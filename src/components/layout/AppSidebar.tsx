@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -12,7 +13,10 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Zap,
+  UsersRound,
+  UserCog,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
@@ -20,8 +24,21 @@ import { useAppStore } from '@/store/appStore';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
-const menuItems = [
+interface MenuItem {
+  icon: any;
+  label: string;
+  path: string;
+  badge?: number;
+  children?: { icon: any; label: string; path: string }[];
+}
+
+const menuItems: MenuItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: MessageSquare, label: 'Conversas', path: '/inbox', badge: 5 },
   { icon: Kanban, label: 'Funil', path: '/funnel' },
@@ -29,15 +46,32 @@ const menuItems = [
   { icon: CheckSquare, label: 'Tarefas', path: '/tasks', badge: 3 },
   { icon: Calendar, label: 'Calendário', path: '/calendar' },
   { icon: BarChart3, label: 'Relatórios', path: '/reports' },
-  { icon: Settings, label: 'Configurações', path: '/settings' },
+  {
+    icon: Settings,
+    label: 'Configurações',
+    path: '/settings',
+    children: [
+      { icon: UserCog, label: 'Usuários', path: '/settings/users' },
+      { icon: UsersRound, label: 'Equipes', path: '/settings/teams' },
+    ],
+  },
 ];
 
 const AppSidebar = () => {
   const location = useLocation();
   const { user, logout } = useAuthStore();
   const { sidebarCollapsed, toggleSidebar } = useAppStore();
+  const [settingsOpen, setSettingsOpen] = useState(
+    location.pathname.startsWith('/settings')
+  );
 
   const isActive = (path: string) => location.pathname === path;
+  const isParentActive = (item: MenuItem) => {
+    if (item.children) {
+      return item.children.some((child) => location.pathname === child.path);
+    }
+    return location.pathname === item.path;
+  };
 
   return (
     <motion.aside
@@ -84,7 +118,62 @@ const AppSidebar = () => {
       <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto scrollbar-thin">
         {menuItems.map((item) => {
           const active = isActive(item.path);
-          
+          const parentActive = isParentActive(item);
+
+          // Item with children (submenu)
+          if (item.children && !sidebarCollapsed) {
+            return (
+              <Collapsible
+                key={item.path}
+                open={settingsOpen}
+                onOpenChange={setSettingsOpen}
+              >
+                <CollapsibleTrigger asChild>
+                  <button
+                    className={cn(
+                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group',
+                      parentActive
+                        ? 'bg-sidebar-accent text-sidebar-foreground'
+                        : 'text-sidebar-foreground hover:bg-sidebar-accent'
+                    )}
+                  >
+                    <item.icon className="w-5 h-5 flex-shrink-0" />
+                    <span className="font-medium whitespace-nowrap flex-1 text-left">
+                      {item.label}
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        'w-4 h-4 transition-transform',
+                        settingsOpen && 'rotate-180'
+                      )}
+                    />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pl-4 mt-1 space-y-1">
+                  {item.children.map((child) => {
+                    const childActive = isActive(child.path);
+                    return (
+                      <Link
+                        key={child.path}
+                        to={child.path}
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200',
+                          childActive
+                            ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                            : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                        )}
+                      >
+                        <child.icon className="w-4 h-4" />
+                        <span className="text-sm">{child.label}</span>
+                      </Link>
+                    );
+                  })}
+                </CollapsibleContent>
+              </Collapsible>
+            );
+          }
+
+          // Regular menu item
           const linkContent = (
             <Link
               to={item.path}
