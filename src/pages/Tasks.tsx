@@ -3,20 +3,17 @@ import { motion } from 'framer-motion';
 import {
   Plus,
   Search,
-  Filter,
-  Calendar,
   Clock,
   CheckCircle2,
   Circle,
   AlertCircle,
   MoreVertical,
   User,
-  Tag,
-  ChevronDown,
   ListTodo,
   LayoutGrid,
+  Calendar as CalendarIcon,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,14 +26,34 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useAppStore } from '@/store/appStore';
 import { mockUsers, mockLeads } from '@/data/mockData';
 import { Task } from '@/types';
 import { cn } from '@/lib/utils';
 import { format, isToday, isTomorrow, isPast } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { TaskModal } from '@/components/tasks/TaskModal';
+import { TaskCalendar } from '@/components/tasks/TaskCalendar';
+import { toast } from '@/hooks/use-toast';
 
-const TaskCard = ({ task, onStatusChange }: { task: Task; onStatusChange: (status: Task['status']) => void }) => {
+interface TaskCardProps {
+  task: Task;
+  onStatusChange: (status: Task['status']) => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+const TaskCard = ({ task, onStatusChange, onEdit, onDelete }: TaskCardProps) => {
   const assignee = mockUsers.find((u) => u.id === task.assignedTo);
   const lead = task.leadId ? mockLeads.find((l) => l.id === task.leadId) : null;
   const isOverdue = task.dueDate && isPast(task.dueDate) && task.status !== 'done';
@@ -103,8 +120,10 @@ const TaskCard = ({ task, onStatusChange }: { task: Task; onStatusChange: (statu
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>Editar</DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive">Excluir</DropdownMenuItem>
+                    <DropdownMenuItem onClick={onEdit}>Editar</DropdownMenuItem>
+                    <DropdownMenuItem onClick={onDelete} className="text-destructive">
+                      Excluir
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -153,13 +172,24 @@ const TaskCard = ({ task, onStatusChange }: { task: Task; onStatusChange: (statu
 };
 
 const Tasks = () => {
-  const { tasks, updateTaskStatus } = useAppStore();
-  const [view, setView] = useState<'list' | 'kanban'>('list');
+  const { tasks, updateTaskStatus, addTask, updateTask, deleteTask } = useAppStore();
+  const [view, setView] = useState<'list' | 'kanban' | 'calendar'>('list');
   const [filter, setFilter] = useState<'all' | 'todo' | 'in_progress' | 'done'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  
+  // Delete confirmation
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
   const filteredTasks = tasks.filter((task) => {
-    if (filter === 'all') return true;
-    return task.status === filter;
+    const matchesFilter = filter === 'all' || task.status === filter;
+    const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      task.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesFilter && matchesSearch;
   });
 
   const tasksByStatus = {
@@ -174,6 +204,59 @@ const Tasks = () => {
     done: { label: 'Concluídas', icon: CheckCircle2, color: 'text-success' },
   };
 
+  const handleNewTask = () => {
+    setSelectedTask(null);
+    setModalOpen(true);
+  };
+
+  const handleEditTask = (task: Task) => {
+    setSelectedTask(task);
+    setModalOpen(true);
+  };
+
+  const handleDeleteClick = (task: Task) => {
+    setTaskToDelete(task);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (taskToDelete) {
+      deleteTask(taskToDelete.id);
+      toast({
+        title: 'Tarefa excluída',
+        description: 'A tarefa foi removida com sucesso.',
+      });
+    }
+    setDeleteDialogOpen(false);
+    setTaskToDelete(null);
+  };
+
+  const handleSaveTask = (taskData: Omit<Task, 'id' | 'createdAt'> & { id?: string }) => {
+    if (taskData.id) {
+      updateTask(taskData.id, taskData);
+      toast({
+        title: 'Tarefa atualizada',
+        description: 'As alterações foram salvas.',
+      });
+    } else {
+      addTask(taskData);
+      toast({
+        title: 'Tarefa criada',
+        description: 'Nova tarefa adicionada com sucesso.',
+      });
+    }
+  };
+
+  const handleStatusChange = (taskId: string, status: Task['status']) => {
+    updateTaskStatus(taskId, status);
+    if (status === 'done') {
+      toast({
+        title: 'Tarefa concluída!',
+        description: 'Parabéns por completar a tarefa.',
+      });
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -184,7 +267,7 @@ const Tasks = () => {
             {tasks.length} tarefas · {tasksByStatus.todo.length} pendentes
           </p>
         </div>
-        <Button className="gradient-primary text-primary-foreground gap-2">
+        <Button onClick={handleNewTask} className="gradient-primary text-primary-foreground gap-2">
           <Plus className="w-4 h-4" />
           Nova Tarefa
         </Button>
@@ -194,7 +277,12 @@ const Tasks = () => {
       <div className="flex items-center gap-4 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar tarefas..." className="pl-9" />
+          <Input
+            placeholder="Buscar tarefas..."
+            className="pl-9"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
 
         <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
@@ -221,17 +309,28 @@ const Tasks = () => {
           >
             <LayoutGrid className="w-4 h-4" />
           </Button>
+          <Button
+            variant={view === 'calendar' ? 'secondary' : 'ghost'}
+            size="icon"
+            onClick={() => setView('calendar')}
+          >
+            <CalendarIcon className="w-4 h-4" />
+          </Button>
         </div>
       </div>
 
       {/* Content */}
-      {view === 'list' ? (
+      {view === 'calendar' ? (
+        <TaskCalendar tasks={tasks} onTaskClick={handleEditTask} />
+      ) : view === 'list' ? (
         <div className="space-y-3">
           {filteredTasks.map((task) => (
             <TaskCard
               key={task.id}
               task={task}
-              onStatusChange={(status) => updateTaskStatus(task.id, status)}
+              onStatusChange={(status) => handleStatusChange(task.id, status)}
+              onEdit={() => handleEditTask(task)}
+              onDelete={() => handleDeleteClick(task)}
             />
           ))}
 
@@ -242,9 +341,13 @@ const Tasks = () => {
                   <CheckCircle2 className="w-8 h-8 text-muted-foreground" />
                 </div>
                 <h3 className="font-semibold text-foreground mb-2">Nenhuma tarefa encontrada</h3>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground mb-4">
                   {filter === 'all' ? 'Crie uma nova tarefa para começar' : 'Não há tarefas nesta categoria'}
                 </p>
+                <Button onClick={handleNewTask} variant="outline">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Criar Tarefa
+                </Button>
               </div>
             </Card>
           )}
@@ -268,7 +371,9 @@ const Tasks = () => {
                     <TaskCard
                       key={task.id}
                       task={task}
-                      onStatusChange={(newStatus) => updateTaskStatus(task.id, newStatus)}
+                      onStatusChange={(newStatus) => handleStatusChange(task.id, newStatus)}
+                      onEdit={() => handleEditTask(task)}
+                      onDelete={() => handleDeleteClick(task)}
                     />
                   ))}
 
@@ -283,6 +388,39 @@ const Tasks = () => {
           })}
         </div>
       )}
+
+      {/* Task Modal */}
+      <TaskModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        task={selectedTask}
+        onSave={handleSaveTask}
+        onDelete={(id) => {
+          deleteTask(id);
+          toast({
+            title: 'Tarefa excluída',
+            description: 'A tarefa foi removida com sucesso.',
+          });
+        }}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. A tarefa "{taskToDelete?.title}" será permanentemente removida.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
