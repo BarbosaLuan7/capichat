@@ -10,8 +10,11 @@ import Dashboard from "./pages/Dashboard";
 import Inbox from "./pages/Inbox";
 import Funnel from "./pages/Funnel";
 import Leads from "./pages/Leads";
+import LeadDetail from "./pages/LeadDetail";
 import Tasks from "./pages/Tasks";
 import Settings from "./pages/Settings";
+import UsersSettings from "./pages/settings/UsersSettings";
+import TeamsSettings from "./pages/settings/TeamsSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,8 +40,11 @@ const App = () => (
             <Route path="inbox" element={<Inbox />} />
             <Route path="funnel" element={<Funnel />} />
             <Route path="leads" element={<Leads />} />
+            <Route path="leads/:id" element={<LeadDetail />} />
             <Route path="tasks" element={<Tasks />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="settings/users" element={<UsersSettings />} />
+            <Route path="settings/teams" element={<TeamsSettings />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

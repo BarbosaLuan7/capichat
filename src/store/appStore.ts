@@ -1,12 +1,14 @@
 import { create } from 'zustand';
-import { Lead, Conversation, Message, Task, Label, FunnelStage } from '@/types';
+import { Lead, Conversation, Message, Task, Label, FunnelStage, User, Team } from '@/types';
 import { 
   mockLeads, 
   mockConversations, 
   mockMessages, 
   mockTasks, 
   mockLabels, 
-  mockFunnelStages 
+  mockFunnelStages,
+  mockUsers,
+  mockTeams,
 } from '@/data/mockData';
 
 interface AppState {
@@ -17,6 +19,8 @@ interface AppState {
   tasks: Task[];
   labels: Label[];
   funnelStages: FunnelStage[];
+  users: User[];
+  teams: Team[];
   
   // Selected items
   selectedConversationId: string | null;
@@ -37,6 +41,20 @@ interface AppState {
   
   // Task actions
   updateTaskStatus: (taskId: string, status: Task['status']) => void;
+  addTask: (task: Omit<Task, 'id' | 'createdAt'>) => void;
+  updateTask: (taskId: string, updates: Partial<Task>) => void;
+  deleteTask: (taskId: string) => void;
+  
+  // User actions
+  addUser: (user: Omit<User, 'id' | 'createdAt' | 'avatar'>) => void;
+  updateUser: (userId: string, updates: Partial<User>) => void;
+  deleteUser: (userId: string) => void;
+  toggleUserStatus: (userId: string) => void;
+  
+  // Team actions
+  addTeam: (team: Omit<Team, 'id' | 'createdAt'>) => void;
+  updateTeam: (teamId: string, updates: Partial<Team>) => void;
+  deleteTeam: (teamId: string) => void;
   
   // Message actions
   addMessage: (message: Omit<Message, 'id' | 'createdAt'>) => void;
@@ -51,6 +69,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   tasks: mockTasks,
   labels: mockLabels,
   funnelStages: mockFunnelStages,
+  users: mockUsers,
+  teams: mockTeams,
   
   // Selected items
   selectedConversationId: null,
@@ -83,6 +103,61 @@ export const useAppStore = create<AppState>((set, get) => ({
     tasks: state.tasks.map((task) =>
       task.id === taskId ? { ...task, status } : task
     ),
+  })),
+  
+  addTask: (task) => set((state) => ({
+    tasks: [...state.tasks, { ...task, id: `task-${Date.now()}`, createdAt: new Date() }],
+  })),
+  
+  updateTask: (taskId, updates) => set((state) => ({
+    tasks: state.tasks.map((task) =>
+      task.id === taskId ? { ...task, ...updates } : task
+    ),
+  })),
+  
+  deleteTask: (taskId) => set((state) => ({
+    tasks: state.tasks.filter((task) => task.id !== taskId),
+  })),
+  
+  // User actions
+  addUser: (user) => set((state) => ({
+    users: [...state.users, {
+      ...user,
+      id: `user-${Date.now()}`,
+      createdAt: new Date(),
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`,
+    }],
+  })),
+  
+  updateUser: (userId, updates) => set((state) => ({
+    users: state.users.map((user) =>
+      user.id === userId ? { ...user, ...updates } : user
+    ),
+  })),
+  
+  deleteUser: (userId) => set((state) => ({
+    users: state.users.filter((user) => user.id !== userId),
+  })),
+  
+  toggleUserStatus: (userId) => set((state) => ({
+    users: state.users.map((user) =>
+      user.id === userId ? { ...user, isActive: !user.isActive } : user
+    ),
+  })),
+  
+  // Team actions
+  addTeam: (team) => set((state) => ({
+    teams: [...state.teams, { ...team, id: `team-${Date.now()}`, createdAt: new Date() }],
+  })),
+  
+  updateTeam: (teamId, updates) => set((state) => ({
+    teams: state.teams.map((team) =>
+      team.id === teamId ? { ...team, ...updates } : team
+    ),
+  })),
+  
+  deleteTeam: (teamId) => set((state) => ({
+    teams: state.teams.filter((team) => team.id !== teamId),
   })),
   
   // Message actions
