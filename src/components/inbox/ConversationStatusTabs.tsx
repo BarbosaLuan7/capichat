@@ -1,6 +1,7 @@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Clock, CheckCircle2 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { MessageCircle, Clock, CheckCircle2, Inbox } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type ConversationStatus = Database['public']['Enums']['conversation_status'];
@@ -16,37 +17,54 @@ interface ConversationStatusTabsProps {
   };
 }
 
+const tabs = [
+  { value: 'all', label: 'Todas', icon: Inbox, colorClass: '' },
+  { value: 'open', label: 'Abertas', icon: MessageCircle, colorClass: 'bg-success/10 text-success' },
+  { value: 'pending', label: 'Pendentes', icon: Clock, colorClass: 'bg-warning/10 text-warning' },
+  { value: 'resolved', label: 'Resolvidas', icon: CheckCircle2, colorClass: 'bg-muted-foreground/10 text-muted-foreground' },
+] as const;
+
 export function ConversationStatusTabs({ value, onChange, counts }: ConversationStatusTabsProps) {
+  const getCount = (tabValue: string) => {
+    switch (tabValue) {
+      case 'all': return counts.all;
+      case 'open': return counts.open;
+      case 'pending': return counts.pending;
+      case 'resolved': return counts.resolved;
+      default: return 0;
+    }
+  };
+
   return (
     <Tabs value={value} onValueChange={(v) => onChange(v as ConversationStatus | 'all')}>
-      <TabsList className="w-full bg-muted relative z-10 overflow-hidden">
-        <TabsTrigger value="all" className="flex-1 min-w-0 text-xs gap-1.5 overflow-hidden">
-          <span className="truncate">Todas</span>
-          <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-medium shrink-0">
-            {counts.all}
-          </Badge>
-        </TabsTrigger>
-        <TabsTrigger value="open" className="flex-1 min-w-0 text-xs gap-1.5 overflow-hidden">
-          <MessageCircle className="w-3 h-3 shrink-0" />
-          <span className="truncate">Abertas</span>
-          <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-medium bg-success/10 text-success shrink-0">
-            {counts.open}
-          </Badge>
-        </TabsTrigger>
-        <TabsTrigger value="pending" className="flex-1 min-w-0 text-xs gap-1.5 overflow-hidden">
-          <Clock className="w-3 h-3 shrink-0" />
-          <span className="truncate">Pendentes</span>
-          <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-medium bg-warning/10 text-warning shrink-0">
-            {counts.pending}
-          </Badge>
-        </TabsTrigger>
-        <TabsTrigger value="resolved" className="flex-1 min-w-0 text-xs gap-1.5 overflow-hidden">
-          <CheckCircle2 className="w-3 h-3 shrink-0" />
-          <span className="truncate">Resolvidas</span>
-          <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-medium bg-muted-foreground/10 text-muted-foreground shrink-0">
-            {counts.resolved}
-          </Badge>
-        </TabsTrigger>
+      <TabsList className="grid grid-cols-4 w-full bg-muted">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const count = getCount(tab.value);
+          
+          return (
+            <Tooltip key={tab.value}>
+              <TooltipTrigger asChild>
+                <TabsTrigger 
+                  value={tab.value} 
+                  className="px-1.5 py-1.5 text-[11px] gap-1 justify-center"
+                >
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <span className="hidden sm:inline truncate">{tab.label}</span>
+                  <Badge 
+                    variant="secondary" 
+                    className={`px-1.5 py-0 text-[10px] font-medium shrink-0 ${tab.colorClass}`}
+                  >
+                    {count}
+                  </Badge>
+                </TabsTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="sm:hidden">
+                {tab.label}
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
       </TabsList>
     </Tabs>
   );

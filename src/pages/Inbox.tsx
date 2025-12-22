@@ -407,7 +407,7 @@ const Inbox = () => {
       {/* Conversation List */}
       <div className="w-80 border-r border-border flex flex-col bg-card">
         {/* Search and Filter */}
-        <div className="p-4 space-y-3 border-b border-border bg-card sticky top-0 z-20">
+        <div className="p-4 space-y-3 border-b border-border bg-card sticky top-0 z-30 shadow-sm isolate">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input 
