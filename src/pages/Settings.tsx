@@ -28,7 +28,8 @@ const settingsMenu = [
   { icon: Tag, label: 'Etiquetas', description: 'Configurar etiquetas', href: '/settings/labels' },
   { icon: MessageSquare, label: 'Templates', description: 'Mensagens rápidas', href: '/settings/templates' },
   { icon: Zap, label: 'Automações', description: 'Regras automáticas', href: '/automations' },
-  { icon: Key, label: 'Integrações', description: 'APIs e webhooks', href: undefined },
+  { icon: Key, label: 'API & Integrações', description: 'Chaves de API e documentação', href: '/settings/api' },
+  { icon: Database, label: 'Webhooks', description: 'Enviar dados para sistemas externos', href: '/settings/webhooks' },
   { icon: Bell, label: 'Notificações', description: 'Preferências de alertas', href: undefined },
   { icon: Palette, label: 'Aparência', description: 'Tema e personalização', href: undefined },
 ];
