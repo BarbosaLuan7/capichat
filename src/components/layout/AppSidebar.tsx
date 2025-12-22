@@ -19,6 +19,11 @@ import {
   UserCog,
   Workflow,
   Zap,
+  Tags,
+  FileText,
+  Webhook,
+  MessageCircle,
+  Key,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
@@ -57,6 +62,11 @@ const menuItems: MenuItem[] = [
     children: [
       { icon: UserCog, label: 'Usuários', path: '/settings/users' },
       { icon: UsersRound, label: 'Equipes', path: '/settings/teams' },
+      { icon: Tags, label: 'Etiquetas', path: '/settings/labels' },
+      { icon: FileText, label: 'Templates', path: '/settings/templates' },
+      { icon: Webhook, label: 'Webhooks', path: '/settings/webhooks' },
+      { icon: MessageCircle, label: 'WhatsApp', path: '/settings/whatsapp' },
+      { icon: Key, label: 'API', path: '/settings/api' },
     ],
   },
 ];
@@ -72,7 +82,7 @@ const AppSidebar = () => {
   const isActive = (path: string) => location.pathname === path;
   const isParentActive = (item: MenuItem) => {
     if (item.children) {
-      return item.children.some((child) => location.pathname === child.path);
+      return location.pathname.startsWith(item.path);
     }
     return location.pathname === item.path;
   };
