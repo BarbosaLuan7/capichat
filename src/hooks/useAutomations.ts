@@ -12,10 +12,7 @@ export function useAutomations() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('automations')
-        .select(`
-          *,
-          creator:created_by (id, name, email, avatar)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -31,10 +28,7 @@ export function useAutomation(id: string | undefined) {
       if (!id) return null;
       const { data, error } = await supabase
         .from('automations')
-        .select(`
-          *,
-          creator:created_by (id, name, email, avatar)
-        `)
+        .select('*')
         .eq('id', id)
         .maybeSingle();
       
