@@ -4,16 +4,17 @@ import {
   Users,
   MessageSquare,
   TrendingUp,
-  DollarSign,
   Clock,
   ArrowUpRight,
   ArrowDownRight,
   CheckCircle2,
   AlertCircle,
   Calendar,
+  Target,
+  Zap,
+  Timer,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -22,7 +23,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
-import { mockMetrics } from '@/data/mockData';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import {
   BarChart,
@@ -35,59 +38,30 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
   AreaChart,
   Area,
   Legend,
+  FunnelChart,
+  Funnel,
+  LabelList,
 } from 'recharts';
-
-type PeriodFilter = 'today' | 'week' | 'month' | 'quarter';
+import {
+  useLeadMetrics,
+  useFunnelMetrics,
+  useAgentPerformance,
+  useDailyEvolution,
+  useConversationMetrics,
+  type PeriodFilter,
+} from '@/hooks/useMetrics';
 
 const Dashboard = () => {
   const [period, setPeriod] = useState<PeriodFilter>('month');
 
-  // Dynamic multiplier based on period for demo purposes
-  const multiplier = period === 'today' ? 0.1 : period === 'week' ? 0.3 : period === 'quarter' ? 3 : 1;
-
-  const stats = [
-    {
-      title: 'Total de Leads',
-      value: Math.round(mockMetrics.totalLeads * multiplier),
-      change: '+12%',
-      isPositive: true,
-      icon: Users,
-      color: 'text-primary',
-      bgColor: 'bg-primary/10',
-    },
-    {
-      title: 'Conversas Abertas',
-      value: Math.round(mockMetrics.openConversations * multiplier),
-      change: '-5%',
-      isPositive: false,
-      icon: MessageSquare,
-      color: 'text-accent',
-      bgColor: 'bg-accent/10',
-    },
-    {
-      title: 'Taxa de Conversão',
-      value: `${mockMetrics.conversionRate}%`,
-      change: '+3.2%',
-      isPositive: true,
-      icon: TrendingUp,
-      color: 'text-success',
-      bgColor: 'bg-success/10',
-    },
-    {
-      title: 'Receita do Período',
-      value: `R$ ${(mockMetrics.revenueThisMonth * multiplier / 1000).toFixed(0)}k`,
-      change: '+18%',
-      isPositive: true,
-      icon: DollarSign,
-      color: 'text-warning',
-      bgColor: 'bg-warning/10',
-    },
-  ];
+  const { data: leadMetrics, isLoading: loadingLeads } = useLeadMetrics(period);
+  const { data: funnelMetrics, isLoading: loadingFunnel } = useFunnelMetrics(period);
+  const { data: agentPerformance, isLoading: loadingAgents } = useAgentPerformance(period);
+  const { data: dailyEvolution, isLoading: loadingDaily } = useDailyEvolution(period);
+  const { data: conversationMetrics, isLoading: loadingConversations } = useConversationMetrics(period);
 
   const periodLabels: Record<PeriodFilter, string> = {
     today: 'Hoje',
@@ -96,29 +70,44 @@ const Dashboard = () => {
     quarter: 'Este Trimestre',
   };
 
-  // Funnel data for horizontal bar chart
-  const funnelData = mockMetrics.leadsByStage.map((stage) => ({
-    ...stage,
-    count: Math.round(stage.count * multiplier),
-    value: Math.round(stage.value * multiplier),
-  }));
-
-  // Colors for pie chart
-  const COLORS = mockMetrics.leadsBySource.map((s) => s.color);
-
-  // Team performance data
-  const teamData = mockMetrics.performanceByAgent.map((agent) => ({
-    ...agent,
-    leads: Math.round(agent.leads * multiplier),
-    conversions: Math.round(agent.conversions * multiplier),
-    revenue: Math.round(agent.revenue * multiplier),
-  }));
-
-  // Weekly evolution data
-  const weeklyData = mockMetrics.weeklyLeads.map((d) => ({
-    ...d,
-    leads: Math.round(d.leads * multiplier),
-  }));
+  const stats = [
+    {
+      title: 'Total de Leads',
+      value: leadMetrics?.totalLeads || 0,
+      change: '+12%',
+      isPositive: true,
+      icon: Users,
+      color: 'text-primary',
+      bgColor: 'bg-primary/10',
+    },
+    {
+      title: 'Conversas Abertas',
+      value: conversationMetrics?.open || 0,
+      change: `${conversationMetrics?.total || 0} total`,
+      isPositive: true,
+      icon: MessageSquare,
+      color: 'text-accent',
+      bgColor: 'bg-accent/10',
+    },
+    {
+      title: 'Taxa de Resolução',
+      value: `${conversationMetrics?.resolutionRate || 0}%`,
+      change: `${conversationMetrics?.resolved || 0} resolvidas`,
+      isPositive: true,
+      icon: CheckCircle2,
+      color: 'text-success',
+      bgColor: 'bg-success/10',
+    },
+    {
+      title: 'Leads Quentes',
+      value: leadMetrics?.leadsByTemperature.hot || 0,
+      change: 'prontos para fechar',
+      isPositive: true,
+      icon: Zap,
+      color: 'text-warning',
+      bgColor: 'bg-warning/10',
+    },
+  ];
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -136,9 +125,12 @@ const Dashboard = () => {
     return null;
   };
 
+  const isLoading = loadingLeads || loadingFunnel || loadingAgents || loadingDaily || loadingConversations;
+
   return (
     <div className="p-6 space-y-6">
       <PageBreadcrumb items={[{ label: 'Dashboard' }]} />
+      
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -162,7 +154,7 @@ const Dashboard = () => {
           </Select>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="w-4 h-4" />
-            <span className="hidden sm:inline">Atualizado há 2 min</span>
+            <span className="hidden sm:inline">Tempo real</span>
           </div>
         </div>
       </div>
@@ -176,28 +168,30 @@ const Dashboard = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: index * 0.1 }}
           >
-            <Card className="hover:shadow-card-hover transition-shadow cursor-pointer">
+            <Card className="hover:shadow-card-hover transition-shadow">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center', stat.bgColor)}>
-                    <stat.icon className={cn('w-6 h-6', stat.color)} />
+                {isLoading ? (
+                  <div className="space-y-3">
+                    <Skeleton className="h-12 w-12 rounded-xl" />
+                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-4 w-24" />
                   </div>
-                  <div className={cn(
-                    'flex items-center gap-1 text-sm font-medium',
-                    stat.isPositive ? 'text-success' : 'text-destructive'
-                  )}>
-                    {stat.isPositive ? (
-                      <ArrowUpRight className="w-4 h-4" />
-                    ) : (
-                      <ArrowDownRight className="w-4 h-4" />
-                    )}
-                    {stat.change}
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                  <p className="text-sm text-muted-foreground mt-1">{stat.title}</p>
-                </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center', stat.bgColor)}>
+                        <stat.icon className={cn('w-6 h-6', stat.color)} />
+                      </div>
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        {stat.change}
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{stat.title}</p>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -210,37 +204,59 @@ const Dashboard = () => {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary" />
+              <Target className="w-5 h-5 text-primary" />
               Funil de Conversão
             </CardTitle>
+            <CardDescription>
+              Taxa de conversão entre etapas
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={funnelData}
-                  layout="vertical"
-                  margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <YAxis
-                    type="category"
-                    dataKey="stage"
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    width={95}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar
-                    dataKey="count"
-                    name="Leads"
-                    fill="hsl(var(--primary))"
-                    radius={[0, 4, 4, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {loadingFunnel ? (
+              <div className="h-[300px] flex items-center justify-center">
+                <Skeleton className="h-full w-full" />
+              </div>
+            ) : (
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={funnelMetrics?.stages || []}
+                    layout="vertical"
+                    margin={{ top: 5, right: 30, left: 120, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis
+                      type="category"
+                      dataKey="stage"
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      width={115}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar
+                      dataKey="count"
+                      name="Leads"
+                      radius={[0, 4, 4, 0]}
+                    >
+                      {funnelMetrics?.stages?.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            {/* Conversion rates */}
+            {!loadingFunnel && funnelMetrics?.stages && (
+              <div className="flex flex-wrap gap-2 mt-4">
+                {funnelMetrics.stages.slice(1).map((stage, index) => (
+                  <Badge key={stage.id} variant="outline" className="text-xs">
+                    {stage.stage}: {stage.conversionRate}%
+                  </Badge>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -253,192 +269,271 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={mockMetrics.leadsBySource}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={2}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    labelLine={false}
-                  >
-                    {mockMetrics.leadsBySource.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index]} />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<CustomTooltip />} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex flex-wrap gap-2 mt-4 justify-center">
-              {mockMetrics.leadsBySource.map((source) => (
-                <div key={source.name} className="flex items-center gap-1.5 text-xs">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: source.color }}
-                  />
-                  <span className="text-muted-foreground">{source.name}</span>
+            {loadingLeads ? (
+              <div className="h-[300px] flex items-center justify-center">
+                <Skeleton className="h-full w-full rounded-full" />
+              </div>
+            ) : leadMetrics?.leadsBySource && leadMetrics.leadsBySource.length > 0 ? (
+              <>
+                <div className="h-[250px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={leadMetrics.leadsBySource}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {leadMetrics.leadsBySource.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<CustomTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-              ))}
-            </div>
+                <div className="flex flex-wrap gap-2 mt-2 justify-center">
+                  {leadMetrics.leadsBySource.map((source) => (
+                    <div key={source.name} className="flex items-center gap-1.5 text-xs">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: source.color }}
+                      />
+                      <span className="text-muted-foreground">{source.name} ({source.value})</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                <p className="text-sm">Adicione etiquetas de origem aos leads</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
       {/* Charts Grid - Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Weekly Evolution */}
+        {/* Daily Evolution */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-primary" />
-              Evolução Semanal
+              Evolução de Leads
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={weeklyData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Area
-                    type="monotone"
-                    dataKey="leads"
-                    name="Leads"
-                    stroke="hsl(var(--primary))"
-                    fillOpacity={1}
-                    fill="url(#colorLeads)"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+            {loadingDaily ? (
+              <Skeleton className="h-[280px] w-full" />
+            ) : dailyEvolution && dailyEvolution.length > 0 ? (
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={dailyEvolution} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area
+                      type="monotone"
+                      dataKey="leads"
+                      name="Leads"
+                      stroke="hsl(var(--primary))"
+                      fillOpacity={1}
+                      fill="url(#colorLeads)"
+                      strokeWidth={2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-[280px] flex items-center justify-center text-muted-foreground">
+                <p className="text-sm">Sem dados de leads para o período</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Team Performance */}
+        {/* Temperature Distribution */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary" />
-              Performance da Equipe
+              <Zap className="w-5 h-5 text-primary" />
+              Temperatura dos Leads
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={teamData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend />
-                  <Bar dataKey="leads" name="Leads" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="conversions" name="Conversões" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {loadingLeads ? (
+              <Skeleton className="h-[280px] w-full" />
+            ) : (
+              <div className="space-y-6 py-4">
+                {[
+                  { label: 'Frios', value: leadMetrics?.leadsByTemperature.cold || 0, color: 'bg-blue-500', textColor: 'text-blue-500' },
+                  { label: 'Mornos', value: leadMetrics?.leadsByTemperature.warm || 0, color: 'bg-yellow-500', textColor: 'text-yellow-500' },
+                  { label: 'Quentes', value: leadMetrics?.leadsByTemperature.hot || 0, color: 'bg-red-500', textColor: 'text-red-500' },
+                ].map((temp) => {
+                  const total = (leadMetrics?.totalLeads || 1);
+                  const percentage = total > 0 ? (temp.value / total) * 100 : 0;
+                  return (
+                    <div key={temp.label} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">{temp.label}</span>
+                        <span className={cn('text-sm font-bold', temp.textColor)}>
+                          {temp.value} ({percentage.toFixed(0)}%)
+                        </span>
+                      </div>
+                      <div className="h-3 bg-muted rounded-full overflow-hidden">
+                        <motion.div
+                          className={cn('h-full rounded-full', temp.color)}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${percentage}%` }}
+                          transition={{ duration: 0.5, delay: 0.2 }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
       {/* Bottom Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Team Details */}
+        {/* Agent Performance */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5 text-primary" />
-              Ranking de Vendedores
+              Performance da Equipe
             </CardTitle>
+            <CardDescription>
+              Métricas por atendente no período
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {teamData.map((agent, index) => (
-                <motion.div
-                  key={agent.name}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
-                  className="flex items-center gap-4 p-3 rounded-lg bg-muted/50"
-                >
-                  <div className={cn(
-                    'w-10 h-10 rounded-full flex items-center justify-center text-primary-foreground font-bold',
-                    index === 0 ? 'bg-warning' : index === 1 ? 'bg-muted-foreground' : 'bg-warning/60'
-                  )}>
-                    {index + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground truncate">{agent.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {agent.leads} leads · {agent.conversions} conversões
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-foreground">
-                      R$ {(agent.revenue / 1000).toFixed(0)}k
-                    </p>
-                    <p className="text-xs text-success flex items-center justify-end gap-1">
-                      <ArrowUpRight className="w-3 h-3" />
-                      {agent.leads > 0 ? ((agent.conversions / agent.leads) * 100).toFixed(0) : 0}%
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+            {loadingAgents ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : agentPerformance?.agents && agentPerformance.agents.length > 0 ? (
+              <div className="space-y-4">
+                {agentPerformance.agents.slice(0, 5).map((agent, index) => (
+                  <motion.div
+                    key={agent.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                    className="flex items-center gap-4 p-3 rounded-lg bg-muted/50"
+                  >
+                    <div className={cn(
+                      'w-8 h-8 rounded-full flex items-center justify-center text-primary-foreground font-bold text-sm',
+                      index === 0 ? 'bg-warning' : index === 1 ? 'bg-muted-foreground' : 'bg-muted-foreground/60'
+                    )}>
+                      {index + 1}
+                    </div>
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={agent.avatar || undefined} />
+                      <AvatarFallback>{agent.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate">{agent.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {agent.leads} leads · {agent.resolved} resolvidos
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div className="flex items-center gap-1 text-sm">
+                        <Timer className="w-3 h-3 text-muted-foreground" />
+                        <span className="font-medium">{agent.avgResponseTimeFormatted}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">tempo médio</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-muted-foreground">
+                <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p className="text-sm">Nenhum atendente com atividade no período</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Recent Activities */}
+        {/* Conversation Status */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-primary" />
-              Atividades Recentes
+              <MessageSquare className="w-5 h-5 text-primary" />
+              Status das Conversas
             </CardTitle>
+            <CardDescription>
+              Distribuição por status no período
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {[
-                { icon: CheckCircle2, color: 'text-success', bgColor: 'bg-success/10', text: 'Lead "Patrícia Alves" fechado', time: '2h atrás', value: 'R$ 45k' },
-                { icon: MessageSquare, color: 'text-primary', bgColor: 'bg-primary/10', text: 'Nova mensagem de João Ferreira', time: '15 min' },
-                { icon: AlertCircle, color: 'text-warning', bgColor: 'bg-warning/10', text: 'Tarefa vencida: Follow-up Mariana', time: '1h' },
-                { icon: Users, color: 'text-accent', bgColor: 'bg-accent/10', text: 'Novo lead via Facebook Ads', time: '30 min' },
-                { icon: TrendingUp, color: 'text-success', bgColor: 'bg-success/10', text: 'Lucas Mendes movido para Negociação', time: '3h atrás' },
-              ].map((activity, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
-                  className="flex items-center gap-3"
-                >
-                  <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', activity.bgColor)}>
-                    <activity.icon className={cn('w-4 h-4', activity.color)} />
+            {loadingConversations ? (
+              <Skeleton className="h-[200px] w-full" />
+            ) : (
+              <div className="space-y-6 py-4">
+                {[
+                  { label: 'Abertas', value: conversationMetrics?.open || 0, color: 'bg-blue-500', icon: MessageSquare },
+                  { label: 'Pendentes', value: conversationMetrics?.pending || 0, color: 'bg-yellow-500', icon: AlertCircle },
+                  { label: 'Resolvidas', value: conversationMetrics?.resolved || 0, color: 'bg-green-500', icon: CheckCircle2 },
+                ].map((status, index) => {
+                  const total = conversationMetrics?.total || 1;
+                  const percentage = total > 0 ? (status.value / total) * 100 : 0;
+                  return (
+                    <motion.div
+                      key={status.label}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="flex items-center gap-4"
+                    >
+                      <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', status.color.replace('bg-', 'bg-') + '/10')}>
+                        <status.icon className={cn('w-5 h-5', status.color.replace('bg-', 'text-'))} />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium">{status.label}</span>
+                          <span className="text-sm font-bold">{status.value}</span>
+                        </div>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <motion.div
+                            className={cn('h-full rounded-full', status.color)}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${percentage}%` }}
+                            transition={{ duration: 0.5, delay: 0.2 }}
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+                
+                {/* Summary */}
+                <div className="pt-4 border-t border-border">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Total de Conversas</span>
+                    <span className="text-lg font-bold">{conversationMetrics?.total || 0}</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-foreground truncate">{activity.text}</p>
-                    <p className="text-xs text-muted-foreground">{activity.time}</p>
-                  </div>
-                  {activity.value && (
-                    <span className="text-sm font-semibold text-success">{activity.value}</span>
-                  )}
-                </motion.div>
-              ))}
-            </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
