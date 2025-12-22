@@ -311,7 +311,7 @@ const Inbox = () => {
                           {convLead?.phone}
                         </p>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 flex-wrap">
                           <Badge
                             variant="outline"
                             className={cn(
@@ -326,6 +326,26 @@ const Inbox = () => {
                           {convLead?.temperature === 'hot' && (
                             <Badge className="bg-destructive/10 text-destructive text-xs">
                               Quente
+                            </Badge>
+                          )}
+                          {/* Lead Labels */}
+                          {convLead?.lead_labels?.slice(0, 2).map((ll: any) => (
+                            <Badge
+                              key={ll.labels?.id}
+                              className="text-xs px-1.5 py-0"
+                              style={{
+                                backgroundColor: `${ll.labels?.color}20`,
+                                color: ll.labels?.color,
+                                borderColor: ll.labels?.color,
+                              }}
+                              variant="outline"
+                            >
+                              {ll.labels?.name}
+                            </Badge>
+                          ))}
+                          {convLead?.lead_labels?.length > 2 && (
+                            <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                              +{convLead.lead_labels.length - 2}
                             </Badge>
                           )}
                         </div>
