@@ -409,9 +409,9 @@ const Inbox = () => {
   } : null;
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex">
+    <div className="h-[calc(100vh-4rem)] flex min-w-0 overflow-hidden">
       {/* Conversation List */}
-      <div className="w-80 border-r border-border flex flex-col bg-card">
+      <div className="w-64 xl:w-80 border-r border-border flex flex-col bg-card flex-shrink-0">
         {/* Header with New Conversation Button */}
         <div className="p-3 border-b border-border flex items-center justify-between bg-card">
           <span className="font-semibold text-sm">Conversas</span>
@@ -644,7 +644,7 @@ const Inbox = () => {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 min-w-0 flex flex-col">
         {selectedConversation && leadWithLabels ? (
           <>
             {/* Chat Header */}
@@ -871,10 +871,10 @@ const Inbox = () => {
         {leadWithLabels && selectedConversation && (
           <motion.div
             initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 320, opacity: 1 }}
+            animate={{ width: 'auto', opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="border-l border-border bg-card overflow-hidden"
+            className="w-[280px] xl:w-[320px] border-l border-border bg-card overflow-hidden flex-shrink-0"
           >
             <LeadDetailsPanel
               lead={leadWithLabels}
