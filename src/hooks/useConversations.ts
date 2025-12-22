@@ -36,10 +36,12 @@ export function useConversations() {
     },
   });
 
-  // Set up realtime subscription
+  // Set up realtime subscription for conversations and messages
   useEffect(() => {
+    console.log('[Realtime] Subscribing to conversations');
+
     const channel = supabase
-      .channel('conversations-changes')
+      .channel('inbox-realtime')
       .on(
         'postgres_changes',
         {
@@ -47,13 +49,30 @@ export function useConversations() {
           schema: 'public',
           table: 'conversations',
         },
-        () => {
+        (payload) => {
+          console.log('[Realtime] Conversation change:', payload.eventType);
           queryClient.invalidateQueries({ queryKey: ['conversations'] });
         }
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          console.log('[Realtime] New message in any conversation:', payload);
+          // Invalidate conversations to update last_message_at and unread_count
+          queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Realtime] Inbox subscription status:', status);
+      });
 
     return () => {
+      console.log('[Realtime] Unsubscribing from inbox');
       supabase.removeChannel(channel);
     };
   }, [queryClient]);
@@ -99,14 +118,17 @@ export function useMessages(conversationId: string | undefined) {
       return data as Message[];
     },
     enabled: !!conversationId,
+    refetchInterval: 10000, // Fallback: refetch every 10s
   });
 
   // Set up realtime subscription for messages
   useEffect(() => {
     if (!conversationId) return;
 
+    console.log('[Realtime] Subscribing to messages for conversation:', conversationId);
+
     const channel = supabase
-      .channel(`messages-${conversationId}`)
+      .channel(`messages-realtime-${conversationId}`)
       .on(
         'postgres_changes',
         {
@@ -115,13 +137,39 @@ export function useMessages(conversationId: string | undefined) {
           table: 'messages',
           filter: `conversation_id=eq.${conversationId}`,
         },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
+        (payload) => {
+          console.log('[Realtime] New message received:', payload);
+          // Optimistic update: add message directly to cache
+          queryClient.setQueryData(['messages', conversationId], (old: Message[] | undefined) => {
+            if (!old) return [payload.new as Message];
+            // Avoid duplicates
+            if (old.some(m => m.id === (payload.new as Message).id)) return old;
+            return [...old, payload.new as Message];
+          });
         }
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          console.log('[Realtime] Message updated:', payload);
+          queryClient.setQueryData(['messages', conversationId], (old: Message[] | undefined) => {
+            if (!old) return old;
+            return old.map(m => m.id === (payload.new as Message).id ? payload.new as Message : m);
+          });
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Realtime] Messages subscription status:', status);
+      });
 
     return () => {
+      console.log('[Realtime] Unsubscribing from messages:', conversationId);
       supabase.removeChannel(channel);
     };
   }, [conversationId, queryClient]);
