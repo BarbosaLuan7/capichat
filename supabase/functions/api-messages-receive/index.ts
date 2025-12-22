@@ -72,8 +72,22 @@ Deno.serve(async (req) => {
 
     console.log('Received message from phone:', body.phone);
 
-    // Normalize phone number for search
-    const normalizedPhone = body.phone.replace(/\D/g, '');
+    // Normalize phone number for search - remove country code (55) if present
+    let normalizedPhone = body.phone.replace(/\D/g, '');
+    if (normalizedPhone.startsWith('55') && normalizedPhone.length >= 12) {
+      normalizedPhone = normalizedPhone.substring(2);
+    }
+    
+    // Helper function for display formatting
+    const formatPhoneForDisplay = (phone: string): string => {
+      if (phone.length === 11) {
+        return `(${phone.slice(0, 2)}) ${phone.slice(2, 7)}-${phone.slice(7)}`;
+      }
+      if (phone.length === 10) {
+        return `(${phone.slice(0, 2)}) ${phone.slice(2, 6)}-${phone.slice(6)}`;
+      }
+      return phone;
+    };
 
     // Find or create lead by phone
     let lead;
@@ -115,8 +129,8 @@ Deno.serve(async (req) => {
       const { data: newLead, error: createLeadError } = await supabase
         .from('leads')
         .insert({
-          name: body.sender_name || `Lead ${body.phone}`,
-          phone: body.phone,
+          name: body.sender_name || `Lead ${formatPhoneForDisplay(normalizedPhone)}`,
+          phone: normalizedPhone,
           whatsapp_name: body.sender_name,
           source: 'whatsapp',
           temperature: 'warm',

@@ -60,10 +60,28 @@ interface EvolutionWebhookPayload {
 
 function normalizePhone(phone: string): string {
   // Remove @c.us, @s.whatsapp.net e caracteres não numéricos
-  return phone
+  let numbers = phone
     .replace('@c.us', '')
     .replace('@s.whatsapp.net', '')
     .replace(/\D/g, '');
+  
+  // Remove código do país (55) se presente e número tem 12+ dígitos
+  if (numbers.startsWith('55') && numbers.length >= 12) {
+    numbers = numbers.substring(2);
+  }
+  
+  return numbers;
+}
+
+// Formata telefone para exibição em fallback do nome
+function formatPhoneForDisplay(phone: string): string {
+  if (phone.length === 11) {
+    return `(${phone.slice(0, 2)}) ${phone.slice(2, 7)}-${phone.slice(7)}`;
+  }
+  if (phone.length === 10) {
+    return `(${phone.slice(0, 2)}) ${phone.slice(2, 6)}-${phone.slice(6)}`;
+  }
+  return phone;
 }
 
 function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'waha' | 'evolution'): { content: string; type: string; mediaUrl?: string } {
@@ -288,7 +306,7 @@ serve(async (req) => {
       const { data: newLead, error: createLeadError } = await supabase
         .from('leads')
         .insert({
-          name: senderName || `Lead ${senderPhone}`,
+          name: senderName || `Lead ${formatPhoneForDisplay(senderPhone)}`,
           phone: senderPhone,
           whatsapp_name: senderName,
           source: 'whatsapp',

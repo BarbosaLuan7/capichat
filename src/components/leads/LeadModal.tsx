@@ -39,7 +39,7 @@ import { useFunnelStages } from '@/hooks/useFunnelStages';
 import { useLabels, useLeadLabels, useAddLeadLabel, useRemoveLeadLabel } from '@/hooks/useLabels';
 import { cn } from '@/lib/utils';
 import { MaskedInput } from '@/components/ui/masked-input';
-import { formatPhone, formatCPF, unformatPhone, unformatCPF } from '@/lib/masks';
+import { formatPhone, formatPhoneNumber, formatCPF, unformatPhone, unformatCPF, toWhatsAppFormat } from '@/lib/masks';
 import type { Database } from '@/integrations/supabase/types';
 
 type LeadTemperature = Database['public']['Enums']['lead_temperature'];
@@ -177,8 +177,7 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
 
   const openWhatsApp = () => {
     if (!lead) return;
-    const phone = lead.phone.replace(/\D/g, '');
-    window.open(`https://wa.me/55${phone}`, '_blank');
+    window.open(`https://wa.me/${toWhatsAppFormat(lead.phone)}`, '_blank');
   };
 
   const currentLabelIds = leadLabels?.map((ll: any) => ll.label_id) || [];
@@ -261,7 +260,7 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
             <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-muted-foreground" />
-                <span>{lead.phone}</span>
+                <span>{formatPhoneNumber(lead.phone)}</span>
               </div>
               {lead.email && (
                 <div className="flex items-center gap-2">

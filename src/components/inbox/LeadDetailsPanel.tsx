@@ -31,7 +31,7 @@ import { LeadTimeline } from '@/components/leads/LeadTimeline';
 import { AIClassificationSuggestion } from './AIClassificationSuggestion';
 import { AIConversationSummary } from './AIConversationSummary';
 import { DocumentChecklist } from './DocumentChecklist';
-import { formatPhone, formatCPF } from '@/lib/masks';
+import { formatPhoneNumber, formatCPF, toWhatsAppFormat } from '@/lib/masks';
 import type { Database } from '@/integrations/supabase/types';
 
 type Lead = Database['public']['Tables']['leads']['Row'];
@@ -68,8 +68,7 @@ export function LeadDetailsPanel({
   };
 
   const openWhatsApp = () => {
-    const phone = lead.phone.replace(/\D/g, '');
-    window.open(`https://wa.me/55${phone}`, '_blank');
+    window.open(`https://wa.me/${toWhatsAppFormat(lead.phone)}`, '_blank');
   };
 
   const labelIds = lead.labels?.map((l) => l.id) || [];
@@ -237,7 +236,7 @@ export function LeadDetailsPanel({
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 group">
                       <Phone className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="text-sm flex-1">{formatPhone(lead.phone)}</span>
+                      <span className="text-sm flex-1">{formatPhoneNumber(lead.phone)}</span>
                       <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
                           variant="ghost"

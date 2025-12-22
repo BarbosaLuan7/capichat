@@ -3,7 +3,50 @@
  */
 
 /**
+ * Normaliza número de telefone brasileiro - remove código do país (55)
+ * Para armazenar no banco - só números, sem código do país
+ */
+export function normalizePhoneNumber(phone: string): string {
+  let numbers = phone.replace(/\D/g, '');
+  // Remove @s.whatsapp.net ou @c.us se presente (caso venha com sufixo)
+  numbers = numbers.replace(/@.+$/, '');
+  // Remove código do país (55) se presente e número tem 12+ dígitos
+  if (numbers.startsWith('55') && numbers.length >= 12) {
+    numbers = numbers.substring(2);
+  }
+  return numbers;
+}
+
+/**
+ * Formata telefone brasileiro para exibição
+ * Detecta e remove código do país automaticamente
+ */
+export function formatPhoneNumber(phone: string): string {
+  const numbers = normalizePhoneNumber(phone);
+  
+  // Celular (11 dígitos): (XX) XXXXX-XXXX
+  if (numbers.length === 11) {
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
+  }
+  // Fixo (10 dígitos): (XX) XXXX-XXXX
+  if (numbers.length === 10) {
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`;
+  }
+  
+  return phone; // retorna original se não conseguir formatar
+}
+
+/**
+ * Converte para formato WhatsApp API - com código do país
+ */
+export function toWhatsAppFormat(phone: string): string {
+  const normalized = normalizePhoneNumber(phone);
+  return `55${normalized}`;
+}
+
+/**
  * Format phone number to (00) 00000-0000 or (00) 0000-0000
+ * Mantida para compatibilidade com MaskedInput (entrada manual incremental)
  */
 export function formatPhone(value: string): string {
   const digits = value.replace(/\D/g, '');
