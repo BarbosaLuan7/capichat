@@ -148,10 +148,10 @@ export const AutomationModal = ({
         trigger: automation.trigger,
       });
       const parsedConditions = Array.isArray(automation.conditions) 
-        ? automation.conditions as AutomationCondition[] 
+        ? (automation.conditions as unknown as AutomationCondition[])
         : [];
       const parsedActions = Array.isArray(automation.actions) 
-        ? automation.actions as AutomationActionConfig[] 
+        ? (automation.actions as unknown as AutomationActionConfig[])
         : [];
       setConditions(parsedConditions);
       setActions(parsedActions);
