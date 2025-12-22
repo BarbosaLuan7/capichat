@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Filter,
@@ -36,26 +37,52 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useAppStore } from '@/store/appStore';
-import { mockLabels } from '@/data/mockData';
+import { useLeads, useDeleteLead } from '@/hooks/useLeads';
+import { useFunnelStages } from '@/hooks/useFunnelStages';
+import { useLabels } from '@/hooks/useLabels';
+import { LeadModal } from '@/components/leads/LeadModal';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 const Leads = () => {
-  const { leads, funnelStages } = useAppStore();
+  const navigate = useNavigate();
+  const { data: leads, isLoading } = useLeads();
+  const { data: funnelStages } = useFunnelStages();
+  const { data: allLabels } = useLabels();
+  const deleteLead = useDeleteLead();
+  
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [modalMode, setModalMode] = useState<'view' | 'edit' | 'create'>('create');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [leadToDelete, setLeadToDelete] = useState<string | null>(null);
 
-  const filteredLeads = leads.filter((lead) =>
+  const filteredLeads = leads?.filter((lead) =>
     lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     lead.phone.includes(searchQuery) ||
     lead.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  ) || [];
 
-  const getStage = (stageId: string) => funnelStages.find((s) => s.id === stageId);
-  const getLabels = (labelIds: string[]) => mockLabels.filter((l) => labelIds.includes(l.id));
+  const getStage = (stageId: string | null) => funnelStages?.find((s) => s.id === stageId);
+  const getLabels = (leadLabels: any[] | undefined) => {
+    if (!leadLabels) return [];
+    return leadLabels.map((ll: any) => ll.labels).filter(Boolean);
+  };
 
   const toggleSelectAll = () => {
     if (selectedLeads.length === filteredLeads.length) {
@@ -73,6 +100,42 @@ const Leads = () => {
     }
   };
 
+  const handleViewLead = (leadId: string) => {
+    setSelectedLeadId(leadId);
+    setModalMode('view');
+    setModalOpen(true);
+  };
+
+  const handleEditLead = (leadId: string) => {
+    setSelectedLeadId(leadId);
+    setModalMode('edit');
+    setModalOpen(true);
+  };
+
+  const handleNewLead = () => {
+    setSelectedLeadId(null);
+    setModalMode('create');
+    setModalOpen(true);
+  };
+
+  const handleDeleteClick = (leadId: string) => {
+    setLeadToDelete(leadId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (leadToDelete) {
+      try {
+        await deleteLead.mutateAsync(leadToDelete);
+        toast.success('Lead excluído');
+      } catch (error) {
+        toast.error('Erro ao excluir lead');
+      }
+    }
+    setDeleteDialogOpen(false);
+    setLeadToDelete(null);
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -80,10 +143,10 @@ const Leads = () => {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Leads</h1>
           <p className="text-muted-foreground">
-            {leads.length} leads no total · {filteredLeads.length} exibidos
+            {leads?.length || 0} leads no total · {filteredLeads.length} exibidos
           </p>
         </div>
-        <Button className="gradient-primary text-primary-foreground gap-2">
+        <Button onClick={handleNewLead} className="gradient-primary text-primary-foreground gap-2">
           <Plus className="w-4 h-4" />
           Novo Lead
         </Button>
@@ -156,8 +219,8 @@ const Leads = () => {
           </TableHeader>
           <TableBody>
             {filteredLeads.map((lead, index) => {
-              const stage = getStage(lead.stageId);
-              const labels = getLabels(lead.labelIds);
+              const stage = getStage(lead.stage_id);
+              const labels = getLabels((lead as any).lead_labels);
 
               return (
                 <motion.tr
@@ -185,9 +248,8 @@ const Leads = () => {
                           {labels.slice(0, 2).map((label) => (
                             <Badge
                               key={label.id}
-                              variant="secondary"
-                              className="text-xs h-5"
-                              style={{ backgroundColor: `${label.color}20`, color: label.color }}
+                              className="text-xs h-5 border-0"
+                              style={{ backgroundColor: label.color, color: 'white' }}
                             >
                               {label.name}
                             </Badge>
@@ -231,9 +293,9 @@ const Leads = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {lead.estimatedValue ? (
+                    {lead.estimated_value ? (
                       <span className="font-semibold text-success">
-                        R$ {lead.estimatedValue.toLocaleString('pt-BR')}
+                        R$ {lead.estimated_value.toLocaleString('pt-BR')}
                       </span>
                     ) : (
                       <span className="text-muted-foreground">-</span>
@@ -245,7 +307,7 @@ const Leads = () => {
                   <TableCell>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="w-3.5 h-3.5" />
-                      {format(lead.createdAt, "dd/MM/yyyy", { locale: ptBR })}
+                      {format(new Date(lead.created_at), "dd/MM/yyyy", { locale: ptBR })}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -256,7 +318,7 @@ const Leads = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem className="gap-2">
+                        <DropdownMenuItem className="gap-2" onClick={() => handleViewLead(lead.id)}>
                           <Eye className="w-4 h-4" />
                           Ver detalhes
                         </DropdownMenuItem>
@@ -264,12 +326,12 @@ const Leads = () => {
                           <MessageSquare className="w-4 h-4" />
                           Abrir conversa
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2">
+                        <DropdownMenuItem className="gap-2" onClick={() => handleEditLead(lead.id)}>
                           <Pencil className="w-4 h-4" />
                           Editar
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="gap-2 text-destructive">
+                        <DropdownMenuItem className="gap-2 text-destructive" onClick={() => handleDeleteClick(lead.id)}>
                           <Trash2 className="w-4 h-4" />
                           Excluir
                         </DropdownMenuItem>
@@ -282,6 +344,32 @@ const Leads = () => {
           </TableBody>
         </Table>
       </Card>
+
+      {/* Lead Modal */}
+      <LeadModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        leadId={selectedLeadId}
+        mode={modalMode}
+      />
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir lead?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O lead será permanentemente removido.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
