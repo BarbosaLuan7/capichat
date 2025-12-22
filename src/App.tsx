@@ -88,42 +88,40 @@ function AppContent() {
   });
 
   return (
-    <>
+    <BrowserRouter>
       <CommandBar
         open={commandBarOpen}
         onOpenChange={setCommandBarOpen}
       />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/login" element={<Navigate to="/auth" replace />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <MainLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="inbox" element={<Inbox />} />
-            <Route path="funnel" element={<Funnel />} />
-            <Route path="leads" element={<Leads />} />
-            <Route path="leads/:id" element={<LeadDetail />} />
-            <Route path="tasks" element={<Tasks />} />
-            <Route path="calendar" element={<Calendar />} />
-            <Route path="automations" element={<Automations />} />
-            <Route path="chatbot" element={<ChatbotBuilder />} />
-            <Route path="metrics" element={<Metrics />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="settings/users" element={<UsersSettings />} />
-            <Route path="settings/teams" element={<TeamsSettings />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </>
+      <Routes>
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/login" element={<Navigate to="/auth" replace />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="inbox" element={<Inbox />} />
+          <Route path="funnel" element={<Funnel />} />
+          <Route path="leads" element={<Leads />} />
+          <Route path="leads/:id" element={<LeadDetail />} />
+          <Route path="tasks" element={<Tasks />} />
+          <Route path="calendar" element={<Calendar />} />
+          <Route path="automations" element={<Automations />} />
+          <Route path="chatbot" element={<ChatbotBuilder />} />
+          <Route path="metrics" element={<Metrics />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="settings/users" element={<UsersSettings />} />
+          <Route path="settings/teams" element={<TeamsSettings />} />
+        </Route>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
