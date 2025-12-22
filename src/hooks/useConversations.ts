@@ -190,3 +190,67 @@ export function useMarkConversationAsRead() {
     },
   });
 }
+
+export function useToggleConversationFavorite() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ conversationId, isFavorite }: { conversationId: string; isFavorite: boolean }) => {
+      const { data, error } = await supabase
+        .from('conversations')
+        .update({ is_favorite: isFavorite })
+        .eq('id', conversationId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+}
+
+export function useUpdateConversationAssignee() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ conversationId, assignedTo }: { conversationId: string; assignedTo: string }) => {
+      const { data, error } = await supabase
+        .from('conversations')
+        .update({ assigned_to: assignedTo })
+        .eq('id', conversationId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+}
+
+export function useToggleMessageStar() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ messageId, isStarred }: { messageId: string; isStarred: boolean }) => {
+      const { data, error } = await supabase
+        .from('messages')
+        .update({ is_starred: isStarred })
+        .eq('id', messageId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate all messages queries
+      queryClient.invalidateQueries({ queryKey: ['messages'] });
+    },
+  });
+}
