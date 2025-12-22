@@ -1,4 +1,4 @@
-import { User, Lead, Conversation, Message, Task, Label, FunnelStage, Team, Template } from '@/types';
+import { User, Lead, Conversation, Message, Task, Label, FunnelStage, Team, Template, Automation } from '@/types';
 
 // Usuários mockados
 export const mockUsers: User[] = [
@@ -490,3 +490,84 @@ export const mockMetrics = {
     { day: 'Dom', leads: 5 },
   ],
 };
+
+// Automações mockadas
+export const mockAutomations: Automation[] = [
+  {
+    id: 'auto-1',
+    name: 'Lead quente sem resposta',
+    description: 'Notifica o gestor quando um lead quente fica sem resposta por 2 horas',
+    isActive: true,
+    trigger: 'lead_no_response',
+    conditions: [
+      { field: 'temperature', operator: 'equals', value: 'hot' },
+      { field: 'hours_since_last_message', operator: 'greater_than', value: '2' },
+    ],
+    actions: [
+      { type: 'notify_user', params: { userId: '2', message: 'Lead quente {{lead_name}} sem resposta há 2h!' } },
+    ],
+    createdBy: '1',
+    createdAt: new Date('2024-12-01'),
+    updatedAt: new Date('2024-12-01'),
+  },
+  {
+    id: 'auto-2',
+    name: 'Mover para Primeiro Contato',
+    description: 'Move automaticamente novos leads para "Primeiro Contato" após mensagem enviada',
+    isActive: true,
+    trigger: 'lead_created',
+    conditions: [],
+    actions: [
+      { type: 'create_task', params: { title: 'Fazer primeiro contato', priority: 'high', dueInHours: '24' } },
+    ],
+    createdBy: '1',
+    createdAt: new Date('2024-12-05'),
+    updatedAt: new Date('2024-12-05'),
+  },
+  {
+    id: 'auto-3',
+    name: 'Lead frio para reavaliação',
+    description: 'Move leads frios para etapa de reavaliação após 7 dias',
+    isActive: false,
+    trigger: 'lead_no_response',
+    conditions: [
+      { field: 'temperature', operator: 'equals', value: 'cold' },
+      { field: 'hours_since_last_message', operator: 'greater_than', value: '168' },
+    ],
+    actions: [
+      { type: 'move_lead_to_stage', params: { stageId: '3' } },
+      { type: 'add_label', params: { labelId: '9' } },
+    ],
+    createdBy: '1',
+    createdAt: new Date('2024-12-10'),
+    updatedAt: new Date('2024-12-15'),
+  },
+  {
+    id: 'auto-4',
+    name: 'Distribuição round-robin',
+    description: 'Distribui novos leads entre os atendentes automaticamente',
+    isActive: true,
+    trigger: 'lead_created',
+    conditions: [],
+    actions: [
+      { type: 'assign_to_user', params: { mode: 'round_robin', teamId: '1' } },
+    ],
+    createdBy: '1',
+    createdAt: new Date('2024-12-01'),
+    updatedAt: new Date('2024-12-01'),
+  },
+  {
+    id: 'auto-5',
+    name: 'Tarefa vencida - Alerta',
+    description: 'Notifica o responsável quando uma tarefa está vencida',
+    isActive: true,
+    trigger: 'task_overdue',
+    conditions: [],
+    actions: [
+      { type: 'notify_user', params: { userId: 'assigned', message: 'Tarefa "{{task_title}}" vencida!' } },
+    ],
+    createdBy: '1',
+    createdAt: new Date('2024-12-08'),
+    updatedAt: new Date('2024-12-08'),
+  },
+];
