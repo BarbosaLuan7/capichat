@@ -15,12 +15,14 @@ import {
   MessageSquare,
   CheckSquare,
   Thermometer,
+  Loader2,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,13 +39,29 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useAppStore } from '@/store/appStore';
-import { Automation, AutomationTrigger, AutomationAction } from '@/types';
+import { useAutomations, useCreateAutomation, useUpdateAutomation, useDeleteAutomation, useToggleAutomation } from '@/hooks/useAutomations';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AutomationModal } from '@/components/automations/AutomationModal';
 import { toast } from '@/hooks/use-toast';
+import type { Database } from '@/integrations/supabase/types';
+
+type AutomationTrigger = Database['public']['Enums']['automation_trigger'];
+type AutomationAction = Database['public']['Enums']['automation_action'];
+
+interface AutomationActionConfig {
+  type: AutomationAction;
+  params: Record<string, string>;
+}
+
+interface AutomationCondition {
+  field: string;
+  operator: string;
+  value: string;
+}
+
+type AutomationRow = Database['public']['Tables']['automations']['Row'];
 
 const getTriggerLabel = (trigger: AutomationTrigger): string => {
   const labels: Record<AutomationTrigger, string> = {
@@ -59,7 +77,7 @@ const getTriggerLabel = (trigger: AutomationTrigger): string => {
 };
 
 const getActionIcon = (action: AutomationAction) => {
-  const icons: Record<AutomationAction, any> = {
+  const icons: Record<AutomationAction, React.ComponentType<{ className?: string }>> = {
     move_lead_to_stage: ArrowRight,
     change_lead_temperature: Thermometer,
     add_label: Tag,
@@ -86,73 +104,182 @@ const getActionLabel = (action: AutomationAction): string => {
   return labels[action];
 };
 
+const AutomationSkeleton = () => (
+  <Card>
+    <CardContent className="p-5">
+      <div className="flex items-start gap-4">
+        <Skeleton className="w-10 h-10 rounded-lg" />
+        <div className="flex-1 space-y-2">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-4 w-64" />
+            </div>
+            <Skeleton className="h-6 w-12" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-5 w-28" />
+          </div>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const parseActions = (actions: unknown): AutomationActionConfig[] => {
+  if (Array.isArray(actions)) {
+    return actions as AutomationActionConfig[];
+  }
+  return [];
+};
+
+const parseConditions = (conditions: unknown): AutomationCondition[] => {
+  if (Array.isArray(conditions)) {
+    return conditions as AutomationCondition[];
+  }
+  return [];
+};
+
 const Automations = () => {
-  const { automations, addAutomation, updateAutomation, deleteAutomation, toggleAutomationStatus } = useAppStore();
+  const { data: automations = [], isLoading, error } = useAutomations();
+  const createAutomation = useCreateAutomation();
+  const updateAutomation = useUpdateAutomation();
+  const deleteAutomation = useDeleteAutomation();
+  const toggleAutomation = useToggleAutomation();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedAutomation, setSelectedAutomation] = useState<Automation | null>(null);
+  const [selectedAutomation, setSelectedAutomation] = useState<AutomationRow | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [automationToDelete, setAutomationToDelete] = useState<Automation | null>(null);
+  const [automationToDelete, setAutomationToDelete] = useState<AutomationRow | null>(null);
 
   const filteredAutomations = automations.filter((auto) =>
     auto.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     auto.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const activeCount = automations.filter((a) => a.isActive).length;
+  const activeCount = automations.filter((a) => a.is_active).length;
 
   const handleNewAutomation = () => {
     setSelectedAutomation(null);
     setModalOpen(true);
   };
 
-  const handleEditAutomation = (automation: Automation) => {
+  const handleEditAutomation = (automation: AutomationRow) => {
     setSelectedAutomation(automation);
     setModalOpen(true);
   };
 
-  const handleDeleteClick = (automation: Automation) => {
+  const handleDeleteClick = (automation: AutomationRow) => {
     setAutomationToDelete(automation);
     setDeleteDialogOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (automationToDelete) {
-      deleteAutomation(automationToDelete.id);
-      toast({
-        title: 'Automação excluída',
-        description: 'A automação foi removida com sucesso.',
-      });
+      try {
+        await deleteAutomation.mutateAsync(automationToDelete.id);
+        toast({
+          title: 'Automação excluída',
+          description: 'A automação foi removida com sucesso.',
+        });
+      } catch {
+        toast({
+          title: 'Erro ao excluir',
+          description: 'Não foi possível excluir a automação.',
+          variant: 'destructive',
+        });
+      }
     }
     setDeleteDialogOpen(false);
     setAutomationToDelete(null);
   };
 
-  const handleSaveAutomation = (automationData: Omit<Automation, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }) => {
-    if (automationData.id) {
-      updateAutomation(automationData.id, automationData);
+  const handleSaveAutomation = async (automationData: {
+    id?: string;
+    name: string;
+    description?: string;
+    trigger: AutomationTrigger;
+    conditions: AutomationCondition[];
+    actions: AutomationActionConfig[];
+    is_active: boolean;
+  }) => {
+    try {
+      if (automationData.id) {
+        await updateAutomation.mutateAsync({
+          id: automationData.id,
+          name: automationData.name,
+          description: automationData.description,
+          trigger: automationData.trigger,
+          conditions: automationData.conditions as unknown as Database['public']['Tables']['automations']['Update']['conditions'],
+          actions: automationData.actions as unknown as Database['public']['Tables']['automations']['Update']['actions'],
+          is_active: automationData.is_active,
+        });
+        toast({
+          title: 'Automação atualizada',
+          description: 'As alterações foram salvas.',
+        });
+      } else {
+        await createAutomation.mutateAsync({
+          name: automationData.name,
+          description: automationData.description,
+          trigger: automationData.trigger,
+          conditions: automationData.conditions as unknown as Database['public']['Tables']['automations']['Insert']['conditions'],
+          actions: automationData.actions as unknown as Database['public']['Tables']['automations']['Insert']['actions'],
+          is_active: automationData.is_active,
+        });
+        toast({
+          title: 'Automação criada',
+          description: 'Nova automação adicionada com sucesso.',
+        });
+      }
+      setModalOpen(false);
+    } catch {
       toast({
-        title: 'Automação atualizada',
-        description: 'As alterações foram salvas.',
-      });
-    } else {
-      addAutomation(automationData);
-      toast({
-        title: 'Automação criada',
-        description: 'Nova automação adicionada com sucesso.',
+        title: 'Erro ao salvar',
+        description: 'Não foi possível salvar a automação.',
+        variant: 'destructive',
       });
     }
   };
 
-  const handleToggleStatus = (automation: Automation) => {
-    toggleAutomationStatus(automation.id);
-    toast({
-      title: automation.isActive ? 'Automação desativada' : 'Automação ativada',
-      description: automation.isActive
-        ? 'A automação foi pausada.'
-        : 'A automação está ativa agora.',
-    });
+  const handleToggleStatus = async (automation: AutomationRow) => {
+    try {
+      await toggleAutomation.mutateAsync({ id: automation.id, isActive: !automation.is_active });
+      toast({
+        title: automation.is_active ? 'Automação desativada' : 'Automação ativada',
+        description: automation.is_active
+          ? 'A automação foi pausada.'
+          : 'A automação está ativa agora.',
+      });
+    } catch {
+      toast({
+        title: 'Erro ao alterar status',
+        description: 'Não foi possível alterar o status da automação.',
+        variant: 'destructive',
+      });
+    }
   };
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <Card className="p-12">
+          <div className="text-center">
+            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+              <Zap className="w-8 h-8 text-destructive" />
+            </div>
+            <h3 className="font-semibold text-foreground mb-2">Erro ao carregar automações</h3>
+            <p className="text-muted-foreground">
+              Ocorreu um erro ao carregar as automações. Tente novamente.
+            </p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -161,11 +288,23 @@ const Automations = () => {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Automações</h1>
           <p className="text-muted-foreground">
-            {automations.length} automações · {activeCount} ativas
+            {isLoading ? (
+              <Skeleton className="h-4 w-32 inline-block" />
+            ) : (
+              <>{automations.length} automações · {activeCount} ativas</>
+            )}
           </p>
         </div>
-        <Button onClick={handleNewAutomation} className="gradient-primary text-primary-foreground gap-2">
-          <Plus className="w-4 h-4" />
+        <Button 
+          onClick={handleNewAutomation} 
+          className="gradient-primary text-primary-foreground gap-2"
+          disabled={createAutomation.isPending}
+        >
+          {createAutomation.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Plus className="w-4 h-4" />
+          )}
           Nova Automação
         </Button>
       </div>
@@ -178,7 +317,11 @@ const Automations = () => {
               <Zap className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{automations.length}</p>
+              {isLoading ? (
+                <Skeleton className="h-8 w-12" />
+              ) : (
+                <p className="text-2xl font-bold text-foreground">{automations.length}</p>
+              )}
               <p className="text-sm text-muted-foreground">Total de automações</p>
             </div>
           </CardContent>
@@ -189,7 +332,11 @@ const Automations = () => {
               <Play className="w-6 h-6 text-success" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{activeCount}</p>
+              {isLoading ? (
+                <Skeleton className="h-8 w-12" />
+              ) : (
+                <p className="text-2xl font-bold text-foreground">{activeCount}</p>
+              )}
               <p className="text-sm text-muted-foreground">Automações ativas</p>
             </div>
           </CardContent>
@@ -200,7 +347,11 @@ const Automations = () => {
               <Pause className="w-6 h-6 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-foreground">{automations.length - activeCount}</p>
+              {isLoading ? (
+                <Skeleton className="h-8 w-12" />
+              ) : (
+                <p className="text-2xl font-bold text-foreground">{automations.length - activeCount}</p>
+              )}
               <p className="text-sm text-muted-foreground">Automações pausadas</p>
             </div>
           </CardContent>
@@ -220,106 +371,118 @@ const Automations = () => {
 
       {/* Automations List */}
       <div className="space-y-4">
-        {filteredAutomations.map((automation, index) => (
-          <motion.div
-            key={automation.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-          >
-            <Card className={cn(
-              'hover:shadow-md transition-all',
-              !automation.isActive && 'opacity-60'
-            )}>
-              <CardContent className="p-5">
-                <div className="flex items-start gap-4">
-                  <div className={cn(
-                    'w-10 h-10 rounded-lg flex items-center justify-center shrink-0',
-                    automation.isActive ? 'bg-primary/10' : 'bg-muted'
-                  )}>
-                    <Zap className={cn(
-                      'w-5 h-5',
-                      automation.isActive ? 'text-primary' : 'text-muted-foreground'
-                    )} />
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4 mb-2">
-                      <div>
-                        <h3 className="font-semibold text-foreground">{automation.name}</h3>
-                        {automation.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-1">
-                            {automation.description}
-                          </p>
-                        )}
+        {isLoading ? (
+          <>
+            <AutomationSkeleton />
+            <AutomationSkeleton />
+            <AutomationSkeleton />
+          </>
+        ) : filteredAutomations.length > 0 ? (
+          filteredAutomations.map((automation, index) => {
+            const actions = parseActions(automation.actions);
+            const conditions = parseConditions(automation.conditions);
+            
+            return (
+              <motion.div
+                key={automation.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <Card className={cn(
+                  'hover:shadow-md transition-all',
+                  !automation.is_active && 'opacity-60'
+                )}>
+                  <CardContent className="p-5">
+                    <div className="flex items-start gap-4">
+                      <div className={cn(
+                        'w-10 h-10 rounded-lg flex items-center justify-center shrink-0',
+                        automation.is_active ? 'bg-primary/10' : 'bg-muted'
+                      )}>
+                        <Zap className={cn(
+                          'w-5 h-5',
+                          automation.is_active ? 'text-primary' : 'text-muted-foreground'
+                        )} />
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Switch
-                          checked={automation.isActive}
-                          onCheckedChange={() => handleToggleStatus(automation)}
-                        />
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditAutomation(automation)}>
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteClick(automation)}
-                              className="text-destructive"
-                            >
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
 
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <Badge variant="outline" className="text-xs">
-                        <Clock className="w-3 h-3 mr-1" />
-                        {getTriggerLabel(automation.trigger)}
-                      </Badge>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-4 mb-2">
+                          <div>
+                            <h3 className="font-semibold text-foreground">{automation.name}</h3>
+                            {automation.description && (
+                              <p className="text-sm text-muted-foreground line-clamp-1">
+                                {automation.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Switch
+                              checked={automation.is_active}
+                              onCheckedChange={() => handleToggleStatus(automation)}
+                              disabled={toggleAutomation.isPending}
+                            />
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditAutomation(automation)}>
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteClick(automation)}
+                                  className="text-destructive"
+                                >
+                                  Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
 
-                      {automation.conditions.length > 0 && (
-                        <Badge variant="secondary" className="text-xs">
-                          {automation.conditions.length} condição(ões)
-                        </Badge>
-                      )}
-
-                      <div className="flex items-center gap-1">
-                        {automation.actions.slice(0, 3).map((action, i) => {
-                          const Icon = getActionIcon(action.type);
-                          return (
-                            <Badge key={i} variant="secondary" className="text-xs gap-1">
-                              <Icon className="w-3 h-3" />
-                              {getActionLabel(action.type)}
-                            </Badge>
-                          );
-                        })}
-                        {automation.actions.length > 3 && (
-                          <Badge variant="secondary" className="text-xs">
-                            +{automation.actions.length - 3}
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <Badge variant="outline" className="text-xs">
+                            <Clock className="w-3 h-3 mr-1" />
+                            {getTriggerLabel(automation.trigger)}
                           </Badge>
-                        )}
+
+                          {conditions.length > 0 && (
+                            <Badge variant="secondary" className="text-xs">
+                              {conditions.length} condição(ões)
+                            </Badge>
+                          )}
+
+                          <div className="flex items-center gap-1">
+                            {actions.slice(0, 3).map((action, i) => {
+                              const Icon = getActionIcon(action.type);
+                              return (
+                                <Badge key={i} variant="secondary" className="text-xs gap-1">
+                                  <Icon className="w-3 h-3" />
+                                  {getActionLabel(action.type)}
+                                </Badge>
+                              );
+                            })}
+                            {actions.length > 3 && (
+                              <Badge variant="secondary" className="text-xs">
+                                +{actions.length - 3}
+                              </Badge>
+                            )}
+                          </div>
+
+                          <span className="text-xs text-muted-foreground ml-auto">
+                            Atualizado em {format(new Date(automation.updated_at), "dd/MM/yyyy", { locale: ptBR })}
+                          </span>
+                        </div>
                       </div>
-
-                      <span className="text-xs text-muted-foreground ml-auto">
-                        Atualizado em {format(automation.updatedAt, "dd/MM/yyyy", { locale: ptBR })}
-                      </span>
                     </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-
-        {filteredAutomations.length === 0 && (
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })
+        ) : (
           <Card className="p-12">
             <div className="text-center">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
@@ -344,13 +507,23 @@ const Automations = () => {
         onOpenChange={setModalOpen}
         automation={selectedAutomation}
         onSave={handleSaveAutomation}
-        onDelete={(id) => {
-          deleteAutomation(id);
-          toast({
-            title: 'Automação excluída',
-            description: 'A automação foi removida com sucesso.',
-          });
+        onDelete={async (id) => {
+          try {
+            await deleteAutomation.mutateAsync(id);
+            toast({
+              title: 'Automação excluída',
+              description: 'A automação foi removida com sucesso.',
+            });
+            setModalOpen(false);
+          } catch {
+            toast({
+              title: 'Erro ao excluir',
+              description: 'Não foi possível excluir a automação.',
+              variant: 'destructive',
+            });
+          }
         }}
+        isSaving={createAutomation.isPending || updateAutomation.isPending}
       />
 
       {/* Delete Confirmation Dialog */}
@@ -363,8 +536,15 @@ const Automations = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground">
+            <AlertDialogCancel disabled={deleteAutomation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete} 
+              className="bg-destructive text-destructive-foreground"
+              disabled={deleteAutomation.isPending}
+            >
+              {deleteAutomation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : null}
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>

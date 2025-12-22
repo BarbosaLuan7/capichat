@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, X, Trash2 } from 'lucide-react';
+import { Plus, X, Trash2, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -30,14 +30,30 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
-import { Automation, AutomationTrigger, AutomationAction, AutomationCondition, AutomationActionConfig } from '@/types';
-import { mockUsers, mockFunnelStages, mockLabels } from '@/data/mockData';
+import { useFunnelStages } from '@/hooks/useFunnelStages';
+import { useLabels } from '@/hooks/useLabels';
+import { useProfiles } from '@/hooks/useProfiles';
+import type { Database } from '@/integrations/supabase/types';
+
+type AutomationTrigger = Database['public']['Enums']['automation_trigger'];
+type AutomationAction = Database['public']['Enums']['automation_action'];
+type AutomationRow = Database['public']['Tables']['automations']['Row'];
+
+interface AutomationCondition {
+  field: string;
+  operator: string;
+  value: string;
+}
+
+interface AutomationActionConfig {
+  type: AutomationAction;
+  params: Record<string, string>;
+}
 
 const automationSchema = z.object({
   name: z.string().min(1, 'Nome obrigatório'),
   description: z.string().optional(),
-  isActive: z.boolean(),
+  is_active: z.boolean(),
   trigger: z.string().min(1, 'Gatilho obrigatório'),
 });
 
@@ -46,9 +62,18 @@ type AutomationFormData = z.infer<typeof automationSchema>;
 interface AutomationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  automation?: Automation | null;
-  onSave: (automation: Omit<Automation, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }) => void;
+  automation?: AutomationRow | null;
+  onSave: (automation: {
+    id?: string;
+    name: string;
+    description?: string;
+    trigger: AutomationTrigger;
+    conditions: AutomationCondition[];
+    actions: AutomationActionConfig[];
+    is_active: boolean;
+  }) => void;
   onDelete?: (automationId: string) => void;
+  isSaving?: boolean;
 }
 
 const triggerOptions: { value: AutomationTrigger; label: string }[] = [
@@ -89,16 +114,27 @@ const operatorOptions = [
   { value: 'less_than', label: 'Menor que' },
 ];
 
-export const AutomationModal = ({ open, onOpenChange, automation, onSave, onDelete }: AutomationModalProps) => {
-  const [conditions, setConditions] = useState<AutomationCondition[]>(automation?.conditions || []);
-  const [actions, setActions] = useState<AutomationActionConfig[]>(automation?.actions || []);
+export const AutomationModal = ({ 
+  open, 
+  onOpenChange, 
+  automation, 
+  onSave, 
+  onDelete,
+  isSaving = false 
+}: AutomationModalProps) => {
+  const { data: funnelStages = [] } = useFunnelStages();
+  const { data: labels = [] } = useLabels();
+  const { data: profiles = [] } = useProfiles();
+  
+  const [conditions, setConditions] = useState<AutomationCondition[]>([]);
+  const [actions, setActions] = useState<AutomationActionConfig[]>([]);
 
   const form = useForm<AutomationFormData>({
     resolver: zodResolver(automationSchema),
     defaultValues: {
       name: '',
       description: '',
-      isActive: true,
+      is_active: true,
       trigger: '',
     },
   });
@@ -108,36 +144,39 @@ export const AutomationModal = ({ open, onOpenChange, automation, onSave, onDele
       form.reset({
         name: automation.name,
         description: automation.description || '',
-        isActive: automation.isActive,
+        is_active: automation.is_active,
         trigger: automation.trigger,
       });
-      setConditions(automation.conditions);
-      setActions(automation.actions);
+      const parsedConditions = Array.isArray(automation.conditions) 
+        ? automation.conditions as AutomationCondition[] 
+        : [];
+      const parsedActions = Array.isArray(automation.actions) 
+        ? automation.actions as AutomationActionConfig[] 
+        : [];
+      setConditions(parsedConditions);
+      setActions(parsedActions);
     } else {
       form.reset({
         name: '',
         description: '',
-        isActive: true,
+        is_active: true,
         trigger: '',
       });
       setConditions([]);
       setActions([]);
     }
-  }, [automation, form]);
+  }, [automation, form, open]);
 
   const handleSubmit = (data: AutomationFormData) => {
-    const automationData = {
+    onSave({
       name: data.name,
       description: data.description,
-      isActive: data.isActive,
+      is_active: data.is_active,
       trigger: data.trigger as AutomationTrigger,
       conditions,
       actions,
-      createdBy: '1',
       ...(automation?.id && { id: automation.id }),
-    };
-    onSave(automationData);
-    onOpenChange(false);
+    });
   };
 
   const addCondition = () => {
@@ -182,7 +221,7 @@ export const AutomationModal = ({ open, onOpenChange, automation, onSave, onDele
               <SelectValue placeholder="Selecionar etapa" />
             </SelectTrigger>
             <SelectContent>
-              {mockFunnelStages.map((stage) => (
+              {funnelStages.map((stage) => (
                 <SelectItem key={stage.id} value={stage.id}>{stage.name}</SelectItem>
               ))}
             </SelectContent>
@@ -215,7 +254,7 @@ export const AutomationModal = ({ open, onOpenChange, automation, onSave, onDele
               <SelectValue placeholder="Selecionar etiqueta" />
             </SelectTrigger>
             <SelectContent>
-              {mockLabels.map((label) => (
+              {labels.map((label) => (
                 <SelectItem key={label.id} value={label.id}>{label.name}</SelectItem>
               ))}
             </SelectContent>
@@ -234,7 +273,7 @@ export const AutomationModal = ({ open, onOpenChange, automation, onSave, onDele
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="assigned">Responsável atual</SelectItem>
-                {mockUsers.filter(u => u.isActive).map((user) => (
+                {profiles.filter(u => u.is_active).map((user) => (
                   <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -305,7 +344,7 @@ export const AutomationModal = ({ open, onOpenChange, automation, onSave, onDele
             <div className="flex items-center justify-between">
               <FormField
                 control={form.control}
-                name="isActive"
+                name="is_active"
                 render={({ field }) => (
                   <FormItem className="flex items-center gap-2">
                     <FormControl>
@@ -396,7 +435,7 @@ export const AutomationModal = ({ open, onOpenChange, automation, onSave, onDele
                     <div key={index} className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
                       <Select
                         value={condition.field}
-                        onValueChange={(v) => updateCondition(index, { field: v as AutomationCondition['field'] })}
+                        onValueChange={(v) => updateCondition(index, { field: v })}
                       >
                         <SelectTrigger className="w-[150px]">
                           <SelectValue />
@@ -409,7 +448,7 @@ export const AutomationModal = ({ open, onOpenChange, automation, onSave, onDele
                       </Select>
                       <Select
                         value={condition.operator}
-                        onValueChange={(v) => updateCondition(index, { operator: v as AutomationCondition['operator'] })}
+                        onValueChange={(v) => updateCondition(index, { operator: v })}
                       >
                         <SelectTrigger className="w-[120px]">
                           <SelectValue />
@@ -478,26 +517,36 @@ export const AutomationModal = ({ open, onOpenChange, automation, onSave, onDele
               )}
             </div>
 
+            <Separator />
+
             <div className="flex justify-between pt-4">
-              {automation && onDelete && (
+              {automation && onDelete ? (
                 <Button
                   type="button"
-                  variant="destructive"
-                  onClick={() => {
-                    onDelete(automation.id);
-                    onOpenChange(false);
-                  }}
+                  variant="ghost"
+                  onClick={() => onDelete(automation.id)}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  disabled={isSaving}
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Excluir
                 </Button>
+              ) : (
+                <div />
               )}
-              <div className="flex gap-2 ml-auto">
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
                   Cancelar
                 </Button>
-                <Button type="submit" className="gradient-primary text-primary-foreground" disabled={actions.length === 0}>
-                  {automation ? 'Salvar' : 'Criar Automação'}
+                <Button type="submit" className="gradient-primary text-primary-foreground" disabled={isSaving}>
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    'Salvar'
+                  )}
                 </Button>
               </div>
             </div>
