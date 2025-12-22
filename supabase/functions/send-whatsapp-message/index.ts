@@ -455,8 +455,8 @@ serve(async (req) => {
     if (!result.success) {
       console.error('[send-whatsapp-message] Falha ao enviar:', result.error);
       return new Response(
-        JSON.stringify({ error: result.error }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: result.error, provider: config.provider }),
+        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

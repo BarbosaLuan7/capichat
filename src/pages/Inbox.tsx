@@ -257,7 +257,8 @@ const Inbox = () => {
         }
       }
     } catch (error) {
-      toast.error('Erro ao enviar mensagem');
+      const message = error instanceof Error ? error.message : 'Erro ao enviar mensagem';
+      toast.error(message);
     }
   };
 
@@ -286,7 +287,8 @@ const Inbox = () => {
       setShowAudioRecorder(false);
       toast.success('Áudio enviado');
     } catch (error) {
-      toast.error('Erro ao enviar áudio');
+      const message = error instanceof Error ? error.message : 'Erro ao enviar áudio';
+      toast.error(message);
     }
   };
 
