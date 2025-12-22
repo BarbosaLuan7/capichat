@@ -98,6 +98,7 @@ export type Database = {
         Row: {
           color: string
           created_at: string
+          grupo: string | null
           id: string
           name: string
           order: number
@@ -105,6 +106,7 @@ export type Database = {
         Insert: {
           color?: string
           created_at?: string
+          grupo?: string | null
           id?: string
           name: string
           order?: number
@@ -112,6 +114,7 @@ export type Database = {
         Update: {
           color?: string
           created_at?: string
+          grupo?: string | null
           id?: string
           name?: string
           order?: number
@@ -513,7 +516,14 @@ export type Database = {
         | "task_overdue"
         | "conversation_no_response"
       conversation_status: "open" | "pending" | "resolved"
-      label_category: "origem" | "interesse" | "prioridade" | "status"
+      label_category:
+        | "origem"
+        | "interesse"
+        | "prioridade"
+        | "status"
+        | "beneficio"
+        | "condicao_saude"
+        | "desqualificacao"
       lead_temperature: "cold" | "warm" | "hot"
       message_status: "sent" | "delivered" | "read"
       message_type: "text" | "image" | "audio" | "video" | "document"
@@ -668,7 +678,15 @@ export const Constants = {
         "conversation_no_response",
       ],
       conversation_status: ["open", "pending", "resolved"],
-      label_category: ["origem", "interesse", "prioridade", "status"],
+      label_category: [
+        "origem",
+        "interesse",
+        "prioridade",
+        "status",
+        "beneficio",
+        "condicao_saude",
+        "desqualificacao",
+      ],
       lead_temperature: ["cold", "warm", "hot"],
       message_status: ["sent", "delivered", "read"],
       message_type: ["text", "image", "audio", "video", "document"],
