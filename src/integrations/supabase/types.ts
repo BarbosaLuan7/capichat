@@ -462,6 +462,7 @@ export type Database = {
           conversation_id: string
           created_at: string
           direction: Database["public"]["Enums"]["message_direction"] | null
+          external_id: string | null
           id: string
           is_internal_note: boolean | null
           is_starred: boolean | null
@@ -477,6 +478,7 @@ export type Database = {
           conversation_id: string
           created_at?: string
           direction?: Database["public"]["Enums"]["message_direction"] | null
+          external_id?: string | null
           id?: string
           is_internal_note?: boolean | null
           is_starred?: boolean | null
@@ -492,6 +494,7 @@ export type Database = {
           conversation_id?: string
           created_at?: string
           direction?: Database["public"]["Enums"]["message_direction"] | null
+          external_id?: string | null
           id?: string
           is_internal_note?: boolean | null
           is_starred?: boolean | null

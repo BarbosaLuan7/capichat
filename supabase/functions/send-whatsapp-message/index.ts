@@ -460,7 +460,7 @@ serve(async (req) => {
       );
     }
 
-    // Save message to database
+    // Save message to database with external_id for status tracking
     const { data: savedMessage, error: messageError } = await supabase
       .from('messages')
       .insert({
@@ -473,6 +473,7 @@ serve(async (req) => {
         sender_id: user.id,
         direction: 'outbound',
         status: 'sent',
+        external_id: result.messageId || null, // ID do WhatsApp para rastrear status
       })
       .select()
       .single();

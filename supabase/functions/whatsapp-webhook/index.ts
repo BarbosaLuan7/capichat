@@ -193,6 +193,44 @@ serve(async (req) => {
       // Log completo para debug
       console.log('[whatsapp-webhook] Payload WAHA completo:', JSON.stringify(body));
       
+      // ========== WAHA: Evento de ACK (status delivered/read) ==========
+      if (event === 'message.ack') {
+        const payload = body.payload || {};
+        const messageId = payload.id || payload.key?.id || payload.ids?.[0];
+        const ackName = payload.ackName || payload.receipt_type || payload.ack;
+        const ackNumber = payload.ack;
+        
+        console.log('[whatsapp-webhook] ACK recebido:', { messageId, ackName, ackNumber });
+        
+        let newStatus: 'delivered' | 'read' | null = null;
+        
+        // WAHA usa ackName: 'DEVICE' (entregue), 'READ' (lida), 'PLAYED' (áudio reproduzido)
+        // Ou ack: 2 (delivered), 3 (read)
+        if (['DEVICE', 'delivered', 'DELIVERY_ACK'].includes(ackName) || ackNumber === 2) {
+          newStatus = 'delivered';
+        } else if (['READ', 'read', 'PLAYED'].includes(ackName) || ackNumber === 3) {
+          newStatus = 'read';
+        }
+        
+        if (newStatus && messageId) {
+          const { error: updateError } = await supabase
+            .from('messages')
+            .update({ status: newStatus })
+            .eq('external_id', messageId);
+          
+          if (updateError) {
+            console.error('[whatsapp-webhook] Erro ao atualizar status:', updateError);
+          } else {
+            console.log('[whatsapp-webhook] Status atualizado para:', newStatus, 'messageId:', messageId);
+          }
+        }
+        
+        return new Response(
+          JSON.stringify({ success: true, event: 'ack', status: newStatus, messageId }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       // Eventos de mensagem do WAHA
       if (event === 'message' || event === 'message.any') {
         const payload = body.payload as WAHAMessage;
@@ -233,6 +271,42 @@ serve(async (req) => {
     else if (body.event && body.instance !== undefined) {
       provider = 'evolution';
       event = body.event;
+      
+      // ========== Evolution: Evento de status update ==========
+      if (event === 'messages.update') {
+        const payload = body.data || {};
+        const messageId = payload.key?.id || payload.id;
+        const status = payload.update?.status || payload.status;
+        
+        console.log('[whatsapp-webhook] Evolution status update:', { messageId, status });
+        
+        let newStatus: 'delivered' | 'read' | null = null;
+        
+        // Evolution usa: 2 = delivered, 3 = read (ou strings equivalentes)
+        if (status === 2 || status === 'DELIVERY_ACK' || status === 'delivered') {
+          newStatus = 'delivered';
+        } else if (status === 3 || status === 'READ' || status === 'read') {
+          newStatus = 'read';
+        }
+        
+        if (newStatus && messageId) {
+          const { error: updateError } = await supabase
+            .from('messages')
+            .update({ status: newStatus })
+            .eq('external_id', messageId);
+          
+          if (updateError) {
+            console.error('[whatsapp-webhook] Erro ao atualizar status Evolution:', updateError);
+          } else {
+            console.log('[whatsapp-webhook] Status Evolution atualizado para:', newStatus, 'messageId:', messageId);
+          }
+        }
+        
+        return new Response(
+          JSON.stringify({ success: true, event: 'status_update', status: newStatus, messageId }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       
       if (event === 'messages.upsert') {
         const payload = body.data as EvolutionMessage;
