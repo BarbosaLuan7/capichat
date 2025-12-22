@@ -340,82 +340,128 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const payload: EventPayload = await req.json();
-    console.log('[Automation] Processing event:', payload.event);
-
-    // Map event to trigger
-    const trigger = mapEventToTrigger(payload.event);
-    if (!trigger) {
-      console.log('[Automation] No matching trigger for event:', payload.event);
-      return new Response(
-        JSON.stringify({ message: 'No matching trigger', event: payload.event }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Fetch active automations for this trigger
-    const { data: automations, error: autoError } = await supabase
-      .from('automations')
+    // Get unprocessed items from automation queue
+    const { data: queueItems, error: queueError } = await supabase
+      .from('automation_queue')
       .select('*')
-      .eq('trigger', trigger)
-      .eq('is_active', true);
+      .eq('processed', false)
+      .order('created_at', { ascending: true })
+      .limit(100);
 
-    if (autoError) {
-      console.error('[Automation] Error fetching automations:', autoError);
-      throw autoError;
+    if (queueError) {
+      console.error('[Automation] Error fetching queue:', queueError);
+      throw queueError;
     }
 
-    if (!automations || automations.length === 0) {
-      console.log('[Automation] No active automations for trigger:', trigger);
+    if (!queueItems || queueItems.length === 0) {
+      console.log('[Automation] No items to process');
       return new Response(
-        JSON.stringify({ message: 'No active automations', trigger }),
+        JSON.stringify({ message: 'No items to process', processed: 0 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[Automation] Found ${automations.length} automations for trigger:`, trigger);
+    console.log(`[Automation] Processing ${queueItems.length} queue items`);
 
-    const results: { automationId: string; name: string; matched: boolean; executed: boolean; results?: unknown }[] = [];
+    const allResults: unknown[] = [];
 
-    for (const automation of automations as Automation[]) {
-      // Evaluate conditions
-      const conditionsMatch = evaluateConditions(automation.conditions || [], payload.data);
+    for (const queueItem of queueItems) {
+      const payload: EventPayload = {
+        event: queueItem.event,
+        timestamp: queueItem.created_at,
+        data: queueItem.payload.data || queueItem.payload,
+      };
 
-      if (!conditionsMatch) {
-        console.log(`[Automation ${automation.id}] Conditions not met, skipping`);
-        results.push({ automationId: automation.id, name: automation.name, matched: false, executed: false });
+      console.log('[Automation] Processing event:', payload.event);
+
+      // Map event to trigger
+      const trigger = mapEventToTrigger(payload.event);
+      if (!trigger) {
+        console.log('[Automation] No matching trigger for event:', payload.event);
+        // Mark as processed
+        await supabase
+          .from('automation_queue')
+          .update({ processed: true, processed_at: new Date().toISOString() })
+          .eq('id', queueItem.id);
         continue;
       }
 
-      console.log(`[Automation ${automation.id}] Conditions met, executing actions`);
+      // Fetch active automations for this trigger
+      const { data: automations, error: autoError } = await supabase
+        .from('automations')
+        .select('*')
+        .eq('trigger', trigger)
+        .eq('is_active', true);
 
-      // Execute actions
-      const actionResults = await executeActions(
-        supabase,
-        automation.actions || [],
-        payload.data,
-        automation.id
-      );
+      if (autoError) {
+        console.error('[Automation] Error fetching automations:', autoError);
+        continue;
+      }
 
-      results.push({
-        automationId: automation.id,
-        name: automation.name,
-        matched: true,
-        executed: actionResults.success,
-        results: actionResults.results,
+      if (!automations || automations.length === 0) {
+        console.log('[Automation] No active automations for trigger:', trigger);
+        // Mark as processed
+        await supabase
+          .from('automation_queue')
+          .update({ processed: true, processed_at: new Date().toISOString() })
+          .eq('id', queueItem.id);
+        continue;
+      }
+
+      console.log(`[Automation] Found ${automations.length} automations for trigger:`, trigger);
+
+      const results: { automationId: string; name: string; matched: boolean; executed: boolean; results?: unknown }[] = [];
+
+      for (const automation of automations as Automation[]) {
+        // Evaluate conditions
+        const conditionsMatch = evaluateConditions(automation.conditions || [], payload.data);
+
+        if (!conditionsMatch) {
+          console.log(`[Automation ${automation.id}] Conditions not met, skipping`);
+          results.push({ automationId: automation.id, name: automation.name, matched: false, executed: false });
+          continue;
+        }
+
+        console.log(`[Automation ${automation.id}] Conditions met, executing actions`);
+
+        // Execute actions
+        const actionResults = await executeActions(
+          supabase,
+          automation.actions || [],
+          payload.data,
+          automation.id
+        );
+
+        results.push({
+          automationId: automation.id,
+          name: automation.name,
+          matched: true,
+          executed: actionResults.success,
+          results: actionResults.results,
+        });
+
+        console.log(`[Automation ${automation.id}] Execution complete:`, actionResults);
+      }
+
+      allResults.push({
+        queueId: queueItem.id,
+        event: payload.event,
+        trigger,
+        results,
       });
 
-      // Log automation execution
-      console.log(`[Automation ${automation.id}] Execution complete:`, actionResults);
+      // Mark as processed
+      await supabase
+        .from('automation_queue')
+        .update({ processed: true, processed_at: new Date().toISOString() })
+        .eq('id', queueItem.id);
     }
 
     return new Response(
       JSON.stringify({
-        message: 'Automations processed',
-        event: payload.event,
-        trigger,
-        automationsProcessed: results.length,
-        results,
+        message: 'Automation queue processed',
+        processed: queueItems.length,
+        results: allResults,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
