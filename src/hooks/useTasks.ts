@@ -12,11 +12,7 @@ export function useTasks() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tasks')
-        .select(`
-          *,
-          profiles:assigned_to (id, name, email, avatar),
-          leads (id, name, phone)
-        `)
+        .select('*')
         .order('due_date', { ascending: true });
       
       if (error) throw error;
@@ -32,11 +28,7 @@ export function useTask(id: string | undefined) {
       if (!id) return null;
       const { data, error } = await supabase
         .from('tasks')
-        .select(`
-          *,
-          profiles:assigned_to (id, name, email, avatar),
-          leads (id, name, phone)
-        `)
+        .select('*')
         .eq('id', id)
         .maybeSingle();
       
