@@ -26,7 +26,7 @@ const settingsMenu = [
   { icon: Building2, label: 'Empresa', description: 'Informações da empresa', href: undefined },
   { icon: Users, label: 'Usuários', description: 'Gerenciar membros da equipe', href: '/settings/users' },
   { icon: Tag, label: 'Etiquetas', description: 'Configurar etiquetas', href: '/settings/labels' },
-  { icon: MessageSquare, label: 'Templates', description: 'Mensagens rápidas', href: undefined },
+  { icon: MessageSquare, label: 'Templates', description: 'Mensagens rápidas', href: '/settings/templates' },
   { icon: Zap, label: 'Automações', description: 'Regras automáticas', href: '/automations' },
   { icon: Key, label: 'Integrações', description: 'APIs e webhooks', href: undefined },
   { icon: Bell, label: 'Notificações', description: 'Preferências de alertas', href: undefined },
