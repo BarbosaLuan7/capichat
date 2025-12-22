@@ -63,6 +63,7 @@ import { ptBR } from 'date-fns/locale';
 import { TaskModal } from '@/components/tasks/TaskModal';
 import { TaskCalendar } from '@/components/tasks/TaskCalendar';
 import { SubtaskList } from '@/components/tasks/SubtaskList';
+import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 import { toast } from 'sonner';
 
 import type { Database } from '@/integrations/supabase/types';
@@ -444,6 +445,7 @@ const Tasks = () => {
 
   return (
     <div className="p-6 space-y-6">
+      <PageBreadcrumb items={[{ label: 'Tarefas' }]} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

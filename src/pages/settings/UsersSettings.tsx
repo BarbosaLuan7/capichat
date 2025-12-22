@@ -34,6 +34,7 @@ import { useAppStore } from '@/store/appStore';
 import { User } from '@/types';
 import { UserModal } from '@/components/users/UserModal';
 import { getRoleLabel } from '@/lib/permissions';
+import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 import { cn } from '@/lib/utils';
 
 const UsersSettings = () => {
@@ -99,6 +100,7 @@ const UsersSettings = () => {
 
   return (
     <div className="p-6 space-y-6">
+      <PageBreadcrumb items={[{ label: 'Configurações', href: '/settings' }, { label: 'Usuários' }]} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

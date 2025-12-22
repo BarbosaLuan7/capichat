@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { useAuthStore } from '@/store/authStore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 
 const settingsMenu = [
   { icon: Building2, label: 'Empresa', description: 'Informações da empresa' },
@@ -36,6 +37,7 @@ const SettingsPage = () => {
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
+      <PageBreadcrumb items={[{ label: 'Configurações' }]} />
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-foreground">Configurações</h1>

@@ -53,6 +53,7 @@ import { useFunnelStages } from '@/hooks/useFunnelStages';
 import { useLabels } from '@/hooks/useLabels';
 import { LeadModal } from '@/components/leads/LeadModal';
 import { BulkActionsBar } from '@/components/leads/BulkActionsBar';
+import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -139,6 +140,7 @@ const Leads = () => {
 
   return (
     <div className="p-6 space-y-6">
+      <PageBreadcrumb items={[{ label: 'Leads' }]} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAppStore } from '@/store/appStore';
 import { Team } from '@/types';
 import { TeamModal } from '@/components/teams/TeamModal';
+import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 
 const TeamsSettings = () => {
   const { teams, users, leads, addTeam, updateTeam, deleteTeam } = useAppStore();
@@ -56,6 +57,7 @@ const TeamsSettings = () => {
 
   return (
     <div className="p-6 space-y-6">
+      <PageBreadcrumb items={[{ label: 'Configurações', href: '/settings' }, { label: 'Equipes' }]} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

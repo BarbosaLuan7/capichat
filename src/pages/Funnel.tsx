@@ -36,6 +36,7 @@ import { toast } from 'sonner';
 import { useFunnelStages } from '@/hooks/useFunnelStages';
 import { useLeads, useUpdateLeadStage } from '@/hooks/useLeads';
 import { useLabels } from '@/hooks/useLabels';
+import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 import type { Database } from '@/integrations/supabase/types';
 
 type Lead = Database['public']['Tables']['leads']['Row'] & {
@@ -312,6 +313,7 @@ const Funnel = () => {
 
   return (
     <div className="p-6">
+      <PageBreadcrumb items={[{ label: 'Funil de Vendas' }]} />
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 import { mockMetrics } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import {
@@ -137,6 +138,7 @@ const Dashboard = () => {
 
   return (
     <div className="p-6 space-y-6">
+      <PageBreadcrumb items={[{ label: 'Dashboard' }]} />
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>

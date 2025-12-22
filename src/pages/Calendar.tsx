@@ -28,6 +28,7 @@ import { Task } from '@/types';
 import { mockUsers, mockLeads } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 import { TaskModal } from '@/components/tasks/TaskModal';
+import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 import { toast } from '@/hooks/use-toast';
 
 const Calendar = () => {
@@ -117,6 +118,7 @@ const Calendar = () => {
 
   return (
     <div className="p-6 space-y-6">
+      <PageBreadcrumb items={[{ label: 'Calendário' }]} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
