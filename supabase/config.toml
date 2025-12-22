@@ -21,6 +21,9 @@ verify_jwt = false
 [functions.api-messages-receive]
 verify_jwt = false
 
+[functions.api-messages-send]
+verify_jwt = false
+
 [functions.dispatch-webhook]
 verify_jwt = false
 
@@ -32,3 +35,6 @@ verify_jwt = false
 
 [functions.whatsapp-webhook]
 verify_jwt = false
+
+[functions.send-whatsapp-message]
+verify_jwt = true

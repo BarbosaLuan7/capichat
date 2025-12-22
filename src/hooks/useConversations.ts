@@ -202,25 +202,37 @@ export function useSendMessage() {
 
   return useMutation({
     mutationFn: async (message: MessageInsert) => {
-      const { data, error } = await supabase
-        .from('messages')
-        .insert(message)
-        .select()
-        .single();
+      console.log('[useSendMessage] Enviando via edge function:', message.conversation_id);
       
-      if (error) throw error;
+      // Call edge function to send via WhatsApp
+      const { data, error } = await supabase.functions.invoke('send-whatsapp-message', {
+        body: {
+          conversation_id: message.conversation_id,
+          content: message.content,
+          type: message.type || 'text',
+          media_url: message.media_url,
+        }
+      });
+      
+      if (error) {
+        console.error('[useSendMessage] Edge function error:', error);
+        throw new Error(error.message || 'Erro ao enviar mensagem');
+      }
 
-      // Update conversation's last_message_at
-      await supabase
-        .from('conversations')
-        .update({ last_message_at: new Date().toISOString() })
-        .eq('id', message.conversation_id);
+      if (!data?.success) {
+        console.error('[useSendMessage] API error:', data?.error);
+        throw new Error(data?.error || 'Erro ao enviar mensagem via WhatsApp');
+      }
 
-      return data;
+      console.log('[useSendMessage] Mensagem enviada:', data);
+      return data.message;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['messages', variables.conversation_id] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+    onError: (error) => {
+      console.error('[useSendMessage] Mutation error:', error);
     },
   });
 }
