@@ -144,12 +144,17 @@ export function useTestWhatsAppConnection() {
 
       if (error) throw error;
       if (!data.success) throw new Error(data.error);
-      return data as { success: boolean; status?: string; phone?: string };
+      return data as { success: boolean; status?: string; phone?: string; engine?: string };
     },
     onSuccess: (data) => {
+      const parts = [
+        data.phone ? `Conectado ao número: ${data.phone}` : (data.status ? `Status: ${data.status}` : ''),
+        data.engine ? `Engine: ${String(data.engine).toUpperCase()}` : '',
+      ].filter(Boolean);
+
       toast({ 
         title: 'Conexão bem sucedida!', 
-        description: data.phone ? `Conectado ao número: ${data.phone}` : `Status: ${data.status}`,
+        description: parts.join(' • '),
       });
     },
     onError: (error: Error) => {
