@@ -120,3 +120,47 @@ export interface InternalNote {
   content: string;
   createdAt: Date;
 }
+
+// Automation Types
+export type AutomationTrigger = 
+  | 'lead_created'
+  | 'lead_stage_changed'
+  | 'lead_temperature_changed'
+  | 'lead_no_response'
+  | 'lead_label_added'
+  | 'task_overdue'
+  | 'conversation_no_response';
+
+export type AutomationAction = 
+  | 'move_lead_to_stage'
+  | 'change_lead_temperature'
+  | 'add_label'
+  | 'remove_label'
+  | 'create_task'
+  | 'notify_user'
+  | 'assign_to_user'
+  | 'send_message';
+
+export interface AutomationCondition {
+  field: 'stage' | 'temperature' | 'label' | 'source' | 'hours_since_last_message' | 'assigned_to';
+  operator: 'equals' | 'not_equals' | 'contains' | 'greater_than' | 'less_than';
+  value: string;
+}
+
+export interface AutomationActionConfig {
+  type: AutomationAction;
+  params: Record<string, string>;
+}
+
+export interface Automation {
+  id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  trigger: AutomationTrigger;
+  conditions: AutomationCondition[];
+  actions: AutomationActionConfig[];
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}

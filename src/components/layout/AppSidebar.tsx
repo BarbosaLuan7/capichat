@@ -17,6 +17,7 @@ import {
   Zap,
   UsersRound,
   UserCog,
+  Workflow,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
@@ -45,6 +46,7 @@ const menuItems: MenuItem[] = [
   { icon: Users, label: 'Leads', path: '/leads' },
   { icon: CheckSquare, label: 'Tarefas', path: '/tasks', badge: 3 },
   { icon: Calendar, label: 'Calendário', path: '/calendar' },
+  { icon: Workflow, label: 'Automações', path: '/automations' },
   { icon: BarChart3, label: 'Relatórios', path: '/reports' },
   {
     icon: Settings,

@@ -13,6 +13,7 @@ import Leads from "./pages/Leads";
 import LeadDetail from "./pages/LeadDetail";
 import Tasks from "./pages/Tasks";
 import Calendar from "./pages/Calendar";
+import Automations from "./pages/Automations";
 import Settings from "./pages/Settings";
 import UsersSettings from "./pages/settings/UsersSettings";
 import TeamsSettings from "./pages/settings/TeamsSettings";
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="leads/:id" element={<LeadDetail />} />
             <Route path="tasks" element={<Tasks />} />
             <Route path="calendar" element={<Calendar />} />
+            <Route path="automations" element={<Automations />} />
             <Route path="settings" element={<Settings />} />
             <Route path="settings/users" element={<UsersSettings />} />
             <Route path="settings/teams" element={<TeamsSettings />} />

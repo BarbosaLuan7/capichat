@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Lead, Conversation, Message, Task, Label, FunnelStage, User, Team } from '@/types';
+import { Lead, Conversation, Message, Task, Label, FunnelStage, User, Team, Automation } from '@/types';
 import { 
   mockLeads, 
   mockConversations, 
@@ -9,6 +9,7 @@ import {
   mockFunnelStages,
   mockUsers,
   mockTeams,
+  mockAutomations,
 } from '@/data/mockData';
 
 interface AppState {
@@ -21,6 +22,7 @@ interface AppState {
   funnelStages: FunnelStage[];
   users: User[];
   teams: Team[];
+  automations: Automation[];
   
   // Selected items
   selectedConversationId: string | null;
@@ -56,6 +58,12 @@ interface AppState {
   updateTeam: (teamId: string, updates: Partial<Team>) => void;
   deleteTeam: (teamId: string) => void;
   
+  // Automation actions
+  addAutomation: (automation: Omit<Automation, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updateAutomation: (automationId: string, updates: Partial<Automation>) => void;
+  deleteAutomation: (automationId: string) => void;
+  toggleAutomationStatus: (automationId: string) => void;
+  
   // Message actions
   addMessage: (message: Omit<Message, 'id' | 'createdAt'>) => void;
   markConversationAsRead: (conversationId: string) => void;
@@ -71,6 +79,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   funnelStages: mockFunnelStages,
   users: mockUsers,
   teams: mockTeams,
+  automations: mockAutomations,
   
   // Selected items
   selectedConversationId: null,
@@ -158,6 +167,36 @@ export const useAppStore = create<AppState>((set, get) => ({
   
   deleteTeam: (teamId) => set((state) => ({
     teams: state.teams.filter((team) => team.id !== teamId),
+  })),
+  
+  // Automation actions
+  addAutomation: (automation) => set((state) => ({
+    automations: [...state.automations, {
+      ...automation,
+      id: `auto-${Date.now()}`,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }],
+  })),
+  
+  updateAutomation: (automationId, updates) => set((state) => ({
+    automations: state.automations.map((automation) =>
+      automation.id === automationId 
+        ? { ...automation, ...updates, updatedAt: new Date() } 
+        : automation
+    ),
+  })),
+  
+  deleteAutomation: (automationId) => set((state) => ({
+    automations: state.automations.filter((automation) => automation.id !== automationId),
+  })),
+  
+  toggleAutomationStatus: (automationId) => set((state) => ({
+    automations: state.automations.map((automation) =>
+      automation.id === automationId 
+        ? { ...automation, isActive: !automation.isActive, updatedAt: new Date() } 
+        : automation
+    ),
   })),
   
   // Message actions
