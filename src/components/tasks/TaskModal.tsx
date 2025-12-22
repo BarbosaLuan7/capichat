@@ -109,7 +109,7 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete }: TaskMo
       dueDate: data.dueDate,
       priority: data.priority,
       status: data.status,
-      leadId: data.leadId || undefined,
+      leadId: data.leadId === 'none' ? undefined : data.leadId || undefined,
       subtasks,
       labelIds: task?.labelIds || [],
       ...(task?.id && { id: task.id }),
@@ -232,7 +232,7 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete }: TaskMo
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Nenhum</SelectItem>
+                        <SelectItem value="none">Nenhum</SelectItem>
                         {mockLeads.map(lead => (
                           <SelectItem key={lead.id} value={lead.id}>
                             {lead.name}
