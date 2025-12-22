@@ -52,6 +52,7 @@ import { useLeads, useDeleteLead } from '@/hooks/useLeads';
 import { useFunnelStages } from '@/hooks/useFunnelStages';
 import { useLabels } from '@/hooks/useLabels';
 import { LeadModal } from '@/components/leads/LeadModal';
+import { BulkActionsBar } from '@/components/leads/BulkActionsBar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -177,19 +178,14 @@ const Leads = () => {
             <ChevronDown className="w-4 h-4" />
           </Button>
 
-          {selectedLeads.length > 0 && (
-            <div className="flex items-center gap-2 ml-auto">
-              <span className="text-sm text-muted-foreground">
-                {selectedLeads.length} selecionados
-              </span>
-              <Button variant="outline" size="sm">
-                Ações em Massa
-                <ChevronDown className="w-4 h-4 ml-2" />
-              </Button>
-            </div>
-          )}
         </div>
       </Card>
+
+      {/* Bulk Actions Bar */}
+      <BulkActionsBar
+        selectedIds={selectedLeads}
+        onClearSelection={() => setSelectedLeads([])}
+      />
 
       {/* Table */}
       <Card>

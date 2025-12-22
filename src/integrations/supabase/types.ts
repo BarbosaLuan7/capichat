@@ -177,6 +177,41 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_activities: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          lead_id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          lead_id: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          lead_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_labels: {
         Row: {
           created_at: string
