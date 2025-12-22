@@ -131,6 +131,16 @@ async function sendWAHA(config: WhatsAppConfig, phone: string, message: string, 
     if (!response.ok) {
       try {
         const errorData = JSON.parse(responseText);
+        
+        // Detectar erro de versão Plus do WAHA
+        if (responseText.includes('Plus version') || responseText.includes('GOWS')) {
+          const mediaTypeLabel = type === 'audio' ? 'áudio' : type === 'image' ? 'imagens' : type === 'video' ? 'vídeos' : 'arquivos';
+          return { 
+            success: false, 
+            error: `Envio de ${mediaTypeLabel} não suportado na versão gratuita do WAHA com engine GOWS. Altere o engine para WEBJS ou faça upgrade para WAHA Plus.` 
+          };
+        }
+        
         return { success: false, error: errorData.message || `Erro ${response.status}` };
       } catch {
         return { success: false, error: `Erro ${response.status}: ${responseText}` };
