@@ -19,7 +19,7 @@ interface ConversationStatusTabsProps {
 export function ConversationStatusTabs({ value, onChange, counts }: ConversationStatusTabsProps) {
   return (
     <Tabs value={value} onValueChange={(v) => onChange(v as ConversationStatus | 'all')}>
-      <TabsList className="w-full bg-muted/50">
+      <TabsList className="w-full bg-muted relative z-10">
         <TabsTrigger value="all" className="flex-1 text-xs gap-1.5">
           Todas
           <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-medium">
