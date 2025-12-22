@@ -48,6 +48,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { useAuth } from '@/hooks/useAuth';
+import { useAISuggestions } from '@/hooks/useAISuggestions';
+import { useAIReminders } from '@/hooks/useAIReminders';
 
 // Components
 import { AttachmentMenu } from '@/components/inbox/AttachmentMenu';
@@ -58,6 +60,8 @@ import { SlashCommandPopover } from '@/components/inbox/SlashCommandPopover';
 import { MessageBubble } from '@/components/inbox/MessageBubble';
 import { LeadDetailsPanel } from '@/components/inbox/LeadDetailsPanel';
 import { InlineNoteMessage } from '@/components/inbox/InlineNoteMessage';
+import { AISuggestions } from '@/components/inbox/AISuggestions';
+import { AIReminderPrompt } from '@/components/inbox/AIReminderPrompt';
 
 import type { Database } from '@/integrations/supabase/types';
 
@@ -75,6 +79,7 @@ const Inbox = () => {
   const [pendingFile, setPendingFile] = useState<{ file: File; type: 'image' | 'video' | 'audio' | 'document' } | null>(null);
   const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
   const [showSlashCommand, setShowSlashCommand] = useState(false);
+  const [showReminderPrompt, setShowReminderPrompt] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -101,6 +106,10 @@ const Inbox = () => {
   
   // Audio recorder
   const audioRecorder = useAudioRecorder();
+  
+  // AI hooks
+  const aiSuggestions = useAISuggestions();
+  const aiReminders = useAIReminders();
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -113,6 +122,21 @@ const Inbox = () => {
       markAsRead.mutate(selectedConversationId);
     }
   }, [selectedConversationId, selectedConversation?.unread_count]);
+
+  // Fetch AI suggestions when conversation changes
+  useEffect(() => {
+    if (messages && messages.length > 0 && leadWithLabels) {
+      aiSuggestions.fetchSuggestions(
+        messages.slice(-10),
+        {
+          name: leadWithLabels.name,
+          stage: leadWithLabels.funnel_stages?.name,
+          temperature: leadWithLabels.temperature,
+          labels: leadWithLabels.labels,
+        }
+      );
+    }
+  }, [selectedConversationId, messages?.length]);
 
   const filteredConversations = conversations?.filter((conv) => {
     // Filter by tab
@@ -179,6 +203,8 @@ const Inbox = () => {
   const handleSendMessage = async () => {
     if ((!messageInput.trim() && !pendingFile) || !selectedConversationId || !user) return;
 
+    const sentMessage = messageInput;
+    
     try {
       let mediaUrl: string | null = null;
       let messageType: 'text' | 'image' | 'video' | 'audio' | 'document' = 'text';
@@ -200,6 +226,14 @@ const Inbox = () => {
 
       setMessageInput('');
       inputRef.current?.focus();
+      
+      // Check for reminders in sent message
+      if (sentMessage.trim().length > 10) {
+        const reminderResult = await aiReminders.detectReminder(sentMessage, leadWithLabels?.name);
+        if (reminderResult?.hasReminder) {
+          setShowReminderPrompt(true);
+        }
+      }
     } catch (error) {
       toast.error('Erro ao enviar mensagem');
     }
@@ -250,6 +284,25 @@ const Inbox = () => {
     setMessageInput(value);
     // Show slash command popover when "/" is typed
     setShowSlashCommand(value.includes('/'));
+  };
+  
+  const handleSelectAISuggestion = (text: string) => {
+    setMessageInput(text);
+    inputRef.current?.focus();
+  };
+  
+  const handleRefreshAISuggestions = () => {
+    if (messages && messages.length > 0 && leadWithLabels) {
+      aiSuggestions.fetchSuggestions(
+        messages.slice(-10),
+        {
+          name: leadWithLabels.name,
+          stage: leadWithLabels.funnel_stages?.name,
+          temperature: leadWithLabels.temperature,
+          labels: leadWithLabels.labels,
+        }
+      );
+    }
   };
 
   // Merge messages and notes for inline display
@@ -635,6 +688,26 @@ const Inbox = () => {
               </div>
             )}
 
+            {/* AI Suggestions */}
+            <AISuggestions
+              suggestions={aiSuggestions.suggestions}
+              isLoading={aiSuggestions.isLoading}
+              onSelectSuggestion={handleSelectAISuggestion}
+              onRefresh={handleRefreshAISuggestions}
+            />
+
+            {/* AI Reminder Prompt */}
+            <AIReminderPrompt
+              show={showReminderPrompt}
+              reminder={aiReminders.reminder}
+              isLoading={aiReminders.isLoading}
+              leadId={leadWithLabels?.id}
+              onClose={() => {
+                setShowReminderPrompt(false);
+                aiReminders.clearReminder();
+              }}
+            />
+
             {/* Message Input */}
             <div className="p-4 border-t border-border bg-card">
               <div className="flex items-center gap-2 max-w-3xl mx-auto">
@@ -734,6 +807,7 @@ const Inbox = () => {
             <LeadDetailsPanel
               lead={leadWithLabels}
               conversationId={selectedConversation.id}
+              messages={messages}
               isFavorite={(selectedConversation as any).is_favorite}
               onToggleFavorite={handleToggleFavorite}
               onTransfer={handleTransfer}

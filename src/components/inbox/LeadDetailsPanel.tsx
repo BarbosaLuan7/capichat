@@ -14,6 +14,7 @@ import {
   FileText,
   History,
   Sparkles,
+  Brain,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +27,8 @@ import { TransferLeadModal } from './TransferLeadModal';
 import { LeadLabelsModal } from './LeadLabelsModal';
 import { InternalNotes } from './InternalNotes';
 import { LeadTimeline } from '@/components/leads/LeadTimeline';
+import { AIClassificationSuggestion } from './AIClassificationSuggestion';
+import { AIConversationSummary } from './AIConversationSummary';
 import type { Database } from '@/integrations/supabase/types';
 
 type Lead = Database['public']['Tables']['leads']['Row'];
@@ -37,6 +40,7 @@ interface LeadDetailsPanelProps {
     labels?: Label[];
   };
   conversationId: string;
+  messages?: any[];
   isFavorite?: boolean;
   onToggleFavorite: () => void;
   onTransfer: (userId: string) => void;
@@ -46,6 +50,7 @@ interface LeadDetailsPanelProps {
 export function LeadDetailsPanel({
   lead,
   conversationId,
+  messages,
   isFavorite,
   onToggleFavorite,
   onTransfer,
@@ -185,6 +190,10 @@ export function LeadDetailsPanel({
             <TabsTrigger value="dados" className="text-xs gap-1 data-[state=active]:bg-muted">
               <User className="w-3 h-3" />
               Dados
+            </TabsTrigger>
+            <TabsTrigger value="ia" className="text-xs gap-1 data-[state=active]:bg-muted">
+              <Brain className="w-3 h-3" />
+              IA
             </TabsTrigger>
             <TabsTrigger value="historico" className="text-xs gap-1 data-[state=active]:bg-muted">
               <History className="w-3 h-3" />
@@ -378,6 +387,27 @@ export function LeadDetailsPanel({
                     )}
                   </div>
                 </div>
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          {/* IA Tab */}
+          <TabsContent value="ia" className="flex-1 m-0">
+            <ScrollArea className="h-[calc(100vh-20rem)]">
+              <div className="p-4 space-y-4">
+                {/* AI Summary */}
+                <AIConversationSummary
+                  messages={messages || []}
+                  lead={lead}
+                  onSummaryGenerated={onLabelsUpdate}
+                />
+
+                {/* AI Classification */}
+                <AIClassificationSuggestion
+                  messages={messages || []}
+                  lead={lead}
+                  onApplyClassification={onLabelsUpdate}
+                />
               </div>
             </ScrollArea>
           </TabsContent>
