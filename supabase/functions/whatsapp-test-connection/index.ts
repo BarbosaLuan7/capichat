@@ -19,7 +19,7 @@ function normalizeUrl(url: string): string {
 }
 
 // Tenta WAHA com múltiplos formatos de autenticação
-async function testWAHA(config: TestConnectionPayload): Promise<{ success: boolean; status?: string; phone?: string; error?: string; authFormat?: string }> {
+async function testWAHA(config: TestConnectionPayload): Promise<{ success: boolean; status?: string; phone?: string; engine?: string; error?: string; authFormat?: string }> {
   const baseUrl = normalizeUrl(config.base_url);
   const sessionName = config.instance_name || 'default';
   const endpoint = `/api/sessions/${sessionName}`;
@@ -48,11 +48,20 @@ async function testWAHA(config: TestConnectionPayload): Promise<{ success: boole
       if (response.ok) {
         const data = await response.json();
         console.log('[WAHA] Resposta sucesso:', JSON.stringify(data));
-        
+
+        const engine =
+          data?.engine ||
+          data?.config?.engine ||
+          data?.session?.engine ||
+          data?.config?.session?.engine ||
+          data?.settings?.engine ||
+          undefined;
+
         return { 
           success: true, 
           status: data.status || 'connected',
           phone: data.me?.id?.replace('@c.us', '') || data.me?.pushname || data.config?.webhooks?.[0]?.url,
+          engine,
           authFormat: authFormat.name,
         };
       }
