@@ -2,3 +2,15 @@ project_id = "vnsypopnzwtkmyvxvqpu"
 
 [functions.transcribe-audio]
 verify_jwt = false
+
+[functions.ai-suggest-replies]
+verify_jwt = false
+
+[functions.ai-classify-lead]
+verify_jwt = false
+
+[functions.ai-detect-reminders]
+verify_jwt = false
+
+[functions.ai-summarize-conversation]
+verify_jwt = false
