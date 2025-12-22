@@ -407,7 +407,7 @@ const Inbox = () => {
       {/* Conversation List */}
       <div className="w-80 border-r border-border flex flex-col bg-card">
         {/* Search and Filter */}
-        <div className="p-4 space-y-3 border-b border-border">
+        <div className="p-4 space-y-3 border-b border-border bg-card sticky top-0 z-20">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input 
@@ -425,7 +425,7 @@ const Inbox = () => {
           />
 
           <Tabs value={filter} onValueChange={(v) => setFilter(v as InboxFilter)}>
-            <TabsList className="w-full">
+            <TabsList className="w-full bg-muted relative z-10">
               <TabsTrigger value="novos" className="flex-1 text-xs">Novos</TabsTrigger>
               <TabsTrigger value="meus" className="flex-1 text-xs">Meus</TabsTrigger>
               <TabsTrigger value="outros" className="flex-1 text-xs">Outros</TabsTrigger>
