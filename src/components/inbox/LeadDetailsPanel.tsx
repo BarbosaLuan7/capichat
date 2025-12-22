@@ -15,6 +15,7 @@ import {
   History,
   Sparkles,
   Brain,
+  ClipboardList,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +30,7 @@ import { InternalNotes } from './InternalNotes';
 import { LeadTimeline } from '@/components/leads/LeadTimeline';
 import { AIClassificationSuggestion } from './AIClassificationSuggestion';
 import { AIConversationSummary } from './AIConversationSummary';
+import { DocumentChecklist } from './DocumentChecklist';
 import { formatPhone, formatCPF } from '@/lib/masks';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -191,6 +193,10 @@ export function LeadDetailsPanel({
             <TabsTrigger value="dados" className="text-xs gap-1 data-[state=active]:bg-muted">
               <User className="w-3 h-3" />
               Dados
+            </TabsTrigger>
+            <TabsTrigger value="docs" className="text-xs gap-1 data-[state=active]:bg-muted">
+              <ClipboardList className="w-3 h-3" />
+              Docs
             </TabsTrigger>
             <TabsTrigger value="ia" className="text-xs gap-1 data-[state=active]:bg-muted">
               <Brain className="w-3 h-3" />
@@ -388,6 +394,20 @@ export function LeadDetailsPanel({
                     )}
                   </div>
                 </div>
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          {/* Docs Tab */}
+          <TabsContent value="docs" className="flex-1 m-0">
+            <ScrollArea className="h-[calc(100vh-20rem)]">
+              <div className="p-4">
+                <DocumentChecklist
+                  leadId={lead.id}
+                  customFields={(lead as any).custom_fields}
+                  labels={lead.labels}
+                  onUpdate={onLabelsUpdate}
+                />
               </div>
             </ScrollArea>
           </TabsContent>
