@@ -215,6 +215,7 @@ export type Database = {
       }
       leads: {
         Row: {
+          ai_summary: string | null
           assigned_to: string | null
           cpf: string | null
           created_at: string
@@ -224,12 +225,15 @@ export type Database = {
           id: string
           name: string
           phone: string
+          qualification: Json | null
           source: string
           stage_id: string | null
           temperature: Database["public"]["Enums"]["lead_temperature"]
           updated_at: string
+          whatsapp_name: string | null
         }
         Insert: {
+          ai_summary?: string | null
           assigned_to?: string | null
           cpf?: string | null
           created_at?: string
@@ -239,12 +243,15 @@ export type Database = {
           id?: string
           name: string
           phone: string
+          qualification?: Json | null
           source?: string
           stage_id?: string | null
           temperature?: Database["public"]["Enums"]["lead_temperature"]
           updated_at?: string
+          whatsapp_name?: string | null
         }
         Update: {
+          ai_summary?: string | null
           assigned_to?: string | null
           cpf?: string | null
           created_at?: string
@@ -254,10 +261,12 @@ export type Database = {
           id?: string
           name?: string
           phone?: string
+          qualification?: Json | null
           source?: string
           stage_id?: string | null
           temperature?: Database["public"]["Enums"]["lead_temperature"]
           updated_at?: string
+          whatsapp_name?: string | null
         }
         Relationships: [
           {

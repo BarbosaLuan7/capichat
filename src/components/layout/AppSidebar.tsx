@@ -47,7 +47,8 @@ const menuItems: MenuItem[] = [
   { icon: CheckSquare, label: 'Tarefas', path: '/tasks', badge: 3 },
   { icon: Calendar, label: 'Calendário', path: '/calendar' },
   { icon: Workflow, label: 'Automações', path: '/automations' },
-  { icon: BarChart3, label: 'Relatórios', path: '/reports' },
+  { icon: Zap, label: 'Chatbot', path: '/chatbot' },
+  { icon: BarChart3, label: 'Métricas', path: '/metrics' },
   {
     icon: Settings,
     label: 'Configurações',
