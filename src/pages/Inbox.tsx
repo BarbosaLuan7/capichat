@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { formatPhoneNumber } from '@/lib/masks';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -523,7 +524,7 @@ const Inbox = () => {
         </div>
 
         {/* Conversations */}
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 overflow-hidden">
           {loadingConversations ? (
             <div className="p-4 text-center text-muted-foreground">
               Carregando...
@@ -546,18 +547,18 @@ const Inbox = () => {
                     animate={{ opacity: 1 }}
                     onClick={() => handleSelectConversation(conversation.id)}
                     className={cn(
-                      'p-4 cursor-pointer transition-colors hover:bg-muted/50 overflow-hidden',
+                      'p-4 cursor-pointer transition-colors hover:bg-muted/50 overflow-hidden isolate',
                       isSelected && 'bg-primary/5 border-l-2 border-l-primary'
                     )}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="relative flex-shrink-0">
-                        <Avatar className="w-12 h-12">
+                      <div className="relative flex-shrink-0 overflow-visible">
+                        <Avatar className="w-10 h-10">
                           <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${convLead?.name}`} />
                           <AvatarFallback>{convLead?.name?.charAt(0)}</AvatarFallback>
                         </Avatar>
                         {conversation.unread_count > 0 && (
-                          <span className="absolute top-0 right-0 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                          <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center shadow-sm">
                             {conversation.unread_count}
                           </span>
                         )}
@@ -577,7 +578,7 @@ const Inbox = () => {
                         </div>
 
                         <p className="text-sm text-muted-foreground truncate mb-2">
-                          {convLead?.phone}
+                          {formatPhoneNumber(convLead?.phone || '')}
                         </p>
 
                         <div className="flex items-center gap-1 flex-wrap">

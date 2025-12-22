@@ -190,6 +190,9 @@ serve(async (req) => {
       provider = 'waha';
       event = body.event;
       
+      // Log completo para debug
+      console.log('[whatsapp-webhook] Payload WAHA completo:', JSON.stringify(body));
+      
       // Eventos de mensagem do WAHA
       if (event === 'message' || event === 'message.any') {
         const payload = body.payload as WAHAMessage;
@@ -205,7 +208,18 @@ serve(async (req) => {
         
         messageData = payload;
         senderPhone = normalizePhone(payload.from || payload.chatId || '');
-        senderName = payload.pushName || '';
+        
+        // Extrair pushName de múltiplas fontes possíveis no payload WAHA
+        senderName = 
+          payload.pushName ||
+          (body.payload as any)?._data?.pushName ||
+          (body.payload as any)?._data?.notifyName ||
+          body.pushName ||
+          (body.payload as any)?.chat?.contact?.pushname ||
+          (body.payload as any)?.sender?.pushName ||
+          '';
+        
+        console.log('[whatsapp-webhook] pushName extraído:', senderName);
         isFromMe = payload.fromMe;
       } else {
         console.log('[whatsapp-webhook] Evento não processado:', event);
