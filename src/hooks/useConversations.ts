@@ -18,7 +18,16 @@ export function useConversations() {
         .from('conversations')
         .select(`
           *,
-          leads (id, name, phone, email, temperature)
+          leads (
+            id, 
+            name, 
+            phone, 
+            email, 
+            temperature,
+            lead_labels (
+              labels (id, name, color, category)
+            )
+          )
         `)
         .order('last_message_at', { ascending: false });
       
