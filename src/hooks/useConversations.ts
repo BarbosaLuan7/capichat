@@ -18,8 +18,7 @@ export function useConversations() {
         .from('conversations')
         .select(`
           *,
-          leads (id, name, phone, email, temperature),
-          profiles:assigned_to (id, name, email, avatar)
+          leads (id, name, phone, email, temperature)
         `)
         .order('last_message_at', { ascending: false });
       
@@ -62,8 +61,7 @@ export function useConversation(id: string | undefined) {
         .from('conversations')
         .select(`
           *,
-          leads (id, name, phone, email, temperature),
-          profiles:assigned_to (id, name, email, avatar)
+          leads (id, name, phone, email, temperature)
         `)
         .eq('id', id)
         .maybeSingle();
