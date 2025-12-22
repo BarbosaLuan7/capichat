@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          rate_limit: number
+          usage_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          rate_limit?: number
+          usage_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          rate_limit?: number
+          usage_count?: number
+        }
+        Relationships: []
+      }
       automations: {
         Row: {
           actions: Json | null
@@ -252,55 +291,82 @@ export type Database = {
         Row: {
           ai_summary: string | null
           assigned_to: string | null
+          benefit_type: string | null
+          birth_date: string | null
+          case_status: string | null
           cpf: string | null
           created_at: string
           custom_fields: Json | null
+          documents_checklist: Json | null
           email: string | null
           estimated_value: number | null
           id: string
+          internal_notes: string | null
+          last_interaction_at: string | null
           name: string
+          nit_pis: string | null
           phone: string
           qualification: Json | null
           source: string
           stage_id: string | null
+          status: Database["public"]["Enums"]["lead_status"]
           temperature: Database["public"]["Enums"]["lead_temperature"]
           updated_at: string
+          utm_medium: string | null
           whatsapp_name: string | null
         }
         Insert: {
           ai_summary?: string | null
           assigned_to?: string | null
+          benefit_type?: string | null
+          birth_date?: string | null
+          case_status?: string | null
           cpf?: string | null
           created_at?: string
           custom_fields?: Json | null
+          documents_checklist?: Json | null
           email?: string | null
           estimated_value?: number | null
           id?: string
+          internal_notes?: string | null
+          last_interaction_at?: string | null
           name: string
+          nit_pis?: string | null
           phone: string
           qualification?: Json | null
           source?: string
           stage_id?: string | null
+          status?: Database["public"]["Enums"]["lead_status"]
           temperature?: Database["public"]["Enums"]["lead_temperature"]
           updated_at?: string
+          utm_medium?: string | null
           whatsapp_name?: string | null
         }
         Update: {
           ai_summary?: string | null
           assigned_to?: string | null
+          benefit_type?: string | null
+          birth_date?: string | null
+          case_status?: string | null
           cpf?: string | null
           created_at?: string
           custom_fields?: Json | null
+          documents_checklist?: Json | null
           email?: string | null
           estimated_value?: number | null
           id?: string
+          internal_notes?: string | null
+          last_interaction_at?: string | null
           name?: string
+          nit_pis?: string | null
           phone?: string
           qualification?: Json | null
           source?: string
           stage_id?: string | null
+          status?: Database["public"]["Enums"]["lead_status"]
           temperature?: Database["public"]["Enums"]["lead_temperature"]
           updated_at?: string
+          utm_medium?: string | null
           whatsapp_name?: string | null
         }
         Relationships: [
@@ -318,8 +384,11 @@ export type Database = {
           content: string
           conversation_id: string
           created_at: string
+          direction: Database["public"]["Enums"]["message_direction"] | null
           id: string
+          is_internal_note: boolean | null
           is_starred: boolean | null
+          lead_id: string | null
           media_url: string | null
           sender_id: string
           sender_type: Database["public"]["Enums"]["sender_type"]
@@ -330,8 +399,11 @@ export type Database = {
           content: string
           conversation_id: string
           created_at?: string
+          direction?: Database["public"]["Enums"]["message_direction"] | null
           id?: string
+          is_internal_note?: boolean | null
           is_starred?: boolean | null
+          lead_id?: string | null
           media_url?: string | null
           sender_id: string
           sender_type: Database["public"]["Enums"]["sender_type"]
@@ -342,8 +414,11 @@ export type Database = {
           content?: string
           conversation_id?: string
           created_at?: string
+          direction?: Database["public"]["Enums"]["message_direction"] | null
           id?: string
+          is_internal_note?: boolean | null
           is_starred?: boolean | null
+          lead_id?: string | null
           media_url?: string | null
           sender_id?: string
           sender_type?: Database["public"]["Enums"]["sender_type"]
@@ -359,6 +434,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          data: Json | null
+          id: string
+          link: string | null
+          message: string
+          read: boolean
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          link?: string | null
+          message: string
+          read?: boolean
+          title: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          link?: string | null
+          message?: string
+          read?: boolean
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -523,11 +634,111 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_logs: {
+        Row: {
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          event: Database["public"]["Enums"]["webhook_event"]
+          id: string
+          payload: Json
+          response_body: string | null
+          response_status: number | null
+          status: Database["public"]["Enums"]["webhook_log_status"]
+          webhook_id: string
+        }
+        Insert: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          event: Database["public"]["Enums"]["webhook_event"]
+          id?: string
+          payload?: Json
+          response_body?: string | null
+          response_status?: number | null
+          status?: Database["public"]["Enums"]["webhook_log_status"]
+          webhook_id: string
+        }
+        Update: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          event?: Database["public"]["Enums"]["webhook_event"]
+          id?: string
+          payload?: Json
+          response_body?: string | null
+          response_status?: number | null
+          status?: Database["public"]["Enums"]["webhook_log_status"]
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_logs_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhooks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          events: Database["public"]["Enums"]["webhook_event"][]
+          headers: Json | null
+          id: string
+          is_active: boolean
+          name: string
+          secret: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          events?: Database["public"]["Enums"]["webhook_event"][]
+          headers?: Json | null
+          id?: string
+          is_active?: boolean
+          name: string
+          secret?: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          events?: Database["public"]["Enums"]["webhook_event"][]
+          headers?: Json | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          secret?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      create_notification: {
+        Args: {
+          p_data?: Json
+          p_link?: string
+          p_message: string
+          p_title: string
+          p_type?: Database["public"]["Enums"]["notification_type"]
+          p_user_id: string
+        }
+        Returns: string
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -539,6 +750,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      validate_api_key: { Args: { key_value: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "manager" | "agent" | "viewer"
@@ -568,12 +780,39 @@ export type Database = {
         | "beneficio"
         | "condicao_saude"
         | "desqualificacao"
+      lead_status: "active" | "archived" | "converted" | "lost"
       lead_temperature: "cold" | "warm" | "hot"
+      message_direction: "inbound" | "outbound"
       message_status: "sent" | "delivered" | "read"
       message_type: "text" | "image" | "audio" | "video" | "document"
+      notification_type:
+        | "info"
+        | "success"
+        | "warning"
+        | "error"
+        | "message"
+        | "task"
+        | "lead"
       sender_type: "lead" | "agent"
       task_priority: "urgent" | "high" | "medium" | "low"
       task_status: "todo" | "in_progress" | "done"
+      webhook_event:
+        | "lead.created"
+        | "lead.updated"
+        | "lead.deleted"
+        | "lead.stage_changed"
+        | "lead.assigned"
+        | "lead.temperature_changed"
+        | "lead.label_added"
+        | "lead.label_removed"
+        | "message.received"
+        | "message.sent"
+        | "conversation.created"
+        | "conversation.assigned"
+        | "conversation.resolved"
+        | "task.created"
+        | "task.completed"
+      webhook_log_status: "pending" | "success" | "failed" | "retrying"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -731,12 +970,41 @@ export const Constants = {
         "condicao_saude",
         "desqualificacao",
       ],
+      lead_status: ["active", "archived", "converted", "lost"],
       lead_temperature: ["cold", "warm", "hot"],
+      message_direction: ["inbound", "outbound"],
       message_status: ["sent", "delivered", "read"],
       message_type: ["text", "image", "audio", "video", "document"],
+      notification_type: [
+        "info",
+        "success",
+        "warning",
+        "error",
+        "message",
+        "task",
+        "lead",
+      ],
       sender_type: ["lead", "agent"],
       task_priority: ["urgent", "high", "medium", "low"],
       task_status: ["todo", "in_progress", "done"],
+      webhook_event: [
+        "lead.created",
+        "lead.updated",
+        "lead.deleted",
+        "lead.stage_changed",
+        "lead.assigned",
+        "lead.temperature_changed",
+        "lead.label_added",
+        "lead.label_removed",
+        "message.received",
+        "message.sent",
+        "conversation.created",
+        "conversation.assigned",
+        "conversation.resolved",
+        "task.created",
+        "task.completed",
+      ],
+      webhook_log_status: ["pending", "success", "failed", "retrying"],
     },
   },
 } as const
