@@ -52,11 +52,13 @@ import type { Database } from '@/integrations/supabase/types';
 
 type ConversationStatus = Database['public']['Enums']['conversation_status'];
 
+type InboxFilter = 'novos' | 'meus' | 'outros';
+
 const Inbox = () => {
   const { user } = useAuth();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
-  const [filter, setFilter] = useState<'all' | ConversationStatus>('all');
+  const [filter, setFilter] = useState<InboxFilter>('meus');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [pendingFile, setPendingFile] = useState<{ file: File; type: 'image' | 'video' | 'audio' | 'document' } | null>(null);
@@ -98,7 +100,20 @@ const Inbox = () => {
   }, [selectedConversationId, selectedConversation?.unread_count]);
 
   const filteredConversations = conversations?.filter((conv) => {
-    const matchesFilter = filter === 'all' || conv.status === filter;
+    // Filter by tab
+    let matchesFilter = true;
+    if (filter === 'novos') {
+      // Novos = sem atribuição ou criados recentemente (últimas 24h)
+      const isRecent = new Date(conv.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000;
+      matchesFilter = !conv.assigned_to || isRecent;
+    } else if (filter === 'meus') {
+      // Meus = atribuídos ao usuário atual
+      matchesFilter = conv.assigned_to === user?.id;
+    } else if (filter === 'outros') {
+      // Outros = atribuídos a outras pessoas
+      matchesFilter = !!conv.assigned_to && conv.assigned_to !== user?.id;
+    }
+    
     const matchesSearch = !searchQuery || 
       (conv.leads as any)?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (conv.leads as any)?.phone?.includes(searchQuery);
@@ -229,11 +244,11 @@ const Inbox = () => {
             />
           </div>
 
-          <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
+          <Tabs value={filter} onValueChange={(v) => setFilter(v as InboxFilter)}>
             <TabsList className="w-full">
-              <TabsTrigger value="all" className="flex-1 text-xs">Todas</TabsTrigger>
-              <TabsTrigger value="open" className="flex-1 text-xs">Abertas</TabsTrigger>
-              <TabsTrigger value="pending" className="flex-1 text-xs">Pendentes</TabsTrigger>
+              <TabsTrigger value="novos" className="flex-1 text-xs">Novos</TabsTrigger>
+              <TabsTrigger value="meus" className="flex-1 text-xs">Meus</TabsTrigger>
+              <TabsTrigger value="outros" className="flex-1 text-xs">Outros</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
