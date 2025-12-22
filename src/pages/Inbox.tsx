@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -38,6 +38,7 @@ import {
 } from '@/hooks/useConversations';
 import { useLead, useUpdateLead } from '@/hooks/useLeads';
 import { useLabels, useLeadLabels } from '@/hooks/useLabels';
+import { useInternalNotes } from '@/hooks/useInternalNotes';
 import {
   Popover,
   PopoverContent,
@@ -53,8 +54,10 @@ import { AttachmentMenu } from '@/components/inbox/AttachmentMenu';
 import { AudioRecorder } from '@/components/inbox/AudioRecorder';
 import { EmojiPicker } from '@/components/inbox/EmojiPicker';
 import { TemplateSelector } from '@/components/inbox/TemplateSelector';
+import { SlashCommandPopover } from '@/components/inbox/SlashCommandPopover';
 import { MessageBubble } from '@/components/inbox/MessageBubble';
 import { LeadDetailsPanel } from '@/components/inbox/LeadDetailsPanel';
+import { InlineNoteMessage } from '@/components/inbox/InlineNoteMessage';
 
 import type { Database } from '@/integrations/supabase/types';
 
@@ -71,6 +74,7 @@ const Inbox = () => {
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [pendingFile, setPendingFile] = useState<{ file: File; type: 'image' | 'video' | 'audio' | 'document' } | null>(null);
   const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
+  const [showSlashCommand, setShowSlashCommand] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -82,6 +86,7 @@ const Inbox = () => {
   const { data: leadData, refetch: refetchLead } = useLead(selectedConversation?.lead_id || undefined);
   const { data: leadLabels } = useLeadLabels(selectedConversation?.lead_id || undefined);
   const { data: allLabels } = useLabels();
+  const { data: internalNotes } = useInternalNotes(selectedConversationId || undefined);
   
   // Mutations
   const sendMessage = useSendMessage();
@@ -236,8 +241,39 @@ const Inbox = () => {
 
   const handleTemplateSelect = (content: string) => {
     setMessageInput(content);
+    setShowSlashCommand(false);
     inputRef.current?.focus();
   };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setMessageInput(value);
+    // Show slash command popover when "/" is typed
+    setShowSlashCommand(value.includes('/'));
+  };
+
+  // Merge messages and notes for inline display
+  type MessageItem = (typeof messages extends (infer U)[] | undefined ? U : never) & { itemType: 'message' };
+  type NoteItem = (typeof internalNotes extends (infer U)[] | undefined ? U : never) & { itemType: 'note' };
+  type CombinedItem = MessageItem | NoteItem;
+
+  const messagesWithNotes = useMemo((): CombinedItem[] => {
+    if (!messages) return [];
+    
+    const messageItems: CombinedItem[] = messages.map(m => ({ ...m, itemType: 'message' as const })) as CombinedItem[];
+    
+    if (!internalNotes || internalNotes.length === 0) {
+      return messageItems;
+    }
+
+    // Combine and sort by created_at
+    const noteItems: CombinedItem[] = internalNotes.map(n => ({ ...n, itemType: 'note' as const })) as CombinedItem[];
+    const combined = [...messageItems, ...noteItems].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+
+    return combined;
+  }, [messages, internalNotes]);
 
   const handleToggleFavorite = () => {
     if (!selectedConversationId || !selectedConversation) return;
@@ -533,12 +569,18 @@ const Inbox = () => {
               <div className="space-y-4 max-w-3xl mx-auto">
                 {loadingMessages ? (
                   <div className="text-center text-muted-foreground">Carregando mensagens...</div>
-                ) : messages?.length === 0 ? (
+                ) : messagesWithNotes.length === 0 ? (
                   <div className="text-center text-muted-foreground">Nenhuma mensagem ainda</div>
                 ) : (
-                  messages?.map((message, index) => {
+                  messagesWithNotes.map((item, index) => {
+                    if (item.itemType === 'note') {
+                      return <InlineNoteMessage key={`note-${item.id}`} note={item as any} />;
+                    }
+
+                    const message = item as typeof messages[0] & { itemType: 'message' };
                     const isAgent = message.sender_type === 'agent';
-                    const showAvatar = index === 0 || messages[index - 1]?.sender_type !== message.sender_type;
+                    const prevItem = messagesWithNotes[index - 1];
+                    const showAvatar = index === 0 || prevItem?.itemType === 'note' || (prevItem as any)?.sender_type !== message.sender_type;
 
                     return (
                       <MessageBubble
@@ -612,12 +654,25 @@ const Inbox = () => {
                 </div>
 
                 <div className="flex-1 relative">
+                  {showSlashCommand && (
+                    <SlashCommandPopover
+                      inputValue={messageInput}
+                      onSelectTemplate={handleTemplateSelect}
+                      leadName={leadWithLabels.name}
+                      leadPhone={leadWithLabels.phone}
+                      inputRef={inputRef as React.RefObject<HTMLInputElement>}
+                      onClose={() => setShowSlashCommand(false)}
+                    />
+                  )}
                   <Input
                     ref={inputRef}
                     value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                    placeholder="Digite sua mensagem..."
+                    onChange={handleInputChange}
+                    onKeyDown={(e) => {
+                      if (showSlashCommand) return; // Let SlashCommand handle navigation
+                      if (e.key === 'Enter' && !e.shiftKey) handleSendMessage();
+                    }}
+                    placeholder="Digite / para atalhos..."
                     className="pr-12"
                   />
                   <div className="absolute right-1 top-1/2 -translate-y-1/2">
