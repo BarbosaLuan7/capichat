@@ -23,6 +23,7 @@ import Metrics from "./pages/Metrics";
 import Settings from "./pages/Settings";
 import UsersSettings from "./pages/settings/UsersSettings";
 import TeamsSettings from "./pages/settings/TeamsSettings";
+import LabelsSettings from "./pages/settings/LabelsSettings";
 import NotFound from "./pages/NotFound";
 import React from "react";
 
@@ -118,6 +119,7 @@ function AppContent() {
           <Route path="settings" element={<Settings />} />
           <Route path="settings/users" element={<UsersSettings />} />
           <Route path="settings/teams" element={<TeamsSettings />} />
+          <Route path="settings/labels" element={<LabelsSettings />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
