@@ -26,6 +26,19 @@ function normalizeUrl(url: string): string {
   return url.replace(/\/+$/, '');
 }
 
+// Normaliza telefone para envio (adiciona código do país 55 se necessário)
+function normalizePhoneForSending(phone: string): string {
+  // Remove tudo que não é número
+  let numbers = phone.replace(/\D/g, '');
+  
+  // Se não tem 55 no início, adiciona
+  if (!numbers.startsWith('55') && numbers.length >= 10 && numbers.length <= 11) {
+    numbers = '55' + numbers;
+  }
+  
+  return numbers;
+}
+
 // Tenta fazer request com múltiplos formatos de auth para WAHA
 async function wahaFetch(
   url: string, 
@@ -80,7 +93,8 @@ async function wahaFetch(
 // Provider-specific message sending functions
 async function sendWAHA(config: WhatsAppConfig, phone: string, message: string, type: string, mediaUrl?: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const baseUrl = normalizeUrl(config.base_url);
-  const chatId = phone.replace(/\D/g, '') + '@c.us';
+  const normalizedPhone = normalizePhoneForSending(phone);
+  const chatId = normalizedPhone + '@c.us';
   const session = config.instance_name || 'default';
   
   let endpoint = '/api/sendText';
@@ -161,7 +175,7 @@ async function sendWAHA(config: WhatsAppConfig, phone: string, message: string, 
 
 async function sendEvolution(config: WhatsAppConfig, phone: string, message: string, type: string, mediaUrl?: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const baseUrl = normalizeUrl(config.base_url);
-  const number = phone.replace(/\D/g, '');
+  const number = normalizePhoneForSending(phone);
   const instance = config.instance_name || 'default';
   
   let endpoint = `/message/sendText/${instance}`;
@@ -222,7 +236,7 @@ async function sendEvolution(config: WhatsAppConfig, phone: string, message: str
 
 async function sendZAPI(config: WhatsAppConfig, phone: string, message: string, type: string, mediaUrl?: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const baseUrl = normalizeUrl(config.base_url);
-  const phoneNumber = phone.replace(/\D/g, '');
+  const phoneNumber = normalizePhoneForSending(phone);
   
   let endpoint = '/send-text';
   let body: Record<string, unknown> = {
