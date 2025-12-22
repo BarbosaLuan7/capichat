@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { aiCache, generateMessagesKey } from '@/lib/aiCache';
 
 interface StructuredSummary {
   situation?: string;
@@ -31,11 +32,23 @@ export function useAISummary() {
       phone?: string;
       source?: string;
       stage?: string;
-    }
+    },
+    forceRefresh = false
   ) => {
     if (!messages || messages.length === 0) {
       setSummaryResult(null);
       return;
+    }
+
+    // Check cache first (unless forcing refresh)
+    const cacheKey = generateMessagesKey('summary', messages);
+    
+    if (!forceRefresh) {
+      const cached = aiCache.get<AISummaryResult>(cacheKey);
+      if (cached) {
+        setSummaryResult(cached);
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -62,6 +75,9 @@ export function useAISummary() {
       }
 
       setSummaryResult(data);
+      
+      // Cache the result
+      aiCache.set(cacheKey, data);
     } catch (err: any) {
       console.error('Error fetching AI summary:', err);
       setError(err.message || 'Erro ao gerar resumo');

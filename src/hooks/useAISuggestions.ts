@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { aiCache, generateMessagesKey } from '@/lib/aiCache';
 
 interface AISuggestion {
   text: string;
@@ -26,11 +27,23 @@ export function useAISuggestions() {
   const fetchSuggestions = useCallback(async (
     messages: any[],
     lead: UseAISuggestionsOptions['lead'],
-    templates?: any[]
+    templates?: any[],
+    forceRefresh = false
   ) => {
     if (!messages || messages.length === 0) {
       setSuggestions([]);
       return;
+    }
+
+    // Check cache first (unless forcing refresh)
+    const cacheKey = generateMessagesKey('suggestions', messages);
+    
+    if (!forceRefresh) {
+      const cached = aiCache.get<AISuggestion[]>(cacheKey);
+      if (cached) {
+        setSuggestions(cached);
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -56,7 +69,11 @@ export function useAISuggestions() {
         return;
       }
 
-      setSuggestions(data?.suggestions || []);
+      const result = data?.suggestions || [];
+      setSuggestions(result);
+      
+      // Cache the result
+      aiCache.set(cacheKey, result);
     } catch (err: any) {
       console.error('Error fetching AI suggestions:', err);
       setError(err.message || 'Erro ao buscar sugestões');
