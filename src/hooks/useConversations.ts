@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import { getEdgeFunctionErrorMessage } from '@/lib/edgeFunctionErrors';
 
 type Conversation = Database['public']['Tables']['conversations']['Row'];
 type ConversationInsert = Database['public']['Tables']['conversations']['Insert'];
@@ -203,20 +204,20 @@ export function useSendMessage() {
   return useMutation({
     mutationFn: async (message: MessageInsert) => {
       console.log('[useSendMessage] Enviando via edge function:', message.conversation_id);
-      
-      // Call edge function to send via WhatsApp
+
       const { data, error } = await supabase.functions.invoke('send-whatsapp-message', {
         body: {
           conversation_id: message.conversation_id,
           content: message.content,
           type: message.type || 'text',
           media_url: message.media_url,
-        }
+        },
       });
-      
+
       if (error) {
         console.error('[useSendMessage] Edge function error:', error);
-        throw new Error(error.message || 'Erro ao enviar mensagem');
+        const friendly = getEdgeFunctionErrorMessage(error);
+        throw new Error(friendly || 'Erro ao enviar mensagem');
       }
 
       if (!data?.success) {
