@@ -261,3 +261,24 @@ export function useToggleMessageStar() {
     },
   });
 }
+
+export function useUpdateConversationStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ conversationId, status }: { conversationId: string; status: 'open' | 'pending' | 'resolved' }) => {
+      const { data, error } = await supabase
+        .from('conversations')
+        .update({ status })
+        .eq('id', conversationId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+  });
+}
