@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, X, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Loader2, Info } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -30,25 +30,19 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { useFunnelStages } from '@/hooks/useFunnelStages';
-import { useLabels } from '@/hooks/useLabels';
-import { useProfiles } from '@/hooks/useProfiles';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { ConditionBuilder, AutomationCondition } from './ConditionBuilder';
+import { ActionBuilder, AutomationActionConfig } from './ActionBuilder';
 import type { Database } from '@/integrations/supabase/types';
 
 type AutomationTrigger = Database['public']['Enums']['automation_trigger'];
-type AutomationAction = Database['public']['Enums']['automation_action'];
 type AutomationRow = Database['public']['Tables']['automations']['Row'];
-
-interface AutomationCondition {
-  field: string;
-  operator: string;
-  value: string;
-}
-
-interface AutomationActionConfig {
-  type: AutomationAction;
-  params: Record<string, string>;
-}
 
 const automationSchema = z.object({
   name: z.string().min(1, 'Nome obrigatório'),
@@ -76,42 +70,14 @@ interface AutomationModalProps {
   isSaving?: boolean;
 }
 
-const triggerOptions: { value: AutomationTrigger; label: string }[] = [
-  { value: 'lead_created', label: 'Novo lead criado' },
-  { value: 'lead_stage_changed', label: 'Lead mudou de etapa' },
-  { value: 'lead_temperature_changed', label: 'Temperatura do lead alterada' },
-  { value: 'lead_no_response', label: 'Lead sem resposta' },
-  { value: 'lead_label_added', label: 'Etiqueta adicionada ao lead' },
-  { value: 'task_overdue', label: 'Tarefa vencida' },
-  { value: 'conversation_no_response', label: 'Conversa sem resposta' },
-];
-
-const actionOptions: { value: AutomationAction; label: string }[] = [
-  { value: 'move_lead_to_stage', label: 'Mover lead para etapa' },
-  { value: 'change_lead_temperature', label: 'Alterar temperatura do lead' },
-  { value: 'add_label', label: 'Adicionar etiqueta' },
-  { value: 'remove_label', label: 'Remover etiqueta' },
-  { value: 'create_task', label: 'Criar tarefa' },
-  { value: 'notify_user', label: 'Notificar usuário' },
-  { value: 'assign_to_user', label: 'Atribuir a usuário' },
-  { value: 'send_message', label: 'Enviar mensagem' },
-];
-
-const conditionFields = [
-  { value: 'stage', label: 'Etapa do funil' },
-  { value: 'temperature', label: 'Temperatura' },
-  { value: 'label', label: 'Etiqueta' },
-  { value: 'source', label: 'Origem' },
-  { value: 'hours_since_last_message', label: 'Horas sem mensagem' },
-  { value: 'assigned_to', label: 'Atribuído a' },
-];
-
-const operatorOptions = [
-  { value: 'equals', label: 'Igual a' },
-  { value: 'not_equals', label: 'Diferente de' },
-  { value: 'contains', label: 'Contém' },
-  { value: 'greater_than', label: 'Maior que' },
-  { value: 'less_than', label: 'Menor que' },
+const triggerOptions: { value: AutomationTrigger; label: string; description: string }[] = [
+  { value: 'lead_created', label: 'Novo lead criado', description: 'Quando um novo lead é cadastrado no sistema' },
+  { value: 'lead_stage_changed', label: 'Lead mudou de etapa', description: 'Quando um lead muda de etapa no funil' },
+  { value: 'lead_temperature_changed', label: 'Temperatura alterada', description: 'Quando a temperatura do lead muda' },
+  { value: 'lead_no_response', label: 'Lead sem resposta', description: 'Quando um lead não responde há X horas' },
+  { value: 'lead_label_added', label: 'Etiqueta adicionada', description: 'Quando uma etiqueta é adicionada ao lead' },
+  { value: 'task_overdue', label: 'Tarefa vencida', description: 'Quando uma tarefa passa da data de vencimento' },
+  { value: 'conversation_no_response', label: 'Conversa sem resposta', description: 'Quando uma conversa fica sem resposta' },
 ];
 
 export const AutomationModal = ({ 
@@ -122,10 +88,6 @@ export const AutomationModal = ({
   onDelete,
   isSaving = false 
 }: AutomationModalProps) => {
-  const { data: funnelStages = [] } = useFunnelStages();
-  const { data: labels = [] } = useLabels();
-  const { data: profiles = [] } = useProfiles();
-  
   const [conditions, setConditions] = useState<AutomationCondition[]>([]);
   const [actions, setActions] = useState<AutomationActionConfig[]>([]);
 
@@ -138,6 +100,8 @@ export const AutomationModal = ({
       trigger: '',
     },
   });
+
+  const watchTrigger = form.watch('trigger') as AutomationTrigger | '';
 
   useEffect(() => {
     if (automation) {
@@ -182,7 +146,7 @@ export const AutomationModal = ({
   const addCondition = () => {
     setConditions([
       ...conditions,
-      { field: 'stage', operator: 'equals', value: '' },
+      { field: 'stage_id', operator: 'equals', value: '' },
     ]);
   };
 
@@ -209,349 +173,253 @@ export const AutomationModal = ({
     setActions(actions.filter((_, i) => i !== index));
   };
 
-  const renderActionParams = (action: AutomationActionConfig, index: number) => {
-    switch (action.type) {
-      case 'move_lead_to_stage':
-        return (
-          <Select
-            value={action.params.stageId || ''}
-            onValueChange={(v) => updateAction(index, { params: { ...action.params, stageId: v } })}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Selecionar etapa" />
-            </SelectTrigger>
-            <SelectContent>
-              {funnelStages.map((stage) => (
-                <SelectItem key={stage.id} value={stage.id}>{stage.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
-      case 'change_lead_temperature':
-        return (
-          <Select
-            value={action.params.temperature || ''}
-            onValueChange={(v) => updateAction(index, { params: { ...action.params, temperature: v } })}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Selecionar temperatura" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="cold">Frio</SelectItem>
-              <SelectItem value="warm">Morno</SelectItem>
-              <SelectItem value="hot">Quente</SelectItem>
-            </SelectContent>
-          </Select>
-        );
-      case 'add_label':
-      case 'remove_label':
-        return (
-          <Select
-            value={action.params.labelId || ''}
-            onValueChange={(v) => updateAction(index, { params: { ...action.params, labelId: v } })}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Selecionar etiqueta" />
-            </SelectTrigger>
-            <SelectContent>
-              {labels.map((label) => (
-                <SelectItem key={label.id} value={label.id}>{label.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        );
-      case 'notify_user':
-      case 'assign_to_user':
-        return (
-          <div className="space-y-2">
-            <Select
-              value={action.params.userId || ''}
-              onValueChange={(v) => updateAction(index, { params: { ...action.params, userId: v } })}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecionar usuário" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="assigned">Responsável atual</SelectItem>
-                {profiles.filter(u => u.is_active).map((user) => (
-                  <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {action.type === 'notify_user' && (
-              <Input
-                placeholder="Mensagem da notificação (use {{lead_name}}, {{task_title}})"
-                value={action.params.message || ''}
-                onChange={(e) => updateAction(index, { params: { ...action.params, message: e.target.value } })}
-              />
-            )}
-          </div>
-        );
-      case 'create_task':
-        return (
-          <div className="space-y-2">
-            <Input
-              placeholder="Título da tarefa"
-              value={action.params.title || ''}
-              onChange={(e) => updateAction(index, { params: { ...action.params, title: e.target.value } })}
-            />
-            <div className="flex gap-2">
-              <Select
-                value={action.params.priority || 'medium'}
-                onValueChange={(v) => updateAction(index, { params: { ...action.params, priority: v } })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="urgent">Urgente</SelectItem>
-                  <SelectItem value="high">Alta</SelectItem>
-                  <SelectItem value="medium">Média</SelectItem>
-                  <SelectItem value="low">Baixa</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input
-                type="number"
-                placeholder="Vence em (horas)"
-                value={action.params.dueInHours || ''}
-                onChange={(e) => updateAction(index, { params: { ...action.params, dueInHours: e.target.value } })}
-              />
-            </div>
-          </div>
-        );
-      case 'send_message':
-        return (
-          <Textarea
-            placeholder="Conteúdo da mensagem (use {{lead_name}})"
-            value={action.params.content || ''}
-            onChange={(e) => updateAction(index, { params: { ...action.params, content: e.target.value } })}
-          />
-        );
-      default:
-        return null;
-    }
-  };
+  const selectedTrigger = triggerOptions.find(t => t.value === watchTrigger);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{automation ? 'Editar Automação' : 'Nova Automação'}</DialogTitle>
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4">
+          <DialogTitle className="text-xl">
+            {automation ? 'Editar Automação' : 'Nova Automação'}
+          </DialogTitle>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            <div className="flex items-center justify-between">
-              <FormField
-                control={form.control}
-                name="is_active"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-2">
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <FormLabel className="!mt-0">
-                      {field.value ? 'Ativa' : 'Inativa'}
-                    </FormLabel>
-                  </FormItem>
+        <ScrollArea className="flex-1 px-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 pb-6">
+              {/* Status Toggle */}
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <FormField
+                    control={form.control}
+                    name="is_active"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2">
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                        <FormLabel className="!mt-0 font-normal">
+                          {field.value ? (
+                            <Badge variant="default" className="bg-success">Ativa</Badge>
+                          ) : (
+                            <Badge variant="secondary">Inativa</Badge>
+                          )}
+                        </FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                {automation && onDelete && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => onDelete(automation.id)}
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Excluir
+                  </Button>
                 )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome da automação</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Notificar gestor para leads quentes" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição (opcional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Descreva o que esta automação faz..."
-                      className="resize-none"
-                      rows={2}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="trigger"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Quando executar (Gatilho)</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecionar gatilho" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {triggerOptions.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <Separator />
-
-            {/* Conditions */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <FormLabel className="text-base">Condições (opcional)</FormLabel>
-                <Button type="button" variant="outline" size="sm" onClick={addCondition}>
-                  <Plus className="w-4 h-4 mr-1" />
-                  Adicionar
-                </Button>
               </div>
-              {conditions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhuma condição. A automação será executada sempre que o gatilho ocorrer.</p>
-              ) : (
-                <div className="space-y-2">
-                  {conditions.map((condition, index) => (
-                    <div key={index} className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
-                      <Select
-                        value={condition.field}
-                        onValueChange={(v) => updateCondition(index, { field: v })}
-                      >
-                        <SelectTrigger className="w-[150px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {conditionFields.map((f) => (
-                            <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Select
-                        value={condition.operator}
-                        onValueChange={(v) => updateCondition(index, { operator: v })}
-                      >
-                        <SelectTrigger className="w-[120px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {operatorOptions.map((o) => (
-                            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        className="flex-1"
-                        placeholder="Valor"
-                        value={condition.value}
-                        onChange={(e) => updateCondition(index, { value: e.target.value })}
-                      />
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeCondition(index)}>
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
 
-            <Separator />
-
-            {/* Actions */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <FormLabel className="text-base">Ações</FormLabel>
-                <Button type="button" variant="outline" size="sm" onClick={addAction}>
-                  <Plus className="w-4 h-4 mr-1" />
-                  Adicionar
-                </Button>
-              </div>
-              {actions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Adicione pelo menos uma ação para a automação.</p>
-              ) : (
-                <div className="space-y-3">
-                  {actions.map((action, index) => (
-                    <div key={index} className="p-3 bg-muted/50 rounded-lg space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-xs">Ação {index + 1}</Badge>
-                        <Select
-                          value={action.type}
-                          onValueChange={(v) => updateAction(index, { type: v as AutomationAction, params: {} })}
-                        >
-                          <SelectTrigger className="flex-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {actionOptions.map((a) => (
-                              <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeAction(index)}>
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      {renderActionParams(action, index)}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <Separator />
-
-            <div className="flex justify-between pt-4">
-              {automation && onDelete ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => onDelete(automation.id)}
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  disabled={isSaving}
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Excluir
-                </Button>
-              ) : (
-                <div />
-              )}
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
-                  Cancelar
-                </Button>
-                <Button type="submit" className="gradient-primary text-primary-foreground" disabled={isSaving}>
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : (
-                    'Salvar'
+              {/* Basic Info */}
+              <div className="grid gap-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome da automação</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Notificar gestor para leads quentes" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </Button>
+                />
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Descrição (opcional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Descreva o que esta automação faz..."
+                          className="resize-none"
+                          rows={2}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
-            </div>
-          </form>
-        </Form>
+
+              <Separator />
+
+              {/* Trigger Section */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-semibold">Gatilho</h3>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="w-4 h-4 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs max-w-xs">
+                          O gatilho define quando a automação será executada
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="trigger"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Selecionar gatilho" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {triggerOptions.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              <div>
+                                <div className="font-medium">{opt.label}</div>
+                                <div className="text-xs text-muted-foreground">{opt.description}</div>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {selectedTrigger && (
+                  <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                    💡 {selectedTrigger.description}
+                  </p>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Conditions Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-semibold">Condições</h3>
+                    <Badge variant="secondary" className="text-xs">Opcional</Badge>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={addCondition}>
+                    <Plus className="w-4 h-4 mr-1" />
+                    Adicionar condição
+                  </Button>
+                </div>
+
+                {conditions.length === 0 ? (
+                  <div className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg text-center">
+                    Nenhuma condição definida. A automação será executada sempre que o gatilho ocorrer.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {conditions.map((condition, index) => (
+                      <ConditionBuilder
+                        key={index}
+                        condition={condition}
+                        index={index}
+                        trigger={watchTrigger}
+                        onUpdate={updateCondition}
+                        onRemove={removeCondition}
+                      />
+                    ))}
+                    {conditions.length > 1 && (
+                      <p className="text-xs text-muted-foreground">
+                        ⚠️ Todas as condições devem ser verdadeiras para a automação executar (E lógico)
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Actions Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-semibold">Ações</h3>
+                    <Badge variant="default" className="text-xs">Obrigatório</Badge>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={addAction}>
+                    <Plus className="w-4 h-4 mr-1" />
+                    Adicionar ação
+                  </Button>
+                </div>
+
+                {actions.length === 0 ? (
+                  <div className="text-sm text-muted-foreground bg-amber-500/10 border border-amber-500/20 p-4 rounded-lg text-center">
+                    ⚠️ Adicione pelo menos uma ação para a automação funcionar
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {actions.map((action, index) => (
+                      <ActionBuilder
+                        key={index}
+                        action={action}
+                        index={index}
+                        onUpdate={updateAction}
+                        onRemove={removeAction}
+                      />
+                    ))}
+                    {actions.length > 1 && (
+                      <p className="text-xs text-muted-foreground">
+                        💡 As ações serão executadas na ordem em que aparecem
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </form>
+          </Form>
+        </ScrollArea>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t bg-muted/30">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSaving}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={form.handleSubmit(handleSubmit)}
+            disabled={isSaving || actions.length === 0}
+            className="min-w-[120px]"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              'Salvar automação'
+            )}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
