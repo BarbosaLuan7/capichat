@@ -16,6 +16,7 @@ import {
   CheckSquare,
   Thermometer,
   Loader2,
+  Activity,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -39,11 +40,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAutomations, useCreateAutomation, useUpdateAutomation, useDeleteAutomation, useToggleAutomation } from '@/hooks/useAutomations';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AutomationModal } from '@/components/automations/AutomationModal';
+import { AutomationExecutionLogs } from '@/components/automations/AutomationExecutionLogs';
 import { toast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -369,8 +372,20 @@ const Automations = () => {
         />
       </div>
 
-      {/* Automations List */}
-      <div className="space-y-4">
+      {/* Tabs for Automations and Logs */}
+      <Tabs defaultValue="automations" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="automations" className="gap-2">
+            <Zap className="w-4 h-4" />
+            Automações
+          </TabsTrigger>
+          <TabsTrigger value="logs" className="gap-2">
+            <Activity className="w-4 h-4" />
+            Execuções
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="automations" className="space-y-4">
         {isLoading ? (
           <>
             <AutomationSkeleton />
@@ -499,7 +514,12 @@ const Automations = () => {
             </div>
           </Card>
         )}
-      </div>
+        </TabsContent>
+
+        <TabsContent value="logs">
+          <AutomationExecutionLogs />
+        </TabsContent>
+      </Tabs>
 
       {/* Automation Modal */}
       <AutomationModal

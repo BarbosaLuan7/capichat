@@ -53,6 +53,56 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_logs: {
+        Row: {
+          actions_executed: Json | null
+          automation_id: string
+          conditions_evaluated: Json | null
+          conditions_met: boolean
+          created_at: string
+          error_message: string | null
+          execution_time_ms: number | null
+          id: string
+          payload: Json
+          status: string
+          trigger_event: string
+        }
+        Insert: {
+          actions_executed?: Json | null
+          automation_id: string
+          conditions_evaluated?: Json | null
+          conditions_met?: boolean
+          created_at?: string
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          payload?: Json
+          status?: string
+          trigger_event: string
+        }
+        Update: {
+          actions_executed?: Json | null
+          automation_id?: string
+          conditions_evaluated?: Json | null
+          conditions_met?: boolean
+          created_at?: string
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          payload?: Json
+          status?: string
+          trigger_event?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_logs_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_queue: {
         Row: {
           created_at: string
