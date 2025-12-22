@@ -14,6 +14,7 @@ import {
   Tag,
   X,
   Loader2,
+  Plus,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -67,6 +68,7 @@ import { AISuggestions } from '@/components/inbox/AISuggestions';
 import { AIReminderPrompt } from '@/components/inbox/AIReminderPrompt';
 import { ConversationStatusTabs } from '@/components/inbox/ConversationStatusTabs';
 import { ConversationStatusActions } from '@/components/inbox/ConversationStatusActions';
+import { NewConversationModal } from '@/components/inbox/NewConversationModal';
 
 import type { Database } from '@/integrations/supabase/types';
 
@@ -86,6 +88,7 @@ const Inbox = () => {
   const [showSlashCommand, setShowSlashCommand] = useState(false);
   const [showReminderPrompt, setShowReminderPrompt] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [showNewConversationModal, setShowNewConversationModal] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -409,6 +412,19 @@ const Inbox = () => {
     <div className="h-[calc(100vh-4rem)] flex">
       {/* Conversation List */}
       <div className="w-80 border-r border-border flex flex-col bg-card">
+        {/* Header with New Conversation Button */}
+        <div className="p-3 border-b border-border flex items-center justify-between bg-card">
+          <span className="font-semibold text-sm">Conversas</span>
+          <Button
+            size="sm"
+            onClick={() => setShowNewConversationModal(true)}
+            className="h-8 gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            Nova conversa
+          </Button>
+        </div>
+        
         {/* Search and Filter */}
         <div className="p-4 space-y-3 border-b border-border bg-card sticky top-0 z-30 shadow-sm isolate">
           <div className="relative">
@@ -872,6 +888,15 @@ const Inbox = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      
+      {/* New Conversation Modal */}
+      <NewConversationModal
+        open={showNewConversationModal}
+        onOpenChange={setShowNewConversationModal}
+        onConversationCreated={(conversationId) => {
+          setSelectedConversationId(conversationId);
+        }}
+      />
     </div>
   );
 };
