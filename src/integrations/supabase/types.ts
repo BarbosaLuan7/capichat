@@ -684,6 +684,33 @@ export type Database = {
           },
         ]
       }
+      webhook_queue: {
+        Row: {
+          created_at: string
+          event: Database["public"]["Enums"]["webhook_event"]
+          id: string
+          payload: Json
+          processed: boolean
+          processed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          event: Database["public"]["Enums"]["webhook_event"]
+          id?: string
+          payload?: Json
+          processed?: boolean
+          processed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          event?: Database["public"]["Enums"]["webhook_event"]
+          id?: string
+          payload?: Json
+          processed?: boolean
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
       webhooks: {
         Row: {
           created_at: string
