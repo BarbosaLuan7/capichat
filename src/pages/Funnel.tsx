@@ -9,6 +9,7 @@ import {
   useSensor,
   useSensors,
   closestCenter,
+  useDroppable,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -90,9 +91,8 @@ const LeadCard = ({ lead, isDragging }: { lead: Lead; isDragging?: boolean }) =>
             {labels.slice(0, 2).map((label) => (
               <Badge
                 key={label.id}
-                variant="secondary"
-                className="text-xs"
-                style={{ backgroundColor: `${label.color}20`, color: label.color }}
+                className="text-xs border-0"
+                style={{ backgroundColor: label.color, color: 'white' }}
               >
                 {label.name}
               </Badge>
@@ -144,6 +144,10 @@ const FunnelColumn = ({
   leads: Lead[];
   color: string;
 }) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: stage.id,
+  });
+  
   const totalValue = leads.reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0);
 
   return (
@@ -161,21 +165,29 @@ const FunnelColumn = ({
         </div>
       </div>
 
-      <ScrollArea className="h-[calc(100vh-16rem)]">
-        <SortableContext items={leads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-3 pr-2">
-            {leads.map((lead) => (
-              <SortableLeadCard key={lead.id} lead={lead} />
-            ))}
-          </div>
-        </SortableContext>
-
-        {leads.length === 0 && (
-          <div className="p-8 text-center text-muted-foreground border-2 border-dashed border-border rounded-lg">
-            <p className="text-sm">Nenhum lead nesta etapa</p>
-          </div>
+      <div 
+        ref={setNodeRef}
+        className={cn(
+          "min-h-[calc(100vh-16rem)] rounded-lg transition-colors",
+          isOver && "bg-primary/10 ring-2 ring-primary/20"
         )}
-      </ScrollArea>
+      >
+        <ScrollArea className="h-[calc(100vh-16rem)]">
+          <SortableContext items={leads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3 pr-2">
+              {leads.map((lead) => (
+                <SortableLeadCard key={lead.id} lead={lead} />
+              ))}
+            </div>
+          </SortableContext>
+
+          {leads.length === 0 && (
+            <div className="p-8 text-center text-muted-foreground border-2 border-dashed border-border rounded-lg">
+              <p className="text-sm">Nenhum lead nesta etapa</p>
+            </div>
+          )}
+        </ScrollArea>
+      </div>
     </div>
   );
 };
@@ -205,10 +217,19 @@ const Funnel = () => {
     const leadId = active.id as string;
     const overId = over.id as string;
 
-    // Check if dropped over a stage
-    const stage = funnelStages.find((s) => s.id === overId);
-    if (stage) {
-      updateLeadStage(leadId, stage.id);
+    // Check if dropped over a stage directly
+    let targetStage = funnelStages.find((s) => s.id === overId);
+    
+    // If not dropped on a stage, check if dropped on another lead card
+    if (!targetStage) {
+      const targetLead = leads.find((l) => l.id === overId);
+      if (targetLead) {
+        targetStage = funnelStages.find((s) => s.id === targetLead.stageId);
+      }
+    }
+    
+    if (targetStage) {
+      updateLeadStage(leadId, targetStage.id);
     }
   };
 

@@ -365,13 +365,11 @@ const Inbox = () => {
                   return (
                     <Badge
                       key={labelId}
-                      className="text-xs px-1.5 py-0 gap-1 cursor-pointer"
+                      className="text-xs px-1.5 py-0 gap-1 cursor-pointer border-0"
                       style={{
-                        backgroundColor: `${label.color}20`,
-                        color: label.color,
-                        borderColor: label.color,
+                        backgroundColor: label.color,
+                        color: 'white',
                       }}
-                      variant="outline"
                       onClick={() => toggleLabelFilter(labelId)}
                     >
                       {label.name}
@@ -468,13 +466,11 @@ const Inbox = () => {
                           {convLead?.lead_labels?.slice(0, 2).map((ll: any) => (
                             <Badge
                               key={ll.labels?.id}
-                              className="text-xs px-1.5 py-0"
+                              className="text-xs px-1.5 py-0 border-0"
                               style={{
-                                backgroundColor: `${ll.labels?.color}20`,
-                                color: ll.labels?.color,
-                                borderColor: ll.labels?.color,
+                                backgroundColor: ll.labels?.color,
+                                color: 'white',
                               }}
-                              variant="outline"
                             >
                               {ll.labels?.name}
                             </Badge>

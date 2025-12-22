@@ -284,9 +284,8 @@ export function LeadDetailsPanel({
                       {lead.labels.map((label) => (
                         <Badge
                           key={label.id}
-                          variant="outline"
-                          className="text-xs"
-                          style={{ borderColor: label.color, color: label.color }}
+                          className="text-xs border-0"
+                          style={{ backgroundColor: label.color, color: 'white' }}
                         >
                           {label.name}
                         </Badge>

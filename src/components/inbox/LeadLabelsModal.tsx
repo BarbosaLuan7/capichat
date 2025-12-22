@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -61,6 +62,9 @@ export function LeadLabelsModal({
             <Tag className="w-5 h-5" />
             Etiquetas do Lead
           </DialogTitle>
+          <DialogDescription>
+            Selecione as etiquetas para associar a este lead.
+          </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="max-h-96">
