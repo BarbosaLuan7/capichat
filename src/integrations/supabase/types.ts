@@ -53,6 +53,33 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_queue: {
+        Row: {
+          created_at: string
+          event: string
+          id: string
+          payload: Json
+          processed: boolean
+          processed_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          id?: string
+          payload?: Json
+          processed?: boolean
+          processed_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          id?: string
+          payload?: Json
+          processed?: boolean
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
       automations: {
         Row: {
           actions: Json | null
