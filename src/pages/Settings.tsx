@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import {
   Users,
   MessageSquare,
@@ -22,17 +23,18 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 
 const settingsMenu = [
-  { icon: Building2, label: 'Empresa', description: 'Informações da empresa' },
-  { icon: Users, label: 'Usuários', description: 'Gerenciar membros da equipe' },
-  { icon: Tag, label: 'Etiquetas', description: 'Configurar etiquetas' },
-  { icon: MessageSquare, label: 'Templates', description: 'Mensagens rápidas' },
-  { icon: Zap, label: 'Automações', description: 'Regras automáticas' },
-  { icon: Key, label: 'Integrações', description: 'APIs e webhooks' },
-  { icon: Bell, label: 'Notificações', description: 'Preferências de alertas' },
-  { icon: Palette, label: 'Aparência', description: 'Tema e personalização' },
+  { icon: Building2, label: 'Empresa', description: 'Informações da empresa', href: undefined },
+  { icon: Users, label: 'Usuários', description: 'Gerenciar membros da equipe', href: '/settings/users' },
+  { icon: Tag, label: 'Etiquetas', description: 'Configurar etiquetas', href: '/settings/labels' },
+  { icon: MessageSquare, label: 'Templates', description: 'Mensagens rápidas', href: undefined },
+  { icon: Zap, label: 'Automações', description: 'Regras automáticas', href: '/automations' },
+  { icon: Key, label: 'Integrações', description: 'APIs e webhooks', href: undefined },
+  { icon: Bell, label: 'Notificações', description: 'Preferências de alertas', href: undefined },
+  { icon: Palette, label: 'Aparência', description: 'Tema e personalização', href: undefined },
 ];
 
 const SettingsPage = () => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
 
   return (
@@ -94,7 +96,9 @@ const SettingsPage = () => {
             {settingsMenu.map((item) => (
               <button
                 key={item.label}
-                className="w-full flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors text-left"
+                onClick={() => item.href && navigate(item.href)}
+                className="w-full flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!item.href}
               >
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                   <item.icon className="w-5 h-5 text-primary" />

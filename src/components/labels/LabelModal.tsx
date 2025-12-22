@@ -1,0 +1,159 @@
+import { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import type { Database } from '@/integrations/supabase/types';
+
+type LabelCategory = Database['public']['Enums']['label_category'];
+type LabelRow = Database['public']['Tables']['labels']['Row'];
+
+interface LabelModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  label?: LabelRow | null;
+  onSave: (data: { name: string; color: string; category: LabelCategory }) => void;
+}
+
+const COLORS = [
+  { name: 'Vermelho', value: '#EF4444' },
+  { name: 'Laranja', value: '#F97316' },
+  { name: 'Amarelo', value: '#EAB308' },
+  { name: 'Verde', value: '#22C55E' },
+  { name: 'Azul', value: '#3B82F6' },
+  { name: 'Roxo', value: '#8B5CF6' },
+  { name: 'Rosa', value: '#EC4899' },
+  { name: 'Cinza', value: '#6B7280' },
+  { name: 'Ciano', value: '#06B6D4' },
+  { name: 'Índigo', value: '#6366F1' },
+];
+
+const CATEGORIES: { value: LabelCategory; label: string }[] = [
+  { value: 'origem', label: 'Origem/Campanha' },
+  { value: 'beneficio', label: 'Tipo de Benefício' },
+  { value: 'condicao_saude', label: 'Condição de Saúde' },
+  { value: 'prioridade', label: 'Prioridade' },
+  { value: 'status', label: 'Status' },
+  { value: 'interesse', label: 'Interesse' },
+  { value: 'desqualificacao', label: 'Desqualificação' },
+];
+
+export function LabelModal({ open, onOpenChange, label, onSave }: LabelModalProps) {
+  const [name, setName] = useState('');
+  const [color, setColor] = useState('#3B82F6');
+  const [category, setCategory] = useState<LabelCategory>('status');
+
+  useEffect(() => {
+    if (label) {
+      setName(label.name);
+      setColor(label.color);
+      setCategory(label.category);
+    } else {
+      setName('');
+      setColor('#3B82F6');
+      setCategory('status');
+    }
+  }, [label, open]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    onSave({ name: name.trim(), color, category });
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {label ? 'Editar Etiqueta' : 'Nova Etiqueta'}
+          </DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Preview */}
+          <div className="flex items-center justify-center p-4 bg-muted/30 rounded-lg">
+            <Badge
+              style={{ backgroundColor: color }}
+              className="text-white text-sm px-3 py-1"
+            >
+              {name || 'Preview da Etiqueta'}
+            </Badge>
+          </div>
+
+          {/* Nome */}
+          <div className="space-y-2">
+            <Label htmlFor="name">Nome da Etiqueta</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex: Facebook Ads, BPC Idoso..."
+              autoFocus
+            />
+          </div>
+
+          {/* Categoria */}
+          <div className="space-y-2">
+            <Label>Categoria</Label>
+            <Select value={category} onValueChange={(v) => setCategory(v as LabelCategory)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Seletor de Cor */}
+          <div className="space-y-2">
+            <Label>Cor</Label>
+            <div className="grid grid-cols-5 gap-2">
+              {COLORS.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setColor(c.value)}
+                  className={`w-10 h-10 rounded-lg transition-all hover:scale-110 ${
+                    color === c.value ? 'ring-2 ring-offset-2 ring-primary' : ''
+                  }`}
+                  style={{ backgroundColor: c.value }}
+                  title={c.name}
+                />
+              ))}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" className="gradient-primary text-primary-foreground">
+              {label ? 'Salvar' : 'Criar Etiqueta'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
