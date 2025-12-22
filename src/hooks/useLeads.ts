@@ -14,8 +14,7 @@ export function useLeads() {
         .from('leads')
         .select(`
           *,
-          funnel_stages (id, name, color),
-          profiles:assigned_to (id, name, email, avatar)
+          funnel_stages (id, name, color)
         `)
         .order('created_at', { ascending: false });
       
@@ -35,7 +34,6 @@ export function useLead(id: string | undefined) {
         .select(`
           *,
           funnel_stages (id, name, color),
-          profiles:assigned_to (id, name, email, avatar),
           lead_labels (
             label_id,
             labels (id, name, color, category)
