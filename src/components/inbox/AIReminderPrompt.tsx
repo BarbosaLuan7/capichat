@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, Calendar, X, Check, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,24 +7,24 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { format, parseISO, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useCreateTask } from '@/hooks/useTasks';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
+
+interface AIReminder {
+  hasReminder: boolean;
+  taskTitle?: string;
+  taskDescription?: string;
+  suggestedDate?: string;
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+}
 
 interface AIReminderPromptProps {
-  reminder: {
-    hasReminder: boolean;
-    taskTitle?: string;
-    taskDescription?: string;
-    suggestedDate?: string;
-    priority?: 'low' | 'medium' | 'high' | 'urgent';
-  };
+  show: boolean;
+  reminder: AIReminder | null;
+  isLoading: boolean;
   leadId?: string;
-  onCreateTask: (task: {
-    title: string;
-    description: string;
-    dueDate: string;
-    priority: 'low' | 'medium' | 'high' | 'urgent';
-    leadId?: string;
-  }) => void;
-  onDismiss: () => void;
+  onClose: () => void;
 }
 
 const priorityLabels = {
@@ -35,33 +35,56 @@ const priorityLabels = {
 };
 
 export function AIReminderPrompt({
+  show,
   reminder,
+  isLoading,
   leadId,
-  onCreateTask,
-  onDismiss,
+  onClose,
 }: AIReminderPromptProps) {
+  const { user } = useAuth();
+  const createTask = useCreateTask();
+  
   const [isExpanded, setIsExpanded] = useState(false);
-  const [title, setTitle] = useState(reminder.taskTitle || '');
-  const [description, setDescription] = useState(reminder.taskDescription || '');
-  const [dueDate, setDueDate] = useState(
-    reminder.suggestedDate || format(addDays(new Date(), 1), 'yyyy-MM-dd')
-  );
-  const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>(
-    reminder.priority || 'medium'
-  );
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [dueDate, setDueDate] = useState(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
 
-  if (!reminder.hasReminder) {
+  // Update form when reminder changes
+  useEffect(() => {
+    if (reminder) {
+      setTitle(reminder.taskTitle || '');
+      setDescription(reminder.taskDescription || '');
+      setDueDate(reminder.suggestedDate || format(addDays(new Date(), 1), 'yyyy-MM-dd'));
+      setPriority(reminder.priority || 'medium');
+    }
+  }, [reminder]);
+
+  if (!show || isLoading || !reminder?.hasReminder) {
     return null;
   }
 
-  const handleQuickCreate = () => {
-    onCreateTask({
-      title: title || 'Lembrete',
-      description,
-      dueDate,
-      priority,
-      leadId,
-    });
+  const handleQuickCreate = async () => {
+    if (!user) {
+      toast.error('Usuário não autenticado');
+      return;
+    }
+
+    try {
+      await createTask.mutateAsync({
+        title: title || 'Lembrete',
+        description,
+        due_date: dueDate,
+        priority,
+        lead_id: leadId,
+        assigned_to: user.id,
+        status: 'todo',
+      });
+      toast.success('Tarefa criada com sucesso');
+      onClose();
+    } catch (error) {
+      toast.error('Erro ao criar tarefa');
+    }
   };
 
   const formattedDate = dueDate 
@@ -86,7 +109,7 @@ export function AIReminderPrompt({
             variant="ghost"
             size="icon"
             className="h-6 w-6"
-            onClick={onDismiss}
+            onClick={onClose}
           >
             <X className="w-3.5 h-3.5" />
           </Button>
@@ -158,6 +181,7 @@ export function AIReminderPrompt({
               size="sm"
               className="flex-1 text-xs gradient-primary text-primary-foreground"
               onClick={handleQuickCreate}
+              disabled={createTask.isPending}
             >
               <Check className="w-3 h-3 mr-1" />
               Criar Tarefa

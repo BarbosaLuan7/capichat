@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Sparkles, 
@@ -17,38 +17,56 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
-
-interface StructuredSummary {
-  situation?: string;
-  benefit?: string;
-  healthConditions?: string[];
-  documentsReceived?: string[];
-  documentsPending?: string[];
-  importantDates?: { date: string; description: string }[];
-  nextSteps?: string[];
-  observations?: string;
-  summaryText: string;
-}
+import { useAISummary } from '@/hooks/useAISummary';
+import { useUpdateLead } from '@/hooks/useLeads';
+import { toast } from 'sonner';
 
 interface AIConversationSummaryProps {
-  summaryResult: {
-    summary: string;
-    structured: StructuredSummary | null;
-  } | null;
-  isLoading: boolean;
-  onRefresh: () => void;
-  onSave: (summary: string) => void;
+  messages: any[];
+  lead: {
+    id: string;
+    name: string;
+    phone?: string;
+    source?: string;
+    funnel_stages?: { name: string } | null;
+  };
+  onSummaryGenerated?: () => void;
   className?: string;
 }
 
 export function AIConversationSummary({
-  summaryResult,
-  isLoading,
-  onRefresh,
-  onSave,
+  messages,
+  lead,
+  onSummaryGenerated,
   className,
 }: AIConversationSummaryProps) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const { summaryResult, isLoading, fetchSummary, clearSummary } = useAISummary();
+  const updateLead = useUpdateLead();
+
+  const handleRefresh = () => {
+    if (messages && messages.length > 0) {
+      fetchSummary(messages, {
+        name: lead.name,
+        phone: lead.phone,
+        source: lead.source,
+        stage: lead.funnel_stages?.name,
+      });
+    }
+  };
+
+  const handleSave = async (summary: string) => {
+    try {
+      await updateLead.mutateAsync({
+        id: lead.id,
+        ai_summary: summary,
+      });
+      toast.success('Resumo salvo no lead');
+      onSummaryGenerated?.();
+    } catch (error) {
+      toast.error('Erro ao salvar resumo');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -73,12 +91,18 @@ export function AIConversationSummary({
             variant="ghost"
             size="sm"
             className="h-7 text-xs"
-            onClick={onRefresh}
+            onClick={handleRefresh}
+            disabled={!messages || messages.length === 0}
           >
             <RefreshCw className="w-3 h-3 mr-1" />
             Gerar
           </Button>
         </div>
+        {(!messages || messages.length === 0) && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Sem mensagens para analisar
+          </p>
+        )}
       </div>
     );
   }
@@ -106,7 +130,7 @@ export function AIConversationSummary({
                 className="h-6 w-6"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onRefresh();
+                  handleRefresh();
                 }}
                 title="Atualizar resumo"
               >
@@ -118,7 +142,7 @@ export function AIConversationSummary({
                 className="h-6 w-6"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onSave(summary);
+                  handleSave(summary);
                 }}
                 title="Salvar no lead"
               >
@@ -183,19 +207,20 @@ export function AIConversationSummary({
                   )}
 
                   {/* Documents */}
-                  {(structured.documentsReceived?.length > 0 || structured.documentsPending?.length > 0) && (
+                  {((structured.documentsReceived && structured.documentsReceived.length > 0) || 
+                    (structured.documentsPending && structured.documentsPending.length > 0)) && (
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                         <FileText className="w-3 h-3" />
                         DOCUMENTOS
                       </div>
-                      {structured.documentsReceived?.length > 0 && (
+                      {structured.documentsReceived && structured.documentsReceived.length > 0 && (
                         <div className="text-xs">
                           <span className="text-success">✓ Recebidos: </span>
                           <span>{structured.documentsReceived.join(', ')}</span>
                         </div>
                       )}
-                      {structured.documentsPending?.length > 0 && (
+                      {structured.documentsPending && structured.documentsPending.length > 0 && (
                         <div className="text-xs">
                           <span className="text-warning">⏳ Pendentes: </span>
                           <span>{structured.documentsPending.join(', ')}</span>
