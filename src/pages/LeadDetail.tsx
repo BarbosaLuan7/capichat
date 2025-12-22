@@ -34,6 +34,7 @@ import {
 import { useAppStore } from '@/store/appStore';
 import { mockUsers, mockLabels, mockFunnelStages } from '@/data/mockData';
 import { LeadTimeline } from '@/components/leads/LeadTimeline';
+import { LeadActivityTimeline } from '@/components/leads/LeadActivityTimeline';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -280,15 +281,20 @@ const LeadDetail = () => {
         <div className="lg:col-span-2">
           <Card className="h-full">
             <CardHeader>
-              <Tabs defaultValue="timeline" className="w-full">
+            <Tabs defaultValue="timeline" className="w-full">
                 <TabsList>
                   <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                  <TabsTrigger value="activity">Atividades</TabsTrigger>
                   <TabsTrigger value="tasks">Tarefas</TabsTrigger>
                   <TabsTrigger value="notes">Notas</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="timeline" className="mt-4">
                   <LeadTimeline events={timelineEvents} />
+                </TabsContent>
+
+                <TabsContent value="activity" className="mt-4">
+                  <LeadActivityTimeline leadId={id!} />
                 </TabsContent>
 
                 <TabsContent value="tasks" className="mt-4">
