@@ -11,6 +11,8 @@ import {
   MessageSquare,
   Star,
   Mic,
+  Tag,
+  X,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -35,7 +37,13 @@ import {
   useToggleMessageStar,
 } from '@/hooks/useConversations';
 import { useLead, useUpdateLead } from '@/hooks/useLeads';
-import { useLeadLabels } from '@/hooks/useLabels';
+import { useLabels, useLeadLabels } from '@/hooks/useLabels';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { useAuth } from '@/hooks/useAuth';
@@ -62,6 +70,7 @@ const Inbox = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [pendingFile, setPendingFile] = useState<{ file: File; type: 'image' | 'video' | 'audio' | 'document' } | null>(null);
+  const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -72,6 +81,7 @@ const Inbox = () => {
   const { data: messages, isLoading: loadingMessages } = useMessages(selectedConversationId || undefined);
   const { data: leadData, refetch: refetchLead } = useLead(selectedConversation?.lead_id || undefined);
   const { data: leadLabels } = useLeadLabels(selectedConversation?.lead_id || undefined);
+  const { data: allLabels } = useLabels();
   
   // Mutations
   const sendMessage = useSendMessage();
@@ -117,8 +127,45 @@ const Inbox = () => {
     const matchesSearch = !searchQuery || 
       (conv.leads as any)?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (conv.leads as any)?.phone?.includes(searchQuery);
-    return matchesFilter && matchesSearch;
+
+    // Filter by labels
+    const matchesLabels = selectedLabelIds.length === 0 || 
+      selectedLabelIds.some((labelId) => 
+        (conv.leads as any)?.lead_labels?.some((ll: any) => ll.labels?.id === labelId)
+      );
+
+    return matchesFilter && matchesSearch && matchesLabels;
   }) || [];
+
+  const toggleLabelFilter = (labelId: string) => {
+    setSelectedLabelIds((prev) =>
+      prev.includes(labelId)
+        ? prev.filter((id) => id !== labelId)
+        : [...prev, labelId]
+    );
+  };
+
+  const clearLabelFilters = () => {
+    setSelectedLabelIds([]);
+  };
+
+  // Group labels by category
+  const labelsByCategory = allLabels?.reduce((acc, label) => {
+    const category = label.category || 'outros';
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(label);
+    return acc;
+  }, {} as Record<string, typeof allLabels>) || {};
+
+  const categoryLabels: Record<string, string> = {
+    origem: 'Origem',
+    interesse: 'Benefício/Condição',
+    prioridade: 'Prioridade',
+    status: 'Status',
+    beneficio: 'Benefício',
+    condicao_saude: 'Condição de Saúde',
+    desqualificacao: 'Desqualificação',
+  };
 
   const handleSelectConversation = (id: string) => {
     setSelectedConversationId(id);
@@ -251,6 +298,95 @@ const Inbox = () => {
               <TabsTrigger value="outros" className="flex-1 text-xs">Outros</TabsTrigger>
             </TabsList>
           </Tabs>
+
+          {/* Label Filter */}
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <Tag className="w-3.5 h-3.5" />
+                  Etiquetas
+                  {selectedLabelIds.length > 0 && (
+                    <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">
+                      {selectedLabelIds.length}
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-0" align="start">
+                <div className="p-3 border-b border-border">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Filtrar por etiquetas</span>
+                    {selectedLabelIds.length > 0 && (
+                      <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={clearLabelFilters}>
+                        Limpar
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <ScrollArea className="max-h-64">
+                  <div className="p-2 space-y-3">
+                    {Object.entries(labelsByCategory).map(([category, labels]) => (
+                      <div key={category}>
+                        <p className="text-xs font-medium text-muted-foreground mb-1.5 px-1">
+                          {categoryLabels[category] || category}
+                        </p>
+                        <div className="space-y-0.5">
+                          {labels?.map((label) => (
+                            <label
+                              key={label.id}
+                              className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 cursor-pointer"
+                            >
+                              <Checkbox
+                                checked={selectedLabelIds.includes(label.id)}
+                                onCheckedChange={() => toggleLabelFilter(label.id)}
+                              />
+                              <span
+                                className="w-2.5 h-2.5 rounded-full"
+                                style={{ backgroundColor: label.color }}
+                              />
+                              <span className="text-sm">{label.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </PopoverContent>
+            </Popover>
+
+            {/* Selected Labels Pills */}
+            {selectedLabelIds.length > 0 && (
+              <div className="flex items-center gap-1 flex-wrap flex-1">
+                {selectedLabelIds.slice(0, 2).map((labelId) => {
+                  const label = allLabels?.find((l) => l.id === labelId);
+                  if (!label) return null;
+                  return (
+                    <Badge
+                      key={labelId}
+                      className="text-xs px-1.5 py-0 gap-1 cursor-pointer"
+                      style={{
+                        backgroundColor: `${label.color}20`,
+                        color: label.color,
+                        borderColor: label.color,
+                      }}
+                      variant="outline"
+                      onClick={() => toggleLabelFilter(labelId)}
+                    >
+                      {label.name}
+                      <X className="w-2.5 h-2.5" />
+                    </Badge>
+                  );
+                })}
+                {selectedLabelIds.length > 2 && (
+                  <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                    +{selectedLabelIds.length - 2}
+                  </Badge>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Conversations */}
