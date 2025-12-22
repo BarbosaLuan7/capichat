@@ -155,7 +155,23 @@ async function sendWAHA(config: WhatsAppConfig, phone: string, message: string, 
           };
         }
         
-        return { success: false, error: errorData.message || `Erro ${response.status}` };
+        // Detectar erro "No LID for user" - sessão não conectada ou número inválido
+        if (responseText.includes('No LID for user')) {
+          return { 
+            success: false, 
+            error: 'Sessão do WhatsApp desconectada ou número não existe no WhatsApp. Verifique a conexão do WhatsApp na configuração.' 
+          };
+        }
+        
+        // Detectar erro de sessão não encontrada
+        if (responseText.includes('session') && (responseText.includes('not found') || responseText.includes('not exists'))) {
+          return { 
+            success: false, 
+            error: 'Sessão do WhatsApp não encontrada. Verifique o nome da instância na configuração.' 
+          };
+        }
+        
+        return { success: false, error: errorData.message || errorData.exception?.message || `Erro ${response.status}` };
       } catch {
         return { success: false, error: `Erro ${response.status}: ${responseText}` };
       }
