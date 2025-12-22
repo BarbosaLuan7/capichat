@@ -1,10 +1,12 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Check, CheckCheck, Star, Image, FileText, Video, Mic } from 'lucide-react';
+import { Check, CheckCheck, Star, Image, FileText, Video, Mic, Sparkles, Loader2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useAudioTranscription } from '@/hooks/useAudioTranscription';
 import type { Database } from '@/integrations/supabase/types';
 
 type Message = Database['public']['Tables']['messages']['Row'] & {
@@ -28,6 +30,25 @@ export function MessageBubble({
   agentName = 'Agente',
   onToggleStar,
 }: MessageBubbleProps) {
+  const { transcribeAudio, getTranscription, isLoading } = useAudioTranscription();
+  const [transcription, setTranscription] = useState<string | null>(null);
+  const [hasAttempted, setHasAttempted] = useState(false);
+
+  // Auto-transcribe audio messages from leads
+  useEffect(() => {
+    if (message.type === 'audio' && message.media_url && !isAgent && !hasAttempted) {
+      const cached = getTranscription(message.id);
+      if (cached) {
+        setTranscription(cached);
+      } else {
+        setHasAttempted(true);
+        transcribeAudio(message.id, message.media_url).then((text) => {
+          if (text) setTranscription(text);
+        });
+      }
+    }
+  }, [message.id, message.type, message.media_url, isAgent, hasAttempted, transcribeAudio, getTranscription]);
+
   const renderMedia = () => {
     if (!message.media_url) return null;
 
@@ -54,8 +75,46 @@ export function MessageBubble({
         );
       case 'audio':
         return (
-          <div className="mb-2">
+          <div className="mb-2 space-y-2">
             <audio src={message.media_url} controls className="w-full" />
+            
+            {/* Transcription section */}
+            {!isAgent && (
+              <div className="text-xs">
+                {isLoading(message.id) && (
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span>Transcrevendo...</span>
+                  </div>
+                )}
+                
+                {transcription && (
+                  <div className="p-2 rounded-md bg-background/50 border border-border/50">
+                    <div className="flex items-center gap-1 text-primary/70 mb-1">
+                      <Sparkles className="w-3 h-3" />
+                      <span className="font-medium">Transcrição:</span>
+                    </div>
+                    <p className="text-foreground/80 italic">"{transcription}"</p>
+                  </div>
+                )}
+                
+                {!isLoading(message.id) && !transcription && hasAttempted && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      transcribeAudio(message.id, message.media_url!).then((text) => {
+                        if (text) setTranscription(text);
+                      });
+                    }}
+                  >
+                    <Sparkles className="w-3 h-3 mr-1" />
+                    Transcrever áudio
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         );
       case 'document':
@@ -124,7 +183,7 @@ export function MessageBubble({
         >
           {renderMedia()}
           
-          {message.content && (
+          {message.content && message.content !== '[Áudio]' && message.content !== '[audio]' && (
             <p className="text-sm whitespace-pre-wrap">{message.content}</p>
           )}
           
