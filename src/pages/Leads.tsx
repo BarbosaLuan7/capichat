@@ -1,16 +1,13 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
-  Filter,
   Plus,
   MoreVertical,
   Phone,
   Mail,
   Calendar,
-  Tag,
-  ChevronDown,
   ArrowUpDown,
   Eye,
   Pencil,
@@ -51,11 +48,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useLeads, useDeleteLead } from '@/hooks/useLeads';
 import { useFunnelStages } from '@/hooks/useFunnelStages';
 import { useLabels } from '@/hooks/useLabels';
+import { useProfiles } from '@/hooks/useProfiles';
 import { LeadModal } from '@/components/leads/LeadModal';
 import { BulkActionsBar } from '@/components/leads/BulkActionsBar';
+import { LeadFilters, LeadFiltersState } from '@/components/leads/LeadFilters';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 
@@ -64,6 +63,7 @@ const Leads = () => {
   const { data: leads, isLoading } = useLeads();
   const { data: funnelStages } = useFunnelStages();
   const { data: allLabels } = useLabels();
+  const { data: profiles } = useProfiles();
   const deleteLead = useDeleteLead();
   
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
@@ -73,12 +73,54 @@ const Leads = () => {
   const [modalMode, setModalMode] = useState<'view' | 'edit' | 'create'>('create');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [leadToDelete, setLeadToDelete] = useState<string | null>(null);
+  const [filters, setFilters] = useState<LeadFiltersState>({
+    stageId: null,
+    labelIds: [],
+    temperature: null,
+    assignedTo: null,
+    dateRange: undefined,
+  });
 
-  const filteredLeads = leads?.filter((lead) =>
-    lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    lead.phone.includes(searchQuery) ||
-    lead.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  const filteredLeads = useMemo(() => {
+    if (!leads) return [];
+    
+    return leads.filter((lead) => {
+      // Search filter
+      const matchesSearch =
+        lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        lead.phone.includes(searchQuery) ||
+        lead.email?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      if (!matchesSearch) return false;
+
+      // Stage filter
+      if (filters.stageId && lead.stage_id !== filters.stageId) return false;
+
+      // Temperature filter
+      if (filters.temperature && lead.temperature !== filters.temperature) return false;
+
+      // Assigned to filter
+      if (filters.assignedTo && lead.assigned_to !== filters.assignedTo) return false;
+
+      // Labels filter (any of selected labels)
+      if (filters.labelIds.length > 0) {
+        const leadLabelIds = (lead as any).lead_labels?.map((ll: any) => ll.label_id) || [];
+        const hasAnyLabel = filters.labelIds.some((labelId) => leadLabelIds.includes(labelId));
+        if (!hasAnyLabel) return false;
+      }
+
+      // Date range filter
+      if (filters.dateRange?.from) {
+        const leadDate = new Date(lead.created_at);
+        const from = startOfDay(filters.dateRange.from);
+        const to = filters.dateRange.to ? endOfDay(filters.dateRange.to) : endOfDay(filters.dateRange.from);
+        
+        if (!isWithinInterval(leadDate, { start: from, end: to })) return false;
+      }
+
+      return true;
+    });
+  }, [leads, searchQuery, filters]);
 
   const getStage = (stageId: string | null) => funnelStages?.find((s) => s.id === stageId);
   const getLabels = (leadLabels: any[] | undefined) => {
@@ -158,28 +200,23 @@ const Leads = () => {
       {/* Filters */}
       <Card className="p-4">
         <div className="flex items-center gap-4 flex-wrap">
-          <div className="relative flex-1 min-w-[200px] max-w-md">
+          <div className="relative min-w-[200px] max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome, telefone ou email..."
+              placeholder="Buscar..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-9 h-9"
             />
           </div>
 
-          <Button variant="outline" className="gap-2">
-            <Filter className="w-4 h-4" />
-            Filtros
-            <ChevronDown className="w-4 h-4" />
-          </Button>
-
-          <Button variant="outline" className="gap-2">
-            <Tag className="w-4 h-4" />
-            Etiquetas
-            <ChevronDown className="w-4 h-4" />
-          </Button>
-
+          <LeadFilters
+            filters={filters}
+            onFiltersChange={setFilters}
+            funnelStages={funnelStages || []}
+            labels={allLabels || []}
+            profiles={profiles || []}
+          />
         </div>
       </Card>
 
