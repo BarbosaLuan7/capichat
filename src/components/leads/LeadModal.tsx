@@ -38,6 +38,8 @@ import { useLeads, useLead, useCreateLead, useUpdateLead, useDeleteLead } from '
 import { useFunnelStages } from '@/hooks/useFunnelStages';
 import { useLabels, useLeadLabels, useAddLeadLabel, useRemoveLeadLabel } from '@/hooks/useLabels';
 import { cn } from '@/lib/utils';
+import { MaskedInput } from '@/components/ui/masked-input';
+import { formatPhone, formatCPF, unformatPhone, unformatCPF } from '@/lib/masks';
 import type { Database } from '@/integrations/supabase/types';
 
 type LeadTemperature = Database['public']['Enums']['lead_temperature'];
@@ -95,9 +97,9 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
     if (lead && leadId) {
       form.reset({
         name: lead.name,
-        phone: lead.phone,
+        phone: formatPhone(lead.phone),
         email: lead.email || '',
-        cpf: lead.cpf || '',
+        cpf: lead.cpf ? formatCPF(lead.cpf) : '',
         source: lead.source,
         stage_id: lead.stage_id || undefined,
         temperature: lead.temperature,
@@ -117,13 +119,16 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
 
   const handleSubmit = async (data: LeadFormData) => {
     try {
+      const phoneDigits = unformatPhone(data.phone);
+      const cpfDigits = data.cpf ? unformatCPF(data.cpf) : null;
+      
       if (leadId && currentMode === 'edit') {
         await updateLead.mutateAsync({
           id: leadId,
           name: data.name,
-          phone: data.phone,
+          phone: phoneDigits,
           email: data.email || null,
-          cpf: data.cpf || null,
+          cpf: cpfDigits,
           source: data.source,
           stage_id: data.stage_id || null,
           temperature: data.temperature,
@@ -133,9 +138,9 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
       } else {
         await createLead.mutateAsync({
           name: data.name,
-          phone: data.phone,
+          phone: phoneDigits,
           email: data.email || null,
-          cpf: data.cpf || null,
+          cpf: cpfDigits,
           source: data.source,
           stage_id: data.stage_id || null,
           temperature: data.temperature,
@@ -340,9 +345,14 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Telefone</FormLabel>
+                      <FormLabel>Telefone *</FormLabel>
                       <FormControl>
-                        <Input placeholder="(00) 00000-0000" {...field} />
+                        <MaskedInput
+                          mask="phone"
+                          placeholder="(00) 00000-0000"
+                          value={field.value}
+                          onChange={field.onChange}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -372,7 +382,12 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
                     <FormItem>
                       <FormLabel>CPF (opcional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="000.000.000-00" {...field} />
+                        <MaskedInput
+                          mask="cpf"
+                          placeholder="000.000.000-00"
+                          value={field.value || ''}
+                          onChange={field.onChange}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

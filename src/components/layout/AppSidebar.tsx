@@ -14,10 +14,11 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Zap,
+  Scale,
   UsersRound,
   UserCog,
   Workflow,
+  Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
@@ -94,10 +95,10 @@ const AppSidebar = () => {
               className="flex items-center gap-3"
             >
               <div className="w-9 h-9 rounded-lg gradient-primary flex items-center justify-center">
-                <Zap className="w-5 h-5 text-primary-foreground" />
+                <Scale className="w-5 h-5 text-primary-foreground" />
               </div>
               <span className="text-lg font-bold text-sidebar-foreground">
-                LeadFlow
+                GaranteDireito
               </span>
             </motion.div>
           )}

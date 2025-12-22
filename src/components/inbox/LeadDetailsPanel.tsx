@@ -29,6 +29,7 @@ import { InternalNotes } from './InternalNotes';
 import { LeadTimeline } from '@/components/leads/LeadTimeline';
 import { AIClassificationSuggestion } from './AIClassificationSuggestion';
 import { AIConversationSummary } from './AIConversationSummary';
+import { formatPhone, formatCPF } from '@/lib/masks';
 import type { Database } from '@/integrations/supabase/types';
 
 type Lead = Database['public']['Tables']['leads']['Row'];
@@ -230,7 +231,7 @@ export function LeadDetailsPanel({
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 group">
                       <Phone className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="text-sm flex-1">{lead.phone}</span>
+                      <span className="text-sm flex-1">{formatPhone(lead.phone)}</span>
                       <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
                           variant="ghost"
@@ -269,7 +270,7 @@ export function LeadDetailsPanel({
                         <span className="text-xs font-medium text-muted-foreground w-4">
                           CPF
                         </span>
-                        <span className="text-sm flex-1">{lead.cpf}</span>
+                        <span className="text-sm flex-1">{formatCPF(lead.cpf)}</span>
                         <Button
                           variant="ghost"
                           size="icon"
