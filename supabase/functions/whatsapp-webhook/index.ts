@@ -84,6 +84,99 @@ function formatPhoneForDisplay(phone: string): string {
   return phone;
 }
 
+// Função para baixar mídia e fazer upload para o storage
+async function uploadMediaToStorage(
+  supabase: any,
+  mediaUrl: string,
+  type: string,
+  leadId: string
+): Promise<string | null> {
+  try {
+    console.log('[whatsapp-webhook] Baixando mídia de:', mediaUrl);
+    
+    // Baixar o arquivo
+    const response = await fetch(mediaUrl);
+    if (!response.ok) {
+      console.error('[whatsapp-webhook] Erro ao baixar mídia:', response.status);
+      return null;
+    }
+    
+    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+    const arrayBuffer = await response.arrayBuffer();
+    
+    console.log('[whatsapp-webhook] Mídia baixada, contentType:', contentType, 'size:', arrayBuffer.byteLength);
+    
+    // Determinar extensão baseada no content-type ou tipo de mensagem
+    const extensionMap: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+      'image/gif': 'gif',
+      'audio/ogg': 'ogg',
+      'audio/ogg; codecs=opus': 'ogg',
+      'audio/mpeg': 'mp3',
+      'audio/mp4': 'm4a',
+      'audio/aac': 'aac',
+      'video/mp4': 'mp4',
+      'video/3gpp': '3gp',
+      'application/pdf': 'pdf',
+      'application/msword': 'doc',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+    };
+    
+    // Tentar encontrar extensão pelo content-type exato ou parcial
+    let extension = extensionMap[contentType];
+    if (!extension) {
+      // Tentar match parcial
+      for (const [ct, ext] of Object.entries(extensionMap)) {
+        if (contentType.includes(ct.split('/')[1])) {
+          extension = ext;
+          break;
+        }
+      }
+    }
+    
+    // Fallback baseado no tipo de mensagem
+    if (!extension) {
+      const typeExtMap: Record<string, string> = {
+        'image': 'jpg',
+        'audio': 'ogg',
+        'video': 'mp4',
+        'document': 'bin',
+      };
+      extension = typeExtMap[type] || 'bin';
+    }
+    
+    // Nome do arquivo: leads/{leadId}/{timestamp}.{ext}
+    const fileName = `leads/${leadId}/${Date.now()}.${extension}`;
+    
+    // Upload para o storage
+    const { data, error } = await supabase.storage
+      .from('message-attachments')
+      .upload(fileName, arrayBuffer, {
+        contentType,
+        cacheControl: '31536000', // 1 ano
+        upsert: false,
+      });
+    
+    if (error) {
+      console.error('[whatsapp-webhook] Erro no upload:', error);
+      return null;
+    }
+    
+    // Gerar URL pública
+    const { data: { publicUrl } } = supabase.storage
+      .from('message-attachments')
+      .getPublicUrl(data.path);
+    
+    console.log('[whatsapp-webhook] Mídia salva em:', publicUrl);
+    return publicUrl;
+  } catch (error) {
+    console.error('[whatsapp-webhook] Erro ao processar mídia:', error);
+    return null;
+  }
+}
+
 function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'waha' | 'evolution'): { content: string; type: string; mediaUrl?: string } {
   if (provider === 'waha') {
     const msg = payload as WAHAMessage;
@@ -353,7 +446,7 @@ serve(async (req) => {
 
     // Extrair conteúdo da mensagem
     const { content, type, mediaUrl } = getMessageContent(messageData, provider);
-    console.log('[whatsapp-webhook] Conteúdo:', content.substring(0, 100), 'Tipo:', type);
+    console.log('[whatsapp-webhook] Conteúdo:', content.substring(0, 100), 'Tipo:', type, 'MediaUrl:', mediaUrl ? 'presente' : 'nenhum');
 
     // Buscar lead pelo telefone
     let lead;
@@ -468,6 +561,19 @@ serve(async (req) => {
       console.log('[whatsapp-webhook] Conversa criada:', conversation.id);
     }
 
+    // Se tiver mídia, fazer upload para o storage permanente
+    let finalMediaUrl = mediaUrl;
+    if (mediaUrl && type !== 'text') {
+      console.log('[whatsapp-webhook] Processando mídia para storage...');
+      const storageUrl = await uploadMediaToStorage(supabase, mediaUrl, type, lead.id);
+      if (storageUrl) {
+        finalMediaUrl = storageUrl;
+        console.log('[whatsapp-webhook] Mídia salva no storage:', storageUrl);
+      } else {
+        console.log('[whatsapp-webhook] Falha no upload, usando URL original como fallback');
+      }
+    }
+
     // Criar mensagem
     const { data: message, error: createMsgError } = await supabase
       .from('messages')
@@ -478,7 +584,7 @@ serve(async (req) => {
         sender_type: 'lead',
         content: content,
         type: type as 'text' | 'image' | 'audio' | 'video' | 'document',
-        media_url: mediaUrl,
+        media_url: finalMediaUrl,
         direction: 'inbound',
         status: 'delivered',
       })
