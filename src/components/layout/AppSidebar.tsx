@@ -192,7 +192,7 @@ const AppSidebar = () => {
             <Link
               to={item.path}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative',
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative overflow-visible',
                 active
                   ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-glow'
                   : 'text-sidebar-foreground hover:bg-sidebar-accent'
@@ -216,9 +216,9 @@ const AppSidebar = () => {
               {item.badge && (
                 <span
                   className={cn(
-                    'absolute flex items-center justify-center text-xs font-bold rounded-full',
+                    'flex items-center justify-center text-xs font-bold rounded-full',
                     sidebarCollapsed
-                      ? 'top-0 right-0 w-5 h-5 bg-destructive text-destructive-foreground'
+                      ? 'absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground shadow-sm'
                       : 'ml-auto w-6 h-6 bg-destructive/20 text-destructive'
                   )}
                 >

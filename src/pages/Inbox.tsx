@@ -13,6 +13,7 @@ import {
   Mic,
   Tag,
   X,
+  Loader2,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -543,18 +544,18 @@ const Inbox = () => {
                     animate={{ opacity: 1 }}
                     onClick={() => handleSelectConversation(conversation.id)}
                     className={cn(
-                      'p-4 cursor-pointer transition-colors hover:bg-muted/50',
+                      'p-4 cursor-pointer transition-colors hover:bg-muted/50 overflow-hidden',
                       isSelected && 'bg-primary/5 border-l-2 border-l-primary'
                     )}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="relative">
+                      <div className="relative flex-shrink-0">
                         <Avatar className="w-12 h-12">
                           <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${convLead?.name}`} />
                           <AvatarFallback>{convLead?.name?.charAt(0)}</AvatarFallback>
                         </Avatar>
                         {conversation.unread_count > 0 && (
-                          <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                          <span className="absolute top-0 right-0 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
                             {conversation.unread_count}
                           </span>
                         )}
@@ -817,9 +818,13 @@ const Inbox = () => {
                   <Button
                     onClick={handleSendMessage}
                     disabled={(!messageInput.trim() && !pendingFile) || sendMessage.isPending || uploadProgress.uploading}
-                    className="gradient-primary text-primary-foreground"
+                    className="gradient-primary text-primary-foreground min-w-[40px]"
                   >
-                    <Send className="w-4 h-4" />
+                    {sendMessage.isPending || uploadProgress.uploading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
                   </Button>
                 )}
               </div>
