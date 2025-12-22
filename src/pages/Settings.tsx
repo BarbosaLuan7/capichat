@@ -22,12 +22,15 @@ import { useAuthStore } from '@/store/authStore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 
+import { Smartphone } from 'lucide-react';
+
 const settingsMenu = [
   { icon: Building2, label: 'Empresa', description: 'Informações da empresa', href: undefined },
   { icon: Users, label: 'Usuários', description: 'Gerenciar membros da equipe', href: '/settings/users' },
   { icon: Tag, label: 'Etiquetas', description: 'Configurar etiquetas', href: '/settings/labels' },
   { icon: MessageSquare, label: 'Templates', description: 'Mensagens rápidas', href: '/settings/templates' },
   { icon: Zap, label: 'Automações', description: 'Regras automáticas', href: '/automations' },
+  { icon: Smartphone, label: 'WhatsApp', description: 'Gateway WAHA/Evolution/Z-API', href: '/settings/whatsapp' },
   { icon: Key, label: 'API & Integrações', description: 'Chaves de API e documentação', href: '/settings/api' },
   { icon: Database, label: 'Webhooks', description: 'Enviar dados para sistemas externos', href: '/settings/webhooks' },
   { icon: Bell, label: 'Notificações', description: 'Preferências de alertas', href: undefined },

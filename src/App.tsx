@@ -26,6 +26,7 @@ import TeamsSettings from "./pages/settings/TeamsSettings";
 import LabelsSettings from "./pages/settings/LabelsSettings";
 import TemplatesSettings from "./pages/settings/TemplatesSettings";
 import WebhooksSettings from "./pages/settings/WebhooksSettings";
+import WhatsAppSettings from "./pages/settings/WhatsAppSettings";
 import ApiSettings from "./pages/settings/ApiSettings";
 import NotFound from "./pages/NotFound";
 import React from "react";
@@ -125,6 +126,7 @@ function AppContent() {
           <Route path="settings/labels" element={<LabelsSettings />} />
           <Route path="settings/templates" element={<TemplatesSettings />} />
           <Route path="settings/webhooks" element={<WebhooksSettings />} />
+          <Route path="settings/whatsapp" element={<WhatsAppSettings />} />
           <Route path="settings/api" element={<ApiSettings />} />
         </Route>
         <Route path="*" element={<NotFound />} />

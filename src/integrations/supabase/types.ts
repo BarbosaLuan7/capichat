@@ -827,6 +827,51 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_config: {
+        Row: {
+          api_key: string
+          base_url: string
+          created_at: string
+          created_by: string | null
+          id: string
+          instance_name: string | null
+          is_active: boolean
+          name: string
+          phone_number: string | null
+          provider: string
+          updated_at: string
+          webhook_secret: string | null
+        }
+        Insert: {
+          api_key: string
+          base_url: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          instance_name?: string | null
+          is_active?: boolean
+          name: string
+          phone_number?: string | null
+          provider: string
+          updated_at?: string
+          webhook_secret?: string | null
+        }
+        Update: {
+          api_key?: string
+          base_url?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          instance_name?: string | null
+          is_active?: boolean
+          name?: string
+          phone_number?: string | null
+          provider?: string
+          updated_at?: string
+          webhook_secret?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
