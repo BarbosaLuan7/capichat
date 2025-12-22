@@ -58,6 +58,7 @@ export type Database = {
           assigned_to: string | null
           created_at: string
           id: string
+          is_favorite: boolean | null
           last_message_at: string
           lead_id: string
           status: Database["public"]["Enums"]["conversation_status"]
@@ -67,6 +68,7 @@ export type Database = {
           assigned_to?: string | null
           created_at?: string
           id?: string
+          is_favorite?: boolean | null
           last_message_at?: string
           lead_id: string
           status?: Database["public"]["Enums"]["conversation_status"]
@@ -76,6 +78,7 @@ export type Database = {
           assigned_to?: string | null
           created_at?: string
           id?: string
+          is_favorite?: boolean | null
           last_message_at?: string
           lead_id?: string
           status?: Database["public"]["Enums"]["conversation_status"]
@@ -269,6 +272,7 @@ export type Database = {
           conversation_id: string
           created_at: string
           id: string
+          is_starred: boolean | null
           media_url: string | null
           sender_id: string
           sender_type: Database["public"]["Enums"]["sender_type"]
@@ -280,6 +284,7 @@ export type Database = {
           conversation_id: string
           created_at?: string
           id?: string
+          is_starred?: boolean | null
           media_url?: string | null
           sender_id: string
           sender_type: Database["public"]["Enums"]["sender_type"]
@@ -291,6 +296,7 @@ export type Database = {
           conversation_id?: string
           created_at?: string
           id?: string
+          is_starred?: boolean | null
           media_url?: string | null
           sender_id?: string
           sender_type?: Database["public"]["Enums"]["sender_type"]
