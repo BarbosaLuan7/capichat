@@ -35,6 +35,7 @@ import {
   useToggleConversationFavorite,
   useUpdateConversationAssignee,
   useToggleMessageStar,
+  useUpdateConversationStatus,
 } from '@/hooks/useConversations';
 import { useLead, useUpdateLead } from '@/hooks/useLeads';
 import { useLabels, useLeadLabels } from '@/hooks/useLabels';
@@ -62,11 +63,13 @@ import { LeadDetailsPanel } from '@/components/inbox/LeadDetailsPanel';
 import { InlineNoteMessage } from '@/components/inbox/InlineNoteMessage';
 import { AISuggestions } from '@/components/inbox/AISuggestions';
 import { AIReminderPrompt } from '@/components/inbox/AIReminderPrompt';
+import { ConversationStatusTabs } from '@/components/inbox/ConversationStatusTabs';
+import { ConversationStatusActions } from '@/components/inbox/ConversationStatusActions';
 
 import type { Database } from '@/integrations/supabase/types';
 
 type ConversationStatus = Database['public']['Enums']['conversation_status'];
-
+type StatusFilter = ConversationStatus | 'all';
 type InboxFilter = 'novos' | 'meus' | 'outros';
 
 const Inbox = () => {
@@ -80,6 +83,7 @@ const Inbox = () => {
   const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
   const [showSlashCommand, setShowSlashCommand] = useState(false);
   const [showReminderPrompt, setShowReminderPrompt] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -100,6 +104,7 @@ const Inbox = () => {
   const updateAssignee = useUpdateConversationAssignee();
   const toggleMessageStar = useToggleMessageStar();
   const updateLead = useUpdateLead();
+  const updateConversationStatus = useUpdateConversationStatus();
   
   // File upload
   const { uploadFile, uploadProgress, getFileType } = useFileUpload();
@@ -138,33 +143,49 @@ const Inbox = () => {
     }
   }, [selectedConversationId, messages?.length]);
 
-  const filteredConversations = conversations?.filter((conv) => {
-    // Filter by tab
-    let matchesFilter = true;
-    if (filter === 'novos') {
-      // Novos = sem atribuição ou criados recentemente (últimas 24h)
-      const isRecent = new Date(conv.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000;
-      matchesFilter = !conv.assigned_to || isRecent;
-    } else if (filter === 'meus') {
-      // Meus = atribuídos ao usuário atual
-      matchesFilter = conv.assigned_to === user?.id;
-    } else if (filter === 'outros') {
-      // Outros = atribuídos a outras pessoas
-      matchesFilter = !!conv.assigned_to && conv.assigned_to !== user?.id;
-    }
-    
-    const matchesSearch = !searchQuery || 
-      (conv.leads as any)?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (conv.leads as any)?.phone?.includes(searchQuery);
+  // Calculate status counts
+  const statusCounts = useMemo(() => {
+    const counts = { all: 0, open: 0, pending: 0, resolved: 0 };
+    conversations?.forEach((conv) => {
+      counts.all++;
+      if (conv.status === 'open') counts.open++;
+      else if (conv.status === 'pending') counts.pending++;
+      else if (conv.status === 'resolved') counts.resolved++;
+    });
+    return counts;
+  }, [conversations]);
 
-    // Filter by labels
-    const matchesLabels = selectedLabelIds.length === 0 || 
-      selectedLabelIds.some((labelId) => 
-        (conv.leads as any)?.lead_labels?.some((ll: any) => ll.labels?.id === labelId)
-      );
+  const filteredConversations = useMemo(() => {
+    return conversations?.filter((conv) => {
+      // Filter by status tab
+      if (statusFilter !== 'all' && conv.status !== statusFilter) {
+        return false;
+      }
 
-    return matchesFilter && matchesSearch && matchesLabels;
-  }) || [];
+      // Filter by assignment tab
+      let matchesFilter = true;
+      if (filter === 'novos') {
+        const isRecent = new Date(conv.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000;
+        matchesFilter = !conv.assigned_to || isRecent;
+      } else if (filter === 'meus') {
+        matchesFilter = conv.assigned_to === user?.id;
+      } else if (filter === 'outros') {
+        matchesFilter = !!conv.assigned_to && conv.assigned_to !== user?.id;
+      }
+      
+      const matchesSearch = !searchQuery || 
+        (conv.leads as any)?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (conv.leads as any)?.phone?.includes(searchQuery);
+
+      // Filter by labels
+      const matchesLabels = selectedLabelIds.length === 0 || 
+        selectedLabelIds.some((labelId) => 
+          (conv.leads as any)?.lead_labels?.some((ll: any) => ll.labels?.id === labelId)
+        );
+
+      return matchesFilter && matchesSearch && matchesLabels;
+    }) || [];
+  }, [conversations, statusFilter, filter, user?.id, searchQuery, selectedLabelIds]);
 
   const toggleLabelFilter = (labelId: string) => {
     setSelectedLabelIds((prev) =>
@@ -358,6 +379,22 @@ const Inbox = () => {
     toggleMessageStar.mutate({ messageId, isStarred });
   };
 
+  const handleStatusChange = (status: ConversationStatus) => {
+    if (!selectedConversationId) return;
+    updateConversationStatus.mutate(
+      { conversationId: selectedConversationId, status },
+      {
+        onSuccess: () => {
+          const statusLabels = { open: 'Aberta', pending: 'Pendente', resolved: 'Resolvida' };
+          toast.success(`Conversa marcada como ${statusLabels[status]}`);
+        },
+        onError: () => {
+          toast.error('Erro ao atualizar status');
+        },
+      }
+    );
+  };
+
   const lead = leadData as any;
   const leadWithLabels = lead ? {
     ...lead,
@@ -379,6 +416,12 @@ const Inbox = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+
+          <ConversationStatusTabs
+            value={statusFilter}
+            onChange={setStatusFilter}
+            counts={statusCounts}
+          />
 
           <Tabs value={filter} onValueChange={(v) => setFilter(v as InboxFilter)}>
             <TabsList className="w-full">
@@ -598,6 +641,11 @@ const Inbox = () => {
               </div>
 
               <div className="flex items-center gap-2">
+                <ConversationStatusActions
+                  currentStatus={selectedConversation.status}
+                  onStatusChange={handleStatusChange}
+                  isLoading={updateConversationStatus.isPending}
+                />
                 <Button variant="ghost" size="icon">
                   <Phone className="w-4 h-4" />
                 </Button>
