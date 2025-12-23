@@ -60,9 +60,11 @@ const CATEGORY_LABELS: Record<LabelCategory, string> = {
   beneficio: 'Tipo de Benefício',
   condicao_saude: 'Condição de Saúde',
   prioridade: 'Prioridade',
-  status: 'Status',
+  status: 'Status/Workflow',
   interesse: 'Interesse',
   desqualificacao: 'Desqualificação',
+  situacao: 'Situação',
+  perda: 'Motivo de Perda',
 };
 
 const CATEGORY_COLORS: Record<LabelCategory, string> = {
@@ -73,6 +75,8 @@ const CATEGORY_COLORS: Record<LabelCategory, string> = {
   status: 'bg-purple-500/10 text-purple-600',
   interesse: 'bg-cyan-500/10 text-cyan-600',
   desqualificacao: 'bg-gray-500/10 text-gray-600',
+  situacao: 'bg-yellow-500/10 text-yellow-600',
+  perda: 'bg-rose-500/10 text-rose-600',
 };
 
 const LabelsSettings = () => {
