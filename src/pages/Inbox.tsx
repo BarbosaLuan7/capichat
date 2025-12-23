@@ -26,8 +26,23 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { formatPhoneNumber } from '@/lib/masks';
-import { format, isSameDay } from 'date-fns';
+import { format, isSameDay, isYesterday, differenceInMinutes, differenceInHours, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
+// Format conversation date intelligently
+const formatConversationDate = (date: Date): string => {
+  const now = new Date();
+  const diffMins = differenceInMinutes(now, date);
+  const diffHours = differenceInHours(now, date);
+  const diffDays = differenceInDays(now, date);
+  
+  if (diffMins < 1) return 'agora';
+  if (diffMins < 60) return `${diffMins}min`;
+  if (isSameDay(date, now)) return format(date, 'HH:mm');
+  if (isYesterday(date)) return 'ontem';
+  if (diffDays < 7) return format(date, 'EEEE', { locale: ptBR });
+  return format(date, 'dd/MM');
+};
 import { toast } from 'sonner';
 
 // Hooks
@@ -93,7 +108,15 @@ const Inbox = () => {
   const [showReminderPrompt, setShowReminderPrompt] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
-  const [showLeadPanel, setShowLeadPanel] = useState(true);
+  const [showLeadPanel, setShowLeadPanel] = useState(() => {
+    const saved = localStorage.getItem('inbox-show-lead-panel');
+    return saved !== null ? saved === 'true' : true;
+  });
+  
+  // Persist lead panel toggle
+  useEffect(() => {
+    localStorage.setItem('inbox-show-lead-panel', String(showLeadPanel));
+  }, [showLeadPanel]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -242,6 +265,8 @@ const Inbox = () => {
     beneficio: 'Benefício',
     condicao_saude: 'Condição de Saúde',
     desqualificacao: 'Desqualificação',
+    situacao: 'Situação',
+    perda: 'Motivo de Perda',
   };
 
   const handleSelectConversation = (id: string) => {
@@ -654,12 +679,12 @@ const Inbox = () => {
                             </span>
                           </div>
                           <span className="text-xs text-muted-foreground">
-                            {format(new Date(conversation.last_message_at), 'HH:mm', { locale: ptBR })}
+                            {formatConversationDate(new Date(conversation.last_message_at))}
                           </span>
                         </div>
 
                         <p className="text-sm text-muted-foreground truncate mb-2">
-                          {formatPhoneNumber(convLead?.phone || '')}
+                          {(conversation as any).last_message_content || formatPhoneNumber(convLead?.phone || '')}
                         </p>
 
                         <div className="flex items-center gap-1 flex-wrap">
