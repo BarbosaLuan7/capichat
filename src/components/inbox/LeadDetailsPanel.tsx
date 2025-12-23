@@ -103,7 +103,7 @@ export function LeadDetailsPanel({
     id: activity.id,
     type: getEventType(activity.action),
     title: formatActivityMessage(activity.action, activity.details || {}),
-    description: activity.details?.description,
+    description: activity.details?.description || activity.details?.content,
     createdAt: new Date(activity.created_at),
     user: activity.profiles?.name,
   })) || [
