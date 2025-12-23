@@ -708,9 +708,9 @@ const Inbox = () => {
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-1">
-                            {isFavorite && <Star className="w-3 h-3 fill-warning text-warning" />}
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <div className="flex items-center gap-1 min-w-0 flex-1">
+                            {isFavorite && <Star className="w-3 h-3 fill-warning text-warning flex-shrink-0" />}
                             <span 
                               className="font-semibold text-foreground truncate"
                               title={convLead?.name}
@@ -718,7 +718,7 @@ const Inbox = () => {
                               {convLead?.name}
                             </span>
                           </div>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
                             {formatConversationDate(new Date(conversation.last_message_at))}
                           </span>
                         </div>
