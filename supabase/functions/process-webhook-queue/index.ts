@@ -1,598 +1,535 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// ============================================================================
-// MAPEAMENTOS PT-BR (copiados do dispatch-webhook para consistência)
-// ============================================================================
+// ============================================
+// HELPERS
+// ============================================
 
-const EVENT_NAMES_PT: Record<string, string> = {
-  'lead.created': 'lead.criado',
-  'lead.updated': 'lead.atualizado',
-  'lead.deleted': 'lead.excluido',
-  'lead.stage_changed': 'lead.etapa_alterada',
-  'lead.assigned': 'lead.transferido',
-  'lead.temperature_changed': 'lead.temperatura_alterada',
-  'lead.label_added': 'lead.etiqueta_adicionada',
-  'lead.label_removed': 'lead.etiqueta_removida',
-  'message.received': 'mensagem.recebida',
-  'message.sent': 'mensagem.enviada',
-  'conversation.created': 'conversa.criada',
-  'conversation.assigned': 'conversa.atribuida',
-  'conversation.resolved': 'conversa.resolvida',
-  'task.created': 'tarefa.criada',
-  'task.completed': 'tarefa.concluida',
-};
-
-const TEMPERATURE_MAP: Record<string, { valor: string; emoji: string }> = {
-  'cold': { valor: 'frio', emoji: '❄️' },
-  'warm': { valor: 'morno', emoji: '🌡️' },
-  'hot': { valor: 'quente', emoji: '🔥' },
-};
-
-const PRIORITY_MAP: Record<string, { valor: string; emoji: string }> = {
-  'urgent': { valor: 'urgente', emoji: '🔴' },
-  'high': { valor: 'alta', emoji: '🟠' },
-  'medium': { valor: 'media', emoji: '🟡' },
-  'low': { valor: 'baixa', emoji: '🟢' },
-};
-
-const TASK_STATUS_MAP: Record<string, string> = {
-  'todo': 'pendente',
-  'in_progress': 'em_andamento',
-  'done': 'concluida',
-};
-
-const CONVERSATION_STATUS_MAP: Record<string, string> = {
-  'open': 'aberta',
-  'pending': 'pendente',
-  'resolved': 'resolvida',
-};
-
-const MESSAGE_TYPE_MAP: Record<string, string> = {
-  'text': 'texto',
-  'image': 'imagem',
-  'audio': 'audio',
-  'video': 'video',
-  'document': 'documento',
-};
-
-// ============================================================================
-// FUNÇÕES AUXILIARES
-// ============================================================================
-
-function formatDateBrasilia(date?: Date | string): string {
-  const d = date ? (typeof date === 'string' ? new Date(date) : date) : new Date();
-  const brasiliaOffset = -3 * 60;
-  const utcOffset = d.getTimezoneOffset();
-  const diff = utcOffset + brasiliaOffset;
-  const brasiliaTime = new Date(d.getTime() + diff * 60 * 1000);
-  
-  const year = brasiliaTime.getFullYear();
-  const month = String(brasiliaTime.getMonth() + 1).padStart(2, '0');
-  const day = String(brasiliaTime.getDate()).padStart(2, '0');
-  const hours = String(brasiliaTime.getHours()).padStart(2, '0');
-  const minutes = String(brasiliaTime.getMinutes()).padStart(2, '0');
-  const seconds = String(brasiliaTime.getSeconds()).padStart(2, '0');
-  
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}-03:00`;
-}
-
-function gerarCodigoLead(leadId: string, createdAt?: string): string {
-  const date = createdAt ? new Date(createdAt) : new Date();
-  const ano = date.getFullYear();
-  const hash = leadId.replace(/-/g, '').substring(0, 8);
-  const num = parseInt(hash, 16) % 1000000;
-  return `L-${ano}-${String(num).padStart(6, '0')}`;
-}
-
-function formatarTelefone(phone: string | null | undefined): {
-  numero: string;
-  formatado: string;
-  ddd: string;
-  whatsapp: boolean;
-} | null {
-  if (!phone) return null;
-  
-  const normalizado = phone.replace(/\D/g, '');
-  if (normalizado.length < 10) return null;
-  
-  const semPais = normalizado.startsWith('55') ? normalizado.slice(2) : normalizado;
-  const ddd = semPais.substring(0, 2);
-  const numero = semPais.substring(2);
-  
-  let formatado: string;
-  if (numero.length === 9) {
-    formatado = `+55 (${ddd}) ${numero.slice(0, 5)}-${numero.slice(5)}`;
-  } else if (numero.length === 8) {
-    formatado = `+55 (${ddd}) ${numero.slice(0, 4)}-${numero.slice(4)}`;
-  } else {
-    formatado = `+55 ${semPais}`;
-  }
-  
-  return { numero: `55${semPais}`, formatado, ddd, whatsapp: true };
-}
-
-function isHorarioComercial(): boolean {
-  const now = new Date();
-  const brasiliaOffset = -3 * 60;
-  const utcOffset = now.getTimezoneOffset();
-  const diff = utcOffset + brasiliaOffset;
-  const brasiliaTime = new Date(now.getTime() + diff * 60 * 1000);
-  
-  const hora = brasiliaTime.getHours();
-  const diaSemana = brasiliaTime.getDay();
-  
-  return diaSemana >= 1 && diaSemana <= 5 && hora >= 8 && hora < 18;
-}
-
-// ============================================================================
-// INTERFACES
-// ============================================================================
-
-interface WebhookQueueItem {
-  id: string;
-  event: string;
-  payload: Record<string, unknown>;
-  processed: boolean;
-  created_at: string;
-}
-
-interface Webhook {
-  id: string;
-  url: string;
-  secret: string;
-  events: string[];
-  headers: Record<string, string> | null;
-  is_active: boolean;
-}
-
-interface EnrichedData {
-  lead?: any;
-  leadLabels?: Array<{ id: string; nome: string; cor: string; categoria: string }>;
-  responsavel?: { id: string; nome: string; email: string };
-  etapa?: { id: string; nome: string; ordem: number; cor: string };
-  etapaAnterior?: { id: string; nome: string; ordem: number; cor: string };
-  conversa?: any;
-  mensagem?: any;
-  tarefa?: any;
-}
-
-// ============================================================================
-// BUSCAR DADOS ENRIQUECIDOS
-// ============================================================================
-
-async function buscarDadosEnriquecidos(
-  supabase: any,
-  event: string,
-  data: Record<string, unknown>
-): Promise<EnrichedData> {
-  const enriched: EnrichedData = {};
-  const innerData = (data.data as Record<string, unknown>) || data;
-  
-  try {
-    const leadData = innerData.lead as Record<string, unknown> | undefined;
-    const leadId = leadData?.id as string || innerData.lead_id as string;
-    
-    if (leadId) {
-      const { data: lead } = await supabase
-        .from('leads')
-        .select('*, funnel_stages(*)')
-        .eq('id', leadId)
-        .single();
-      
-      if (lead) {
-        enriched.lead = lead;
-        
-        if (lead.funnel_stages) {
-          enriched.etapa = {
-            id: lead.funnel_stages.id,
-            nome: lead.funnel_stages.name,
-            ordem: lead.funnel_stages.order,
-            cor: lead.funnel_stages.color,
-          };
-        }
-        
-        if (lead.assigned_to) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('id, name, email')
-            .eq('id', lead.assigned_to)
-            .single();
-          
-          if (profile) {
-            enriched.responsavel = {
-              id: profile.id,
-              nome: profile.name,
-              email: profile.email,
-            };
-          }
-        }
-        
-        const { data: leadLabels } = await supabase
-          .from('lead_labels')
-          .select('labels(id, name, color, category)')
-          .eq('lead_id', leadId);
-        
-        if (leadLabels) {
-          enriched.leadLabels = leadLabels
-            .filter((ll: any) => ll.labels)
-            .map((ll: any) => ({
-              id: ll.labels.id,
-              nome: ll.labels.name,
-              cor: ll.labels.color,
-              categoria: ll.labels.category,
-            }));
-        }
-      }
-    }
-    
-    if (event === 'lead.stage_changed') {
-      const previousStageId = innerData.previous_stage_id as string;
-      if (previousStageId) {
-        const { data: stage } = await supabase
-          .from('funnel_stages')
-          .select('*')
-          .eq('id', previousStageId)
-          .single();
-        
-        if (stage) {
-          enriched.etapaAnterior = {
-            id: stage.id,
-            nome: stage.name,
-            ordem: stage.order,
-            cor: stage.color,
-          };
-        }
-      }
-    }
-    
-    const conversationData = innerData.conversation as Record<string, unknown> | undefined;
-    if (conversationData?.id) {
-      const { data: conversation } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('id', conversationData.id)
-        .single();
-      
-      if (conversation) enriched.conversa = conversation;
-    }
-    
-    if (innerData.message) enriched.mensagem = innerData.message;
-    if (innerData.task) enriched.tarefa = innerData.task;
-    
-  } catch (err) {
-    console.error('[Webhook Queue] Erro ao buscar dados enriquecidos:', err);
-  }
-  
-  return enriched;
-}
-
-// ============================================================================
-// CONSTRUIR PAYLOAD V2.0
-// ============================================================================
-
-function buildPayloadV2(
-  event: string,
-  data: Record<string, unknown>,
-  enriched: EnrichedData,
-  webhookId: string,
-  attempt: number
-): Record<string, unknown> {
-  const eventoPtBr = EVENT_NAMES_PT[event] || event;
-  const idEntrega = crypto.randomUUID();
-  const timestamp = formatDateBrasilia();
-  const timestampUnix = Math.floor(Date.now() / 1000);
-  const innerData = (data.data as Record<string, unknown>) || data;
-  
-  let dados: Record<string, unknown> = {};
-  let contexto: Record<string, unknown> = {
-    empresa: 'GaranteDireito',
-    fuso_horario: 'America/Sao_Paulo',
+function gerarIdLegivel(tipo: string, uuid: string): string {
+  const prefixos: Record<string, string> = {
+    lead: 'lead_', mensagem: 'msg_', conversa: 'conv_', usuario: 'user_', tarefa: 'task_'
   };
+  return (prefixos[tipo] || '') + uuid.replace(/-/g, '').substring(0, 8);
+}
+
+function formatarTelefone(numero: string | null | undefined): string {
+  if (!numero) return '';
+  const digits = numero.replace(/\D/g, '');
   
-  // Build lead object if available
-  const lead = enriched.lead || innerData.lead as Record<string, unknown>;
-  if (lead && event.startsWith('lead.')) {
-    const telefone = formatarTelefone(lead.phone as string);
-    const temperatura = TEMPERATURE_MAP[lead.temperature as string] || { valor: lead.temperature || 'desconhecido', emoji: '' };
+  if (digits.length === 13 && digits.startsWith('55')) {
+    return `+${digits.slice(0,2)} (${digits.slice(2,4)}) ${digits.slice(4,9)}-${digits.slice(9)}`;
+  }
+  if (digits.length === 12 && digits.startsWith('55')) {
+    return `+${digits.slice(0,2)} (${digits.slice(2,4)}) ${digits.slice(4,8)}-${digits.slice(8)}`;
+  }
+  if (digits.length === 11) {
+    return `+55 (${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 10) {
+    return `+55 (${digits.slice(0,2)}) ${digits.slice(2,6)}-${digits.slice(6)}`;
+  }
+  return numero;
+}
+
+function formatarCPF(cpf: string | null | undefined): string | null {
+  if (!cpf) return null;
+  const digits = cpf.replace(/\D/g, '');
+  if (digits.length !== 11) return cpf;
+  return `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6,9)}-${digits.slice(9)}`;
+}
+
+function formatTimestamp(): string {
+  return new Date().toISOString().replace('Z', '-03:00');
+}
+
+function traduzirTemperatura(temp: string): string {
+  const map: Record<string, string> = { 'cold': 'frio', 'warm': 'morno', 'hot': 'quente' };
+  return map[temp] || temp;
+}
+
+function traduzirTipoMensagem(type: string): string {
+  const map: Record<string, string> = {
+    'text': 'texto', 'image': 'imagem', 'audio': 'audio',
+    'video': 'video', 'document': 'documento', 'sticker': 'sticker', 'location': 'localizacao'
+  };
+  return map[type] || type;
+}
+
+function traduzirStatusConversa(status: string): string {
+  const map: Record<string, string> = { 'open': 'aberta', 'pending': 'pendente', 'resolved': 'resolvida' };
+  return map[status] || status;
+}
+
+function traduzirStatusMensagem(status: string): string {
+  const map: Record<string, string> = { 'sent': 'enviada', 'delivered': 'entregue', 'read': 'lida' };
+  return map[status] || status;
+}
+
+// ============================================
+// DATA FETCHING
+// ============================================
+
+async function buscarLeadCompleto(supabase: any, leadId: string) {
+  if (!leadId) return null;
+  
+  const { data: lead } = await supabase
+    .from('leads')
+    .select(`*, funnel_stages (id, name)`)
+    .eq('id', leadId)
+    .maybeSingle();
+  
+  if (!lead) return null;
+  
+  const { data: leadLabels } = await supabase
+    .from('lead_labels')
+    .select('labels (name)')
+    .eq('lead_id', leadId);
+  
+  const etiquetas = leadLabels?.map((ll: any) => ll.labels?.name).filter(Boolean) || [];
+  
+  let responsavel = null;
+  if (lead.assigned_to) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, name')
+      .eq('id', lead.assigned_to)
+      .maybeSingle();
     
-    dados.lead = {
-      id: lead.id,
-      codigo: gerarCodigoLead(lead.id as string, lead.created_at as string),
-      nome: lead.name,
-      telefone,
-      email: lead.email || null,
-      temperatura,
-      funil: enriched.etapa || null,
-      responsavel: enriched.responsavel || null,
-      etiquetas: enriched.leadLabels || [],
-      criado_em: lead.created_at ? formatDateBrasilia(lead.created_at as string) : null,
-    };
-    
-    // Event-specific data
-    if (event === 'lead.stage_changed') {
-      dados.etapa_anterior = enriched.etapaAnterior || { id: innerData.previous_stage_id };
-      dados.etapa_nova = enriched.etapa || { id: innerData.new_stage_id };
-    } else if (event === 'lead.temperature_changed') {
-      dados.temperatura_anterior = TEMPERATURE_MAP[innerData.previous_temperature as string] || { valor: innerData.previous_temperature };
-      dados.temperatura_nova = TEMPERATURE_MAP[innerData.new_temperature as string] || { valor: innerData.new_temperature };
-    } else if (event === 'lead.label_added' || event === 'lead.label_removed') {
-      dados.etiqueta = {
-        id: innerData.label_id,
-        nome: innerData.label_name,
-        cor: innerData.label_color,
-        categoria: innerData.label_category,
-      };
-      dados.todas_etiquetas = enriched.leadLabels || [];
+    if (profile) {
+      responsavel = { id: gerarIdLegivel('usuario', profile.id), nome: profile.name };
     }
-  }
-  
-  // Message events
-  if (event.startsWith('message.')) {
-    const message = enriched.mensagem || innerData.message as Record<string, unknown>;
-    if (message) {
-      dados.mensagem = {
-        id: message.id,
-        tipo: MESSAGE_TYPE_MAP[message.type as string] || message.type,
-        conteudo: message.content,
-        midia: message.media_url ? { url: message.media_url } : null,
-        criado_em: message.created_at ? formatDateBrasilia(message.created_at as string) : timestamp,
-      };
-    }
-    if (lead) {
-      dados.lead = {
-        id: lead.id,
-        codigo: gerarCodigoLead(lead.id as string, lead.created_at as string),
-        nome: lead.name,
-        telefone: formatarTelefone(lead.phone as string),
-      };
-    }
-    contexto.canal = 'whatsapp';
-    contexto.horario_comercial = isHorarioComercial();
-  }
-  
-  // Conversation events
-  if (event.startsWith('conversation.')) {
-    const conversation = enriched.conversa || innerData.conversation as Record<string, unknown>;
-    if (conversation) {
-      dados.conversa = {
-        id: conversation.id,
-        status: CONVERSATION_STATUS_MAP[conversation.status as string] || conversation.status,
-      };
-    }
-    if (lead) {
-      dados.lead = {
-        id: lead.id,
-        codigo: gerarCodigoLead(lead.id as string, lead.created_at as string),
-        nome: lead.name,
-        telefone: formatarTelefone(lead.phone as string),
-      };
-    }
-  }
-  
-  // Task events
-  if (event.startsWith('task.')) {
-    const task = enriched.tarefa || innerData.task as Record<string, unknown>;
-    if (task) {
-      dados.tarefa = {
-        id: task.id,
-        titulo: task.title,
-        descricao: task.description,
-        prioridade: PRIORITY_MAP[task.priority as string] || { valor: task.priority },
-        status: TASK_STATUS_MAP[task.status as string] || task.status,
-      };
-    }
-    dados.responsavel = enriched.responsavel || null;
   }
   
   return {
-    evento: eventoPtBr,
-    versao: '2.0',
-    ambiente: Deno.env.get('ENVIRONMENT') || 'producao',
-    timestamp,
-    entrega: { id: idEntrega, tentativa: attempt, max_tentativas: 3 },
-    dados,
-    contexto,
-    assinatura: { algoritmo: 'sha256', hash: '', timestamp: timestampUnix },
+    id: gerarIdLegivel('lead', lead.id),
+    id_original: lead.id,
+    nome: lead.name,
+    whatsapp: formatarTelefone(lead.phone),
+    email: lead.email || null,
+    cpf: formatarCPF(lead.cpf),
+    temperatura: traduzirTemperatura(lead.temperature),
+    etapa_funil: lead.funnel_stages?.name || null,
+    etiquetas,
+    origem: lead.source || null,
+    campanha: lead.utm_medium || null,
+    beneficio: lead.benefit_type || null,
+    criado_em: lead.created_at,
+    responsavel
   };
 }
 
-// ============================================================================
-// ASSINATURA E ENVIO
-// ============================================================================
-
-async function generateSignature(payload: string, secret: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
-  return Array.from(new Uint8Array(signature))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
+async function buscarConversa(supabase: any, conversationId: string) {
+  if (!conversationId) return null;
+  
+  const { data: conv } = await supabase
+    .from('conversations')
+    .select('*')
+    .eq('id', conversationId)
+    .maybeSingle();
+  
+  if (!conv) return null;
+  
+  const { count } = await supabase
+    .from('messages')
+    .select('*', { count: 'exact', head: true })
+    .eq('conversation_id', conversationId);
+  
+  return {
+    id: gerarIdLegivel('conversa', conv.id),
+    id_original: conv.id,
+    status: traduzirStatusConversa(conv.status),
+    nao_lidas: conv.unread_count || 0,
+    total_mensagens: count || 0,
+    lead_id: conv.lead_id
+  };
 }
 
-async function sendWebhook(
-  supabase: any,
-  webhook: Webhook,
-  queueItem: WebhookQueueItem,
-  attempt: number = 1
-): Promise<{ success: boolean; status?: number; error?: string }> {
-  const maxAttempts = 3;
+async function buscarUsuario(supabase: any, userId: string) {
+  if (!userId) return null;
   
-  const enriched = await buscarDadosEnriquecidos(supabase, queueItem.event, queueItem.payload);
-  const payloadObj = buildPayloadV2(queueItem.event, queueItem.payload, enriched, webhook.id, attempt);
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, name')
+    .eq('id', userId)
+    .maybeSingle();
   
-  const payloadSemAssinatura = JSON.stringify({ ...payloadObj, assinatura: undefined });
-  const hash = await generateSignature(payloadSemAssinatura, webhook.secret);
-  (payloadObj.assinatura as Record<string, unknown>).hash = hash;
+  if (!profile) return null;
+  return { id: gerarIdLegivel('usuario', profile.id), nome: profile.name };
+}
+
+// ============================================
+// PAYLOAD BUILDER
+// ============================================
+
+async function buildPayload(supabase: any, evento: string, dados: any): Promise<any> {
+  const eventData = dados?.data || dados;
   
-  const payloadString = JSON.stringify(payloadObj);
-  const timestamp = (payloadObj.assinatura as Record<string, unknown>).timestamp as number;
-  
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json; charset=utf-8',
-    'X-Webhook-Evento': payloadObj.evento as string,
-    'X-Webhook-Versao': '2.0',
-    'X-Webhook-Ambiente': payloadObj.ambiente as string,
-    'X-Webhook-ID-Entrega': (payloadObj.entrega as Record<string, unknown>).id as string,
-    'X-Webhook-Timestamp': timestamp.toString(),
-    'X-Webhook-Assinatura': `sha256=${hash}`,
-    ...(webhook.headers || {}),
-  };
-  
-  try {
-    console.log(`[Webhook Queue v2.0] Enviando ${queueItem.event} -> ${payloadObj.evento} para ${webhook.url} (tentativa ${attempt}/${maxAttempts})`);
-    
-    const response = await fetch(webhook.url, {
-      method: 'POST',
-      headers,
-      body: payloadString,
-    });
-    
-    const responseBody = await response.text();
-    const success = response.ok;
-    
-    console.log(`[Webhook Queue v2.0] Resposta: ${response.status} - ${success ? 'sucesso' : 'falha'}`);
-    
-    await supabase.from('webhook_logs').insert({
-      webhook_id: webhook.id,
-      event: queueItem.event,
-      payload: payloadObj,
-      status: success ? 'success' : (attempt < maxAttempts ? 'retrying' : 'failed'),
-      response_status: response.status,
-      response_body: responseBody.substring(0, 10000),
-      attempts: attempt,
-      completed_at: success ? new Date().toISOString() : null,
-      error_message: success ? null : `HTTP ${response.status}`,
-    });
-    
-    if (!success && attempt < maxAttempts) {
-      const delay = Math.pow(2, attempt) * 1000;
-      await new Promise(resolve => setTimeout(resolve, delay));
-      return sendWebhook(supabase, webhook, queueItem, attempt + 1);
+  switch (evento) {
+    case 'message.received': {
+      const msg = eventData?.message || eventData;
+      const lead = msg?.lead_id ? await buscarLeadCompleto(supabase, msg.lead_id) : null;
+      const conversa = msg?.conversation_id ? await buscarConversa(supabase, msg.conversation_id) : null;
+      
+      return {
+        evento: 'mensagem.recebida',
+        timestamp: formatTimestamp(),
+        mensagem: {
+          id: msg?.id ? gerarIdLegivel('mensagem', msg.id) : null,
+          tipo: traduzirTipoMensagem(msg?.type || 'text'),
+          conteudo: msg?.content || null,
+          midia_url: msg?.media_url || null,
+          recebida_em: msg?.created_at || formatTimestamp()
+        },
+        lead: lead ? {
+          id: lead.id, nome: lead.nome, whatsapp: lead.whatsapp,
+          temperatura: lead.temperatura, etapa_funil: lead.etapa_funil, etiquetas: lead.etiquetas
+        } : null,
+        conversa: conversa ? { id: conversa.id, status: conversa.status, nao_lidas: conversa.nao_lidas } : null,
+        responsavel: lead?.responsavel || null
+      };
     }
     
-    return { success, status: response.status };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-    console.error(`[Webhook Queue v2.0] Erro:`, errorMessage);
-    
-    await supabase.from('webhook_logs').insert({
-      webhook_id: webhook.id,
-      event: queueItem.event,
-      payload: payloadObj,
-      status: attempt < maxAttempts ? 'retrying' : 'failed',
-      attempts: attempt,
-      error_message: errorMessage,
-    });
-    
-    if (attempt < maxAttempts) {
-      const delay = Math.pow(2, attempt) * 1000;
-      await new Promise(resolve => setTimeout(resolve, delay));
-      return sendWebhook(supabase, webhook, queueItem, attempt + 1);
+    case 'message.sent': {
+      const msg = eventData?.message || eventData;
+      const lead = msg?.lead_id ? await buscarLeadCompleto(supabase, msg.lead_id) : null;
+      const conversa = msg?.conversation_id ? await buscarConversa(supabase, msg.conversation_id) : null;
+      const enviadaPor = msg?.sender_id ? await buscarUsuario(supabase, msg.sender_id) : null;
+      
+      return {
+        evento: 'mensagem.enviada',
+        timestamp: formatTimestamp(),
+        mensagem: {
+          id: msg?.id ? gerarIdLegivel('mensagem', msg.id) : null,
+          tipo: traduzirTipoMensagem(msg?.type || 'text'),
+          conteudo: msg?.content || null,
+          midia_url: msg?.media_url || null,
+          enviada_em: msg?.created_at || formatTimestamp(),
+          status: traduzirStatusMensagem(msg?.status || 'sent')
+        },
+        lead: lead ? {
+          id: lead.id, nome: lead.nome, whatsapp: lead.whatsapp,
+          temperatura: lead.temperatura, etapa_funil: lead.etapa_funil, etiquetas: lead.etiquetas
+        } : null,
+        conversa: conversa ? { id: conversa.id, status: conversa.status } : null,
+        enviada_por: enviadaPor
+      };
     }
     
-    return { success: false, error: errorMessage };
+    case 'lead.created': {
+      const leadData = eventData?.lead || eventData;
+      const lead = leadData?.id ? await buscarLeadCompleto(supabase, leadData.id) : null;
+      
+      return {
+        evento: 'lead.criado',
+        timestamp: formatTimestamp(),
+        lead: lead ? {
+          id: lead.id, nome: lead.nome, whatsapp: lead.whatsapp, email: lead.email, cpf: lead.cpf,
+          temperatura: lead.temperatura, etapa_funil: lead.etapa_funil, etiquetas: lead.etiquetas,
+          origem: lead.origem, campanha: lead.campanha, beneficio: lead.beneficio, criado_em: lead.criado_em
+        } : null,
+        responsavel: lead?.responsavel || null
+      };
+    }
+    
+    case 'lead.updated': {
+      const leadData = eventData?.lead || eventData;
+      const lead = leadData?.id ? await buscarLeadCompleto(supabase, leadData.id) : null;
+      
+      return {
+        evento: 'lead.atualizado',
+        timestamp: formatTimestamp(),
+        lead: lead ? {
+          id: lead.id, nome: lead.nome, whatsapp: lead.whatsapp,
+          temperatura: lead.temperatura, etapa_funil: lead.etapa_funil, etiquetas: lead.etiquetas
+        } : null
+      };
+    }
+    
+    case 'lead.stage_changed': {
+      const leadId = eventData?.lead?.id || eventData?.lead_id;
+      const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
+      
+      let etapaAnterior = null, etapaNova = null;
+      if (eventData?.previous_stage_id) {
+        const { data: stage } = await supabase.from('funnel_stages').select('name').eq('id', eventData.previous_stage_id).maybeSingle();
+        etapaAnterior = stage?.name || null;
+      }
+      if (eventData?.new_stage_id) {
+        const { data: stage } = await supabase.from('funnel_stages').select('name').eq('id', eventData.new_stage_id).maybeSingle();
+        etapaNova = stage?.name || null;
+      }
+      
+      return {
+        evento: 'lead.etapa_alterada',
+        timestamp: formatTimestamp(),
+        lead: lead ? { id: lead.id, nome: lead.nome, whatsapp: lead.whatsapp, temperatura: lead.temperatura, etiquetas: lead.etiquetas } : null,
+        etapa_anterior: etapaAnterior,
+        etapa_nova: etapaNova || lead?.etapa_funil,
+        alterado_por: lead?.responsavel || null
+      };
+    }
+    
+    case 'lead.temperature_changed': {
+      const leadId = eventData?.lead?.id || eventData?.lead_id;
+      const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
+      
+      return {
+        evento: 'lead.temperatura_alterada',
+        timestamp: formatTimestamp(),
+        lead: lead ? { id: lead.id, nome: lead.nome, whatsapp: lead.whatsapp, etapa_funil: lead.etapa_funil, etiquetas: lead.etiquetas } : null,
+        temperatura_anterior: traduzirTemperatura(eventData?.previous_temperature || ''),
+        temperatura_nova: traduzirTemperatura(eventData?.new_temperature || lead?.temperatura || ''),
+        alterado_por: lead?.responsavel || null
+      };
+    }
+    
+    case 'lead.assigned': {
+      const leadId = eventData?.lead?.id || eventData?.lead_id;
+      const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
+      const de = eventData?.previous_assigned_to ? await buscarUsuario(supabase, eventData.previous_assigned_to) : null;
+      const para = eventData?.new_assigned_to ? await buscarUsuario(supabase, eventData.new_assigned_to) : null;
+      
+      return {
+        evento: 'lead.transferido',
+        timestamp: formatTimestamp(),
+        lead: lead ? { id: lead.id, nome: lead.nome, whatsapp: lead.whatsapp, temperatura: lead.temperatura, etapa_funil: lead.etapa_funil, etiquetas: lead.etiquetas } : null,
+        de, para
+      };
+    }
+    
+    case 'lead.label_added':
+    case 'lead.label_removed': {
+      const leadId = eventData?.lead_id;
+      const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
+      
+      return {
+        evento: evento === 'lead.label_added' ? 'lead.etiqueta_adicionada' : 'lead.etiqueta_removida',
+        timestamp: formatTimestamp(),
+        lead: lead ? { id: lead.id, nome: lead.nome, whatsapp: lead.whatsapp } : null,
+        etiqueta: eventData?.label_name || null,
+        etiquetas_atuais: lead?.etiquetas || [],
+        alterado_por: lead?.responsavel || null
+      };
+    }
+    
+    case 'conversation.created': {
+      const convData = eventData?.conversation || eventData;
+      const conversa = convData?.id ? await buscarConversa(supabase, convData.id) : null;
+      const lead = (convData?.lead_id || conversa?.lead_id) ? await buscarLeadCompleto(supabase, convData?.lead_id || conversa?.lead_id) : null;
+      
+      return {
+        evento: 'conversa.criada',
+        timestamp: formatTimestamp(),
+        conversa: conversa ? { id: conversa.id, status: conversa.status } : null,
+        lead: lead ? { id: lead.id, nome: lead.nome, whatsapp: lead.whatsapp, temperatura: lead.temperatura, etapa_funil: lead.etapa_funil, etiquetas: lead.etiquetas } : null,
+        responsavel: lead?.responsavel || null
+      };
+    }
+    
+    case 'conversation.resolved': {
+      const convData = eventData?.conversation || eventData;
+      const conversa = convData?.id ? await buscarConversa(supabase, convData.id) : null;
+      const lead = (convData?.lead_id || conversa?.lead_id) ? await buscarLeadCompleto(supabase, convData?.lead_id || conversa?.lead_id) : null;
+      
+      let duracaoMinutos = 0;
+      if (conversa?.id_original) {
+        const { data: firstMsg } = await supabase.from('messages').select('created_at').eq('conversation_id', conversa.id_original).order('created_at', { ascending: true }).limit(1).maybeSingle();
+        if (firstMsg) duracaoMinutos = Math.round((Date.now() - new Date(firstMsg.created_at).getTime()) / 60000);
+      }
+      
+      return {
+        evento: 'conversa.resolvida',
+        timestamp: formatTimestamp(),
+        conversa: conversa ? { id: conversa.id, total_mensagens: conversa.total_mensagens, duracao_minutos: duracaoMinutos } : null,
+        lead: lead ? { id: lead.id, nome: lead.nome, whatsapp: lead.whatsapp, etapa_funil: lead.etapa_funil, etiquetas: lead.etiquetas } : null,
+        resolvida_por: lead?.responsavel || null
+      };
+    }
+    
+    case 'task.created': {
+      const task = eventData?.task || eventData;
+      const lead = task?.lead_id ? await buscarLeadCompleto(supabase, task.lead_id) : null;
+      const responsavel = task?.assigned_to ? await buscarUsuario(supabase, task.assigned_to) : null;
+      
+      return {
+        evento: 'tarefa.criada',
+        timestamp: formatTimestamp(),
+        tarefa: { id: task?.id ? gerarIdLegivel('tarefa', task.id) : null, titulo: task?.title, descricao: task?.description, prioridade: task?.priority || 'medium', vencimento: task?.due_date, status: 'pendente' },
+        lead: lead ? { id: lead.id, nome: lead.nome, whatsapp: lead.whatsapp } : null,
+        responsavel
+      };
+    }
+    
+    case 'task.completed': {
+      const task = eventData?.task || eventData;
+      const lead = task?.lead_id ? await buscarLeadCompleto(supabase, task.lead_id) : null;
+      const responsavel = task?.assigned_to ? await buscarUsuario(supabase, task.assigned_to) : null;
+      
+      return {
+        evento: 'tarefa.concluida',
+        timestamp: formatTimestamp(),
+        tarefa: { id: task?.id ? gerarIdLegivel('tarefa', task.id) : null, titulo: task?.title, concluida_em: formatTimestamp() },
+        lead: lead ? { id: lead.id, nome: lead.nome, whatsapp: lead.whatsapp } : null,
+        concluida_por: responsavel
+      };
+    }
+    
+    default:
+      return { evento: evento.replace('.', '_'), timestamp: formatTimestamp(), dados: eventData };
   }
 }
 
-// ============================================================================
-// HANDLER PRINCIPAL
-// ============================================================================
+// ============================================
+// SIGNATURE & SEND
+// ============================================
 
-Deno.serve(async (req) => {
+async function generateSignature(payload: any, secret: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(JSON.stringify(payload)));
+  return `sha256=${Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('')}`;
+}
+
+async function sendWebhook(supabase: any, webhook: any, payload: any, queueId: string): Promise<boolean> {
+  const maxRetries = 3;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const signature = await generateSignature(payload, webhook.secret);
+      const timestamp = Math.floor(Date.now() / 1000);
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'X-Webhook-Evento': payload.evento,
+        'X-Webhook-Timestamp': timestamp.toString(),
+        'X-Webhook-Assinatura': signature,
+        ...(webhook.headers || {})
+      };
+      
+      console.log(`[WebhookQueue] ${webhook.name} tentativa ${attempt}/${maxRetries}`);
+      
+      const response = await fetch(webhook.url, { method: 'POST', headers, body: JSON.stringify(payload) });
+      const responseText = await response.text();
+      
+      await supabase.from('webhook_logs').insert({
+        webhook_id: webhook.id,
+        event: payload.evento,
+        payload,
+        status: response.ok ? 'success' : (attempt < maxRetries ? 'retrying' : 'failed'),
+        response_status: response.status,
+        response_body: responseText.substring(0, 1000),
+        attempts: attempt,
+        completed_at: response.ok ? new Date().toISOString() : null
+      });
+      
+      if (response.ok) {
+        console.log(`[WebhookQueue] ${webhook.name}: OK`);
+        return true;
+      }
+      
+      console.log(`[WebhookQueue] ${webhook.name}: ${response.status}`);
+      
+    } catch (error: any) {
+      console.error(`[WebhookQueue] Erro:`, error);
+      
+      await supabase.from('webhook_logs').insert({
+        webhook_id: webhook.id,
+        event: payload.evento,
+        payload,
+        status: attempt < maxRetries ? 'retrying' : 'failed',
+        error_message: error?.message || 'Erro desconhecido',
+        attempts: attempt
+      });
+    }
+    
+    if (attempt < maxRetries) {
+      await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
+    }
+  }
+  
+  return false;
+}
+
+// ============================================
+// MAIN HANDLER
+// ============================================
+
+serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-  
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
-    const { data: queueItems, error: queueError } = await supabase
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Buscar fila
+    const { data: queueItems } = await supabase
       .from('webhook_queue')
       .select('*')
       .eq('processed', false)
       .order('created_at', { ascending: true })
-      .limit(100);
-    
-    if (queueError) throw queueError;
-    
+      .limit(50);
+
     if (!queueItems || queueItems.length === 0) {
-      return new Response(
-        JSON.stringify({ mensagem: 'Nenhum item para processar', processados: 0 }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ success: true, processed: 0 }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
-    
-    console.log(`[Webhook Queue v2.0] Processando ${queueItems.length} itens`);
-    
-    const { data: webhooks, error: webhooksError } = await supabase
-      .from('webhooks')
-      .select('*')
-      .eq('is_active', true);
-    
-    if (webhooksError) throw webhooksError;
-    
+
+    console.log(`[WebhookQueue] Processando ${queueItems.length} itens`);
+
+    // Buscar webhooks ativos
+    const { data: webhooks } = await supabase.from('webhooks').select('*').eq('is_active', true);
+
     if (!webhooks || webhooks.length === 0) {
-      const ids = queueItems.map(item => item.id);
-      await supabase
-        .from('webhook_queue')
-        .update({ processed: true, processed_at: new Date().toISOString() })
-        .in('id', ids);
-      
-      return new Response(
-        JSON.stringify({ mensagem: 'Nenhum webhook ativo', processados: queueItems.length }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    const results: { fila_id: string; evento: string; webhooks_enviados: number; erros: number }[] = [];
-    
-    for (const item of queueItems) {
-      const matchingWebhooks = webhooks.filter(w => w.events.includes(item.event));
-      
-      let sent = 0;
-      let errors = 0;
-      
-      for (const webhook of matchingWebhooks) {
-        const result = await sendWebhook(supabase, webhook, item);
-        if (result.success) sent++;
-        else errors++;
+      for (const item of queueItems) {
+        await supabase.from('webhook_queue').update({ processed: true, processed_at: new Date().toISOString() }).eq('id', item.id);
       }
-      
-      results.push({ fila_id: item.id, evento: item.event, webhooks_enviados: sent, erros: errors });
-      
-      await supabase
-        .from('webhook_queue')
-        .update({ processed: true, processed_at: new Date().toISOString() })
-        .eq('id', item.id);
+      return new Response(JSON.stringify({ success: true, processed: queueItems.length }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
-    
-    return new Response(
-      JSON.stringify({
-        mensagem: 'Fila processada com sucesso',
-        versao: '2.0',
-        processados: queueItems.length,
-        resultados: results,
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    console.error('[Webhook Queue v2.0] Erro inesperado:', error);
-    return new Response(
-      JSON.stringify({ erro: error instanceof Error ? error.message : 'Erro desconhecido' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+
+    let processedCount = 0;
+
+    for (const item of queueItems) {
+      const webhooksForEvent = webhooks.filter(w => w.events?.includes(item.event));
+      
+      if (webhooksForEvent.length === 0) {
+        await supabase.from('webhook_queue').update({ processed: true, processed_at: new Date().toISOString() }).eq('id', item.id);
+        processedCount++;
+        continue;
+      }
+
+      // Construir payload limpo
+      const payload = await buildPayload(supabase, item.event, item.payload);
+      
+      console.log(`[WebhookQueue] ${item.event} ->`, JSON.stringify(payload, null, 2));
+
+      for (const webhook of webhooksForEvent) {
+        await sendWebhook(supabase, webhook, payload, item.id);
+      }
+
+      await supabase.from('webhook_queue').update({ processed: true, processed_at: new Date().toISOString() }).eq('id', item.id);
+      processedCount++;
+    }
+
+    return new Response(JSON.stringify({ success: true, processed: processedCount }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+
+  } catch (error: any) {
+    console.error('[WebhookQueue] Erro:', error);
+    return new Response(JSON.stringify({ error: error?.message || 'Erro' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 });
