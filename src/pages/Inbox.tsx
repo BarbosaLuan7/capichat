@@ -566,7 +566,7 @@ const Inbox = () => {
                     )}
                   </div>
                 </div>
-                <ScrollArea className="max-h-64">
+                <ScrollArea className="max-h-80">
                   <div className="p-2 space-y-3">
                     {Object.entries(labelsByCategory).map(([category, labels]) => (
                       <div key={category}>
@@ -746,7 +746,7 @@ const Inbox = () => {
                 </Avatar>
                 <div>
                   <p className="font-semibold text-foreground">{leadWithLabels.name}</p>
-                  <p className="text-xs text-muted-foreground">{leadWithLabels.phone}</p>
+                  <p className="text-xs text-muted-foreground">{formatPhoneNumber(leadWithLabels.phone)}</p>
                 </div>
               </div>
 

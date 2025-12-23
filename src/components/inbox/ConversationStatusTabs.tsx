@@ -47,20 +47,20 @@ export function ConversationStatusTabs({ value, onChange, counts }: Conversation
               <TooltipTrigger asChild>
                 <TabsTrigger 
                   value={tab.value} 
-                  className="px-1.5 py-1.5 text-[11px] gap-1 justify-center"
+                  className="px-1 py-1.5 text-[11px] gap-0.5 justify-center"
                 >
                   <Icon className="w-3.5 h-3.5 shrink-0" />
-                  <span className="hidden sm:inline truncate">{tab.label}</span>
+                  <span className="hidden xl:inline truncate max-w-[50px]">{tab.label}</span>
                   <Badge 
                     variant="secondary" 
-                    className={`px-1.5 py-0 text-[10px] font-medium shrink-0 ${tab.colorClass}`}
+                    className={`px-1 py-0 text-[10px] font-medium shrink-0 min-w-[18px] ${tab.colorClass}`}
                   >
                     {count}
                   </Badge>
                 </TabsTrigger>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="sm:hidden">
-                {tab.label}
+              <TooltipContent side="bottom">
+                {tab.label}: {count}
               </TooltipContent>
             </Tooltip>
           );
