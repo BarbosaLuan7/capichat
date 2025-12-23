@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -24,7 +24,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { formatPhoneNumber } from '@/lib/masks';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 
@@ -69,6 +69,8 @@ import { AIReminderPrompt } from '@/components/inbox/AIReminderPrompt';
 import { ConversationStatusTabs } from '@/components/inbox/ConversationStatusTabs';
 import { ConversationStatusActions } from '@/components/inbox/ConversationStatusActions';
 import { NewConversationModal } from '@/components/inbox/NewConversationModal';
+import { DateSeparator } from '@/components/inbox/DateSeparator';
+import { ScrollToBottomButton } from '@/components/inbox/ScrollToBottomButton';
 
 import type { Database } from '@/integrations/supabase/types';
 
@@ -92,6 +94,8 @@ const Inbox = () => {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
 
   // Data hooks
   const { data: conversations, isLoading: loadingConversations } = useConversations();
@@ -123,8 +127,23 @@ const Inbox = () => {
 
   // Scroll to bottom when messages change
   useEffect(() => {
+    if (!showScrollButton) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, showScrollButton]);
+
+  // Handle scroll to detect if user scrolled up
+  const handleMessagesScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const distanceFromBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    setShowScrollButton(distanceFromBottom > 200);
+  }, []);
+
+  // Scroll to bottom function
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    setShowScrollButton(false);
+  }, []);
 
   // Mark as read when selecting conversation
   useEffect(() => {
@@ -355,6 +374,48 @@ const Inbox = () => {
 
     return combined;
   }, [messages, internalNotes]);
+
+  // Group messages by date
+  const groupedMessages = useMemo(() => {
+    if (!messagesWithNotes.length) return [];
+    
+    type GroupedItem = {
+      date: Date;
+      items: typeof messagesWithNotes;
+    };
+    
+    const groups: GroupedItem[] = [];
+    let currentDateKey: string | null = null;
+    let currentGroup: typeof messagesWithNotes = [];
+
+    messagesWithNotes.forEach((item) => {
+      const itemDate = new Date(item.created_at);
+      const dateKey = format(itemDate, 'yyyy-MM-dd');
+
+      if (dateKey !== currentDateKey) {
+        if (currentGroup.length > 0 && currentDateKey) {
+          groups.push({ 
+            date: new Date(currentDateKey), 
+            items: currentGroup 
+          });
+        }
+        currentDateKey = dateKey;
+        currentGroup = [item];
+      } else {
+        currentGroup.push(item);
+      }
+    });
+
+    // Push last group
+    if (currentGroup.length > 0 && currentDateKey) {
+      groups.push({ 
+        date: new Date(currentDateKey), 
+        items: currentGroup 
+      });
+    }
+
+    return groups;
+  }, [messagesWithNotes]);
 
   const handleToggleFavorite = () => {
     if (!selectedConversationId || !selectedConversation) return;
@@ -686,38 +747,59 @@ const Inbox = () => {
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4 bg-muted/30">
-              <div className="space-y-4 max-w-3xl mx-auto">
-                {loadingMessages ? (
-                  <div className="text-center text-muted-foreground">Carregando mensagens...</div>
-                ) : messagesWithNotes.length === 0 ? (
-                  <div className="text-center text-muted-foreground">Nenhuma mensagem ainda</div>
-                ) : (
-                  messagesWithNotes.map((item, index) => {
-                    if (item.itemType === 'note') {
-                      return <InlineNoteMessage key={`note-${item.id}`} note={item as any} />;
-                    }
+            <div className="flex-1 relative overflow-hidden">
+              <ScrollArea 
+                className="h-full p-4 bg-muted/30"
+                onScrollCapture={handleMessagesScroll}
+              >
+                <div className="space-y-2 max-w-3xl mx-auto">
+                  {loadingMessages ? (
+                    <div className="text-center text-muted-foreground">Carregando mensagens...</div>
+                  ) : groupedMessages.length === 0 ? (
+                    <div className="text-center text-muted-foreground">Nenhuma mensagem ainda</div>
+                  ) : (
+                    groupedMessages.map((group, groupIndex) => (
+                      <div key={group.date.toISOString()}>
+                        {/* Date Separator */}
+                        <DateSeparator date={group.date} />
+                        
+                        {/* Messages for this day */}
+                        <div className="space-y-4">
+                          {group.items.map((item, index) => {
+                            if (item.itemType === 'note') {
+                              return <InlineNoteMessage key={`note-${item.id}`} note={item as any} />;
+                            }
 
-                    const message = item as typeof messages[0] & { itemType: 'message' };
-                    const isAgent = message.sender_type === 'agent';
-                    const prevItem = messagesWithNotes[index - 1];
-                    const showAvatar = index === 0 || prevItem?.itemType === 'note' || (prevItem as any)?.sender_type !== message.sender_type;
+                            const message = item as typeof messages[0] & { itemType: 'message' };
+                            const isAgent = message.sender_type === 'agent';
+                            const prevItem = group.items[index - 1];
+                            const showAvatar = index === 0 || prevItem?.itemType === 'note' || (prevItem as any)?.sender_type !== message.sender_type;
 
-                    return (
-                      <MessageBubble
-                        key={message.id}
-                        message={message as any}
-                        isAgent={isAgent}
-                        showAvatar={showAvatar}
-                        leadName={leadWithLabels.name}
-                        onToggleStar={handleToggleMessageStar}
-                      />
-                    );
-                  })
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-            </ScrollArea>
+                            return (
+                              <MessageBubble
+                                key={message.id}
+                                message={message as any}
+                                isAgent={isAgent}
+                                showAvatar={showAvatar}
+                                leadName={leadWithLabels.name}
+                                onToggleStar={handleToggleMessageStar}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              </ScrollArea>
+              
+              {/* Scroll to Bottom Button */}
+              <ScrollToBottomButton
+                show={showScrollButton}
+                onClick={scrollToBottom}
+              />
+            </div>
 
             {/* Pending File Preview */}
             {pendingFile && (
