@@ -45,19 +45,19 @@ export function ConversationStatusTabs({ value, onChange, counts }: Conversation
           return (
             <Tooltip key={tab.value}>
               <TooltipTrigger asChild>
-                <TabsTrigger 
-                  value={tab.value} 
-                  className="px-1 py-1.5 text-[11px] gap-0.5 justify-center"
+              <TabsTrigger 
+                value={tab.value} 
+                className="px-1.5 py-1.5 text-[11px] gap-1 justify-center min-w-0"
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                <span className="hidden lg:inline truncate">{tab.label}</span>
+                <Badge 
+                  variant="secondary" 
+                  className={`px-1.5 py-0 text-[10px] font-medium shrink-0 min-w-[20px] ${tab.colorClass}`}
                 >
-                  <Icon className="w-3.5 h-3.5 shrink-0" />
-                  <span className="hidden xl:inline truncate max-w-[50px]">{tab.label}</span>
-                  <Badge 
-                    variant="secondary" 
-                    className={`px-1 py-0 text-[10px] font-medium shrink-0 min-w-[18px] ${tab.colorClass}`}
-                  >
-                    {count}
-                  </Badge>
-                </TabsTrigger>
+                  {count}
+                </Badge>
+              </TabsTrigger>
               </TooltipTrigger>
               <TooltipContent side="bottom">
                 {tab.label}: {count}

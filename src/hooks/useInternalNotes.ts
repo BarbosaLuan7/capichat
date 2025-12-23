@@ -71,10 +71,28 @@ export function useCreateInternalNote() {
         .single();
       
       if (error) throw error;
+
+      // Register activity in lead_activities for history tab
+      const { data: conversation } = await supabase
+        .from('conversations')
+        .select('lead_id')
+        .eq('id', conversationId)
+        .single();
+
+      if (conversation?.lead_id) {
+        await supabase.from('lead_activities').insert({
+          lead_id: conversation.lead_id,
+          user_id: user.id,
+          action: 'note_added',
+          details: { content: content.substring(0, 100) }
+        });
+      }
+
       return data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['internal-notes', variables.conversationId] });
+      queryClient.invalidateQueries({ queryKey: ['lead-activities'] });
     },
   });
 }
