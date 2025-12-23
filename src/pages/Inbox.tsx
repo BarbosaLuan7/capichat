@@ -378,7 +378,7 @@ const Inbox = () => {
     return combined;
   }, [messages, internalNotes]);
 
-  // Group messages by date
+  // Group messages by date (using original message date to preserve timezone)
   const groupedMessages = useMemo(() => {
     if (!messagesWithNotes.length) return [];
     
@@ -396,9 +396,10 @@ const Inbox = () => {
       const dateKey = format(itemDate, 'yyyy-MM-dd');
 
       if (dateKey !== currentDateKey) {
-        if (currentGroup.length > 0 && currentDateKey) {
+        if (currentGroup.length > 0) {
+          // Use the first message's original date to preserve timezone
           groups.push({ 
-            date: new Date(currentDateKey), 
+            date: new Date(currentGroup[0].created_at), 
             items: currentGroup 
           });
         }
@@ -409,10 +410,10 @@ const Inbox = () => {
       }
     });
 
-    // Push last group
-    if (currentGroup.length > 0 && currentDateKey) {
+    // Push last group using original date
+    if (currentGroup.length > 0) {
       groups.push({ 
-        date: new Date(currentDateKey), 
+        date: new Date(currentGroup[0].created_at), 
         items: currentGroup 
       });
     }
