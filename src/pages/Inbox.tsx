@@ -125,6 +125,7 @@ const Inbox = () => {
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const ignoreScrollRef = useRef(false);
   const isMobile = useIsMobile();
 
   // Data hooks
@@ -165,16 +166,35 @@ const Inbox = () => {
   // Auto-scroll to bottom when conversation changes and messages are loaded
   useEffect(() => {
     if (selectedConversationId && !loadingMessages && messages && messages.length > 0) {
+      // Ignore scroll events during auto-scroll
+      ignoreScrollRef.current = true;
       setShowScrollButton(false);
-      // Use requestAnimationFrame to ensure DOM is updated
+      
+      // Use double requestAnimationFrame to ensure DOM is fully updated
       requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+        requestAnimationFrame(() => {
+          // Find the scroll viewport and scroll to bottom
+          const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+          if (viewport) {
+            viewport.scrollTop = viewport.scrollHeight;
+          } else {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+          }
+          
+          // Re-enable scroll detection after a short delay
+          setTimeout(() => {
+            ignoreScrollRef.current = false;
+          }, 300);
+        });
       });
     }
   }, [selectedConversationId, loadingMessages, messages?.length]);
 
   // Handle scroll to detect if user scrolled up
   const handleMessagesScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    // Ignore scroll events during auto-scroll
+    if (ignoreScrollRef.current) return;
+    
     const target = e.currentTarget;
     const distanceFromBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
     setShowScrollButton(distanceFromBottom > 200);

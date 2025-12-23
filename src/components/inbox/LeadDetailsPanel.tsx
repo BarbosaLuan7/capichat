@@ -218,8 +218,8 @@ export function LeadDetailsPanel({
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="dados" className="flex-1 flex flex-col">
-          <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent px-4">
+        <Tabs defaultValue="dados" className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent px-4 shrink-0">
             <TabsTrigger value="dados" className="text-xs gap-1 data-[state=active]:bg-muted">
               <User className="w-3 h-3" />
               Dados
