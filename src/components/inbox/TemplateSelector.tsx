@@ -14,9 +14,17 @@ interface TemplateSelectorProps {
   onSelectTemplate: (content: string) => void;
   leadName?: string;
   leadPhone?: string;
+  leadBenefitType?: string;
+  agentName?: string;
 }
 
-export function TemplateSelector({ onSelectTemplate, leadName, leadPhone }: TemplateSelectorProps) {
+export function TemplateSelector({ 
+  onSelectTemplate, 
+  leadName, 
+  leadPhone, 
+  leadBenefitType,
+  agentName 
+}: TemplateSelectorProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const { data: templates, isLoading } = useTemplates();
@@ -28,14 +36,20 @@ export function TemplateSelector({ onSelectTemplate, leadName, leadPhone }: Temp
   ) || [];
 
   const handleSelectTemplate = (content: string) => {
-    // Replace variables
     let processedContent = content;
-    if (leadName) {
-      processedContent = processedContent.replace(/\{\{nome\}\}/gi, leadName);
-    }
-    if (leadPhone) {
-      processedContent = processedContent.replace(/\{\{telefone\}\}/gi, leadPhone);
-    }
+    
+    // Substituir variáveis conhecidas
+    const firstName = leadName ? leadName.split(' ')[0] : '';
+    
+    processedContent = processedContent.replace(/\{\{nome\}\}/gi, leadName || '[nome]');
+    processedContent = processedContent.replace(/\{\{primeiro_nome\}\}/gi, firstName || '[nome]');
+    processedContent = processedContent.replace(/\{\{telefone\}\}/gi, leadPhone || '[telefone]');
+    processedContent = processedContent.replace(/\{\{beneficio\}\}/gi, leadBenefitType || '[benefício]');
+    processedContent = processedContent.replace(/\{\{atendente\}\}/gi, agentName || '[atendente]');
+    
+    // Substituir variáveis não mapeadas por placeholder
+    processedContent = processedContent.replace(/\{\{(\w+)\}\}/g, '[$1]');
+    
     onSelectTemplate(processedContent);
     setOpen(false);
     setSearch('');

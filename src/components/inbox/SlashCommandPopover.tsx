@@ -13,6 +13,8 @@ interface SlashCommandPopoverProps {
   onSelectTemplate: (content: string) => void;
   leadName?: string;
   leadPhone?: string;
+  leadBenefitType?: string;
+  agentName?: string;
   inputRef: React.RefObject<HTMLInputElement>;
   onClose: () => void;
 }
@@ -22,6 +24,8 @@ export function SlashCommandPopover({
   onSelectTemplate,
   leadName,
   leadPhone,
+  leadBenefitType,
+  agentName,
   inputRef,
   onClose,
 }: SlashCommandPopoverProps) {
@@ -97,14 +101,19 @@ export function SlashCommandPopover({
   const handleSelect = (template: { content: string; shortcut: string }) => {
     if (!template) return;
 
-    // Replace the "/" and search text with the template content
     let processedContent = template.content;
-    if (leadName) {
-      processedContent = processedContent.replace(/\{\{nome\}\}/gi, leadName);
-    }
-    if (leadPhone) {
-      processedContent = processedContent.replace(/\{\{telefone\}\}/gi, leadPhone);
-    }
+    
+    // Substituir variáveis conhecidas
+    const firstName = leadName ? leadName.split(' ')[0] : '';
+    
+    processedContent = processedContent.replace(/\{\{nome\}\}/gi, leadName || '[nome]');
+    processedContent = processedContent.replace(/\{\{primeiro_nome\}\}/gi, firstName || '[nome]');
+    processedContent = processedContent.replace(/\{\{telefone\}\}/gi, leadPhone || '[telefone]');
+    processedContent = processedContent.replace(/\{\{beneficio\}\}/gi, leadBenefitType || '[benefício]');
+    processedContent = processedContent.replace(/\{\{atendente\}\}/gi, agentName || '[atendente]');
+    
+    // Substituir variáveis não mapeadas por placeholder
+    processedContent = processedContent.replace(/\{\{(\w+)\}\}/g, '[$1]');
     
     // Get text before the "/"
     const textBefore = inputValue.slice(0, slashIndex);
