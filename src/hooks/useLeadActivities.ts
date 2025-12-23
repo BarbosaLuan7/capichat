@@ -101,7 +101,9 @@ export function formatActivityMessage(action: string, details: Record<string, an
     case 'label_removed':
       return `Etiqueta "${details.label_name}" removida`;
     case 'note_added':
-      return 'Nota adicionada';
+      return details.content 
+        ? `Nota: "${details.content}"` 
+        : 'Nota adicionada';
     case 'updated':
       return 'Lead atualizado';
     default:
