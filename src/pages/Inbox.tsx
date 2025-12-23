@@ -690,51 +690,55 @@ const Inbox = () => {
                     animate={{ opacity: 1 }}
                     onClick={() => handleSelectConversation(conversation.id)}
                     className={cn(
-                      'p-4 cursor-pointer transition-colors hover:bg-muted/50 overflow-hidden isolate',
+                      'px-3 py-3 cursor-pointer transition-colors hover:bg-muted/50',
                       isSelected && 'bg-primary/5 border-l-2 border-l-primary'
                     )}
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="relative flex-shrink-0 overflow-visible">
-                        <Avatar className="w-10 h-10">
-                          <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${convLead?.name}`} />
-                          <AvatarFallback>{convLead?.name?.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        {conversation.unread_count > 0 && (
-                          <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center shadow-sm">
-                            {conversation.unread_count}
-                          </span>
-                        )}
-                      </div>
+                    <div className="flex gap-3">
+                      {/* Avatar */}
+                      <Avatar className="w-12 h-12 shrink-0">
+                        <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${convLead?.name}`} />
+                        <AvatarFallback>{convLead?.name?.charAt(0)}</AvatarFallback>
+                      </Avatar>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <div className="flex items-center gap-1 min-w-0 flex-1">
-                            {isFavorite && <Star className="w-3 h-3 fill-warning text-warning flex-shrink-0" />}
-                            <span 
-                              className="font-semibold text-foreground truncate"
-                              title={convLead?.name}
-                            >
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                        {/* Row 1: Name + Timestamp */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 min-w-0 max-w-[65%]">
+                            {isFavorite && <Star className="w-3 h-3 fill-warning text-warning shrink-0" />}
+                            <span className="font-semibold text-foreground truncate text-[15px]">
                               {convLead?.name}
                             </span>
                           </div>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+                          <span className="text-xs text-muted-foreground shrink-0 ml-2">
                             {formatConversationDate(new Date(conversation.last_message_at))}
                           </span>
                         </div>
 
-                        <p 
-                          className="text-sm text-muted-foreground truncate mb-2"
-                          title={(conversation as any).last_message_content || formatPhoneNumber(convLead?.phone || '')}
-                        >
-                          {(conversation as any).last_message_content || formatPhoneNumber(convLead?.phone || '')}
-                        </p>
+                        {/* Row 2: Last message + Unread/Hot indicators */}
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm text-muted-foreground truncate flex-1">
+                            {(conversation as any).last_message_content || formatPhoneNumber(convLead?.phone || '')}
+                          </p>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {convLead?.temperature === 'hot' && (
+                              <span className="text-sm">🔥</span>
+                            )}
+                            {conversation.unread_count > 0 && (
+                              <span className="min-w-[20px] h-5 px-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-full flex items-center justify-center">
+                                {conversation.unread_count}
+                              </span>
+                            )}
+                          </div>
+                        </div>
 
-                        <div className="flex items-center gap-1 overflow-hidden">
+                        {/* Row 3: Status badge + Labels (simplified) */}
+                        <div className="flex items-center gap-1.5 mt-0.5">
                           <Badge
                             variant="outline"
                             className={cn(
-                              'text-xs shrink-0',
+                              'text-[10px] px-1.5 py-0 h-5',
                               conversation.status === 'open' && 'border-success text-success',
                               conversation.status === 'pending' && 'border-warning text-warning',
                               conversation.status === 'resolved' && 'border-muted-foreground text-muted-foreground'
@@ -742,16 +746,10 @@ const Inbox = () => {
                           >
                             {conversation.status === 'open' ? 'Aberta' : conversation.status === 'pending' ? 'Pendente' : 'Resolvida'}
                           </Badge>
-                          {convLead?.temperature === 'hot' && (
-                            <Badge className="bg-destructive/10 text-destructive text-xs shrink-0">
-                              Quente
-                            </Badge>
-                          )}
-                          {/* Lead Labels - max 2, truncated */}
-                          {convLead?.lead_labels?.slice(0, 2).map((ll: any) => (
+                          {convLead?.lead_labels?.slice(0, 1).map((ll: any) => (
                             <Badge
                               key={ll.labels?.id}
-                              className="text-xs px-1.5 py-0 border-0 shrink-0 max-w-[80px] truncate"
+                              className="text-[10px] px-1.5 py-0 h-5 border-0 max-w-[70px] truncate"
                               style={{
                                 backgroundColor: ll.labels?.color,
                                 color: 'white',
@@ -761,9 +759,9 @@ const Inbox = () => {
                               {ll.labels?.name}
                             </Badge>
                           ))}
-                          {convLead?.lead_labels?.length > 2 && (
-                            <Badge variant="secondary" className="text-xs px-1.5 py-0 shrink-0">
-                              +{convLead.lead_labels.length - 2}
+                          {convLead?.lead_labels?.length > 1 && (
+                            <Badge variant="secondary" className="text-[10px] px-1 py-0 h-5">
+                              +{convLead.lead_labels.length - 1}
                             </Badge>
                           )}
                         </div>
