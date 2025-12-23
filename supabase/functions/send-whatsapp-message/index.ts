@@ -26,17 +26,142 @@ function normalizeUrl(url: string): string {
   return url.replace(/\/+$/, '');
 }
 
-// Normaliza telefone para envio (adiciona código do país 55 se necessário)
-function normalizePhoneForSending(phone: string): string {
-  // Remove tudo que não é número
-  let numbers = phone.replace(/\D/g, '');
-  
-  // Se não tem 55 no início, adiciona
-  if (!numbers.startsWith('55') && numbers.length >= 10 && numbers.length <= 11) {
-    numbers = '55' + numbers;
+// DDDs válidos do Brasil (11-99, excluindo alguns inexistentes)
+const VALID_DDDS = new Set([
+  // Região Sudeste
+  11, 12, 13, 14, 15, 16, 17, 18, 19, // São Paulo
+  21, 22, 24, // Rio de Janeiro
+  27, 28, // Espírito Santo
+  31, 32, 33, 34, 35, 37, 38, // Minas Gerais
+  // Região Sul
+  41, 42, 43, 44, 45, 46, // Paraná
+  47, 48, 49, // Santa Catarina
+  51, 53, 54, 55, // Rio Grande do Sul
+  // Região Centro-Oeste
+  61, // Distrito Federal
+  62, 64, // Goiás
+  63, // Tocantins
+  65, 66, // Mato Grosso
+  67, // Mato Grosso do Sul
+  // Região Nordeste
+  71, 73, 74, 75, 77, // Bahia
+  79, // Sergipe
+  81, 87, // Pernambuco
+  82, // Alagoas
+  83, // Paraíba
+  84, // Rio Grande do Norte
+  85, 88, // Ceará
+  86, 89, // Piauí
+  // Região Norte
+  91, 93, 94, // Pará
+  92, 97, // Amazonas
+  95, // Roraima
+  96, // Amapá
+  98, 99, // Maranhão
+  69, // Rondônia
+  68, // Acre
+]);
+
+// Valida telefone brasileiro e retorna objeto com resultado
+interface PhoneValidation {
+  valid: boolean;
+  normalized?: string;
+  error?: string;
+}
+
+function validateBrazilianPhone(phone: string): PhoneValidation {
+  if (!phone || phone.trim() === '') {
+    return { valid: false, error: 'Número de telefone não informado' };
   }
+
+  // Remove tudo que não é número
+  const numbers = phone.replace(/\D/g, '');
   
-  return numbers;
+  // Verifica tamanho mínimo (10 dígitos sem código país: DDD + 8 dígitos)
+  if (numbers.length < 10) {
+    return { 
+      valid: false, 
+      error: `Número de telefone muito curto (${numbers.length} dígitos). Formato esperado: (DDD) 9XXXX-XXXX` 
+    };
+  }
+
+  // Verifica tamanho máximo (13 dígitos com código país: 55 + DDD + 9 dígitos)
+  if (numbers.length > 13) {
+    return { 
+      valid: false, 
+      error: `Número de telefone muito longo (${numbers.length} dígitos). Verifique se há dígitos extras.` 
+    };
+  }
+
+  let ddd: number;
+  let phoneNumber: string;
+  let normalized: string;
+
+  // Determina formato baseado no tamanho
+  if (numbers.startsWith('55')) {
+    // Com código do país
+    if (numbers.length < 12 || numbers.length > 13) {
+      return { 
+        valid: false, 
+        error: 'Número com código 55 deve ter 12-13 dígitos (55 + DDD + número)' 
+      };
+    }
+    ddd = parseInt(numbers.substring(2, 4));
+    phoneNumber = numbers.substring(4);
+    normalized = numbers;
+  } else {
+    // Sem código do país
+    if (numbers.length < 10 || numbers.length > 11) {
+      return { 
+        valid: false, 
+        error: 'Número sem código do país deve ter 10-11 dígitos (DDD + número)' 
+      };
+    }
+    ddd = parseInt(numbers.substring(0, 2));
+    phoneNumber = numbers.substring(2);
+    normalized = '55' + numbers;
+  }
+
+  // Valida DDD
+  if (!VALID_DDDS.has(ddd)) {
+    return { 
+      valid: false, 
+      error: `DDD ${ddd} não é válido no Brasil. Verifique o código de área.` 
+    };
+  }
+
+  // Valida número (8 ou 9 dígitos)
+  if (phoneNumber.length < 8 || phoneNumber.length > 9) {
+    return { 
+      valid: false, 
+      error: `Número após DDD deve ter 8-9 dígitos, mas tem ${phoneNumber.length}` 
+    };
+  }
+
+  // Celulares brasileiros começam com 9
+  if (phoneNumber.length === 9 && !phoneNumber.startsWith('9')) {
+    return { 
+      valid: false, 
+      error: 'Celulares brasileiros com 9 dígitos devem começar com 9' 
+    };
+  }
+
+  // Verifica se não são todos dígitos iguais (número inválido)
+  if (/^(\d)\1+$/.test(phoneNumber)) {
+    return { 
+      valid: false, 
+      error: 'Número de telefone inválido (todos os dígitos são iguais)' 
+    };
+  }
+
+  return { valid: true, normalized };
+}
+
+// Normaliza telefone para envio (adiciona código do país 55 se necessário)
+// DEPRECATED: Use validateBrazilianPhone instead
+function normalizePhoneForSending(phone: string): string {
+  const validation = validateBrazilianPhone(phone);
+  return validation.normalized || phone.replace(/\D/g, '');
 }
 
 // Tenta fazer request com múltiplos formatos de auth para WAHA
@@ -91,10 +216,10 @@ async function wahaFetch(
 }
 
 // Provider-specific message sending functions
+// Nota: phone já vem validado e normalizado (formato: 5511999999999)
 async function sendWAHA(config: WhatsAppConfig, phone: string, message: string, type: string, mediaUrl?: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const baseUrl = normalizeUrl(config.base_url);
-  const normalizedPhone = normalizePhoneForSending(phone);
-  const chatId = normalizedPhone + '@c.us';
+  const chatId = phone + '@c.us'; // phone já está normalizado
   const session = config.instance_name || 'default';
   
   let endpoint = '/api/sendText';
@@ -191,7 +316,7 @@ async function sendWAHA(config: WhatsAppConfig, phone: string, message: string, 
 
 async function sendEvolution(config: WhatsAppConfig, phone: string, message: string, type: string, mediaUrl?: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const baseUrl = normalizeUrl(config.base_url);
-  const number = normalizePhoneForSending(phone);
+  const number = phone; // phone já está validado e normalizado
   const instance = config.instance_name || 'default';
   
   let endpoint = `/message/sendText/${instance}`;
@@ -252,7 +377,7 @@ async function sendEvolution(config: WhatsAppConfig, phone: string, message: str
 
 async function sendZAPI(config: WhatsAppConfig, phone: string, message: string, type: string, mediaUrl?: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const baseUrl = normalizeUrl(config.base_url);
-  const phoneNumber = normalizePhoneForSending(phone);
+  const phoneNumber = phone; // phone já está validado e normalizado
   
   let endpoint = '/send-text';
   let body: Record<string, unknown> = {
@@ -434,7 +559,22 @@ serve(async (req) => {
       );
     }
 
-    console.log('[send-whatsapp-message] Lead:', lead.name, lead.phone);
+    // Validar número de telefone brasileiro ANTES de tentar enviar
+    const phoneValidation = validateBrazilianPhone(lead.phone);
+    if (!phoneValidation.valid) {
+      console.error('[send-whatsapp-message] Número inválido:', lead.phone, '-', phoneValidation.error);
+      return new Response(
+        JSON.stringify({ 
+          error: `Número de telefone inválido: ${phoneValidation.error}`,
+          phone: lead.phone,
+          lead_name: lead.name
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const validatedPhone = phoneValidation.normalized!;
+    console.log('[send-whatsapp-message] Lead:', lead.name, 'Phone original:', lead.phone, 'Normalizado:', validatedPhone);
 
     // Get active WhatsApp config
     const { data: configs, error: configError } = await supabase
@@ -461,22 +601,22 @@ serve(async (req) => {
     const config = configs[0] as WhatsAppConfig;
     console.log('[send-whatsapp-message] Provider:', config.provider, 'Instance:', config.instance_name);
 
-    // Send message based on provider
+    // Send message based on provider (usando número já validado)
     const messageType = payload.type || 'text';
     let result: { success: boolean; messageId?: string; error?: string };
     
     switch (config.provider) {
       case 'waha':
-        result = await sendWAHA(config, lead.phone, payload.content, messageType, payload.media_url);
+        result = await sendWAHA(config, validatedPhone, payload.content, messageType, payload.media_url);
         break;
       case 'evolution':
-        result = await sendEvolution(config, lead.phone, payload.content, messageType, payload.media_url);
+        result = await sendEvolution(config, validatedPhone, payload.content, messageType, payload.media_url);
         break;
       case 'z-api':
-        result = await sendZAPI(config, lead.phone, payload.content, messageType, payload.media_url);
+        result = await sendZAPI(config, validatedPhone, payload.content, messageType, payload.media_url);
         break;
       case 'custom':
-        result = await sendCustom(config, lead.phone, payload.content, messageType, payload.media_url);
+        result = await sendCustom(config, validatedPhone, payload.content, messageType, payload.media_url);
         break;
       default:
         result = { success: false, error: 'Provider desconhecido' };
