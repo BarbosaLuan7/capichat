@@ -13,6 +13,7 @@ import {
   Pencil,
   Trash2,
   MessageSquare,
+  Upload,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -50,6 +51,7 @@ import { useFunnelStages } from '@/hooks/useFunnelStages';
 import { useLabels } from '@/hooks/useLabels';
 import { useProfiles } from '@/hooks/useProfiles';
 import { LeadModal } from '@/components/leads/LeadModal';
+import { LeadImportModal } from '@/components/leads/LeadImportModal';
 import { BulkActionsBar } from '@/components/leads/BulkActionsBar';
 import { LeadFilters, LeadFiltersState } from '@/components/leads/LeadFilters';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
@@ -80,6 +82,7 @@ const Leads = () => {
     assignedTo: null,
     dateRange: undefined,
   });
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   const filteredLeads = useMemo(() => {
     if (!leads) return [];
@@ -191,10 +194,16 @@ const Leads = () => {
             {leads?.length || 0} leads no total · {filteredLeads.length} exibidos
           </p>
         </div>
-        <Button onClick={handleNewLead} className="gradient-primary text-primary-foreground gap-2">
-          <Plus className="w-4 h-4" />
-          Novo Lead
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setImportModalOpen(true)} className="gap-2">
+            <Upload className="w-4 h-4" />
+            Importar CSV
+          </Button>
+          <Button onClick={handleNewLead} className="gradient-primary text-primary-foreground gap-2">
+            <Plus className="w-4 h-4" />
+            Novo Lead
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -386,6 +395,12 @@ const Leads = () => {
         onOpenChange={setModalOpen}
         leadId={selectedLeadId}
         mode={modalMode}
+      />
+
+      {/* Import Modal */}
+      <LeadImportModal
+        open={importModalOpen}
+        onOpenChange={setImportModalOpen}
       />
 
       {/* Delete Confirmation */}
