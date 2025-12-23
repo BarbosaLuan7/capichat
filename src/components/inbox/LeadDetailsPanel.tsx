@@ -11,7 +11,6 @@ import {
   MessageSquare,
   ExternalLink,
   User,
-  FileText,
   History,
   Sparkles,
   Brain,
@@ -236,10 +235,6 @@ export function LeadDetailsPanel({
             <TabsTrigger value="historico" className="text-xs gap-1 data-[state=active]:bg-muted">
               <History className="w-3 h-3" />
               Histórico
-            </TabsTrigger>
-            <TabsTrigger value="notas" className="text-xs gap-1 data-[state=active]:bg-muted">
-              <FileText className="w-3 h-3" />
-              Notas
             </TabsTrigger>
           </TabsList>
 
@@ -467,7 +462,11 @@ export function LeadDetailsPanel({
           {/* Histórico Tab */}
           <TabsContent value="historico" className="flex-1 m-0">
             <ScrollArea className="h-[calc(100vh-20rem)]">
-              <div className="p-4">
+              <div className="p-4 space-y-4">
+                {/* Adicionar nota no topo */}
+                <InternalNotes conversationId={conversationId} />
+                
+                {/* Timeline de atividades */}
                 {activitiesLoading ? (
                   <div className="flex items-center justify-center py-8 text-muted-foreground">
                     <Loader2 className="w-5 h-5 animate-spin mr-2" />
@@ -476,15 +475,6 @@ export function LeadDetailsPanel({
                 ) : (
                   <LeadTimeline events={timelineEvents} />
                 )}
-              </div>
-            </ScrollArea>
-          </TabsContent>
-
-          {/* Notas Tab */}
-          <TabsContent value="notas" className="flex-1 m-0">
-            <ScrollArea className="h-[calc(100vh-20rem)]">
-              <div className="p-4">
-                <InternalNotes conversationId={conversationId} />
               </div>
             </ScrollArea>
           </TabsContent>

@@ -162,6 +162,17 @@ const Inbox = () => {
     }
   }, [messages, showScrollButton]);
 
+  // Auto-scroll to bottom when conversation changes
+  useEffect(() => {
+    if (selectedConversationId) {
+      setShowScrollButton(false);
+      // Wait for DOM to render messages
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      }, 100);
+    }
+  }, [selectedConversationId]);
+
   // Handle scroll to detect if user scrolled up
   const handleMessagesScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
