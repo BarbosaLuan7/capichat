@@ -147,7 +147,7 @@ export function LeadDetailsPanel({
               </Button>
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-foreground truncate">
+              <h3 className="font-semibold text-foreground truncate" title={lead.name}>
                 {lead.name}
               </h3>
               {(lead as any).whatsapp_name && (lead as any).whatsapp_name !== lead.name && (
@@ -291,7 +291,7 @@ export function LeadDetailsPanel({
                     {lead.email && (
                       <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 group">
                         <Mail className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-sm truncate flex-1">{lead.email}</span>
+                        <span className="text-sm truncate flex-1" title={lead.email}>{lead.email}</span>
                         <Button
                           variant="ghost"
                           size="icon"

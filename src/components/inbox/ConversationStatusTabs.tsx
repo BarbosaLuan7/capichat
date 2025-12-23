@@ -19,10 +19,38 @@ interface ConversationStatusTabsProps {
 }
 
 const tabs = [
-  { value: 'all', label: 'Todas', icon: Inbox, colorClass: 'text-foreground', badgeClass: 'bg-muted text-muted-foreground' },
-  { value: 'open', label: 'Abertas', icon: MessageCircle, colorClass: 'text-success', badgeClass: 'bg-success/15 text-success' },
-  { value: 'pending', label: 'Pendentes', icon: Clock, colorClass: 'text-warning', badgeClass: 'bg-warning/15 text-warning' },
-  { value: 'resolved', label: 'Resolvidas', icon: CheckCircle2, colorClass: 'text-muted-foreground', badgeClass: 'bg-muted text-muted-foreground' },
+  { 
+    value: 'all', 
+    label: 'Todas', 
+    shortLabel: 'Todas',
+    icon: Inbox, 
+    colorClass: 'text-foreground', 
+    badgeClass: 'bg-muted text-muted-foreground' 
+  },
+  { 
+    value: 'open', 
+    label: 'Abertas', 
+    shortLabel: 'Abertas',
+    icon: MessageCircle, 
+    colorClass: 'text-success', 
+    badgeClass: 'bg-success/15 text-success' 
+  },
+  { 
+    value: 'pending', 
+    label: 'Pendentes', 
+    shortLabel: 'Pend.',
+    icon: Clock, 
+    colorClass: 'text-warning', 
+    badgeClass: 'bg-warning/15 text-warning' 
+  },
+  { 
+    value: 'resolved', 
+    label: 'Resolvidas', 
+    shortLabel: 'Resolv.',
+    icon: CheckCircle2, 
+    colorClass: 'text-muted-foreground', 
+    badgeClass: 'bg-muted text-muted-foreground' 
+  },
 ] as const;
 
 export function ConversationStatusTabs({ value, onChange, counts }: ConversationStatusTabsProps) {
@@ -38,7 +66,7 @@ export function ConversationStatusTabs({ value, onChange, counts }: Conversation
 
   return (
     <Tabs value={value} onValueChange={(v) => onChange(v as ConversationStatus | 'all')}>
-      <TabsList className="grid grid-cols-4 w-full bg-muted h-auto p-1">
+      <TabsList className="grid grid-cols-4 w-full bg-muted h-auto p-1 gap-0.5">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const count = getCount(tab.value);
@@ -50,18 +78,19 @@ export function ConversationStatusTabs({ value, onChange, counts }: Conversation
                 <TabsTrigger 
                   value={tab.value} 
                   className={cn(
-                    "flex items-center gap-1.5 px-2 py-2 text-xs font-medium transition-all",
+                    "flex items-center justify-center gap-1 px-1.5 py-2 text-xs font-medium transition-all min-w-0",
                     "hover:bg-background/50 active:scale-[0.98]",
                     "data-[state=active]:bg-background data-[state=active]:shadow-sm",
                     isActive && tab.colorClass
                   )}
                 >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span className="hidden md:inline">{tab.label}</span>
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  {/* Em telas pequenas: só número. Em telas maiores: label abreviado */}
+                  <span className="hidden sm:inline truncate max-w-[50px]">{tab.shortLabel}</span>
                   <Badge 
                     variant="secondary" 
                     className={cn(
-                      "px-1.5 py-0 text-[10px] font-semibold min-w-[20px] h-5",
+                      "px-1 py-0 text-[10px] font-semibold min-w-[18px] h-4 shrink-0",
                       isActive ? tab.badgeClass : 'bg-muted-foreground/10 text-muted-foreground'
                     )}
                   >
