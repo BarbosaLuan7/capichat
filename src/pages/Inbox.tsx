@@ -86,6 +86,7 @@ import { AIReminderPrompt } from '@/components/inbox/AIReminderPrompt';
 import { ConversationStatusTabs } from '@/components/inbox/ConversationStatusTabs';
 import { ConversationStatusActions } from '@/components/inbox/ConversationStatusActions';
 import { NewConversationModal } from '@/components/inbox/NewConversationModal';
+import { ConversationSkeleton, MessageSkeleton, LeadDetailsPanelSkeleton } from '@/components/ui/skeleton';
 import { DateSeparator } from '@/components/inbox/DateSeparator';
 import { ScrollToBottomButton } from '@/components/inbox/ScrollToBottomButton';
 
@@ -127,7 +128,7 @@ const Inbox = () => {
   const { data: conversations, isLoading: loadingConversations } = useConversations();
   const { data: selectedConversation } = useConversation(selectedConversationId || undefined);
   const { data: messages, isLoading: loadingMessages } = useMessages(selectedConversationId || undefined);
-  const { data: leadData, refetch: refetchLead } = useLead(selectedConversation?.lead_id || undefined);
+  const { data: leadData, refetch: refetchLead, isLoading: loadingLead } = useLead(selectedConversation?.lead_id || undefined);
   const { data: leadLabels } = useLeadLabels(selectedConversation?.lead_id || undefined);
   const { data: allLabels } = useLabels();
   const { data: internalNotes, isLoading: isNotesLoading } = useInternalNotes(selectedConversationId || undefined);
@@ -1051,7 +1052,7 @@ const Inbox = () => {
 
       {/* Lead Panel */}
       <AnimatePresence>
-        {leadWithLabels && selectedConversation && showLeadPanel && (
+        {selectedConversation && showLeadPanel && (
           <motion.div
             initial={{ width: 0, opacity: 0 }}
             animate={{ width: 'auto', opacity: 1 }}
@@ -1059,15 +1060,21 @@ const Inbox = () => {
             transition={{ duration: 0.3 }}
             className="w-[280px] xl:w-[320px] border-l border-border bg-card overflow-hidden flex-shrink-0"
           >
-            <LeadDetailsPanel
-              lead={leadWithLabels}
-              conversationId={selectedConversation.id}
-              messages={messages}
-              isFavorite={(selectedConversation as any).is_favorite}
-              onToggleFavorite={handleToggleFavorite}
-              onTransfer={handleTransfer}
-              onLabelsUpdate={() => refetchLead()}
-            />
+            {loadingLead ? (
+              <LeadDetailsPanelSkeleton />
+            ) : leadWithLabels ? (
+              <LeadDetailsPanel
+                lead={leadWithLabels}
+                conversationId={selectedConversation.id}
+                messages={messages}
+                isFavorite={(selectedConversation as any).is_favorite}
+                onToggleFavorite={handleToggleFavorite}
+                onTransfer={handleTransfer}
+                onLabelsUpdate={() => refetchLead()}
+              />
+            ) : (
+              <LeadDetailsPanelSkeleton />
+            )}
           </motion.div>
         )}
       </AnimatePresence>
