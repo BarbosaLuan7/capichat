@@ -1,17 +1,20 @@
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Mapeamento de eventos para PT-BR
+// ============================================================================
+// MAPEAMENTOS PT-BR (copiados do dispatch-webhook para consistência)
+// ============================================================================
+
 const EVENT_NAMES_PT: Record<string, string> = {
   'lead.created': 'lead.criado',
   'lead.updated': 'lead.atualizado',
   'lead.deleted': 'lead.excluido',
   'lead.stage_changed': 'lead.etapa_alterada',
-  'lead.assigned': 'lead.atribuido',
+  'lead.assigned': 'lead.transferido',
   'lead.temperature_changed': 'lead.temperatura_alterada',
   'lead.label_added': 'lead.etiqueta_adicionada',
   'lead.label_removed': 'lead.etiqueta_removida',
@@ -24,36 +27,111 @@ const EVENT_NAMES_PT: Record<string, string> = {
   'task.completed': 'tarefa.concluida',
 };
 
-// Mapeamento de temperatura para PT-BR
-const TEMPERATURE_PT: Record<string, string> = {
-  'cold': 'frio',
-  'warm': 'morno',
-  'hot': 'quente',
+const TEMPERATURE_MAP: Record<string, { valor: string; emoji: string }> = {
+  'cold': { valor: 'frio', emoji: '❄️' },
+  'warm': { valor: 'morno', emoji: '🌡️' },
+  'hot': { valor: 'quente', emoji: '🔥' },
 };
 
-// Mapeamento de status de lead para PT-BR
-const LEAD_STATUS_PT: Record<string, string> = {
-  'active': 'ativo',
-  'archived': 'arquivado',
-  'converted': 'convertido',
-  'lost': 'perdido',
+const PRIORITY_MAP: Record<string, { valor: string; emoji: string }> = {
+  'urgent': { valor: 'urgente', emoji: '🔴' },
+  'high': { valor: 'alta', emoji: '🟠' },
+  'medium': { valor: 'media', emoji: '🟡' },
+  'low': { valor: 'baixa', emoji: '🟢' },
 };
 
-// Mapeamento de status de conversa para PT-BR
-const CONVERSATION_STATUS_PT: Record<string, string> = {
+const TASK_STATUS_MAP: Record<string, string> = {
+  'todo': 'pendente',
+  'in_progress': 'em_andamento',
+  'done': 'concluida',
+};
+
+const CONVERSATION_STATUS_MAP: Record<string, string> = {
   'open': 'aberta',
   'pending': 'pendente',
   'resolved': 'resolvida',
 };
 
-// Mapeamento de tipo de mensagem para PT-BR
-const MESSAGE_TYPE_PT: Record<string, string> = {
+const MESSAGE_TYPE_MAP: Record<string, string> = {
   'text': 'texto',
   'image': 'imagem',
   'audio': 'audio',
   'video': 'video',
   'document': 'documento',
 };
+
+// ============================================================================
+// FUNÇÕES AUXILIARES
+// ============================================================================
+
+function formatDateBrasilia(date?: Date | string): string {
+  const d = date ? (typeof date === 'string' ? new Date(date) : date) : new Date();
+  const brasiliaOffset = -3 * 60;
+  const utcOffset = d.getTimezoneOffset();
+  const diff = utcOffset + brasiliaOffset;
+  const brasiliaTime = new Date(d.getTime() + diff * 60 * 1000);
+  
+  const year = brasiliaTime.getFullYear();
+  const month = String(brasiliaTime.getMonth() + 1).padStart(2, '0');
+  const day = String(brasiliaTime.getDate()).padStart(2, '0');
+  const hours = String(brasiliaTime.getHours()).padStart(2, '0');
+  const minutes = String(brasiliaTime.getMinutes()).padStart(2, '0');
+  const seconds = String(brasiliaTime.getSeconds()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}-03:00`;
+}
+
+function gerarCodigoLead(leadId: string, createdAt?: string): string {
+  const date = createdAt ? new Date(createdAt) : new Date();
+  const ano = date.getFullYear();
+  const hash = leadId.replace(/-/g, '').substring(0, 8);
+  const num = parseInt(hash, 16) % 1000000;
+  return `L-${ano}-${String(num).padStart(6, '0')}`;
+}
+
+function formatarTelefone(phone: string | null | undefined): {
+  numero: string;
+  formatado: string;
+  ddd: string;
+  whatsapp: boolean;
+} | null {
+  if (!phone) return null;
+  
+  const normalizado = phone.replace(/\D/g, '');
+  if (normalizado.length < 10) return null;
+  
+  const semPais = normalizado.startsWith('55') ? normalizado.slice(2) : normalizado;
+  const ddd = semPais.substring(0, 2);
+  const numero = semPais.substring(2);
+  
+  let formatado: string;
+  if (numero.length === 9) {
+    formatado = `+55 (${ddd}) ${numero.slice(0, 5)}-${numero.slice(5)}`;
+  } else if (numero.length === 8) {
+    formatado = `+55 (${ddd}) ${numero.slice(0, 4)}-${numero.slice(4)}`;
+  } else {
+    formatado = `+55 ${semPais}`;
+  }
+  
+  return { numero: `55${semPais}`, formatado, ddd, whatsapp: true };
+}
+
+function isHorarioComercial(): boolean {
+  const now = new Date();
+  const brasiliaOffset = -3 * 60;
+  const utcOffset = now.getTimezoneOffset();
+  const diff = utcOffset + brasiliaOffset;
+  const brasiliaTime = new Date(now.getTime() + diff * 60 * 1000);
+  
+  const hora = brasiliaTime.getHours();
+  const diaSemana = brasiliaTime.getDay();
+  
+  return diaSemana >= 1 && diaSemana <= 5 && hora >= 8 && hora < 18;
+}
+
+// ============================================================================
+// INTERFACES
+// ============================================================================
 
 interface WebhookQueueItem {
   id: string;
@@ -72,186 +150,261 @@ interface Webhook {
   is_active: boolean;
 }
 
-// Formatar data em GMT-3 (São Paulo)
-function formatDateBrasilia(date?: Date): string {
-  const d = date || new Date();
-  const brasiliaOffset = -3 * 60;
-  const utcOffset = d.getTimezoneOffset();
-  const diff = utcOffset + brasiliaOffset;
-  const brasiliaTime = new Date(d.getTime() + diff * 60 * 1000);
-  
-  const year = brasiliaTime.getFullYear();
-  const month = String(brasiliaTime.getMonth() + 1).padStart(2, '0');
-  const day = String(brasiliaTime.getDate()).padStart(2, '0');
-  const hours = String(brasiliaTime.getHours()).padStart(2, '0');
-  const minutes = String(brasiliaTime.getMinutes()).padStart(2, '0');
-  const seconds = String(brasiliaTime.getSeconds()).padStart(2, '0');
-  
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}-03:00`;
+interface EnrichedData {
+  lead?: any;
+  leadLabels?: Array<{ id: string; nome: string; cor: string; categoria: string }>;
+  responsavel?: { id: string; nome: string; email: string };
+  etapa?: { id: string; nome: string; ordem: number; cor: string };
+  etapaAnterior?: { id: string; nome: string; ordem: number; cor: string };
+  conversa?: any;
+  mensagem?: any;
+  tarefa?: any;
 }
 
-// Traduzir campos de lead para PT-BR
-function translateLead(lead: Record<string, unknown>): Record<string, unknown> {
-  return {
-    id: lead.id,
-    nome: lead.name || lead.nome,
-    telefone: lead.phone || lead.telefone,
-    email: lead.email,
-    cpf: lead.cpf,
-    nit_pis: lead.nit_pis,
-    data_nascimento: lead.birth_date || lead.data_nascimento,
-    tipo_beneficio: lead.benefit_type || lead.tipo_beneficio,
-    status_caso: lead.case_status || lead.status_caso,
-    nome_whatsapp: lead.whatsapp_name || lead.nome_whatsapp,
-    origem: lead.source || lead.origem,
-    utm_medium: lead.utm_medium,
-    temperatura: TEMPERATURE_PT[lead.temperature as string] || lead.temperature || lead.temperatura,
-    status: LEAD_STATUS_PT[lead.status as string] || lead.status,
-    etapa_id: lead.stage_id || lead.etapa_id,
-    responsavel_id: lead.assigned_to || lead.responsavel_id,
-    valor_estimado: lead.estimated_value || lead.valor_estimado,
-    resumo_ia: lead.ai_summary || lead.resumo_ia,
-    notas_internas: lead.internal_notes || lead.notas_internas,
-    qualificacao: lead.qualification || lead.qualificacao,
-    checklist_documentos: lead.documents_checklist || lead.checklist_documentos,
-    campos_personalizados: lead.custom_fields || lead.campos_personalizados,
-    criado_em: lead.created_at ? formatDateBrasilia(new Date(lead.created_at as string)) : undefined,
-    atualizado_em: lead.updated_at ? formatDateBrasilia(new Date(lead.updated_at as string)) : undefined,
-    ultima_interacao_em: lead.last_interaction_at ? formatDateBrasilia(new Date(lead.last_interaction_at as string)) : undefined,
-  };
-}
+// ============================================================================
+// BUSCAR DADOS ENRIQUECIDOS
+// ============================================================================
 
-// Traduzir campos de mensagem para PT-BR
-function translateMessage(message: Record<string, unknown>): Record<string, unknown> {
-  return {
-    id: message.id,
-    conversa_id: message.conversation_id || message.conversa_id,
-    lead_id: message.lead_id,
-    tipo: MESSAGE_TYPE_PT[message.type as string] || message.type || message.tipo,
-    conteudo: message.content || message.conteudo,
-    midia_url: message.media_url || message.midia_url,
-    remetente_id: message.sender_id || message.remetente_id,
-    tipo_remetente: message.sender_type === 'lead' ? 'lead' : 'agente',
-    direcao: message.direction === 'inbound' ? 'entrada' : 'saida',
-    status: message.status,
-    favorita: message.is_starred || message.favorita,
-    nota_interna: message.is_internal_note || message.nota_interna,
-    criado_em: message.created_at ? formatDateBrasilia(new Date(message.created_at as string)) : undefined,
-  };
-}
-
-// Traduzir campos de conversa para PT-BR
-function translateConversation(conversation: Record<string, unknown>): Record<string, unknown> {
-  return {
-    id: conversation.id,
-    lead_id: conversation.lead_id,
-    status: CONVERSATION_STATUS_PT[conversation.status as string] || conversation.status,
-    responsavel_id: conversation.assigned_to || conversation.responsavel_id,
-    mensagens_nao_lidas: conversation.unread_count || conversation.mensagens_nao_lidas,
-    favorita: conversation.is_favorite || conversation.favorita,
-    ultima_mensagem_em: conversation.last_message_at ? formatDateBrasilia(new Date(conversation.last_message_at as string)) : undefined,
-    criado_em: conversation.created_at ? formatDateBrasilia(new Date(conversation.created_at as string)) : undefined,
-  };
-}
-
-// Construir payload padronizado em PT-BR
-function buildStandardPayload(
+async function buscarDadosEnriquecidos(
+  supabase: any,
   event: string,
-  originalPayload: Record<string, unknown>,
-  webhookId: string,
-  attempt: number = 1
-): Record<string, unknown> {
-  const eventoPtBr = EVENT_NAMES_PT[event] || event;
-  const idEntrega = crypto.randomUUID();
-  const ambiente = Deno.env.get('ENVIRONMENT') || 'producao';
+  data: Record<string, unknown>
+): Promise<EnrichedData> {
+  const enriched: EnrichedData = {};
+  const innerData = (data.data as Record<string, unknown>) || data;
   
-  // Extrair dados do payload original (que vem do trigger do banco)
-  const data = (originalPayload.data as Record<string, unknown>) || originalPayload;
-  
-  // Determinar se é teste
-  const isTeste = data._test === true || data._teste === true;
-  
-  // Traduzir dados baseado no tipo de evento
-  let dadosTraduzidos: Record<string, unknown> = {};
-  
-  if (event.startsWith('lead.')) {
-    const lead = data.lead as Record<string, unknown>;
-    if (lead) {
-      dadosTraduzidos.lead = translateLead(lead);
+  try {
+    const leadData = innerData.lead as Record<string, unknown> | undefined;
+    const leadId = leadData?.id as string || innerData.lead_id as string;
+    
+    if (leadId) {
+      const { data: lead } = await supabase
+        .from('leads')
+        .select('*, funnel_stages(*)')
+        .eq('id', leadId)
+        .single();
+      
+      if (lead) {
+        enriched.lead = lead;
+        
+        if (lead.funnel_stages) {
+          enriched.etapa = {
+            id: lead.funnel_stages.id,
+            nome: lead.funnel_stages.name,
+            ordem: lead.funnel_stages.order,
+            cor: lead.funnel_stages.color,
+          };
+        }
+        
+        if (lead.assigned_to) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, name, email')
+            .eq('id', lead.assigned_to)
+            .single();
+          
+          if (profile) {
+            enriched.responsavel = {
+              id: profile.id,
+              nome: profile.name,
+              email: profile.email,
+            };
+          }
+        }
+        
+        const { data: leadLabels } = await supabase
+          .from('lead_labels')
+          .select('labels(id, name, color, category)')
+          .eq('lead_id', leadId);
+        
+        if (leadLabels) {
+          enriched.leadLabels = leadLabels
+            .filter((ll: any) => ll.labels)
+            .map((ll: any) => ({
+              id: ll.labels.id,
+              nome: ll.labels.name,
+              cor: ll.labels.color,
+              categoria: ll.labels.category,
+            }));
+        }
+      }
     }
     
     if (event === 'lead.stage_changed') {
-      dadosTraduzidos.etapa_anterior_id = data.previous_stage_id || data.etapa_anterior_id;
-      dadosTraduzidos.etapa_atual_id = data.new_stage_id || data.etapa_atual_id;
-    } else if (event === 'lead.temperature_changed') {
-      dadosTraduzidos.temperatura_anterior = TEMPERATURE_PT[data.previous_temperature as string] || data.previous_temperature;
-      dadosTraduzidos.temperatura_atual = TEMPERATURE_PT[data.new_temperature as string] || data.new_temperature;
-    } else if (event === 'lead.assigned') {
-      dadosTraduzidos.responsavel_anterior_id = data.previous_assigned_to || data.responsavel_anterior_id;
-      dadosTraduzidos.responsavel_atual_id = data.new_assigned_to || data.responsavel_atual_id;
-    } else if (event === 'lead.label_added' || event === 'lead.label_removed') {
-      dadosTraduzidos.lead_id = data.lead_id;
-      dadosTraduzidos.etiqueta_id = data.label_id || data.etiqueta_id;
-      dadosTraduzidos.etiqueta_nome = data.label_name || data.etiqueta_nome;
-      dadosTraduzidos.etiqueta_cor = data.label_color || data.etiqueta_cor;
-      dadosTraduzidos.etiqueta_categoria = data.label_category || data.etiqueta_categoria;
-    }
-  } else if (event.startsWith('message.')) {
-    const message = data.message as Record<string, unknown>;
-    if (message) {
-      dadosTraduzidos.mensagem = translateMessage(message);
-    }
-  } else if (event.startsWith('conversation.')) {
-    const conversation = data.conversation as Record<string, unknown>;
-    if (conversation) {
-      dadosTraduzidos.conversa = translateConversation(conversation);
+      const previousStageId = innerData.previous_stage_id as string;
+      if (previousStageId) {
+        const { data: stage } = await supabase
+          .from('funnel_stages')
+          .select('*')
+          .eq('id', previousStageId)
+          .single();
+        
+        if (stage) {
+          enriched.etapaAnterior = {
+            id: stage.id,
+            nome: stage.name,
+            ordem: stage.order,
+            cor: stage.color,
+          };
+        }
+      }
     }
     
-    if (event === 'conversation.assigned') {
-      dadosTraduzidos.responsavel_anterior_id = data.previous_assigned_to || data.responsavel_anterior_id;
-      dadosTraduzidos.responsavel_atual_id = data.new_assigned_to || data.responsavel_atual_id;
+    const conversationData = innerData.conversation as Record<string, unknown> | undefined;
+    if (conversationData?.id) {
+      const { data: conversation } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('id', conversationData.id)
+        .single();
+      
+      if (conversation) enriched.conversa = conversation;
     }
-  } else if (event.startsWith('task.')) {
-    const task = data.task as Record<string, unknown>;
-    if (task) {
-      dadosTraduzidos.tarefa = {
-        id: task.id,
-        titulo: task.title || task.titulo,
-        descricao: task.description || task.descricao,
-        status: task.status,
-        prioridade: task.priority || task.prioridade,
-        responsavel_id: task.assigned_to || task.responsavel_id,
-        lead_id: task.lead_id,
-        data_vencimento: task.due_date ? formatDateBrasilia(new Date(task.due_date as string)) : undefined,
-        criado_em: task.created_at ? formatDateBrasilia(new Date(task.created_at as string)) : undefined,
+    
+    if (innerData.message) enriched.mensagem = innerData.message;
+    if (innerData.task) enriched.tarefa = innerData.task;
+    
+  } catch (err) {
+    console.error('[Webhook Queue] Erro ao buscar dados enriquecidos:', err);
+  }
+  
+  return enriched;
+}
+
+// ============================================================================
+// CONSTRUIR PAYLOAD V2.0
+// ============================================================================
+
+function buildPayloadV2(
+  event: string,
+  data: Record<string, unknown>,
+  enriched: EnrichedData,
+  webhookId: string,
+  attempt: number
+): Record<string, unknown> {
+  const eventoPtBr = EVENT_NAMES_PT[event] || event;
+  const idEntrega = crypto.randomUUID();
+  const timestamp = formatDateBrasilia();
+  const timestampUnix = Math.floor(Date.now() / 1000);
+  const innerData = (data.data as Record<string, unknown>) || data;
+  
+  let dados: Record<string, unknown> = {};
+  let contexto: Record<string, unknown> = {
+    empresa: 'GaranteDireito',
+    fuso_horario: 'America/Sao_Paulo',
+  };
+  
+  // Build lead object if available
+  const lead = enriched.lead || innerData.lead as Record<string, unknown>;
+  if (lead && event.startsWith('lead.')) {
+    const telefone = formatarTelefone(lead.phone as string);
+    const temperatura = TEMPERATURE_MAP[lead.temperature as string] || { valor: lead.temperature || 'desconhecido', emoji: '' };
+    
+    dados.lead = {
+      id: lead.id,
+      codigo: gerarCodigoLead(lead.id as string, lead.created_at as string),
+      nome: lead.name,
+      telefone,
+      email: lead.email || null,
+      temperatura,
+      funil: enriched.etapa || null,
+      responsavel: enriched.responsavel || null,
+      etiquetas: enriched.leadLabels || [],
+      criado_em: lead.created_at ? formatDateBrasilia(lead.created_at as string) : null,
+    };
+    
+    // Event-specific data
+    if (event === 'lead.stage_changed') {
+      dados.etapa_anterior = enriched.etapaAnterior || { id: innerData.previous_stage_id };
+      dados.etapa_nova = enriched.etapa || { id: innerData.new_stage_id };
+    } else if (event === 'lead.temperature_changed') {
+      dados.temperatura_anterior = TEMPERATURE_MAP[innerData.previous_temperature as string] || { valor: innerData.previous_temperature };
+      dados.temperatura_nova = TEMPERATURE_MAP[innerData.new_temperature as string] || { valor: innerData.new_temperature };
+    } else if (event === 'lead.label_added' || event === 'lead.label_removed') {
+      dados.etiqueta = {
+        id: innerData.label_id,
+        nome: innerData.label_name,
+        cor: innerData.label_color,
+        categoria: innerData.label_category,
+      };
+      dados.todas_etiquetas = enriched.leadLabels || [];
+    }
+  }
+  
+  // Message events
+  if (event.startsWith('message.')) {
+    const message = enriched.mensagem || innerData.message as Record<string, unknown>;
+    if (message) {
+      dados.mensagem = {
+        id: message.id,
+        tipo: MESSAGE_TYPE_MAP[message.type as string] || message.type,
+        conteudo: message.content,
+        midia: message.media_url ? { url: message.media_url } : null,
+        criado_em: message.created_at ? formatDateBrasilia(message.created_at as string) : timestamp,
+      };
+    }
+    if (lead) {
+      dados.lead = {
+        id: lead.id,
+        codigo: gerarCodigoLead(lead.id as string, lead.created_at as string),
+        nome: lead.name,
+        telefone: formatarTelefone(lead.phone as string),
+      };
+    }
+    contexto.canal = 'whatsapp';
+    contexto.horario_comercial = isHorarioComercial();
+  }
+  
+  // Conversation events
+  if (event.startsWith('conversation.')) {
+    const conversation = enriched.conversa || innerData.conversation as Record<string, unknown>;
+    if (conversation) {
+      dados.conversa = {
+        id: conversation.id,
+        status: CONVERSATION_STATUS_MAP[conversation.status as string] || conversation.status,
+      };
+    }
+    if (lead) {
+      dados.lead = {
+        id: lead.id,
+        codigo: gerarCodigoLead(lead.id as string, lead.created_at as string),
+        nome: lead.name,
+        telefone: formatarTelefone(lead.phone as string),
       };
     }
   }
   
-  if (isTeste) {
-    dadosTraduzidos._teste = true;
-    dadosTraduzidos._descricao = 'Este é um payload de teste enviado manualmente';
+  // Task events
+  if (event.startsWith('task.')) {
+    const task = enriched.tarefa || innerData.task as Record<string, unknown>;
+    if (task) {
+      dados.tarefa = {
+        id: task.id,
+        titulo: task.title,
+        descricao: task.description,
+        prioridade: PRIORITY_MAP[task.priority as string] || { valor: task.priority },
+        status: TASK_STATUS_MAP[task.status as string] || task.status,
+      };
+    }
+    dados.responsavel = enriched.responsavel || null;
   }
   
   return {
     evento: eventoPtBr,
-    evento_original: event,
-    versao_api: '1.0',
-    ambiente: isTeste ? 'teste' : ambiente,
-    data_hora: formatDateBrasilia(),
-    id_entrega: idEntrega,
-    dados: dadosTraduzidos,
-    metadados: {
-      webhook_id: webhookId,
-      tentativa: attempt,
-      max_tentativas: 3,
-      fuso_horario: 'America/Sao_Paulo',
-      formato_data: 'ISO 8601 com offset GMT-3',
-    },
+    versao: '2.0',
+    ambiente: Deno.env.get('ENVIRONMENT') || 'producao',
+    timestamp,
+    entrega: { id: idEntrega, tentativa: attempt, max_tentativas: 3 },
+    dados,
+    contexto,
+    assinatura: { algoritmo: 'sha256', hash: '', timestamp: timestampUnix },
   };
 }
 
-// Generate HMAC-SHA256 signature
+// ============================================================================
+// ASSINATURA E ENVIO
+// ============================================================================
+
 async function generateSignature(payload: string, secret: string): Promise<string> {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
@@ -262,42 +415,42 @@ async function generateSignature(payload: string, secret: string): Promise<strin
     ['sign']
   );
   const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
-  return 'sha256=' + Array.from(new Uint8Array(signature))
+  return Array.from(new Uint8Array(signature))
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
 }
 
-// Send webhook with retry logic
 async function sendWebhook(
-  supabase: SupabaseClient,
+  supabase: any,
   webhook: Webhook,
   queueItem: WebhookQueueItem,
   attempt: number = 1
-): Promise<{ success: boolean; status?: number; body?: string; error?: string }> {
+): Promise<{ success: boolean; status?: number; error?: string }> {
   const maxAttempts = 3;
   
-  // Construir payload padronizado em PT-BR
-  const payloadObj = buildStandardPayload(queueItem.event, queueItem.payload, webhook.id, attempt);
+  const enriched = await buscarDadosEnriquecidos(supabase, queueItem.event, queueItem.payload);
+  const payloadObj = buildPayloadV2(queueItem.event, queueItem.payload, enriched, webhook.id, attempt);
+  
+  const payloadSemAssinatura = JSON.stringify({ ...payloadObj, assinatura: undefined });
+  const hash = await generateSignature(payloadSemAssinatura, webhook.secret);
+  (payloadObj.assinatura as Record<string, unknown>).hash = hash;
+  
   const payloadString = JSON.stringify(payloadObj);
+  const timestamp = (payloadObj.assinatura as Record<string, unknown>).timestamp as number;
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json; charset=utf-8',
+    'X-Webhook-Evento': payloadObj.evento as string,
+    'X-Webhook-Versao': '2.0',
+    'X-Webhook-Ambiente': payloadObj.ambiente as string,
+    'X-Webhook-ID-Entrega': (payloadObj.entrega as Record<string, unknown>).id as string,
+    'X-Webhook-Timestamp': timestamp.toString(),
+    'X-Webhook-Assinatura': `sha256=${hash}`,
+    ...(webhook.headers || {}),
+  };
   
   try {
-    const signature = await generateSignature(payloadString, webhook.secret);
-    const timestamp = Math.floor(Date.now() / 1000);
-    
-    // Headers padronizados em PT-BR
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json; charset=utf-8',
-      'X-Webhook-Evento': payloadObj.evento as string,
-      'X-Webhook-Evento-Original': queueItem.event,
-      'X-Webhook-Versao': '1.0',
-      'X-Webhook-Ambiente': payloadObj.ambiente as string,
-      'X-Webhook-Timestamp': timestamp.toString(),
-      'X-Webhook-Assinatura': signature,
-      'X-Webhook-ID-Entrega': payloadObj.id_entrega as string,
-      ...(webhook.headers || {}),
-    };
-    
-    console.log(`[Webhook] Enviando ${queueItem.event} -> ${payloadObj.evento} para ${webhook.url} (tentativa ${attempt}/${maxAttempts})`);
+    console.log(`[Webhook Queue v2.0] Enviando ${queueItem.event} -> ${payloadObj.evento} para ${webhook.url} (tentativa ${attempt}/${maxAttempts})`);
     
     const response = await fetch(webhook.url, {
       method: 'POST',
@@ -308,9 +461,8 @@ async function sendWebhook(
     const responseBody = await response.text();
     const success = response.ok;
     
-    console.log(`[Webhook] Resposta: ${response.status} - ${success ? 'sucesso' : 'falha'}`);
+    console.log(`[Webhook Queue v2.0] Resposta: ${response.status} - ${success ? 'sucesso' : 'falha'}`);
     
-    // Log the attempt
     await supabase.from('webhook_logs').insert({
       webhook_id: webhook.id,
       event: queueItem.event,
@@ -320,20 +472,19 @@ async function sendWebhook(
       response_body: responseBody.substring(0, 10000),
       attempts: attempt,
       completed_at: success ? new Date().toISOString() : null,
-      error_message: success ? null : `HTTP ${response.status}: ${responseBody.substring(0, 500)}`,
+      error_message: success ? null : `HTTP ${response.status}`,
     });
     
     if (!success && attempt < maxAttempts) {
       const delay = Math.pow(2, attempt) * 1000;
-      console.log(`[Webhook] Nova tentativa em ${delay}ms...`);
       await new Promise(resolve => setTimeout(resolve, delay));
       return sendWebhook(supabase, webhook, queueItem, attempt + 1);
     }
     
-    return { success, status: response.status, body: responseBody };
+    return { success, status: response.status };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-    console.error(`[Webhook] Erro ao enviar para ${webhook.url}:`, errorMessage);
+    console.error(`[Webhook Queue v2.0] Erro:`, errorMessage);
     
     await supabase.from('webhook_logs').insert({
       webhook_id: webhook.id,
@@ -346,7 +497,6 @@ async function sendWebhook(
     
     if (attempt < maxAttempts) {
       const delay = Math.pow(2, attempt) * 1000;
-      console.log(`[Webhook] Nova tentativa em ${delay}ms...`);
       await new Promise(resolve => setTimeout(resolve, delay));
       return sendWebhook(supabase, webhook, queueItem, attempt + 1);
     }
@@ -354,6 +504,10 @@ async function sendWebhook(
     return { success: false, error: errorMessage };
   }
 }
+
+// ============================================================================
+// HANDLER PRINCIPAL
+// ============================================================================
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -372,34 +526,25 @@ Deno.serve(async (req) => {
       .order('created_at', { ascending: true })
       .limit(100);
     
-    if (queueError) {
-      console.error('[Fila] Erro ao buscar itens:', queueError);
-      throw queueError;
-    }
+    if (queueError) throw queueError;
     
     if (!queueItems || queueItems.length === 0) {
-      console.log('[Fila] Nenhum item para processar');
       return new Response(
         JSON.stringify({ mensagem: 'Nenhum item para processar', processados: 0 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    console.log(`[Fila] Processando ${queueItems.length} itens`);
+    console.log(`[Webhook Queue v2.0] Processando ${queueItems.length} itens`);
     
     const { data: webhooks, error: webhooksError } = await supabase
       .from('webhooks')
       .select('*')
       .eq('is_active', true);
     
-    if (webhooksError) {
-      console.error('[Webhooks] Erro ao buscar webhooks:', webhooksError);
-      throw webhooksError;
-    }
+    if (webhooksError) throw webhooksError;
     
     if (!webhooks || webhooks.length === 0) {
-      console.log('[Webhooks] Nenhum webhook ativo configurado');
-      
       const ids = queueItems.map(item => item.id);
       await supabase
         .from('webhook_queue')
@@ -417,28 +562,16 @@ Deno.serve(async (req) => {
     for (const item of queueItems) {
       const matchingWebhooks = webhooks.filter(w => w.events.includes(item.event));
       
-      if (matchingWebhooks.length === 0) {
-        console.log(`[Fila] Nenhum webhook para evento ${item.event}`);
-      } else {
-        let sent = 0;
-        let errors = 0;
-        
-        for (const webhook of matchingWebhooks) {
-          const result = await sendWebhook(supabase, webhook, item);
-          if (result.success) {
-            sent++;
-          } else {
-            errors++;
-          }
-        }
-        
-        results.push({
-          fila_id: item.id,
-          evento: item.event,
-          webhooks_enviados: sent,
-          erros: errors,
-        });
+      let sent = 0;
+      let errors = 0;
+      
+      for (const webhook of matchingWebhooks) {
+        const result = await sendWebhook(supabase, webhook, item);
+        if (result.success) sent++;
+        else errors++;
       }
+      
+      results.push({ fila_id: item.id, evento: item.event, webhooks_enviados: sent, erros: errors });
       
       await supabase
         .from('webhook_queue')
@@ -446,18 +579,17 @@ Deno.serve(async (req) => {
         .eq('id', item.id);
     }
     
-    console.log(`[Fila] Processamento concluído: ${queueItems.length} itens`);
-    
     return new Response(
       JSON.stringify({
         mensagem: 'Fila processada com sucesso',
+        versao: '2.0',
         processados: queueItems.length,
         resultados: results,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('[Fila] Erro inesperado:', error);
+    console.error('[Webhook Queue v2.0] Erro inesperado:', error);
     return new Response(
       JSON.stringify({ erro: error instanceof Error ? error.message : 'Erro desconhecido' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
