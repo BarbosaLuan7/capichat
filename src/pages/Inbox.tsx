@@ -111,7 +111,7 @@ const Inbox = () => {
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
   const [showLeadPanel, setShowLeadPanel] = useState(() => {
     const saved = localStorage.getItem('inbox-show-lead-panel');
-    return saved !== null ? saved === 'true' : true;
+    return saved !== null ? saved === 'true' : false; // Padrão: FECHADO
   });
   
   // Persist lead panel toggle
@@ -707,7 +707,10 @@ const Inbox = () => {
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-1">
                             {isFavorite && <Star className="w-3 h-3 fill-warning text-warning" />}
-                            <span className="font-semibold text-foreground truncate">
+                            <span 
+                              className="font-semibold text-foreground truncate"
+                              title={convLead?.name}
+                            >
                               {convLead?.name}
                             </span>
                           </div>
@@ -716,7 +719,10 @@ const Inbox = () => {
                           </span>
                         </div>
 
-                        <p className="text-sm text-muted-foreground truncate mb-2">
+                        <p 
+                          className="text-sm text-muted-foreground truncate mb-2"
+                          title={(conversation as any).last_message_content || formatPhoneNumber(convLead?.phone || '')}
+                        >
                           {(conversation as any).last_message_content || formatPhoneNumber(convLead?.phone || '')}
                         </p>
 
@@ -806,10 +812,14 @@ const Inbox = () => {
                   <MoreVertical className="w-4 h-4" />
                 </Button>
                 <Button 
-                  variant="ghost" 
+                  variant={showLeadPanel ? "secondary" : "ghost"}
                   size="icon"
                   onClick={() => setShowLeadPanel(!showLeadPanel)}
-                  title={showLeadPanel ? "Ocultar detalhes" : "Mostrar detalhes"}
+                  title={showLeadPanel ? "Ocultar detalhes do lead" : "Mostrar detalhes do lead"}
+                  className={cn(
+                    "transition-colors",
+                    !showLeadPanel && "text-primary hover:text-primary hover:bg-primary/10"
+                  )}
                 >
                   {showLeadPanel ? (
                     <PanelRightClose className="w-4 h-4" />
