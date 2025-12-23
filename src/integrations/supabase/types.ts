@@ -176,6 +176,7 @@ export type Database = {
           id: string
           is_favorite: boolean | null
           last_message_at: string
+          last_message_content: string | null
           lead_id: string
           status: Database["public"]["Enums"]["conversation_status"]
           unread_count: number
@@ -186,6 +187,7 @@ export type Database = {
           id?: string
           is_favorite?: boolean | null
           last_message_at?: string
+          last_message_content?: string | null
           lead_id: string
           status?: Database["public"]["Enums"]["conversation_status"]
           unread_count?: number
@@ -196,6 +198,7 @@ export type Database = {
           id?: string
           is_favorite?: boolean | null
           last_message_at?: string
+          last_message_content?: string | null
           lead_id?: string
           status?: Database["public"]["Enums"]["conversation_status"]
           unread_count?: number
