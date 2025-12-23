@@ -555,8 +555,8 @@ const Inbox = () => {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-72 p-0" align="start">
-                <div className="p-3 border-b border-border">
+              <PopoverContent className="w-72 p-0 max-h-96 flex flex-col" align="start">
+                <div className="p-3 border-b border-border bg-popover sticky top-0 z-10 shrink-0">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Filtrar por etiquetas</span>
                     {selectedLabelIds.length > 0 && (
@@ -566,7 +566,7 @@ const Inbox = () => {
                     )}
                   </div>
                 </div>
-                <ScrollArea className="max-h-80">
+                <ScrollArea className="flex-1">
                   <div className="p-2 space-y-3">
                     {Object.entries(labelsByCategory).map(([category, labels]) => (
                       <div key={category}>
