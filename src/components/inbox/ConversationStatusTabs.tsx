@@ -66,7 +66,7 @@ export function ConversationStatusTabs({ value, onChange, counts }: Conversation
 
   return (
     <Tabs value={value} onValueChange={(v) => onChange(v as ConversationStatus | 'all')}>
-      <TabsList className="grid grid-cols-4 w-full bg-muted h-auto p-1 gap-0.5">
+      <TabsList className="grid grid-cols-4 w-full bg-muted h-auto p-1 gap-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const count = getCount(tab.value);
@@ -78,24 +78,14 @@ export function ConversationStatusTabs({ value, onChange, counts }: Conversation
                 <TabsTrigger 
                   value={tab.value} 
                   className={cn(
-                    "flex items-center justify-center gap-1 px-1.5 py-2 text-xs font-medium transition-all min-w-0",
+                    "flex items-center justify-center gap-1 px-2 py-2 text-xs font-medium transition-all",
                     "hover:bg-background/50 active:scale-[0.98]",
                     "data-[state=active]:bg-background data-[state=active]:shadow-sm",
                     isActive && tab.colorClass
                   )}
                 >
                   <Icon className="w-3.5 h-3.5 shrink-0" />
-                  {/* Em telas pequenas: só número. Em telas maiores: label abreviado */}
-                  <span className="hidden sm:inline truncate max-w-[50px]">{tab.shortLabel}</span>
-                  <Badge 
-                    variant="secondary" 
-                    className={cn(
-                      "px-1 py-0 text-[10px] font-semibold min-w-[18px] h-4 shrink-0",
-                      isActive ? tab.badgeClass : 'bg-muted-foreground/10 text-muted-foreground'
-                    )}
-                  >
-                    {count}
-                  </Badge>
+                  <span className="font-semibold tabular-nums">{count}</span>
                 </TabsTrigger>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-xs">

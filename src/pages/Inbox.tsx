@@ -730,11 +730,11 @@ const Inbox = () => {
                           {(conversation as any).last_message_content || formatPhoneNumber(convLead?.phone || '')}
                         </p>
 
-                        <div className="flex items-center gap-1 flex-wrap">
+                        <div className="flex items-center gap-1 overflow-hidden">
                           <Badge
                             variant="outline"
                             className={cn(
-                              'text-xs',
+                              'text-xs shrink-0',
                               conversation.status === 'open' && 'border-success text-success',
                               conversation.status === 'pending' && 'border-warning text-warning',
                               conversation.status === 'resolved' && 'border-muted-foreground text-muted-foreground'
@@ -743,25 +743,26 @@ const Inbox = () => {
                             {conversation.status === 'open' ? 'Aberta' : conversation.status === 'pending' ? 'Pendente' : 'Resolvida'}
                           </Badge>
                           {convLead?.temperature === 'hot' && (
-                            <Badge className="bg-destructive/10 text-destructive text-xs">
+                            <Badge className="bg-destructive/10 text-destructive text-xs shrink-0">
                               Quente
                             </Badge>
                           )}
-                          {/* Lead Labels */}
+                          {/* Lead Labels - max 2, truncated */}
                           {convLead?.lead_labels?.slice(0, 2).map((ll: any) => (
                             <Badge
                               key={ll.labels?.id}
-                              className="text-xs px-1.5 py-0 border-0"
+                              className="text-xs px-1.5 py-0 border-0 shrink-0 max-w-[80px] truncate"
                               style={{
                                 backgroundColor: ll.labels?.color,
                                 color: 'white',
                               }}
+                              title={ll.labels?.name}
                             >
                               {ll.labels?.name}
                             </Badge>
                           ))}
                           {convLead?.lead_labels?.length > 2 && (
-                            <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                            <Badge variant="secondary" className="text-xs px-1.5 py-0 shrink-0">
                               +{convLead.lead_labels.length - 2}
                             </Badge>
                           )}
