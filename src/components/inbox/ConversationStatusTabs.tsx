@@ -18,10 +18,10 @@ interface ConversationStatusTabsProps {
 }
 
 const tabs = [
-  { value: 'all', label: 'Todas', icon: Inbox, colorClass: '' },
-  { value: 'open', label: 'Abertas', icon: MessageCircle, colorClass: 'bg-success/10 text-success' },
-  { value: 'pending', label: 'Pendentes', icon: Clock, colorClass: 'bg-warning/10 text-warning' },
-  { value: 'resolved', label: 'Resolvidas', icon: CheckCircle2, colorClass: 'bg-muted-foreground/10 text-muted-foreground' },
+  { value: 'all', label: 'Todas', shortLabel: 'Todas', icon: Inbox, colorClass: '' },
+  { value: 'open', label: 'Abertas', shortLabel: 'Aber.', icon: MessageCircle, colorClass: 'bg-success/10 text-success' },
+  { value: 'pending', label: 'Pendentes', shortLabel: 'Pend.', icon: Clock, colorClass: 'bg-warning/10 text-warning' },
+  { value: 'resolved', label: 'Resolvidas', shortLabel: 'Res.', icon: CheckCircle2, colorClass: 'bg-muted-foreground/10 text-muted-foreground' },
 ] as const;
 
 export function ConversationStatusTabs({ value, onChange, counts }: ConversationStatusTabsProps) {
@@ -47,13 +47,13 @@ export function ConversationStatusTabs({ value, onChange, counts }: Conversation
               <TooltipTrigger asChild>
               <TabsTrigger 
                 value={tab.value} 
-                className="px-1.5 py-1.5 text-[11px] gap-1 justify-center min-w-0"
+                className="px-1 py-1.5 text-[11px] gap-0.5 justify-center"
               >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span className="hidden lg:inline truncate">{tab.label}</span>
+                <Icon className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden sm:inline whitespace-nowrap text-[10px]">{tab.shortLabel}</span>
                 <Badge 
                   variant="secondary" 
-                  className={`px-1.5 py-0 text-[10px] font-medium shrink-0 min-w-[20px] ${tab.colorClass}`}
+                  className={`px-1 py-0 text-[9px] font-medium shrink-0 min-w-[16px] ${tab.colorClass}`}
                 >
                   {count}
                 </Badge>

@@ -96,7 +96,7 @@ type StatusFilter = ConversationStatus | 'all';
 type InboxFilter = 'novos' | 'meus' | 'outros';
 
 const Inbox = () => {
-  const { user } = useAuth();
+  const { user, authUser } = useAuth();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const [filter, setFilter] = useState<InboxFilter>('meus');
@@ -914,6 +914,8 @@ const Inbox = () => {
                     onSelectTemplate={handleTemplateSelect}
                     leadName={leadWithLabels.name}
                     leadPhone={leadWithLabels.phone}
+                    leadBenefitType={leadWithLabels.benefit_type || undefined}
+                    agentName={authUser?.name}
                   />
                 </div>
 
@@ -924,6 +926,8 @@ const Inbox = () => {
                       onSelectTemplate={handleTemplateSelect}
                       leadName={leadWithLabels.name}
                       leadPhone={leadWithLabels.phone}
+                      leadBenefitType={leadWithLabels.benefit_type || undefined}
+                      agentName={authUser?.name}
                       inputRef={inputRef as React.RefObject<HTMLInputElement>}
                       onClose={() => setShowSlashCommand(false)}
                     />
