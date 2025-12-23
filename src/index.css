@@ -183,6 +183,29 @@
     animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
+  /* Interactive element states */
+  .interactive {
+    @apply transition-all duration-150 cursor-pointer;
+  }
+  
+  .interactive:hover {
+    @apply bg-muted/50;
+  }
+  
+  .interactive:active {
+    @apply scale-[0.98];
+  }
+
+  /* Click feedback */
+  .click-feedback {
+    @apply transition-transform duration-100 active:scale-[0.97];
+  }
+
+  /* Focus visible ring for accessibility */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted)) transparent;
@@ -204,6 +227,13 @@
 
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  /* Ensure no text truncation unless explicitly specified */
+  .no-truncate {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
   }
 }
 

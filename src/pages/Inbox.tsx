@@ -632,12 +632,44 @@ const Inbox = () => {
         {/* Conversations */}
         <ScrollArea className="flex-1 overflow-hidden">
           {loadingConversations ? (
-            <div className="p-4 text-center text-muted-foreground">
-              Carregando...
+            <div className="divide-y divide-border">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="p-4 flex items-start gap-3 animate-pulse">
+                  <div className="w-10 h-10 rounded-full bg-muted shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="h-4 w-24 bg-muted rounded" />
+                      <div className="h-3 w-12 bg-muted rounded" />
+                    </div>
+                    <div className="h-3 w-full bg-muted rounded" />
+                    <div className="flex gap-1.5">
+                      <div className="h-5 w-16 bg-muted rounded-full" />
+                      <div className="h-5 w-14 bg-muted rounded-full" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : filteredConversations.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">
-              Nenhuma conversa encontrada
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4 text-primary">
+                <MessageSquare className="w-8 h-8" />
+              </div>
+              <h3 className="text-base font-medium text-foreground mb-1">
+                {searchQuery ? 'Nenhum resultado' : 'Nenhuma conversa'}
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-xs mb-4">
+                {searchQuery 
+                  ? `Nenhuma conversa encontrada para "${searchQuery}". Tente outros termos.`
+                  : 'Clique em "+ Nova conversa" para iniciar um atendimento'
+                }
+              </p>
+              {!searchQuery && (
+                <Button size="sm" onClick={() => setShowNewConversationModal(true)}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  Nova conversa
+                </Button>
+              )}
             </div>
           ) : (
             <div className="divide-y divide-border">
@@ -795,9 +827,33 @@ const Inbox = () => {
               >
                 <div className="space-y-2 max-w-3xl mx-auto">
                   {loadingMessages ? (
-                    <div className="text-center text-muted-foreground">Carregando mensagens...</div>
+                    <div className="space-y-4">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className={cn("flex gap-2 animate-pulse", i % 2 === 0 && "flex-row-reverse")}>
+                          <div className="w-8 h-8 rounded-full bg-muted shrink-0" />
+                          <div className={cn(
+                            "rounded-2xl p-4 max-w-[70%] space-y-2",
+                            i % 2 === 0 ? "bg-primary/20" : "bg-card"
+                          )}>
+                            <div className="h-3 w-32 bg-muted rounded" />
+                            <div className="h-3 w-48 bg-muted rounded" />
+                            <div className="h-2 w-12 bg-muted rounded" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   ) : groupedMessages.length === 0 ? (
-                    <div className="text-center text-muted-foreground">Nenhuma mensagem ainda</div>
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4 text-muted-foreground">
+                        <MessageSquare className="w-8 h-8" />
+                      </div>
+                      <h3 className="text-base font-medium text-foreground mb-1">
+                        Nenhuma mensagem ainda
+                      </h3>
+                      <p className="text-sm text-muted-foreground max-w-xs">
+                        Envie a primeira mensagem para iniciar a conversa
+                      </p>
+                    </div>
                   ) : (
                     groupedMessages.map((group, groupIndex) => (
                       <div key={group.date.toISOString()}>
