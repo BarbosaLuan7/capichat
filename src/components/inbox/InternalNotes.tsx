@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { StickyNote, Send } from 'lucide-react';
+import { StickyNote, Send, Loader2, Check } from 'lucide-react';
 import { useInternalNotes, useCreateInternalNote } from '@/hooks/useInternalNotes';
 import { toast } from 'sonner';
 
@@ -15,8 +15,17 @@ interface InternalNotesProps {
 
 export function InternalNotes({ conversationId }: InternalNotesProps) {
   const [note, setNote] = useState('');
+  const [showSaved, setShowSaved] = useState(false);
   const { data: notes, isLoading } = useInternalNotes(conversationId);
   const createNote = useCreateInternalNote();
+
+  // Show "Salvo" feedback briefly after successful save
+  useEffect(() => {
+    if (showSaved) {
+      const timer = setTimeout(() => setShowSaved(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSaved]);
 
   const handleAddNote = async () => {
     if (!note.trim()) return;
@@ -27,6 +36,7 @@ export function InternalNotes({ conversationId }: InternalNotesProps) {
         content: note,
       });
       setNote('');
+      setShowSaved(true);
       toast.success('Nota adicionada');
     } catch (error) {
       toast.error('Erro ao adicionar nota');
@@ -51,10 +61,24 @@ export function InternalNotes({ conversationId }: InternalNotesProps) {
           size="sm"
           onClick={handleAddNote}
           disabled={!note.trim() || createNote.isPending}
-          className="w-full"
+          className="w-full gap-2"
         >
-          <Send className="w-4 h-4 mr-2" />
-          Adicionar Nota
+          {createNote.isPending ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Salvando...
+            </>
+          ) : showSaved ? (
+            <>
+              <Check className="w-4 h-4" />
+              Salvo ✓
+            </>
+          ) : (
+            <>
+              <Send className="w-4 h-4" />
+              Adicionar Nota
+            </>
+          )}
         </Button>
       </div>
 
