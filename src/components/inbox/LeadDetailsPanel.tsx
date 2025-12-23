@@ -239,8 +239,8 @@ export function LeadDetailsPanel({
           </TabsList>
 
           {/* Dados Tab */}
-          <TabsContent value="dados" className="flex-1 m-0">
-            <ScrollArea className="h-[calc(100vh-20rem)]">
+          <TabsContent value="dados" className="flex-1 m-0 min-h-0 overflow-hidden">
+            <ScrollArea className="h-full">
               <div className="p-4 space-y-4">
                 {/* AI Summary */}
                 {(lead as any).ai_summary && (
@@ -425,8 +425,8 @@ export function LeadDetailsPanel({
           </TabsContent>
 
           {/* Docs Tab */}
-          <TabsContent value="docs" className="flex-1 m-0">
-            <ScrollArea className="h-[calc(100vh-20rem)]">
+          <TabsContent value="docs" className="flex-1 m-0 min-h-0 overflow-hidden">
+            <ScrollArea className="h-full">
               <div className="p-4">
                 <DocumentChecklist
                   leadId={lead.id}
@@ -439,8 +439,8 @@ export function LeadDetailsPanel({
           </TabsContent>
 
           {/* IA Tab */}
-          <TabsContent value="ia" className="flex-1 m-0">
-            <ScrollArea className="h-[calc(100vh-20rem)]">
+          <TabsContent value="ia" className="flex-1 m-0 min-h-0 overflow-hidden">
+            <ScrollArea className="h-full">
               <div className="p-4 space-y-4">
                 {/* AI Summary */}
                 <AIConversationSummary
@@ -460,8 +460,8 @@ export function LeadDetailsPanel({
           </TabsContent>
 
           {/* Histórico Tab */}
-          <TabsContent value="historico" className="flex-1 m-0">
-            <ScrollArea className="h-[calc(100vh-20rem)]">
+          <TabsContent value="historico" className="flex-1 m-0 min-h-0 overflow-hidden">
+            <ScrollArea className="h-full">
               <div className="p-4 space-y-4">
                 {/* Adicionar nota no topo */}
                 <InternalNotes conversationId={conversationId} />

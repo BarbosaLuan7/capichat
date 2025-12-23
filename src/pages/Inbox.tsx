@@ -162,16 +162,16 @@ const Inbox = () => {
     }
   }, [messages, showScrollButton]);
 
-  // Auto-scroll to bottom when conversation changes
+  // Auto-scroll to bottom when conversation changes and messages are loaded
   useEffect(() => {
-    if (selectedConversationId) {
+    if (selectedConversationId && !loadingMessages && messages && messages.length > 0) {
       setShowScrollButton(false);
-      // Wait for DOM to render messages
-      setTimeout(() => {
+      // Use requestAnimationFrame to ensure DOM is updated
+      requestAnimationFrame(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
-      }, 100);
+      });
     }
-  }, [selectedConversationId]);
+  }, [selectedConversationId, loadingMessages, messages?.length]);
 
   // Handle scroll to detect if user scrolled up
   const handleMessagesScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
