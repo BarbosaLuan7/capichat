@@ -71,6 +71,7 @@ import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { useAuth } from '@/hooks/useAuth';
 import { useAISuggestions } from '@/hooks/useAISuggestions';
 import { useAIReminders } from '@/hooks/useAIReminders';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Components
 import { AttachmentMenu } from '@/components/inbox/AttachmentMenu';
@@ -109,20 +110,22 @@ const Inbox = () => {
   const [showReminderPrompt, setShowReminderPrompt] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
+  const LEAD_PANEL_STORAGE_KEY = 'inbox-show-lead-panel-v2';
   const [showLeadPanel, setShowLeadPanel] = useState(() => {
-    const saved = localStorage.getItem('inbox-show-lead-panel');
-    return saved !== null ? saved === 'true' : false; // Padrão: FECHADO
+    const saved = localStorage.getItem(LEAD_PANEL_STORAGE_KEY);
+    return saved === 'true';
   });
   
   // Persist lead panel toggle
   useEffect(() => {
-    localStorage.setItem('inbox-show-lead-panel', String(showLeadPanel));
+    localStorage.setItem(LEAD_PANEL_STORAGE_KEY, String(showLeadPanel));
   }, [showLeadPanel]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const isMobile = useIsMobile();
 
   // Data hooks
   const { data: conversations, isLoading: loadingConversations } = useConversations();
@@ -272,6 +275,7 @@ const Inbox = () => {
 
   const handleSelectConversation = (id: string) => {
     setSelectedConversationId(id);
+    setShowLeadPanel(false);
   };
 
   const handleSendMessage = async () => {
@@ -500,7 +504,7 @@ const Inbox = () => {
   } : null;
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex min-w-0 overflow-hidden">
+    <div className="h-[calc(100vh-4rem)] flex min-w-0 overflow-hidden relative">
       {/* Conversation List */}
       <div className="w-64 xl:w-80 border-r border-border flex flex-col bg-card flex-shrink-0">
         {/* Header with New Conversation Button */}
@@ -1063,29 +1067,67 @@ const Inbox = () => {
       {/* Lead Panel */}
       <AnimatePresence>
         {selectedConversation && showLeadPanel && (
-          <motion.div
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 'auto', opacity: 1 }}
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="w-[280px] xl:w-[320px] border-l border-border bg-card overflow-hidden flex-shrink-0"
-          >
-            {loadingLead ? (
-              <LeadDetailsPanelSkeleton />
-            ) : leadWithLabels ? (
-              <LeadDetailsPanel
-                lead={leadWithLabels}
-                conversationId={selectedConversation.id}
-                messages={messages}
-                isFavorite={(selectedConversation as any).is_favorite}
-                onToggleFavorite={handleToggleFavorite}
-                onTransfer={handleTransfer}
-                onLabelsUpdate={() => refetchLead()}
-              />
-            ) : (
-              <LeadDetailsPanelSkeleton />
-            )}
-          </motion.div>
+          isMobile ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="absolute inset-0 z-50 bg-background/40 backdrop-blur-sm"
+              onClick={() => setShowLeadPanel(false)}
+              role="dialog"
+              aria-label="Detalhes do lead"
+            >
+              <motion.aside
+                initial={{ x: 360 }}
+                animate={{ x: 0 }}
+                exit={{ x: 360 }}
+                transition={{ type: 'tween', duration: 0.2 }}
+                className="absolute right-0 top-0 h-full w-[360px] max-w-[92vw] border-l border-border bg-card shadow-lg overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {loadingLead ? (
+                  <LeadDetailsPanelSkeleton />
+                ) : leadWithLabels ? (
+                  <LeadDetailsPanel
+                    lead={leadWithLabels}
+                    conversationId={selectedConversation.id}
+                    messages={messages}
+                    isFavorite={(selectedConversation as any).is_favorite}
+                    onToggleFavorite={handleToggleFavorite}
+                    onTransfer={handleTransfer}
+                    onLabelsUpdate={() => refetchLead()}
+                  />
+                ) : (
+                  <LeadDetailsPanelSkeleton />
+                )}
+              </motion.aside>
+            </motion.div>
+          ) : (
+            <motion.aside
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 'auto', opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="w-[280px] xl:w-[320px] border-l border-border bg-card overflow-hidden flex-shrink-0"
+            >
+              {loadingLead ? (
+                <LeadDetailsPanelSkeleton />
+              ) : leadWithLabels ? (
+                <LeadDetailsPanel
+                  lead={leadWithLabels}
+                  conversationId={selectedConversation.id}
+                  messages={messages}
+                  isFavorite={(selectedConversation as any).is_favorite}
+                  onToggleFavorite={handleToggleFavorite}
+                  onTransfer={handleTransfer}
+                  onLabelsUpdate={() => refetchLead()}
+                />
+              ) : (
+                <LeadDetailsPanelSkeleton />
+              )}
+            </motion.aside>
+          )
         )}
       </AnimatePresence>
       
