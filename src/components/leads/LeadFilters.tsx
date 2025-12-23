@@ -108,10 +108,12 @@ export function LeadFilters({
     origem: 'Origem',
     interesse: 'Interesse',
     prioridade: 'Prioridade',
-    status: 'Status',
+    status: 'Status/Workflow',
     beneficio: 'Benefício',
     condicao_saude: 'Condição de Saúde',
     desqualificacao: 'Desqualificação',
+    situacao: 'Situação',
+    perda: 'Motivo de Perda',
   };
 
   return (

@@ -932,6 +932,8 @@ export type Database = {
         | "beneficio"
         | "condicao_saude"
         | "desqualificacao"
+        | "situacao"
+        | "perda"
       lead_status: "active" | "archived" | "converted" | "lost"
       lead_temperature: "cold" | "warm" | "hot"
       message_direction: "inbound" | "outbound"
@@ -1121,6 +1123,8 @@ export const Constants = {
         "beneficio",
         "condicao_saude",
         "desqualificacao",
+        "situacao",
+        "perda",
       ],
       lead_status: ["active", "archived", "converted", "lost"],
       lead_temperature: ["cold", "warm", "hot"],

@@ -221,6 +221,9 @@ function buildStandardPayload(
     } else if (event === 'lead.label_added' || event === 'lead.label_removed') {
       dadosTraduzidos.lead_id = data.lead_id;
       dadosTraduzidos.etiqueta_id = data.label_id || data.etiqueta_id;
+      dadosTraduzidos.etiqueta_nome = data.label_name || data.etiqueta_nome;
+      dadosTraduzidos.etiqueta_cor = data.label_color || data.etiqueta_cor;
+      dadosTraduzidos.etiqueta_categoria = data.label_category || data.etiqueta_categoria;
     }
   } else if (event.startsWith('message.')) {
     const message = data.message as Record<string, unknown>;
