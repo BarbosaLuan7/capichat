@@ -15,6 +15,8 @@ import {
   X,
   Loader2,
   Plus,
+  PanelRightClose,
+  PanelRightOpen,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -91,6 +93,7 @@ const Inbox = () => {
   const [showReminderPrompt, setShowReminderPrompt] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
+  const [showLeadPanel, setShowLeadPanel] = useState(true);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -743,6 +746,18 @@ const Inbox = () => {
                 <Button variant="ghost" size="icon">
                   <MoreVertical className="w-4 h-4" />
                 </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setShowLeadPanel(!showLeadPanel)}
+                  title={showLeadPanel ? "Ocultar detalhes" : "Mostrar detalhes"}
+                >
+                  {showLeadPanel ? (
+                    <PanelRightClose className="w-4 h-4" />
+                  ) : (
+                    <PanelRightOpen className="w-4 h-4" />
+                  )}
+                </Button>
               </div>
             </div>
 
@@ -950,7 +965,7 @@ const Inbox = () => {
 
       {/* Lead Panel */}
       <AnimatePresence>
-        {leadWithLabels && selectedConversation && (
+        {leadWithLabels && selectedConversation && showLeadPanel && (
           <motion.div
             initial={{ width: 0, opacity: 0 }}
             animate={{ width: 'auto', opacity: 1 }}
