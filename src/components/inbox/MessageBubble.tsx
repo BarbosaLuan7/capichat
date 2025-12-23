@@ -198,7 +198,7 @@ export function MessageBubble({
               {format(new Date(message.created_at), 'HH:mm', { locale: ptBR })}
             </span>
             {isAgent && (
-              <span className="text-primary-foreground/70">
+              <span className={message.status === 'read' ? 'text-blue-400' : 'text-primary-foreground/70'}>
                 {message.status === 'read' ? (
                   <CheckCheck className="w-3.5 h-3.5" />
                 ) : message.status === 'delivered' ? (

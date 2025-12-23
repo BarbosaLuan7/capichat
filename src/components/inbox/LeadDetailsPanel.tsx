@@ -16,6 +16,7 @@ import {
   Sparkles,
   Brain,
   ClipboardList,
+  Loader2,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +33,7 @@ import { AIClassificationSuggestion } from './AIClassificationSuggestion';
 import { AIConversationSummary } from './AIConversationSummary';
 import { DocumentChecklist } from './DocumentChecklist';
 import { formatPhoneNumber, formatCPF, toWhatsAppFormat } from '@/lib/masks';
+import { useLeadActivities, formatActivityMessage } from '@/hooks/useLeadActivities';
 import type { Database } from '@/integrations/supabase/types';
 
 type Lead = Database['public']['Tables']['leads']['Row'];
@@ -62,6 +64,9 @@ export function LeadDetailsPanel({
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showLabelsModal, setShowLabelsModal] = useState(false);
 
+  // Fetch lead activities from database
+  const { data: activities, isLoading: activitiesLoading } = useLeadActivities(lead.id);
+
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copiado!`);
@@ -74,8 +79,35 @@ export function LeadDetailsPanel({
   const labelIds = lead.labels?.map((l) => l.id) || [];
   const qualification = (lead as any).qualification || {};
 
-  // Timeline events based on lead data
-  const timelineEvents = [
+  // Map activities to timeline events
+  const getEventType = (action: string): 'message' | 'stage_change' | 'label_added' | 'assigned' | 'task_completed' | 'note' => {
+    switch (action) {
+      case 'stage_changed':
+        return 'stage_change';
+      case 'label_added':
+      case 'label_removed':
+        return 'label_added';
+      case 'assigned':
+        return 'assigned';
+      case 'note_added':
+        return 'note';
+      case 'message_sent':
+      case 'message_received':
+        return 'message';
+      default:
+        return 'assigned';
+    }
+  };
+
+  const timelineEvents = activities?.map(activity => ({
+    id: activity.id,
+    type: getEventType(activity.action),
+    title: formatActivityMessage(activity.action, activity.details || {}),
+    description: activity.details?.description,
+    createdAt: new Date(activity.created_at),
+    user: activity.profiles?.name,
+  })) || [
+    // Fallback: show lead creation if no activities
     {
       id: 'created',
       type: 'assigned' as const,
@@ -436,7 +468,14 @@ export function LeadDetailsPanel({
           <TabsContent value="historico" className="flex-1 m-0">
             <ScrollArea className="h-[calc(100vh-20rem)]">
               <div className="p-4">
-                <LeadTimeline events={timelineEvents} />
+                {activitiesLoading ? (
+                  <div className="flex items-center justify-center py-8 text-muted-foreground">
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    Carregando histórico...
+                  </div>
+                ) : (
+                  <LeadTimeline events={timelineEvents} />
+                )}
               </div>
             </ScrollArea>
           </TabsContent>
