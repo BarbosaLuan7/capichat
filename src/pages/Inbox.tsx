@@ -130,7 +130,7 @@ const Inbox = () => {
   const { data: leadData, refetch: refetchLead } = useLead(selectedConversation?.lead_id || undefined);
   const { data: leadLabels } = useLeadLabels(selectedConversation?.lead_id || undefined);
   const { data: allLabels } = useLabels();
-  const { data: internalNotes } = useInternalNotes(selectedConversationId || undefined);
+  const { data: internalNotes, isLoading: isNotesLoading } = useInternalNotes(selectedConversationId || undefined);
   
   // Mutations
   const sendMessage = useSendMessage();
