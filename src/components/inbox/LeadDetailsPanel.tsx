@@ -125,7 +125,7 @@ export function LeadDetailsPanel({
             <div className="relative">
               <Avatar className="w-14 h-14">
                 <AvatarImage
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.name}`}
+                  src={(lead as any).avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.name}`}
                 />
                 <AvatarFallback className="text-lg">
                   {lead.name.charAt(0)}

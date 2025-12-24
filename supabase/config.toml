@@ -41,3 +41,6 @@ verify_jwt = true
 
 [functions.resolve-facebook-lids]
 verify_jwt = false
+
+[functions.refresh-lead-avatars]
+verify_jwt = false
