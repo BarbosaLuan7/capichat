@@ -58,11 +58,45 @@ interface EvolutionWebhookPayload {
   data: EvolutionMessage;
 }
 
+// Detecta se é um LID do Facebook (formato: número@lid)
+function isLID(phone: string): boolean {
+  return phone.includes('@lid') || /^\d{15,}$/.test(phone.replace(/\D/g, ''));
+}
+
+// Extrai o número real do payload WAHA quando é um LID
+function extractRealPhoneFromPayload(payload: any): string | null {
+  // Tentar diferentes caminhos no payload para encontrar o número real
+  const possiblePaths = [
+    payload?._data?.from?._serialized,
+    payload?._data?.chat?.id?._serialized,
+    payload?.chat?.id,
+    payload?._data?.chatId,
+    payload?._data?.from,
+  ];
+  
+  for (const path of possiblePaths) {
+    if (path && typeof path === 'string') {
+      // Se termina com @c.us ou @s.whatsapp.net, é um número real
+      if (path.includes('@c.us') || path.includes('@s.whatsapp.net')) {
+        return path;
+      }
+      // Se é um número com 10-13 dígitos (sem @lid), provavelmente é real
+      const digits = path.replace(/\D/g, '');
+      if (digits.length >= 10 && digits.length <= 13 && !path.includes('@lid')) {
+        return digits;
+      }
+    }
+  }
+  
+  return null;
+}
+
 function normalizePhone(phone: string): string {
-  // Remove @c.us, @s.whatsapp.net e caracteres não numéricos
+  // Remove @c.us, @s.whatsapp.net, @lid e caracteres não numéricos
   let numbers = phone
     .replace('@c.us', '')
     .replace('@s.whatsapp.net', '')
+    .replace('@lid', '')
     .replace(/\D/g, '');
   
   // Remove código do país (55) se presente e número tem 12+ dígitos
@@ -268,7 +302,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const body = await req.json();
-    console.log('[whatsapp-webhook] Recebido:', JSON.stringify(body).substring(0, 500));
+    console.log('[whatsapp-webhook] Recebido:', JSON.stringify(body).substring(0, 1000));
 
     // Detectar provider pelo formato do payload
     let provider: 'waha' | 'evolution' = 'waha';
@@ -277,6 +311,7 @@ serve(async (req) => {
     let senderPhone = '';
     let senderName = '';
     let isFromMe = false;
+    let externalMessageId = '';
 
     // WAHA format
     if (body.event && body.session !== undefined) {
@@ -326,7 +361,7 @@ serve(async (req) => {
       
       // Eventos de mensagem do WAHA
       if (event === 'message' || event === 'message.any') {
-        const payload = body.payload as WAHAMessage;
+        const payload = body.payload as WAHAMessage & { _data?: any };
         
         // Ignorar mensagens enviadas por nós
         if (payload.fromMe) {
@@ -338,7 +373,26 @@ serve(async (req) => {
         }
         
         messageData = payload;
-        senderPhone = normalizePhone(payload.from || payload.chatId || '');
+        externalMessageId = payload.id || '';
+        
+        // ========== CORREÇÃO 3: Detectar LID e extrair número real ==========
+        const rawFrom = payload.from || payload.chatId || '';
+        console.log('[whatsapp-webhook] Raw from:', rawFrom);
+        
+        if (isLID(rawFrom)) {
+          console.log('[whatsapp-webhook] Detectado LID do Facebook, buscando número real...');
+          const realPhone = extractRealPhoneFromPayload(body.payload);
+          
+          if (realPhone) {
+            console.log('[whatsapp-webhook] Número real encontrado:', realPhone);
+            senderPhone = normalizePhone(realPhone);
+          } else {
+            console.warn('[whatsapp-webhook] Não foi possível extrair número real do LID, usando normalizado');
+            senderPhone = normalizePhone(rawFrom);
+          }
+        } else {
+          senderPhone = normalizePhone(rawFrom);
+        }
         
         // Extrair pushName de múltiplas fontes possíveis no payload WAHA
         senderName = 
@@ -350,7 +404,7 @@ serve(async (req) => {
           (body.payload as any)?.sender?.pushName ||
           '';
         
-        console.log('[whatsapp-webhook] pushName extraído:', senderName);
+        console.log('[whatsapp-webhook] pushName extraído:', senderName, 'phone normalizado:', senderPhone);
         isFromMe = payload.fromMe;
       } else {
         console.log('[whatsapp-webhook] Evento não processado:', event);
@@ -414,6 +468,7 @@ serve(async (req) => {
         }
         
         messageData = payload;
+        externalMessageId = payload.key?.id || '';
         senderPhone = normalizePhone(payload.key?.remoteJid || '');
         senderName = payload.pushName || '';
         isFromMe = payload.key?.fromMe || false;
@@ -442,25 +497,44 @@ serve(async (req) => {
       );
     }
 
+    // ========== CORREÇÃO 1: Verificar idempotência por external_id ==========
+    if (externalMessageId) {
+      const { data: existingMessage } = await supabase
+        .from('messages')
+        .select('id')
+        .eq('external_id', externalMessageId)
+        .maybeSingle();
+      
+      if (existingMessage) {
+        console.log('[whatsapp-webhook] Mensagem já processada (external_id duplicado):', externalMessageId);
+        return new Response(
+          JSON.stringify({ success: true, duplicate: true, existing_message_id: existingMessage.id }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     console.log('[whatsapp-webhook] Processando mensagem de:', senderPhone, 'Nome:', senderName);
 
     // Extrair conteúdo da mensagem
     const { content, type, mediaUrl } = getMessageContent(messageData, provider);
     console.log('[whatsapp-webhook] Conteúdo:', content.substring(0, 100), 'Tipo:', type, 'MediaUrl:', mediaUrl ? 'presente' : 'nenhum');
 
-    // Buscar lead pelo telefone
-    let lead;
+    // ========== CORREÇÃO 2: Usar upsert para evitar leads duplicados ==========
+    // Primeiro, buscar se já existe um lead com esse telefone
     const { data: existingLead } = await supabase
       .from('leads')
       .select('*')
-      .or(`phone.ilike.%${senderPhone}%,phone.eq.${senderPhone}`)
+      .eq('phone', senderPhone)
       .maybeSingle();
 
+    let lead;
+    
     if (existingLead) {
       lead = existingLead;
       console.log('[whatsapp-webhook] Lead encontrado:', lead.id);
 
-      // Atualizar nome do WhatsApp se disponível
+      // Atualizar dados do lead
       const updateData: Record<string, unknown> = {
         last_interaction_at: new Date().toISOString(),
       };
@@ -474,7 +548,7 @@ serve(async (req) => {
         .update(updateData)
         .eq('id', lead.id);
     } else {
-      // Criar novo lead
+      // Criar novo lead com upsert (proteção adicional contra race condition)
       console.log('[whatsapp-webhook] Criando novo lead para:', senderPhone);
       
       const { data: firstStage } = await supabase
@@ -484,31 +558,54 @@ serve(async (req) => {
         .limit(1)
         .maybeSingle();
 
-      const { data: newLead, error: createLeadError } = await supabase
+      const { data: upsertedLead, error: upsertError } = await supabase
         .from('leads')
-        .insert({
+        .upsert({
           name: senderName || `Lead ${formatPhoneForDisplay(senderPhone)}`,
           phone: senderPhone,
-          whatsapp_name: senderName,
+          whatsapp_name: senderName || null,
           source: 'whatsapp',
           temperature: 'warm',
           stage_id: firstStage?.id,
           status: 'active',
           last_interaction_at: new Date().toISOString(),
+        }, {
+          onConflict: 'phone',
+          ignoreDuplicates: false,
         })
         .select('*')
         .single();
 
-      if (createLeadError) {
-        console.error('[whatsapp-webhook] Erro ao criar lead:', createLeadError);
-        return new Response(
-          JSON.stringify({ success: false, error: 'Error creating lead' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      if (upsertError) {
+        console.error('[whatsapp-webhook] Erro ao criar/upsert lead:', upsertError);
+        
+        // Se falhou por conflito, tentar buscar o existente
+        if (upsertError.code === '23505') {
+          const { data: conflictLead } = await supabase
+            .from('leads')
+            .select('*')
+            .eq('phone', senderPhone)
+            .single();
+          
+          if (conflictLead) {
+            lead = conflictLead;
+            console.log('[whatsapp-webhook] Lead encontrado após conflito:', lead.id);
+          } else {
+            return new Response(
+              JSON.stringify({ success: false, error: 'Error handling lead conflict' }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        } else {
+          return new Response(
+            JSON.stringify({ success: false, error: 'Error creating lead' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else {
+        lead = upsertedLead;
+        console.log('[whatsapp-webhook] Lead criado/atualizado:', lead.id);
       }
-
-      lead = newLead;
-      console.log('[whatsapp-webhook] Lead criado:', lead.id);
     }
 
     // Buscar ou criar conversa
@@ -587,6 +684,7 @@ serve(async (req) => {
         media_url: finalMediaUrl,
         direction: 'inbound',
         status: 'delivered',
+        external_id: externalMessageId || null,
       })
       .select('*')
       .single();
@@ -599,7 +697,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('[whatsapp-webhook] Mensagem criada:', message.id);
+    console.log('[whatsapp-webhook] Mensagem criada:', message.id, 'external_id:', externalMessageId);
 
     // Criar notificação para o usuário atribuído
     if (conversation.assigned_to) {
@@ -625,6 +723,7 @@ serve(async (req) => {
           conversation_id: conversation.id,
           lead_id: lead.id,
           provider,
+          external_id: externalMessageId,
         },
       }),
       { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
