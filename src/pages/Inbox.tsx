@@ -807,7 +807,7 @@ const Inbox = () => {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 min-w-0 flex flex-col">
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
         {selectedConversation && leadWithLabels ? (
           <>
             {/* Chat Header */}
@@ -1140,7 +1140,7 @@ const Inbox = () => {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 24, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="w-[300px] xl:w-[340px] border-l border-border bg-card overflow-hidden shrink-0"
+              className="w-[300px] xl:w-[340px] max-w-[340px] border-l border-border bg-card overflow-hidden shrink-0"
             >
               {loadingLead ? (
                 <LeadDetailsPanelSkeleton />
