@@ -898,25 +898,21 @@ serve(async (req) => {
       conversation = existingConversation;
       console.log('[whatsapp-webhook] Conversa encontrada:', conversation.id);
 
-      // Atualizar conversa
+      // Apenas reabrir conversa se estava pendente - o trigger cuida do unread_count e last_message_at
       await supabase
         .from('conversations')
         .update({
-          last_message_at: new Date().toISOString(),
-          unread_count: (conversation.unread_count || 0) + 1,
           status: 'open',
         })
         .eq('id', conversation.id);
     } else {
-      // Criar nova conversa
+      // Criar nova conversa - o trigger cuida do unread_count e last_message_at quando a mensagem for inserida
       const { data: newConversation, error: createConvError } = await supabase
         .from('conversations')
         .insert({
           lead_id: lead.id,
           status: 'open',
           assigned_to: lead.assigned_to,
-          last_message_at: new Date().toISOString(),
-          unread_count: 1,
         })
         .select('*')
         .single();
