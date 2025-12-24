@@ -139,6 +139,53 @@ async function resolvePhoneFromLID(
   }
 }
 
+// Busca foto de perfil do WhatsApp via WAHA API
+async function getProfilePicture(
+  wahaBaseUrl: string,
+  apiKey: string,
+  sessionName: string,
+  contactId: string
+): Promise<string | null> {
+  try {
+    // Format contact ID para API
+    const formattedContact = contactId.includes('@') ? contactId : `${contactId}@c.us`;
+    
+    const url = `${wahaBaseUrl}/api/contacts/profile-picture?contactId=${encodeURIComponent(formattedContact)}&session=${sessionName}`;
+    
+    console.log('[whatsapp-webhook] Buscando foto de perfil:', url);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'X-Api-Key': apiKey,
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      console.log('[whatsapp-webhook] API foto de perfil retornou:', response.status);
+      return null;
+    }
+    
+    const data = await response.json();
+    console.log('[whatsapp-webhook] Resposta foto de perfil:', JSON.stringify(data));
+    
+    // A resposta pode ter diferentes formatos
+    const profilePictureUrl = data?.profilePictureURL || data?.profilePicture || data?.url || data?.imgUrl;
+    
+    if (profilePictureUrl && typeof profilePictureUrl === 'string' && profilePictureUrl.startsWith('http')) {
+      console.log('[whatsapp-webhook] Foto de perfil encontrada');
+      return profilePictureUrl;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[whatsapp-webhook] Erro ao buscar foto de perfil:', error);
+    return null;
+  }
+}
+
 // Busca configuração do WAHA no banco
 async function getWAHAConfig(supabase: any): Promise<{ baseUrl: string; apiKey: string; sessionName: string } | null> {
   try {
@@ -661,6 +708,23 @@ serve(async (req) => {
         console.log('[whatsapp-webhook] Atualizando lead LID com número real');
       }
 
+      // Buscar foto de perfil se ainda não tiver
+      if (!existingLead.avatar_url) {
+        const wahaConfig = await getWAHAConfig(supabase);
+        if (wahaConfig) {
+          const avatarUrl = await getProfilePicture(
+            wahaConfig.baseUrl,
+            wahaConfig.apiKey,
+            wahaConfig.sessionName,
+            senderPhone
+          );
+          if (avatarUrl) {
+            updateData.avatar_url = avatarUrl;
+            console.log('[whatsapp-webhook] Avatar atualizado para lead existente');
+          }
+        }
+      }
+
       await supabase
         .from('leads')
         .update(updateData)
@@ -684,6 +748,23 @@ serve(async (req) => {
         leadName = `Lead via anúncio ${originalLid?.slice(-4) || ''}`;
       }
 
+      // Buscar foto de perfil para novo lead
+      let avatarUrl: string | null = null;
+      if (!isFromFacebookLid) {
+        const wahaConfig = await getWAHAConfig(supabase);
+        if (wahaConfig) {
+          avatarUrl = await getProfilePicture(
+            wahaConfig.baseUrl,
+            wahaConfig.apiKey,
+            wahaConfig.sessionName,
+            senderPhone
+          );
+          if (avatarUrl) {
+            console.log('[whatsapp-webhook] Avatar encontrado para novo lead');
+          }
+        }
+      }
+
       const { data: upsertedLead, error: upsertError } = await supabase
         .from('leads')
         .upsert({
@@ -697,6 +778,7 @@ serve(async (req) => {
           last_interaction_at: new Date().toISOString(),
           is_facebook_lid: isFromFacebookLid,
           original_lid: originalLid,
+          avatar_url: avatarUrl,
         }, {
           onConflict: 'phone',
           ignoreDuplicates: false,

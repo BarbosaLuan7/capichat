@@ -371,6 +371,7 @@ export type Database = {
         Row: {
           ai_summary: string | null
           assigned_to: string | null
+          avatar_url: string | null
           benefit_type: string | null
           birth_date: string | null
           case_status: string | null
@@ -400,6 +401,7 @@ export type Database = {
         Insert: {
           ai_summary?: string | null
           assigned_to?: string | null
+          avatar_url?: string | null
           benefit_type?: string | null
           birth_date?: string | null
           case_status?: string | null
@@ -429,6 +431,7 @@ export type Database = {
         Update: {
           ai_summary?: string | null
           assigned_to?: string | null
+          avatar_url?: string | null
           benefit_type?: string | null
           birth_date?: string | null
           case_status?: string | null

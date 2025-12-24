@@ -68,7 +68,7 @@ const LeadCard = ({ lead, labels, leadLabels, isDragging }: LeadCardProps) => {
     >
       <div className="flex items-start gap-3">
         <Avatar className="w-10 h-10">
-          <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.name}`} />
+          <AvatarImage src={(lead as any).avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.name}`} />
           <AvatarFallback>{lead.name.charAt(0)}</AvatarFallback>
         </Avatar>
 

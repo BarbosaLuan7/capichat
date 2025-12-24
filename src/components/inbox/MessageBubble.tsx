@@ -18,6 +18,7 @@ interface MessageBubbleProps {
   isAgent: boolean;
   showAvatar: boolean;
   leadName: string;
+  leadAvatarUrl?: string | null;
   agentName?: string;
   onToggleStar?: (messageId: string, isStarred: boolean) => void;
 }
@@ -27,6 +28,7 @@ export function MessageBubble({
   isAgent,
   showAvatar,
   leadName,
+  leadAvatarUrl,
   agentName = 'Agente',
   onToggleStar,
 }: MessageBubbleProps) {
@@ -161,7 +163,7 @@ export function MessageBubble({
             src={
               isAgent
                 ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${agentName}`
-                : `https://api.dicebear.com/7.x/avataaars/svg?seed=${leadName}`
+                : (leadAvatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${leadName}`)
             }
           />
           <AvatarFallback>

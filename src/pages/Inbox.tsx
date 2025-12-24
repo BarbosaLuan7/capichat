@@ -728,7 +728,7 @@ const Inbox = () => {
                     <div className="flex gap-3">
                       {/* Avatar */}
                       <Avatar className="w-12 h-12 shrink-0">
-                        <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${convLead?.name}`} />
+                        <AvatarImage src={convLead?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${convLead?.name}`} />
                         <AvatarFallback>{convLead?.name?.charAt(0)}</AvatarFallback>
                       </Avatar>
 
@@ -814,7 +814,7 @@ const Inbox = () => {
             <div className="h-16 px-4 flex items-center justify-between border-b border-border bg-card">
               <div className="flex items-center gap-3">
                 <Avatar className="w-10 h-10">
-                  <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${leadWithLabels.name}`} />
+                  <AvatarImage src={leadWithLabels.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${leadWithLabels.name}`} />
                   <AvatarFallback>{leadWithLabels.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>
@@ -924,6 +924,7 @@ const Inbox = () => {
                                 isAgent={isAgent}
                                 showAvatar={showAvatar}
                                 leadName={leadWithLabels.name}
+                                leadAvatarUrl={leadWithLabels.avatar_url}
                                 onToggleStar={handleToggleMessageStar}
                               />
                             );
