@@ -118,7 +118,7 @@ export function LeadDetailsPanel({
 
   return (
     <>
-      <div className="h-full flex flex-col overflow-hidden">
+      <div className="h-full w-full max-w-full flex flex-col overflow-hidden">
         {/* Lead Header */}
         <div className="p-4 border-b border-border">
           <div className="flex items-start gap-3">
@@ -218,7 +218,7 @@ export function LeadDetailsPanel({
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="dados" className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <Tabs defaultValue="dados" className="flex-1 flex flex-col min-h-0 overflow-hidden w-full max-w-full">
           <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent px-4 shrink-0">
             <TabsTrigger value="dados" className="text-xs gap-1 data-[state=active]:bg-muted">
               <User className="w-3 h-3" />
@@ -240,8 +240,8 @@ export function LeadDetailsPanel({
 
           {/* Dados Tab */}
           <TabsContent value="dados" className="flex-1 m-0 min-h-0 overflow-hidden data-[state=inactive]:hidden flex flex-col">
-            <ScrollArea className="flex-1 min-h-0 w-full [&_[data-radix-scroll-area-viewport]]:!overflow-x-hidden">
-              <div className="p-4 space-y-4 pb-8 w-full min-w-0 overflow-hidden">
+            <ScrollArea className="flex-1 min-h-0 w-full max-w-full [&_[data-radix-scroll-area-viewport]]:!overflow-x-hidden [&_[data-radix-scroll-area-viewport]]:max-w-full">
+              <div className="p-4 space-y-4 pb-8 max-w-full min-w-0 overflow-hidden box-border">
                 {/* AI Summary */}
                 {(lead as any).ai_summary && (
                   <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 overflow-hidden">
