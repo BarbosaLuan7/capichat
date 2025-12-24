@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.send-whatsapp-message]
 verify_jwt = true
+
+[functions.resolve-facebook-lids]
+verify_jwt = false
