@@ -157,6 +157,75 @@ function validateBrazilianPhone(phone: string): PhoneValidation {
   return { valid: true, normalized };
 }
 
+// Interface para lead com campos de substituição
+interface LeadForTemplate {
+  id: string;
+  phone: string;
+  name: string;
+  estimated_value?: number | null;
+  created_at?: string | null;
+  benefit_type?: string | null;
+  cpf?: string | null;
+  birth_date?: string | null;
+}
+
+// Substitui variáveis de template no conteúdo da mensagem
+function replaceTemplateVariables(content: string, lead: LeadForTemplate): string {
+  let result = content;
+  
+  // Formata data de criação
+  const formatDate = (dateStr: string | null | undefined): string => {
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('pt-BR');
+    } catch {
+      return '';
+    }
+  };
+  
+  // Formata valor monetário
+  const formatCurrency = (value: number | null | undefined): string => {
+    if (value === null || value === undefined) return '';
+    return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+  
+  // Formata CPF
+  const formatCPF = (cpf: string | null | undefined): string => {
+    if (!cpf) return '';
+    const digits = cpf.replace(/\D/g, '');
+    if (digits.length !== 11) return cpf;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+  };
+  
+  // Formata telefone
+  const formatPhone = (phone: string): string => {
+    const digits = phone.replace(/\D/g, '');
+    // Remove código do país se presente
+    const local = digits.startsWith('55') && digits.length >= 12 ? digits.substring(2) : digits;
+    if (local.length === 11) {
+      return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
+    }
+    if (local.length === 10) {
+      return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
+    }
+    return phone;
+  };
+  
+  // Substituições
+  result = result.replace(/\{nome\}/gi, lead.name || '');
+  result = result.replace(/\{telefone\}/gi, formatPhone(lead.phone));
+  result = result.replace(/\{valor\}/gi, formatCurrency(lead.estimated_value));
+  result = result.replace(/\{data_inicio\}/gi, formatDate(lead.created_at));
+  result = result.replace(/\{data_criacao\}/gi, formatDate(lead.created_at));
+  result = result.replace(/\{beneficio\}/gi, lead.benefit_type || '');
+  result = result.replace(/\{tipo_beneficio\}/gi, lead.benefit_type || '');
+  result = result.replace(/\{cpf\}/gi, formatCPF(lead.cpf));
+  result = result.replace(/\{data_nascimento\}/gi, formatDate(lead.birth_date));
+  
+  return result;
+}
+
 // Normaliza telefone para envio (adiciona código do país 55 se necessário)
 // DEPRECATED: Use validateBrazilianPhone instead
 function normalizePhoneForSending(phone: string): string {
@@ -527,7 +596,7 @@ serve(async (req) => {
       );
     }
 
-    // Get conversation with lead info
+    // Get conversation with lead info (incluindo mais campos para substituição de variáveis)
     const { data: conversation, error: convError } = await supabase
       .from('conversations')
       .select(`
@@ -536,7 +605,12 @@ serve(async (req) => {
         leads (
           id,
           phone,
-          name
+          name,
+          estimated_value,
+          created_at,
+          benefit_type,
+          cpf,
+          birth_date
         )
       `)
       .eq('id', payload.conversation_id)
@@ -551,7 +625,7 @@ serve(async (req) => {
     }
 
     // leads is a single object (not array) due to .single() on conversations
-    const lead = conversation.leads as unknown as { id: string; phone: string; name: string } | null;
+    const lead = conversation.leads as unknown as LeadForTemplate | null;
     if (!lead?.phone) {
       return new Response(
         JSON.stringify({ error: 'Lead não possui telefone cadastrado' }),
@@ -601,22 +675,27 @@ serve(async (req) => {
     const config = configs[0] as WhatsAppConfig;
     console.log('[send-whatsapp-message] Provider:', config.provider, 'Instance:', config.instance_name);
 
+    // Substitui variáveis de template no conteúdo da mensagem
+    const messageContent = replaceTemplateVariables(payload.content, lead);
+    console.log('[send-whatsapp-message] Conteúdo original:', payload.content?.substring(0, 50));
+    console.log('[send-whatsapp-message] Conteúdo processado:', messageContent?.substring(0, 50));
+
     // Send message based on provider (usando número já validado)
     const messageType = payload.type || 'text';
     let result: { success: boolean; messageId?: string; error?: string };
     
     switch (config.provider) {
       case 'waha':
-        result = await sendWAHA(config, validatedPhone, payload.content, messageType, payload.media_url);
+        result = await sendWAHA(config, validatedPhone, messageContent, messageType, payload.media_url);
         break;
       case 'evolution':
-        result = await sendEvolution(config, validatedPhone, payload.content, messageType, payload.media_url);
+        result = await sendEvolution(config, validatedPhone, messageContent, messageType, payload.media_url);
         break;
       case 'z-api':
-        result = await sendZAPI(config, validatedPhone, payload.content, messageType, payload.media_url);
+        result = await sendZAPI(config, validatedPhone, messageContent, messageType, payload.media_url);
         break;
       case 'custom':
-        result = await sendCustom(config, validatedPhone, payload.content, messageType, payload.media_url);
+        result = await sendCustom(config, validatedPhone, messageContent, messageType, payload.media_url);
         break;
       default:
         result = { success: false, error: 'Provider desconhecido' };
@@ -631,12 +710,13 @@ serve(async (req) => {
     }
 
     // Save message to database with external_id for status tracking
+    // Salva o conteúdo JÁ PROCESSADO (com variáveis substituídas)
     const { data: savedMessage, error: messageError } = await supabase
       .from('messages')
       .insert({
         conversation_id: payload.conversation_id,
         lead_id: lead.id,
-        content: payload.content,
+        content: messageContent, // Usar conteúdo processado
         type: messageType,
         media_url: payload.media_url,
         sender_type: 'agent',

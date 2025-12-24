@@ -121,11 +121,11 @@ export function useFunnelMetrics(period: PeriodFilter) {
         };
       }) || [];
 
-      // Calcular taxas de conversão entre etapas
-      const conversionRates = funnelData.map((stage, index) => {
-        if (index === 0) return { ...stage, conversionRate: 100 };
-        const previousCount = funnelData[0].count;
-        const rate = previousCount > 0 ? (stage.count / previousCount) * 100 : 0;
+      // Calcular taxas de conversão como distribuição percentual
+      // (cada etapa como % do total de leads no funil)
+      const totalLeadsInFunnel = funnelData.reduce((sum, s) => sum + s.count, 0);
+      const conversionRates = funnelData.map((stage) => {
+        const rate = totalLeadsInFunnel > 0 ? (stage.count / totalLeadsInFunnel) * 100 : 0;
         return { ...stage, conversionRate: parseFloat(rate.toFixed(1)) };
       });
 

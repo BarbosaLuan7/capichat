@@ -713,6 +713,13 @@ const Inbox = () => {
                 const convLead = conversation.leads as any;
                 const isSelected = selectedConversationId === conversation.id;
                 const isFavorite = (conversation as any).is_favorite;
+                
+                // Determinar melhor nome para exibição:
+                // 1. whatsapp_name se disponível
+                // 2. nome se não for "Lead XXXXXXXXX" (número de telefone)
+                // 3. telefone formatado como fallback
+                const isPhoneAsName = convLead?.name?.startsWith('Lead ') && /^Lead \d+$/.test(convLead?.name);
+                const displayName = convLead?.whatsapp_name || (!isPhoneAsName ? convLead?.name : null) || formatPhoneNumber(convLead?.phone || '');
 
                 return (
                   <motion.div
@@ -729,7 +736,7 @@ const Inbox = () => {
                       {/* Avatar */}
                       <Avatar className="w-12 h-12 shrink-0">
                         <AvatarImage src={convLead?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${convLead?.name}`} />
-                        <AvatarFallback>{convLead?.name?.charAt(0)}</AvatarFallback>
+                        <AvatarFallback>{displayName?.charAt(0)}</AvatarFallback>
                       </Avatar>
 
                       {/* Content */}
@@ -739,7 +746,7 @@ const Inbox = () => {
                           <div className="flex items-center gap-1.5 min-w-0 max-w-[65%]">
                             {isFavorite && <Star className="w-3 h-3 fill-warning text-warning shrink-0" />}
                             <span className="font-semibold text-foreground truncate text-[15px]">
-                              {convLead?.name}
+                              {displayName}
                             </span>
                           </div>
                           <span className="text-xs text-muted-foreground shrink-0 ml-2">
@@ -813,14 +820,23 @@ const Inbox = () => {
             {/* Chat Header */}
             <div className="h-16 px-4 flex items-center gap-3 border-b border-border bg-card">
               <div className="flex items-center gap-3 min-w-0 flex-1">
-                <Avatar className="w-10 h-10 shrink-0">
-                  <AvatarImage src={leadWithLabels.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${leadWithLabels.name}`} />
-                  <AvatarFallback>{leadWithLabels.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-foreground truncate">{leadWithLabels.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{formatPhoneNumber(leadWithLabels.phone)}</p>
-                </div>
+                {/* Determinar melhor nome para exibição no header do chat */}
+                {(() => {
+                  const isPhoneAsName = leadWithLabels.name?.startsWith('Lead ') && /^Lead \d+$/.test(leadWithLabels.name);
+                  const chatDisplayName = (leadWithLabels as any).whatsapp_name || (!isPhoneAsName ? leadWithLabels.name : null) || formatPhoneNumber(leadWithLabels.phone);
+                  return (
+                    <>
+                      <Avatar className="w-10 h-10 shrink-0">
+                        <AvatarImage src={leadWithLabels.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${leadWithLabels.name}`} />
+                        <AvatarFallback>{chatDisplayName.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-foreground truncate">{chatDisplayName}</p>
+                        <p className="text-xs text-muted-foreground truncate">{formatPhoneNumber(leadWithLabels.phone)}</p>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
