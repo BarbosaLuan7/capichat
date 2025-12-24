@@ -124,8 +124,8 @@ async function resolvePhoneFromLID(
     const data = await response.json();
     console.log('[whatsapp-webhook] Resposta da API LID:', JSON.stringify(data));
     
-    // A resposta pode ter diferentes formatos dependendo da versão do WAHA
-    const realPhone = data?.phone || data?.number || data?.jid?.replace('@c.us', '') || data?.id?.replace('@c.us', '');
+    // A resposta do WAHA pode ter diferentes formatos - campo 'pn' é o mais comum
+    const realPhone = data?.pn?.replace('@c.us', '') || data?.phone || data?.number || data?.jid?.replace('@c.us', '') || data?.id?.replace('@c.us', '');
     
     if (realPhone && !realPhone.includes('lid')) {
       console.log('[whatsapp-webhook] Número real encontrado via API:', realPhone);
@@ -640,14 +640,24 @@ serve(async (req) => {
         last_interaction_at: new Date().toISOString(),
       };
       
-      if (senderName && !existingLead.whatsapp_name) {
+      // Sempre atualizar whatsapp_name se receber um novo (pessoa pode mudar nome no WhatsApp)
+      if (senderName) {
         updateData.whatsapp_name = senderName;
+        
+        // Se o nome ainda é genérico, atualizar para o NotifyName real
+        const isGenericName = existingLead.name.startsWith('Lead ') || 
+                              existingLead.name.includes('via anúncio') ||
+                              existingLead.name.includes('(via anúncio)');
+        
+        if (isGenericName) {
+          updateData.name = senderName;
+          console.log('[whatsapp-webhook] Atualizando nome genérico para NotifyName:', senderName);
+        }
       }
       
-      // Se o lead existente era um LID e agora recebemos o número real, atualizar
+      // Se o lead existente era um LID e agora recebemos o número real, atualizar flag
       if (existingLead.is_facebook_lid && !isFromFacebookLid) {
         updateData.is_facebook_lid = false;
-        updateData.name = senderName || existingLead.name.replace(' (via anúncio)', '');
         console.log('[whatsapp-webhook] Atualizando lead LID com número real');
       }
 

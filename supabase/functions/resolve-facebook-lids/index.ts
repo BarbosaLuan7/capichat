@@ -36,7 +36,8 @@ async function resolvePhoneFromLID(
     const data = await response.json();
     console.log('[resolve-lids] Resposta da API:', JSON.stringify(data));
     
-    const realPhone = data?.phone || data?.number || data?.jid?.replace('@c.us', '') || data?.id?.replace('@c.us', '');
+    // Campo 'pn' é o mais comum na resposta do WAHA
+    const realPhone = data?.pn?.replace('@c.us', '') || data?.phone || data?.number || data?.jid?.replace('@c.us', '') || data?.id?.replace('@c.us', '');
     
     if (realPhone && !realPhone.includes('lid')) {
       return realPhone;
