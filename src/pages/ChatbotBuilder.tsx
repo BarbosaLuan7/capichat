@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Play,
@@ -6,14 +6,14 @@ import {
   Clock,
   Tag,
   ArrowRight,
-  Plus,
-  Trash2,
   Settings,
   Save,
   Zap,
-  Users,
   X,
   GripVertical,
+  List,
+  Loader2,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,19 +38,8 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useChatbotFlows, useCreateChatbotFlow, useUpdateChatbotFlow, type FlowNode, type FlowConnection } from '@/hooks/useChatbotFlows';
 
-interface FlowNode {
-  id: string;
-  type: 'trigger' | 'wait' | 'message' | 'add_label' | 'remove_label' | 'condition' | 'move_stage';
-  data: Record<string, any>;
-  position: { x: number; y: number };
-}
-
-interface FlowConnection {
-  from: string;
-  to: string;
-  label?: string;
-}
 
 const nodeTypes = [
   { type: 'trigger', label: 'Gatilho', icon: Zap, color: 'bg-primary' },
