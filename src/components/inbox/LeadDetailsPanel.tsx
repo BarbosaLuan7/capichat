@@ -118,7 +118,7 @@ export function LeadDetailsPanel({
 
   return (
     <>
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col overflow-hidden">
         {/* Lead Header */}
         <div className="p-4 border-b border-border">
           <div className="flex items-start gap-3">
@@ -239,9 +239,9 @@ export function LeadDetailsPanel({
           </TabsList>
 
           {/* Dados Tab */}
-          <TabsContent value="dados" className="flex-1 m-0 min-h-0 overflow-hidden">
-            <ScrollArea className="h-full">
-              <div className="p-4 space-y-4">
+          <TabsContent value="dados" className="flex-1 m-0 min-h-0 overflow-hidden data-[state=inactive]:hidden">
+            <ScrollArea className="h-full max-h-[calc(100vh-20rem)]">
+              <div className="p-4 space-y-4 pb-8">
                 {/* AI Summary */}
                 {(lead as any).ai_summary && (
                   <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
@@ -425,7 +425,7 @@ export function LeadDetailsPanel({
           </TabsContent>
 
           {/* Docs Tab */}
-          <TabsContent value="docs" className="flex-1 m-0 min-h-0 overflow-hidden">
+          <TabsContent value="docs" className="flex-1 m-0 min-h-0 overflow-hidden data-[state=inactive]:hidden">
             <ScrollArea className="h-full">
               <div className="p-4">
                 <DocumentChecklist
@@ -439,7 +439,7 @@ export function LeadDetailsPanel({
           </TabsContent>
 
           {/* IA Tab */}
-          <TabsContent value="ia" className="flex-1 m-0 min-h-0 overflow-hidden">
+          <TabsContent value="ia" className="flex-1 m-0 min-h-0 overflow-hidden data-[state=inactive]:hidden">
             <ScrollArea className="h-full">
               <div className="p-4 space-y-4">
                 {/* AI Summary */}
@@ -460,7 +460,7 @@ export function LeadDetailsPanel({
           </TabsContent>
 
           {/* Histórico Tab */}
-          <TabsContent value="historico" className="flex-1 m-0 min-h-0 overflow-hidden">
+          <TabsContent value="historico" className="flex-1 m-0 min-h-0 overflow-hidden data-[state=inactive]:hidden">
             <ScrollArea className="h-full">
               <div className="p-4 space-y-4">
                 {/* Adicionar nota no topo */}

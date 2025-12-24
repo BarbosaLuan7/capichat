@@ -537,7 +537,7 @@ const Inbox = () => {
   return (
     <div className="h-[calc(100vh-4rem)] flex min-w-0 overflow-hidden relative">
       {/* Conversation List */}
-      <div className="w-64 xl:w-80 border-r border-border flex flex-col bg-card flex-shrink-0">
+      <div className="w-72 md:w-80 xl:w-96 border-r border-border flex flex-col bg-card shrink-0 min-w-0">
         {/* Header with New Conversation Button */}
         <div className="p-3 border-b border-border flex items-center justify-between bg-card">
           <span className="font-semibold text-sm">Conversas</span>
@@ -1140,7 +1140,7 @@ const Inbox = () => {
               animate={{ width: 'auto', opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="w-[280px] xl:w-[320px] border-l border-border bg-card overflow-hidden flex-shrink-0"
+              className="w-[300px] xl:w-[340px] border-l border-border bg-card overflow-hidden shrink-0"
             >
               {loadingLead ? (
                 <LeadDetailsPanelSkeleton />
