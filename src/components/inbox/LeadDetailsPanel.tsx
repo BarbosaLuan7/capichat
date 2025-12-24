@@ -146,14 +146,22 @@ export function LeadDetailsPanel({
               </Button>
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-foreground truncate" title={lead.name}>
-                {lead.name}
-              </h3>
-              {(lead as any).whatsapp_name && (lead as any).whatsapp_name !== lead.name && (
-                <p className="text-xs text-muted-foreground">
-                  WhatsApp: {(lead as any).whatsapp_name}
-                </p>
-              )}
+              {(() => {
+                const isPhoneAsName = lead.name?.startsWith('Lead ') && /^Lead \d+$/.test(lead.name);
+                const panelDisplayName = (lead as any).whatsapp_name || (!isPhoneAsName ? lead.name : null) || formatPhoneNumber(lead.phone);
+                return (
+                  <>
+                    <h3 className="font-semibold text-foreground truncate" title={panelDisplayName}>
+                      {panelDisplayName}
+                    </h3>
+                    {(lead as any).whatsapp_name && (lead as any).whatsapp_name !== lead.name && !isPhoneAsName && (
+                      <p className="text-xs text-muted-foreground">
+                        WhatsApp: {(lead as any).whatsapp_name}
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
               <div className="flex items-center gap-2 mt-1">
                 <Badge
                   className={cn(
@@ -401,14 +409,16 @@ export function LeadDetailsPanel({
                     )}
                     <div className="flex justify-between gap-2">
                       <span className="text-muted-foreground shrink-0">Origem:</span>
-                      <span className="text-right min-w-0 break-words">{lead.source}</span>
+                      <span className="text-right min-w-0 break-words">{lead.source || 'Não informada'}</span>
                     </div>
                     <div className="flex justify-between gap-2">
                       <span className="text-muted-foreground shrink-0">Criado:</span>
                       <span>
-                        {format(new Date(lead.created_at), "dd/MM/yyyy", {
-                          locale: ptBR,
-                        })}
+                        {lead.created_at
+                          ? format(new Date(lead.created_at), "dd/MM/yyyy", {
+                              locale: ptBR,
+                            })
+                          : 'Não informado'}
                       </span>
                     </div>
                     {lead.estimated_value && (

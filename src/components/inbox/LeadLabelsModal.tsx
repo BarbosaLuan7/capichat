@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tag, Check, Plus } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Tag, Check, Plus, Search } from 'lucide-react';
 import { useLabels, useAddLeadLabel, useRemoveLeadLabel } from '@/hooks/useLabels';
 import { cn } from '@/lib/utils';
 
@@ -26,6 +27,7 @@ export function LeadLabelsModal({
   leadId,
   currentLabelIds,
 }: LeadLabelsModalProps) {
+  const [searchTerm, setSearchTerm] = useState('');
   const { data: labels, isLoading } = useLabels();
   const addLabel = useAddLeadLabel();
   const removeLabel = useRemoveLeadLabel();
@@ -38,14 +40,37 @@ export function LeadLabelsModal({
     }
   };
 
-  const groupedLabels = labels?.reduce((acc, label) => {
+  // Deduplica etiquetas por ID e filtra por termo de busca
+  const uniqueLabels = useMemo(() => {
+    if (!labels) return [];
+    
+    // Remove duplicatas pelo ID
+    const seen = new Set<string>();
+    const deduplicated = labels.filter((label) => {
+      if (seen.has(label.id)) return false;
+      seen.add(label.id);
+      return true;
+    });
+    
+    // Filtra pelo termo de busca
+    if (!searchTerm.trim()) return deduplicated;
+    
+    const term = searchTerm.toLowerCase();
+    return deduplicated.filter(
+      (label) =>
+        label.name.toLowerCase().includes(term) ||
+        label.category.toLowerCase().includes(term)
+    );
+  }, [labels, searchTerm]);
+
+  const groupedLabels = uniqueLabels.reduce((acc, label) => {
     const category = label.category;
     if (!acc[category]) {
       acc[category] = [];
     }
     acc[category].push(label);
     return acc;
-  }, {} as Record<string, typeof labels>) || {};
+  }, {} as Record<string, typeof uniqueLabels>);
 
   const categoryNames: Record<string, string> = {
     origem: 'Origem',
@@ -66,6 +91,17 @@ export function LeadLabelsModal({
             Selecione as etiquetas para associar a este lead.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Campo de busca */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar etiqueta..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
 
         <ScrollArea className="max-h-96">
           {isLoading ? (
