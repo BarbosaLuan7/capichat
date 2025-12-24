@@ -18,20 +18,20 @@ export function normalizePhoneNumber(phone: string): string {
 }
 
 /**
- * Formata telefone brasileiro para exibição com código do país
- * Detecta e remove código do país automaticamente, depois adiciona formatado
- * Formato: +55 (XX) XXXXX-XXXX ou +55 (XX) XXXX-XXXX
+ * Formata telefone brasileiro para exibição SEM código do país
+ * Formato: (XX) 9XXXX-XXXX
+ * Para números de 10 dígitos, adiciona o 9º dígito visualmente
  */
 export function formatPhoneNumber(phone: string): string {
   const numbers = normalizePhoneNumber(phone);
   
-  // Celular (11 dígitos): +55 (XX) XXXXX-XXXX
+  // Celular (11 dígitos): (XX) 9XXXX-XXXX
   if (numbers.length === 11) {
-    return `+55 (${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
   }
-  // Fixo (10 dígitos): +55 (XX) XXXX-XXXX
+  // Fixo antigo (10 dígitos) - adiciona 9 na frente visualmente: (XX) 9XXXX-XXXX
   if (numbers.length === 10) {
-    return `+55 (${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`;
+    return `(${numbers.slice(0, 2)}) 9${numbers.slice(2, 6)}-${numbers.slice(6)}`;
   }
   
   return phone; // retorna original se não conseguir formatar
