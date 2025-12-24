@@ -169,6 +169,42 @@ export type Database = {
         }
         Relationships: []
       }
+      chatbot_flows: {
+        Row: {
+          connections: Json
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          nodes: Json
+          updated_at: string
+        }
+        Insert: {
+          connections?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          nodes?: Json
+          updated_at?: string
+        }
+        Update: {
+          connections?: Json
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          nodes?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           assigned_to: string | null
@@ -324,6 +360,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "lead_activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_history: {
+        Row: {
+          action: string
+          created_at: string
+          field_name: string | null
+          id: string
+          lead_id: string
+          metadata: Json | null
+          new_value: string | null
+          old_value: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          field_name?: string | null
+          id?: string
+          lead_id: string
+          metadata?: Json | null
+          new_value?: string | null
+          old_value?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          field_name?: string | null
+          id?: string
+          lead_id?: string
+          metadata?: Json | null
+          new_value?: string | null
+          old_value?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_history_lead_id_fkey"
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
@@ -600,6 +680,150 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scheduled_messages: {
+        Row: {
+          content: string
+          conversation_id: string | null
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          id: string
+          lead_id: string
+          scheduled_for: string
+          sent_at: string | null
+          status: string
+          template_id: string | null
+        }
+        Insert: {
+          content: string
+          conversation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          lead_id: string
+          scheduled_for: string
+          sent_at?: string | null
+          status?: string
+          template_id?: string | null
+        }
+        Update: {
+          content?: string
+          conversation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          lead_id?: string
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: string
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_messages_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_messages_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scheduled_reports: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          filters: Json | null
+          format: string
+          id: string
+          is_active: boolean
+          last_run_at: string | null
+          name: string
+          recipients: string[] | null
+          report_type: string
+          schedule_cron: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          filters?: Json | null
+          format?: string
+          id?: string
+          is_active?: boolean
+          last_run_at?: string | null
+          name: string
+          recipients?: string[] | null
+          report_type: string
+          schedule_cron?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          filters?: Json | null
+          format?: string
+          id?: string
+          is_active?: boolean
+          last_run_at?: string | null
+          name?: string
+          recipients?: string[] | null
+          report_type?: string
+          schedule_cron?: string | null
+        }
+        Relationships: []
+      }
+      sla_configs: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          max_hours: number
+          stage_id: string
+          updated_at: string
+          warning_hours: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_hours?: number
+          stage_id: string
+          updated_at?: string
+          warning_hours?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_hours?: number
+          stage_id?: string
+          updated_at?: string
+          warning_hours?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sla_configs_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: true
+            referencedRelation: "funnel_stages"
             referencedColumns: ["id"]
           },
         ]
