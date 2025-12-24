@@ -811,19 +811,19 @@ const Inbox = () => {
         {selectedConversation && leadWithLabels ? (
           <>
             {/* Chat Header */}
-            <div className="h-16 px-4 flex items-center justify-between border-b border-border bg-card">
-              <div className="flex items-center gap-3">
-                <Avatar className="w-10 h-10">
+            <div className="h-16 px-4 flex items-center gap-3 border-b border-border bg-card">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <Avatar className="w-10 h-10 shrink-0">
                   <AvatarImage src={leadWithLabels.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${leadWithLabels.name}`} />
                   <AvatarFallback>{leadWithLabels.name.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <div>
-                  <p className="font-semibold text-foreground">{leadWithLabels.name}</p>
-                  <p className="text-xs text-muted-foreground">{formatPhoneNumber(leadWithLabels.phone)}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-foreground truncate">{leadWithLabels.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{formatPhoneNumber(leadWithLabels.phone)}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <ConversationStatusActions
                   currentStatus={selectedConversation.status}
                   onStatusChange={handleStatusChange}

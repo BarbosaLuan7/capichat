@@ -239,9 +239,9 @@ export function LeadDetailsPanel({
           </TabsList>
 
           {/* Dados Tab */}
-          <TabsContent value="dados" className="flex-1 m-0 min-h-0 overflow-hidden data-[state=inactive]:hidden">
-            <ScrollArea className="flex-1 h-full">
-              <div className="p-4 space-y-4 pb-8 w-full overflow-hidden">
+          <TabsContent value="dados" className="flex-1 m-0 min-h-0 overflow-hidden data-[state=inactive]:hidden flex flex-col">
+            <ScrollArea className="flex-1 min-h-0 w-full [&_[data-radix-scroll-area-viewport]]:!overflow-x-hidden">
+              <div className="p-4 space-y-4 pb-8 w-full min-w-0 overflow-hidden">
                 {/* AI Summary */}
                 {(lead as any).ai_summary && (
                   <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 overflow-hidden">
@@ -344,27 +344,27 @@ export function LeadDetailsPanel({
                     </h4>
                     <div className="space-y-1.5 text-sm">
                       {qualification.situacao && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Situação:</span>
-                          <span>{qualification.situacao}</span>
+                        <div className="flex justify-between gap-2">
+                          <span className="text-muted-foreground shrink-0">Situação:</span>
+                          <span className="text-right min-w-0 break-words">{qualification.situacao}</span>
                         </div>
                       )}
                       {qualification.condicao_saude && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Condição:</span>
-                          <span>{qualification.condicao_saude}</span>
+                        <div className="flex justify-between gap-2">
+                          <span className="text-muted-foreground shrink-0">Condição:</span>
+                          <span className="text-right min-w-0 break-words">{qualification.condicao_saude}</span>
                         </div>
                       )}
                       {qualification.renda && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Renda:</span>
-                          <span>{qualification.renda}</span>
+                        <div className="flex justify-between gap-2">
+                          <span className="text-muted-foreground shrink-0">Renda:</span>
+                          <span className="text-right min-w-0 break-words">{qualification.renda}</span>
                         </div>
                       )}
                       {qualification.idade && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Idade:</span>
-                          <span>{qualification.idade} anos</span>
+                        <div className="flex justify-between gap-2">
+                          <span className="text-muted-foreground shrink-0">Idade:</span>
+                          <span className="text-right min-w-0 break-words">{qualification.idade} anos</span>
                         </div>
                       )}
                     </div>
@@ -378,32 +378,33 @@ export function LeadDetailsPanel({
                   </h4>
                   <div className="space-y-1.5 text-sm">
                     {lead.funnel_stages && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Etapa:</span>
+                      <div className="flex justify-between items-center gap-2">
+                        <span className="text-muted-foreground shrink-0">Etapa:</span>
                         <Badge
                           variant="outline"
-                          className="text-xs"
+                          className="text-xs max-w-[60%] truncate"
                           style={{
                             borderColor: lead.funnel_stages.color,
                             color: lead.funnel_stages.color,
                           }}
+                          title={lead.funnel_stages.name}
                         >
                           {lead.funnel_stages.name}
                         </Badge>
                       </div>
                     )}
                     {lead.funnel_stages?.grupo && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Grupo:</span>
-                        <span>{lead.funnel_stages.grupo}</span>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-muted-foreground shrink-0">Grupo:</span>
+                        <span className="text-right min-w-0 break-words">{lead.funnel_stages.grupo}</span>
                       </div>
                     )}
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Origem:</span>
-                      <span>{lead.source}</span>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground shrink-0">Origem:</span>
+                      <span className="text-right min-w-0 break-words">{lead.source}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Criado:</span>
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground shrink-0">Criado:</span>
                       <span>
                         {format(new Date(lead.created_at), "dd/MM/yyyy", {
                           locale: ptBR,
@@ -411,8 +412,8 @@ export function LeadDetailsPanel({
                       </span>
                     </div>
                     {lead.estimated_value && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Valor:</span>
+                      <div className="flex justify-between gap-2">
+                        <span className="text-muted-foreground shrink-0">Valor:</span>
                         <span className="font-medium text-success">
                           R$ {lead.estimated_value.toLocaleString('pt-BR')}
                         </span>
