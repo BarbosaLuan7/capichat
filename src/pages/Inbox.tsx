@@ -19,6 +19,7 @@ import {
   PanelRightOpen,
   ArrowLeft,
   Menu,
+  ArrowUpDown,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -67,6 +68,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
@@ -114,6 +121,7 @@ const Inbox = () => {
   const [showReminderPrompt, setShowReminderPrompt] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'recent' | 'oldest'>('recent');
   const LEAD_PANEL_STORAGE_KEY = 'inbox-show-lead-panel-v2';
   const [showLeadPanel, setShowLeadPanel] = useState(() => {
     const saved = localStorage.getItem(LEAD_PANEL_STORAGE_KEY);
@@ -245,7 +253,7 @@ const Inbox = () => {
   }, [conversations]);
 
   const filteredConversations = useMemo(() => {
-    return conversations?.filter((conv) => {
+    let filtered = conversations?.filter((conv) => {
       // Filter by status tab
       if (statusFilter !== 'all' && conv.status !== statusFilter) {
         return false;
@@ -274,7 +282,16 @@ const Inbox = () => {
 
       return matchesFilter && matchesSearch && matchesLabels;
     }) || [];
-  }, [conversations, statusFilter, filter, user?.id, searchQuery, selectedLabelIds]);
+
+    // Sort by date
+    filtered = filtered.sort((a, b) => {
+      const dateA = new Date(a.last_message_at).getTime();
+      const dateB = new Date(b.last_message_at).getTime();
+      return sortOrder === 'recent' ? dateB - dateA : dateA - dateB;
+    });
+
+    return filtered;
+  }, [conversations, statusFilter, filter, user?.id, searchQuery, selectedLabelIds, sortOrder]);
 
   const toggleLabelFilter = (labelId: string) => {
     setSelectedLabelIds((prev) =>
@@ -592,7 +609,7 @@ const Inbox = () => {
             </TabsList>
           </Tabs>
 
-          {/* Label Filter */}
+          {/* Label Filter & Sort */}
           <div className="flex items-center gap-2">
             <Popover>
               <PopoverTrigger asChild>
@@ -648,6 +665,29 @@ const Inbox = () => {
                 </ScrollArea>
               </PopoverContent>
             </Popover>
+
+            {/* Sort Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <ArrowUpDown className="w-3.5 h-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="bg-popover">
+                <DropdownMenuItem 
+                  onClick={() => setSortOrder('recent')}
+                  className={sortOrder === 'recent' ? 'bg-accent' : ''}
+                >
+                  Últimas interações primeiro
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => setSortOrder('oldest')}
+                  className={sortOrder === 'oldest' ? 'bg-accent' : ''}
+                >
+                  Mais antigos primeiro
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Selected Labels Pills */}
             {selectedLabelIds.length > 0 && (
@@ -744,7 +784,7 @@ const Inbox = () => {
                     onClick={() => handleSelectConversation(conversation.id)}
                     className={cn(
                       'px-3 py-3 cursor-pointer transition-colors hover:bg-muted/50',
-                      isSelected && 'bg-primary/5 border-l-2 border-l-primary'
+                      isSelected && 'bg-[#EDE9FE] border-l-[3px] border-l-[#7C3AED]'
                     )}
                   >
                     <div className="flex gap-3">
@@ -779,8 +819,8 @@ const Inbox = () => {
                               <span className="text-sm">🔥</span>
                             )}
                             {conversation.unread_count > 0 && (
-                              <span className="min-w-[20px] h-5 px-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-full flex items-center justify-center">
-                                {conversation.unread_count}
+                              <span className="min-w-[20px] h-5 w-5 bg-[#EF4444] text-white text-xs font-bold rounded-full flex items-center justify-center">
+                                {conversation.unread_count > 9 ? '9+' : conversation.unread_count}
                               </span>
                             )}
                           </div>
