@@ -91,6 +91,80 @@ function extractRealPhoneFromPayload(payload: any): string | null {
   return null;
 }
 
+// Resolve LID para número real usando API do WAHA
+async function resolvePhoneFromLID(
+  wahaBaseUrl: string,
+  apiKey: string,
+  sessionName: string,
+  lid: string
+): Promise<string | null> {
+  try {
+    // Limpar o LID para obter apenas o número
+    const cleanLid = lid.replace('@lid', '').replace(/\D/g, '');
+    
+    // URL da API WAHA para resolver LID
+    const url = `${wahaBaseUrl}/api/${sessionName}/lids/${cleanLid}`;
+    
+    console.log('[whatsapp-webhook] Tentando resolver LID via WAHA API:', url);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'X-Api-Key': apiKey,
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      console.log('[whatsapp-webhook] API WAHA retornou:', response.status, await response.text());
+      return null;
+    }
+    
+    const data = await response.json();
+    console.log('[whatsapp-webhook] Resposta da API LID:', JSON.stringify(data));
+    
+    // A resposta pode ter diferentes formatos dependendo da versão do WAHA
+    const realPhone = data?.phone || data?.number || data?.jid?.replace('@c.us', '') || data?.id?.replace('@c.us', '');
+    
+    if (realPhone && !realPhone.includes('lid')) {
+      console.log('[whatsapp-webhook] Número real encontrado via API:', realPhone);
+      return realPhone;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[whatsapp-webhook] Erro ao resolver LID via API:', error);
+    return null;
+  }
+}
+
+// Busca configuração do WAHA no banco
+async function getWAHAConfig(supabase: any): Promise<{ baseUrl: string; apiKey: string; sessionName: string } | null> {
+  try {
+    const { data } = await supabase
+      .from('whatsapp_config')
+      .select('base_url, api_key, instance_name')
+      .eq('is_active', true)
+      .eq('provider', 'waha')
+      .limit(1)
+      .maybeSingle();
+    
+    if (data) {
+      return {
+        baseUrl: data.base_url.replace(/\/$/, ''), // Remove trailing slash
+        apiKey: data.api_key,
+        sessionName: data.instance_name || 'default',
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[whatsapp-webhook] Erro ao buscar config WAHA:', error);
+    return null;
+  }
+}
+
 function normalizePhone(phone: string): string {
   // Remove @c.us, @s.whatsapp.net, @lid e caracteres não numéricos
   let numbers = phone
@@ -312,6 +386,8 @@ serve(async (req) => {
     let senderName = '';
     let isFromMe = false;
     let externalMessageId = '';
+    let isFromFacebookLid = false;
+    let originalLid: string | null = null;
 
     // WAHA format
     if (body.event && body.session !== undefined) {
@@ -381,14 +457,39 @@ serve(async (req) => {
         
         if (isLID(rawFrom)) {
           console.log('[whatsapp-webhook] Detectado LID do Facebook, buscando número real...');
-          const realPhone = extractRealPhoneFromPayload(body.payload);
+          isFromFacebookLid = true;
+          originalLid = rawFrom.replace('@lid', '').replace(/\D/g, '');
+          
+          // Primeiro tenta extrair do payload
+          let realPhone = extractRealPhoneFromPayload(body.payload);
+          
+          // Se não conseguiu, tenta via API do WAHA
+          if (!realPhone) {
+            const wahaConfig = await getWAHAConfig(supabase);
+            if (wahaConfig) {
+              realPhone = await resolvePhoneFromLID(
+                wahaConfig.baseUrl,
+                wahaConfig.apiKey,
+                wahaConfig.sessionName,
+                rawFrom
+              );
+              
+              if (realPhone) {
+                isFromFacebookLid = false; // Conseguimos o número real!
+                console.log('[whatsapp-webhook] Número real resolvido via API WAHA:', realPhone);
+              }
+            } else {
+              console.log('[whatsapp-webhook] Config WAHA não encontrada para resolver LID');
+            }
+          } else {
+            isFromFacebookLid = false; // Conseguimos o número real do payload!
+          }
           
           if (realPhone) {
-            console.log('[whatsapp-webhook] Número real encontrado:', realPhone);
             senderPhone = normalizePhone(realPhone);
           } else {
-            console.warn('[whatsapp-webhook] Não foi possível extrair número real do LID, usando normalizado');
-            senderPhone = normalizePhone(rawFrom);
+            console.warn('[whatsapp-webhook] Não foi possível extrair número real do LID, usando como identificador temporário');
+            senderPhone = originalLid || normalizePhone(rawFrom);
           }
         } else {
           senderPhone = normalizePhone(rawFrom);
@@ -404,7 +505,7 @@ serve(async (req) => {
           (body.payload as any)?.sender?.pushName ||
           '';
         
-        console.log('[whatsapp-webhook] pushName extraído:', senderName, 'phone normalizado:', senderPhone);
+        console.log('[whatsapp-webhook] pushName extraído:', senderName, 'phone normalizado:', senderPhone, 'isLID:', isFromFacebookLid);
         isFromMe = payload.fromMe;
       } else {
         console.log('[whatsapp-webhook] Evento não processado:', event);
@@ -542,6 +643,13 @@ serve(async (req) => {
       if (senderName && !existingLead.whatsapp_name) {
         updateData.whatsapp_name = senderName;
       }
+      
+      // Se o lead existente era um LID e agora recebemos o número real, atualizar
+      if (existingLead.is_facebook_lid && !isFromFacebookLid) {
+        updateData.is_facebook_lid = false;
+        updateData.name = senderName || existingLead.name.replace(' (via anúncio)', '');
+        console.log('[whatsapp-webhook] Atualizando lead LID com número real');
+      }
 
       await supabase
         .from('leads')
@@ -558,17 +666,27 @@ serve(async (req) => {
         .limit(1)
         .maybeSingle();
 
+      // Ajustar nome para leads via anúncio
+      let leadName = senderName || `Lead ${formatPhoneForDisplay(senderPhone)}`;
+      if (isFromFacebookLid && senderName) {
+        leadName = `${senderName} (via anúncio)`;
+      } else if (isFromFacebookLid) {
+        leadName = `Lead via anúncio ${originalLid?.slice(-4) || ''}`;
+      }
+
       const { data: upsertedLead, error: upsertError } = await supabase
         .from('leads')
         .upsert({
-          name: senderName || `Lead ${formatPhoneForDisplay(senderPhone)}`,
+          name: leadName,
           phone: senderPhone,
           whatsapp_name: senderName || null,
-          source: 'whatsapp',
+          source: isFromFacebookLid ? 'facebook_ads' : 'whatsapp',
           temperature: 'warm',
           stage_id: firstStage?.id,
           status: 'active',
           last_interaction_at: new Date().toISOString(),
+          is_facebook_lid: isFromFacebookLid,
+          original_lid: originalLid,
         }, {
           onConflict: 'phone',
           ignoreDuplicates: false,

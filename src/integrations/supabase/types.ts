@@ -382,9 +382,11 @@ export type Database = {
           estimated_value: number | null
           id: string
           internal_notes: string | null
+          is_facebook_lid: boolean | null
           last_interaction_at: string | null
           name: string
           nit_pis: string | null
+          original_lid: string | null
           phone: string
           qualification: Json | null
           source: string
@@ -409,9 +411,11 @@ export type Database = {
           estimated_value?: number | null
           id?: string
           internal_notes?: string | null
+          is_facebook_lid?: boolean | null
           last_interaction_at?: string | null
           name: string
           nit_pis?: string | null
+          original_lid?: string | null
           phone: string
           qualification?: Json | null
           source?: string
@@ -436,9 +440,11 @@ export type Database = {
           estimated_value?: number | null
           id?: string
           internal_notes?: string | null
+          is_facebook_lid?: boolean | null
           last_interaction_at?: string | null
           name?: string
           nit_pis?: string | null
+          original_lid?: string | null
           phone?: string
           qualification?: Json | null
           source?: string
