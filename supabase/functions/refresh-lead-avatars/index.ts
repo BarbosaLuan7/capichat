@@ -111,7 +111,9 @@ serve(async (req) => {
         // Adicionar delay para não sobrecarregar a API (100ms entre requests)
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        const avatarUrl = await getProfilePicture(baseUrl, apiKey, sessionName, lead.phone);
+        // Usar número com código do país (55) para a API
+        const phoneWithCountry = lead.phone.startsWith('55') ? lead.phone : `55${lead.phone}`;
+        const avatarUrl = await getProfilePicture(baseUrl, apiKey, sessionName, phoneWithCountry);
 
         if (avatarUrl) {
           // Atualizar lead com novo avatar

@@ -332,9 +332,43 @@ async function uploadMediaToStorage(
   }
 }
 
-function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'waha' | 'evolution'): { content: string; type: string; mediaUrl?: string } {
+// Verifica se é uma notificação do sistema (não deve ser processada)
+function isSystemNotification(payload: any): boolean {
+  const systemTypes = [
+    'notification_template',
+    'e2e_notification',
+    'gp2',
+    'ciphertext',
+    'protocol',
+    'call_log',
+    'revoked'
+  ];
+  
+  const messageType = payload?._data?.type || payload?.type || '';
+  const subtype = payload?._data?.subtype || payload?.subtype || '';
+  
+  // Verificar se é notificação do sistema
+  if (systemTypes.includes(messageType)) {
+    return true;
+  }
+  
+  // Verificar subtipos que indicam notificações
+  if (subtype === 'contact_info_card' || subtype === 'url') {
+    return true;
+  }
+  
+  return false;
+}
+
+function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'waha' | 'evolution'): { content: string; type: string; mediaUrl?: string; isSystemMessage?: boolean } {
   if (provider === 'waha') {
-    const msg = payload as WAHAMessage;
+    const msg = payload as WAHAMessage & { _data?: any };
+    
+    // Verificar se é notificação do sistema
+    if (isSystemNotification(msg)) {
+      return { content: '', type: 'text', isSystemMessage: true };
+    }
+    
     let type = 'text';
     
     if (msg.type === 'ptt' || msg.type === 'audio') {
@@ -347,8 +381,25 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
       type = 'document';
     }
     
+    // Só mostrar [Mídia] se realmente tiver mídia
+    const hasRealMedia = msg.hasMedia === true && (msg.mediaUrl || type !== 'text');
+    let content = msg.body || '';
+    
+    if (!content && hasRealMedia) {
+      const mediaLabels: Record<string, string> = {
+        'image': '[Imagem]',
+        'audio': '[Áudio]',
+        'video': '[Vídeo]',
+        'document': '[Documento]',
+      };
+      content = mediaLabels[type] || '[Mídia]';
+    } else if (!content) {
+      // Mensagem vazia sem mídia - provavelmente notificação do sistema
+      return { content: '', type: 'text', isSystemMessage: true };
+    }
+    
     return {
-      content: msg.body || '[Mídia]',
+      content,
       type,
       mediaUrl: msg.mediaUrl,
     };
@@ -665,7 +716,17 @@ serve(async (req) => {
     console.log('[whatsapp-webhook] Processando mensagem de:', senderPhone, 'Nome:', senderName);
 
     // Extrair conteúdo da mensagem
-    const { content, type, mediaUrl } = getMessageContent(messageData, provider);
+    const { content, type, mediaUrl, isSystemMessage } = getMessageContent(messageData, provider);
+    
+    // Ignorar notificações do sistema
+    if (isSystemMessage) {
+      console.log('[whatsapp-webhook] Ignorando notificação do sistema');
+      return new Response(
+        JSON.stringify({ success: true, ignored: true, reason: 'system_notification' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     console.log('[whatsapp-webhook] Conteúdo:', content.substring(0, 100), 'Tipo:', type, 'MediaUrl:', mediaUrl ? 'presente' : 'nenhum');
 
     // ========== CORREÇÃO 2: Usar upsert para evitar leads duplicados ==========
@@ -712,11 +773,13 @@ serve(async (req) => {
       if (!existingLead.avatar_url) {
         const wahaConfig = await getWAHAConfig(supabase);
         if (wahaConfig) {
+          // Usar número com código do país (55) para a API
+          const phoneWithCountry = senderPhone.startsWith('55') ? senderPhone : `55${senderPhone}`;
           const avatarUrl = await getProfilePicture(
             wahaConfig.baseUrl,
             wahaConfig.apiKey,
             wahaConfig.sessionName,
-            senderPhone
+            phoneWithCountry
           );
           if (avatarUrl) {
             updateData.avatar_url = avatarUrl;
@@ -753,11 +816,13 @@ serve(async (req) => {
       if (!isFromFacebookLid) {
         const wahaConfig = await getWAHAConfig(supabase);
         if (wahaConfig) {
+          // Usar número com código do país (55) para a API
+          const phoneWithCountry = senderPhone.startsWith('55') ? senderPhone : `55${senderPhone}`;
           avatarUrl = await getProfilePicture(
             wahaConfig.baseUrl,
             wahaConfig.apiKey,
             wahaConfig.sessionName,
-            senderPhone
+            phoneWithCountry
           );
           if (avatarUrl) {
             console.log('[whatsapp-webhook] Avatar encontrado para novo lead');
