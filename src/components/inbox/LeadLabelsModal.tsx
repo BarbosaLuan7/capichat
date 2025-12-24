@@ -74,9 +74,13 @@ export function LeadLabelsModal({
 
   const categoryNames: Record<string, string> = {
     origem: 'Origem',
-    interesse: 'Interesse',
+    beneficio: 'Benefício',
+    condicao_saude: 'Condição de Saúde',
     prioridade: 'Prioridade',
     status: 'Status',
+    situacao: 'Situação',
+    desqualificacao: 'Desqualificação',
+    perda: 'Motivo de Perda',
   };
 
   return (
