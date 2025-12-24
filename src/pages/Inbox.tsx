@@ -218,12 +218,13 @@ const Inbox = () => {
     setShowScrollButton(false);
   }, []);
 
-  // Mark as read when selecting conversation
+  // Mark as read when selecting conversation - só executar quando MUDAR a conversa selecionada
   useEffect(() => {
-    if (selectedConversationId && selectedConversation?.unread_count > 0) {
+    if (selectedConversationId && selectedConversation?.unread_count && selectedConversation.unread_count > 0) {
       markAsRead.mutate(selectedConversationId);
     }
-  }, [selectedConversationId, selectedConversation?.unread_count]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedConversationId]);
 
   // Fetch AI suggestions when conversation changes
   useEffect(() => {
