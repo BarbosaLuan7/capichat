@@ -263,8 +263,10 @@ const Inbox = () => {
       // Filter by assignment tab
       let matchesFilter = true;
       if (filter === 'novos') {
+        // Conversas novas: não atribuídas, recentes (24h), ou com mensagens não lidas
         const isRecent = new Date(conv.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000;
-        matchesFilter = !conv.assigned_to || isRecent;
+        const hasUnread = (conv.unread_count || 0) > 0;
+        matchesFilter = !conv.assigned_to || isRecent || hasUnread;
       } else if (filter === 'meus') {
         matchesFilter = conv.assigned_to === user?.id;
       } else if (filter === 'outros') {
