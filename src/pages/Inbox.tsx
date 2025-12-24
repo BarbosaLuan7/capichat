@@ -138,6 +138,7 @@ const Inbox = () => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const ignoreScrollRef = useRef(false);
+  const userClickedConversationRef = useRef(false); // Tracks if selection was by user click
   const isMobile = useIsMobile();
 
   // Data hooks
@@ -218,11 +219,19 @@ const Inbox = () => {
     setShowScrollButton(false);
   }, []);
 
-  // Mark as read when selecting conversation - só executar quando MUDAR a conversa selecionada
+  // Mark as read ONLY when user explicitly clicked on a conversation
   useEffect(() => {
-    if (selectedConversationId && selectedConversation?.unread_count && selectedConversation.unread_count > 0) {
+    if (
+      selectedConversationId &&
+      userClickedConversationRef.current &&
+      selectedConversation?.unread_count &&
+      selectedConversation.unread_count > 0 &&
+      document.visibilityState === 'visible'
+    ) {
       markAsRead.mutate(selectedConversationId);
     }
+    // Reset the flag after processing
+    userClickedConversationRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedConversationId]);
 
@@ -329,6 +338,7 @@ const Inbox = () => {
   };
 
   const handleSelectConversation = (id: string) => {
+    userClickedConversationRef.current = true; // User explicitly clicked
     setSelectedConversationId(id);
     // Em mobile, não fechamos automaticamente o painel de lead
   };
@@ -807,9 +817,15 @@ const Inbox = () => {
                               {displayName}
                             </span>
                           </div>
-                          <span className="text-xs text-muted-foreground shrink-0 ml-2">
-                            {formatConversationDate(new Date(conversation.last_message_at))}
-                          </span>
+                          <div className="flex items-center gap-1 shrink-0 ml-2">
+                            {/* DEBUG: unread_count - remover depois */}
+                            <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">
+                              u:{conversation.unread_count}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {formatConversationDate(new Date(conversation.last_message_at))}
+                            </span>
+                          </div>
                         </div>
 
                         {/* Row 2: Last message + Unread/Hot indicators */}
