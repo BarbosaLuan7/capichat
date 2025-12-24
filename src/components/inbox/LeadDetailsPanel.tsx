@@ -240,16 +240,16 @@ export function LeadDetailsPanel({
 
           {/* Dados Tab */}
           <TabsContent value="dados" className="flex-1 m-0 min-h-0 overflow-hidden data-[state=inactive]:hidden">
-            <ScrollArea className="h-full max-h-[calc(100vh-20rem)]">
-              <div className="p-4 space-y-4 pb-8">
+            <ScrollArea className="flex-1 h-full">
+              <div className="p-4 space-y-4 pb-8 w-full overflow-hidden">
                 {/* AI Summary */}
                 {(lead as any).ai_summary && (
-                  <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                  <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 overflow-hidden">
                     <div className="flex items-center gap-2 text-primary text-xs font-medium mb-2">
                       <Sparkles className="w-3 h-3" />
                       Resumo IA
                     </div>
-                    <p className="text-sm text-foreground">
+                    <p className="text-sm text-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
                       {(lead as any).ai_summary}
                     </p>
                   </div>
