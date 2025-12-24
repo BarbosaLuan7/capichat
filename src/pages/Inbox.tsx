@@ -17,6 +17,8 @@ import {
   Plus,
   PanelRightClose,
   PanelRightOpen,
+  ArrowLeft,
+  Menu,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -90,6 +92,8 @@ import { NewConversationModal } from '@/components/inbox/NewConversationModal';
 import { ConversationSkeleton, MessageSkeleton, LeadDetailsPanelSkeleton } from '@/components/ui/skeleton';
 import { DateSeparator } from '@/components/inbox/DateSeparator';
 import { ScrollToBottomButton } from '@/components/inbox/ScrollToBottomButton';
+import { LabelBadges } from '@/components/inbox/LabelBadges';
+import { MobileBottomNav } from '@/components/inbox/MobileBottomNav';
 
 import type { Database } from '@/integrations/supabase/types';
 
@@ -306,7 +310,7 @@ const Inbox = () => {
 
   const handleSelectConversation = (id: string) => {
     setSelectedConversationId(id);
-    setShowLeadPanel(false);
+    // Em mobile, não fechamos automaticamente o painel de lead
   };
 
   const handleSendMessage = async () => {
@@ -534,10 +538,21 @@ const Inbox = () => {
     labels: leadLabels?.map((ll: any) => ll.labels) || [],
   } : null;
 
+  // Em mobile, mostra lista ou chat, não ambos
+  const showConversationList = !isMobile || !selectedConversationId;
+  const showChatArea = !isMobile || selectedConversationId;
+
   return (
-    <div className="h-[calc(100vh-4rem)] flex min-w-0 overflow-hidden relative">
+    <div className={cn(
+      "h-[calc(100vh-4rem)] flex min-w-0 overflow-hidden relative",
+      isMobile && "h-[calc(100vh-4rem-3.5rem)]" // Espaço para bottom nav
+    )}>
       {/* Conversation List */}
-      <div className="w-72 md:w-80 xl:w-96 border-r border-border flex flex-col bg-card shrink-0 min-w-0">
+      {showConversationList && (
+      <div className={cn(
+        "w-72 md:w-80 xl:w-96 border-r border-border flex flex-col bg-card shrink-0 min-w-0",
+        isMobile && "w-full border-r-0"
+      )}>
         {/* Header with New Conversation Button */}
         <div className="p-3 border-b border-border flex items-center justify-between bg-card">
           <span className="font-semibold text-sm">Conversas</span>
@@ -812,8 +827,10 @@ const Inbox = () => {
           )}
         </ScrollArea>
       </div>
+      )}
 
       {/* Chat Area */}
+      {showChatArea && (
       <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
         {selectedConversation && leadWithLabels ? (
           <>
@@ -1110,6 +1127,7 @@ const Inbox = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* Lead Panel */}
       <AnimatePresence>

@@ -96,3 +96,42 @@ export function useCreateInternalNote() {
     },
   });
 }
+
+export function useUpdateInternalNote() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ noteId, content }: { noteId: string; content: string }) => {
+      const { data, error } = await supabase
+        .from('internal_notes')
+        .update({ content })
+        .eq('id', noteId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['internal-notes'] });
+    },
+  });
+}
+
+export function useDeleteInternalNote() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (noteId: string) => {
+      const { error } = await supabase
+        .from('internal_notes')
+        .delete()
+        .eq('id', noteId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['internal-notes'] });
+    },
+  });
+}

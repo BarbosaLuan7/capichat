@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAudioTranscription } from '@/hooks/useAudioTranscription';
+import { AudioPlayer } from '@/components/inbox/AudioPlayer';
 import type { Database } from '@/integrations/supabase/types';
 
 type Message = Database['public']['Tables']['messages']['Row'] & {
@@ -78,7 +79,7 @@ export function MessageBubble({
       case 'audio':
         return (
           <div className="mb-2 space-y-2">
-            <audio src={message.media_url} controls className="w-full" />
+            <AudioPlayer src={message.media_url} />
             
             {/* Transcription section */}
             {!isAgent && (
