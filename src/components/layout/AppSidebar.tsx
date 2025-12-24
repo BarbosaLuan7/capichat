@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -36,21 +36,22 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { useSidebarBadges } from '@/hooks/useSidebarBadges';
 
 interface MenuItem {
   icon: any;
   label: string;
   path: string;
-  badge?: number;
+  badgeKey?: 'conversations' | 'tasks';
   children?: { icon: any; label: string; path: string }[];
 }
 
-const menuItems: MenuItem[] = [
+const menuItemsConfig: MenuItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-  { icon: MessageSquare, label: 'Conversas', path: '/inbox', badge: 5 },
+  { icon: MessageSquare, label: 'Conversas', path: '/inbox', badgeKey: 'conversations' },
   { icon: Kanban, label: 'Funil', path: '/funnel' },
   { icon: Users, label: 'Leads', path: '/leads' },
-  { icon: CheckSquare, label: 'Tarefas', path: '/tasks', badge: 3 },
+  { icon: CheckSquare, label: 'Tarefas', path: '/tasks', badgeKey: 'tasks' },
   { icon: Calendar, label: 'Calendário', path: '/calendar' },
   { icon: Workflow, label: 'Automações', path: '/automations' },
   { icon: Zap, label: 'Chatbot', path: '/chatbot' },
@@ -78,9 +79,18 @@ const AppSidebar = () => {
   const [settingsOpen, setSettingsOpen] = useState(
     location.pathname.startsWith('/settings')
   );
+  const badges = useSidebarBadges();
+
+  // Memoize menu items with dynamic badges
+  const menuItems = useMemo(() => {
+    return menuItemsConfig.map((item) => ({
+      ...item,
+      badge: item.badgeKey ? badges[item.badgeKey] : undefined,
+    }));
+  }, [badges]);
 
   const isActive = (path: string) => location.pathname === path;
-  const isParentActive = (item: MenuItem) => {
+  const isParentActive = (item: typeof menuItems[0]) => {
     if (item.children) {
       return location.pathname.startsWith(item.path);
     }
