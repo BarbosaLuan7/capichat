@@ -1136,10 +1136,10 @@ const Inbox = () => {
             </motion.div>
           ) : (
             <motion.aside
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 'auto', opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.3 }}
+              initial={{ x: 24, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 24, opacity: 0 }}
+              transition={{ duration: 0.2 }}
               className="w-[300px] xl:w-[340px] border-l border-border bg-card overflow-hidden shrink-0"
             >
               {loadingLead ? (
