@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Check, CheckCheck, Star, Image, FileText, Video, Mic, Sparkles, Loader2 } from 'lucide-react';
+import { Check, CheckCheck, Star, Image, FileText, Video, Mic, Sparkles, Loader2, Copy } from 'lucide-react';
+import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -36,6 +37,16 @@ export function MessageBubble({
   const { transcribeAudio, getTranscription, isLoading } = useAudioTranscription();
   const [transcription, setTranscription] = useState<string | null>(null);
   const [hasAttempted, setHasAttempted] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyTranscription = () => {
+    if (transcription) {
+      navigator.clipboard.writeText(transcription);
+      setCopied(true);
+      toast.success('Transcrição copiada!');
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   // Auto-transcribe audio messages from leads
   useEffect(() => {
@@ -92,29 +103,36 @@ export function MessageBubble({
                 )}
                 
                 {transcription && (
-                  <div className="p-2 rounded-md bg-background/50 border border-border/50">
-                    <div className="flex items-center gap-1 text-primary/70 mb-1">
-                      <Sparkles className="w-3 h-3" />
-                      <span className="font-medium">Transcrição:</span>
+                  <div className="p-2 rounded-md bg-gray-100 dark:bg-gray-800">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-1 text-primary/70">
+                        <Sparkles className="w-3 h-3" />
+                        <span className="font-medium text-xs">Transcrição:</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5"
+                        onClick={handleCopyTranscription}
+                      >
+                        {copied ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3" />}
+                      </Button>
                     </div>
-                    <p className="text-foreground/80 italic">"{transcription}"</p>
+                    <p className="text-foreground/80 italic text-xs">"{transcription}"</p>
                   </div>
                 )}
                 
                 {!isLoading(message.id) && !transcription && hasAttempted && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 text-xs text-muted-foreground hover:text-foreground"
+                  <button
+                    className="text-[#3B82F6] hover:text-[#2563EB] text-xs underline"
                     onClick={() => {
                       transcribeAudio(message.id, message.media_url!).then((text) => {
                         if (text) setTranscription(text);
                       });
                     }}
                   >
-                    <Sparkles className="w-3 h-3 mr-1" />
                     Transcrever áudio
-                  </Button>
+                  </button>
                 )}
               </div>
             )}

@@ -118,7 +118,7 @@ export function LeadDetailsPanel({
 
   return (
     <>
-      <div className="h-full w-full max-w-full flex flex-col overflow-hidden">
+      <div className="h-full w-full max-w-full min-w-[320px] flex flex-col overflow-hidden">
         {/* Lead Header */}
         <div className="p-4 border-b border-border">
           <div className="flex items-start gap-3">
@@ -257,9 +257,11 @@ export function LeadDetailsPanel({
                       <Sparkles className="w-3 h-3" />
                       Resumo IA
                     </div>
-                    <p className="text-sm text-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
-                      {(lead as any).ai_summary}
-                    </p>
+                    <div className="overflow-y-auto max-h-[200px]">
+                      <p className="text-sm text-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                        {(lead as any).ai_summary}
+                      </p>
+                    </div>
                   </div>
                 )}
 
