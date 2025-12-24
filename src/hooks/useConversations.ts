@@ -25,6 +25,7 @@ export function useConversations() {
             phone, 
             email, 
             temperature,
+            avatar_url,
             lead_labels (
               labels (id, name, color, category)
             )
@@ -90,7 +91,7 @@ export function useConversation(id: string | undefined) {
         .from('conversations')
         .select(`
           *,
-          leads (id, name, phone, email, temperature)
+          leads (id, name, phone, email, temperature, avatar_url)
         `)
         .eq('id', id)
         .maybeSingle();
