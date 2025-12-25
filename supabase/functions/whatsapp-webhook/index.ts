@@ -19,6 +19,12 @@ interface WAHAMessage {
   fromMe: boolean;
   pushName?: string;
   chatId?: string;
+  // Campos adicionais para mídia (WAHA pode enviar em diferentes formatos)
+  media?: {
+    url?: string;
+    filename?: string;
+    mimetype?: string;
+  };
 }
 
 interface WAHAWebhookPayload {
@@ -381,8 +387,14 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
       type = 'document';
     }
     
+    // Extrair mediaUrl de múltiplas fontes possíveis no WAHA
+    // O WAHA pode enviar a URL em: msg.mediaUrl, msg.media?.url, ou msg._data?.media?.url
+    const extractedMediaUrl = msg.mediaUrl || msg.media?.url || (msg as any)._data?.media?.url;
+    
+    console.log('[whatsapp-webhook] Extração de mídia - hasMedia:', msg.hasMedia, 'type:', type, 'mediaUrl:', msg.mediaUrl, 'media?.url:', msg.media?.url, 'extractedMediaUrl:', extractedMediaUrl);
+    
     // Só mostrar [Mídia] se realmente tiver mídia
-    const hasRealMedia = msg.hasMedia === true && (msg.mediaUrl || type !== 'text');
+    const hasRealMedia = msg.hasMedia === true && (extractedMediaUrl || type !== 'text');
     let content = msg.body || '';
     
     if (!content && hasRealMedia) {
@@ -401,7 +413,7 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
     return {
       content,
       type,
-      mediaUrl: msg.mediaUrl,
+      mediaUrl: extractedMediaUrl,
     };
   } else {
     const msg = payload as EvolutionMessage;
