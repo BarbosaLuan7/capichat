@@ -708,9 +708,11 @@ serve(async (req) => {
 
     if (!result.success) {
       console.error('[send-whatsapp-message] Falha ao enviar:', result.error);
+      // Importante: retornar 200 para evitar que o client trate como "erro de edge function" (422)
+      // e possa exibir uma mensagem amigável via `data.success === false`.
       return new Response(
-        JSON.stringify({ error: result.error, provider: config.provider }),
-        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: result.error, provider: config.provider }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
