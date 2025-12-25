@@ -307,12 +307,15 @@ async function sendWAHA(config: WhatsAppConfig, phone: string, message: string, 
       session,
     };
   } else if (type === 'audio' && mediaUrl) {
-    // WAHA Free com GOWS engine não suporta sendFile para áudio
-    // Enviar como texto informativo em vez de falhar
-    endpoint = '/api/sendText';
+    // Usar endpoint específico para áudio/voz
+    endpoint = '/api/sendVoice';
     body = {
       chatId,
-      text: message || '🎤 [Áudio]',
+      file: { 
+        url: mediaUrl,
+        mimetype: 'audio/ogg; codecs=opus'
+      },
+      convert: true, // Converte automaticamente para formato opus
       session,
     };
   } else if (type === 'document' && mediaUrl) {

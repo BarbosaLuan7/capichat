@@ -22,6 +22,7 @@ import {
   ArrowUpDown,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -134,7 +135,7 @@ const Inbox = () => {
   }, [showLeadPanel]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const ignoreScrollRef = useRef(false);
@@ -424,7 +425,7 @@ const Inbox = () => {
     inputRef.current?.focus();
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setMessageInput(value);
     // Show slash command popover when "/" is typed
@@ -1113,7 +1114,7 @@ const Inbox = () => {
                   />
                 </div>
 
-                <div className="flex-1 relative">
+                <div className="flex-1 relative flex items-end">
                   {showSlashCommand && (
                     <SlashCommandPopover
                       inputValue={messageInput}
@@ -1122,22 +1123,31 @@ const Inbox = () => {
                       leadPhone={leadWithLabels.phone}
                       leadBenefitType={leadWithLabels.benefit_type || undefined}
                       agentName={authUser?.name}
-                      inputRef={inputRef as React.RefObject<HTMLInputElement>}
+                      inputRef={inputRef as React.RefObject<HTMLTextAreaElement>}
                       onClose={() => setShowSlashCommand(false)}
                     />
                   )}
-                  <Input
-                    ref={inputRef}
+                  <Textarea
+                    ref={inputRef as React.RefObject<HTMLTextAreaElement>}
                     value={messageInput}
                     onChange={handleInputChange}
                     onKeyDown={(e) => {
                       if (showSlashCommand) return; // Let SlashCommand handle navigation
-                      if (e.key === 'Enter' && !e.shiftKey) handleSendMessage();
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
                     }}
-                    placeholder="Digite / para atalhos..."
-                    className="pr-12"
+                    placeholder="Digite / para atalhos... (Shift+Enter para nova linha)"
+                    className="pr-12 resize-none min-h-[40px] max-h-[120px] overflow-y-auto py-2"
+                    rows={1}
+                    onInput={(e) => {
+                      const target = e.target as HTMLTextAreaElement;
+                      target.style.height = 'auto';
+                      target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
+                    }}
                   />
-                  <div className="absolute right-1 top-1/2 -translate-y-1/2">
+                  <div className="absolute right-1 bottom-2">
                     <EmojiPicker onEmojiSelect={handleEmojiSelect} />
                   </div>
                 </div>
