@@ -20,12 +20,12 @@ interface ConversationStatusTabsProps {
 
 const tabs = [
   { 
-    value: 'all', 
-    label: 'Todas', 
-    shortLabel: 'Todas',
-    icon: Inbox, 
-    colorClass: 'text-foreground', 
-    badgeClass: 'bg-muted text-muted-foreground' 
+    value: 'pending', 
+    label: 'Pendentes', 
+    shortLabel: 'Pend.',
+    icon: Clock, 
+    colorClass: 'text-destructive', 
+    badgeClass: 'bg-destructive/15 text-destructive' 
   },
   { 
     value: 'open', 
@@ -36,19 +36,19 @@ const tabs = [
     badgeClass: 'bg-success/15 text-success' 
   },
   { 
-    value: 'pending', 
-    label: 'Pendentes', 
-    shortLabel: 'Pend.',
-    icon: Clock, 
-    colorClass: 'text-warning', 
-    badgeClass: 'bg-warning/15 text-warning' 
-  },
-  { 
     value: 'resolved', 
     label: 'Resolvidas', 
     shortLabel: 'Resolv.',
     icon: CheckCircle2, 
     colorClass: 'text-muted-foreground', 
+    badgeClass: 'bg-muted text-muted-foreground' 
+  },
+  { 
+    value: 'all', 
+    label: 'Todas', 
+    shortLabel: 'Todas',
+    icon: Inbox, 
+    colorClass: 'text-foreground', 
     badgeClass: 'bg-muted text-muted-foreground' 
   },
 ] as const;
