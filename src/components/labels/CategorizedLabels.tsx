@@ -23,15 +23,13 @@ interface CategorizedLabelsProps {
 
 // Mapeamento de categorias com ícones e nomes em português
 const categoryConfig: Record<string, { label: string; icon: string; order: number }> = {
-  origem: { label: 'Origem', icon: '📍', order: 1 },
-  beneficio: { label: 'Benefício', icon: '🎯', order: 2 },
-  condicao_saude: { label: 'Condição de Saúde', icon: '🏥', order: 3 },
-  interesse: { label: 'Interesse', icon: '⭐', order: 4 },
-  prioridade: { label: 'Prioridade', icon: '🚨', order: 5 },
-  status: { label: 'Status', icon: '📊', order: 6 },
-  situacao: { label: 'Situação', icon: '📋', order: 7 },
-  desqualificacao: { label: 'Desqualificação', icon: '❌', order: 8 },
-  perda: { label: 'Perda', icon: '💔', order: 9 },
+  beneficio: { label: 'Benefício', icon: '🎯', order: 1 },
+  condicao_saude: { label: 'Condição de Saúde', icon: '🏥', order: 2 },
+  interesse: { label: 'Interesse', icon: '⭐', order: 3 },
+  status: { label: 'Status', icon: '📊', order: 4 },
+  situacao: { label: 'Situação', icon: '📋', order: 5 },
+  desqualificacao: { label: 'Desqualificação', icon: '❌', order: 6 },
+  perda: { label: 'Perda', icon: '💔', order: 7 },
 };
 
 export function CategorizedLabels({
