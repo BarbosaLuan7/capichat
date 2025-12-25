@@ -819,10 +819,6 @@ const Inbox = () => {
                             </span>
                           </div>
                           <div className="flex items-center gap-1 shrink-0 ml-2">
-                            {/* DEBUG: unread_count - remover depois */}
-                            <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">
-                              u:{conversation.unread_count}
-                            </span>
                             <span className="text-xs text-muted-foreground">
                               {formatConversationDate(new Date(conversation.last_message_at))}
                             </span>
