@@ -3,8 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
   Filter,
-  MoreVertical,
-  Phone,
   Send,
   Check,
   CheckCheck,
@@ -918,9 +916,6 @@ const Inbox = () => {
                   onStatusChange={handleStatusChange}
                   isLoading={updateConversationStatus.isPending}
                 />
-                <Button variant="ghost" size="icon">
-                  <Phone className="w-4 h-4" />
-                </Button>
                 <Button 
                   variant="ghost" 
                   size="icon"
@@ -931,10 +926,7 @@ const Inbox = () => {
                     (selectedConversation as any).is_favorite && "fill-warning text-warning"
                   )} />
                 </Button>
-                <Button variant="ghost" size="icon">
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-                <Button 
+                <Button
                   variant={showLeadPanel ? "secondary" : "ghost"}
                   size="icon"
                   onClick={() => setShowLeadPanel(!showLeadPanel)}
