@@ -1,14 +1,8 @@
-import { useState } from 'react';
-import { Search, Command, Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Search, Command, Settings } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { NotificationCenter } from '@/components/notifications/NotificationCenter';
-import { useAuth } from '@/hooks/useAuth';
+import { Link } from 'react-router-dom';
 
 const TopBar = () => {
-  const [searchOpen, setSearchOpen] = useState(false);
-  const { user } = useAuth();
-
   return (
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur sticky top-0 z-40 flex items-center justify-between px-6">
       {/* Search */}
@@ -26,15 +20,15 @@ const TopBar = () => {
         </div>
       </div>
 
-      {/* Actions */}
+      {/* Settings */}
       <div className="flex items-center gap-3">
-        <Button className="gradient-primary text-primary-foreground gap-2">
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">Novo Lead</span>
-        </Button>
-
-        {/* Notifications */}
-        <NotificationCenter userId={user?.id} />
+        <Link 
+          to="/settings"
+          className="p-2 rounded-lg hover:bg-muted transition-colors"
+          title="Configurações"
+        >
+          <Settings className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />
+        </Link>
       </div>
     </header>
   );
