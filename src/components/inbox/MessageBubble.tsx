@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAudioTranscription } from '@/hooks/useAudioTranscription';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
 import { AudioPlayer } from '@/components/inbox/AudioPlayer';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -38,6 +39,9 @@ export function MessageBubble({
   const [transcription, setTranscription] = useState<string | null>(null);
   const [hasAttempted, setHasAttempted] = useState(false);
   const [copied, setCopied] = useState(false);
+  
+  // Usar signed URL para mídias em buckets privados
+  const { signedUrl: resolvedMediaUrl, isLoading: isLoadingUrl } = useSignedUrl(message.media_url);
 
   const handleCopyTranscription = () => {
     if (transcription) {
@@ -50,30 +54,46 @@ export function MessageBubble({
 
   // Auto-transcribe audio messages from leads
   useEffect(() => {
-    if (message.type === 'audio' && message.media_url && !isAgent && !hasAttempted) {
+    if (message.type === 'audio' && resolvedMediaUrl && !isAgent && !hasAttempted) {
       const cached = getTranscription(message.id);
       if (cached) {
         setTranscription(cached);
       } else {
         setHasAttempted(true);
-        transcribeAudio(message.id, message.media_url).then((text) => {
+        transcribeAudio(message.id, resolvedMediaUrl).then((text) => {
           if (text) setTranscription(text);
         });
       }
     }
-  }, [message.id, message.type, message.media_url, isAgent, hasAttempted, transcribeAudio, getTranscription]);
+  }, [message.id, message.type, resolvedMediaUrl, isAgent, hasAttempted, transcribeAudio, getTranscription]);
 
   const renderMedia = () => {
     if (!message.media_url) return null;
+    
+    // Mostrar loading enquanto resolve a URL
+    if (isLoadingUrl) {
+      return (
+        <div className="mb-2 flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span className="text-sm">Carregando mídia...</span>
+        </div>
+      );
+    }
+    
+    if (!resolvedMediaUrl) return null;
 
     switch (message.type) {
       case 'image':
         return (
           <div className="mb-2">
             <img
-              src={message.media_url}
+              src={resolvedMediaUrl}
               alt="Imagem"
               className="max-w-full rounded-lg max-h-64 object-cover"
+              onError={(e) => {
+                console.error('[MessageBubble] Erro ao carregar imagem:', message.media_url);
+                e.currentTarget.style.display = 'none';
+              }}
             />
           </div>
         );
@@ -81,7 +101,7 @@ export function MessageBubble({
         return (
           <div className="mb-2">
             <video
-              src={message.media_url}
+              src={resolvedMediaUrl}
               controls
               className="max-w-full rounded-lg max-h-64"
             />
@@ -90,7 +110,7 @@ export function MessageBubble({
       case 'audio':
         return (
           <div className="mb-2 space-y-2">
-            <AudioPlayer src={message.media_url} />
+            <AudioPlayer src={resolvedMediaUrl} />
             
             {/* Transcription section */}
             {!isAgent && (
@@ -126,9 +146,11 @@ export function MessageBubble({
                   <button
                     className="text-[#3B82F6] hover:text-[#2563EB] text-xs underline"
                     onClick={() => {
-                      transcribeAudio(message.id, message.media_url!).then((text) => {
-                        if (text) setTranscription(text);
-                      });
+                      if (resolvedMediaUrl) {
+                        transcribeAudio(message.id, resolvedMediaUrl).then((text) => {
+                          if (text) setTranscription(text);
+                        });
+                      }
                     }}
                   >
                     Transcrever áudio
@@ -141,7 +163,7 @@ export function MessageBubble({
       case 'document':
         return (
           <a
-            href={message.media_url}
+            href={resolvedMediaUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 p-2 bg-background/50 rounded-lg mb-2 hover:bg-background/80 transition-colors"

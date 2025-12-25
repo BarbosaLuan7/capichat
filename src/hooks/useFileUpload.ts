@@ -52,11 +52,10 @@ export function useFileUpload() {
 
       setUploadProgress({ progress: 100, uploading: false });
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('message-attachments')
-        .getPublicUrl(data.path);
-
-      return publicUrl;
+      // Retornar storage ref em vez de publicUrl (bucket é privado)
+      // Frontend vai gerar signed URL quando precisar exibir
+      const storageRef = `storage://message-attachments/${data.path}`;
+      return storageRef;
     } catch (error) {
       console.error('Upload error:', error);
       toast.error('Erro ao enviar arquivo');
