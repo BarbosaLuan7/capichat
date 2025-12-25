@@ -15,7 +15,7 @@ interface SlashCommandPopoverProps {
   leadPhone?: string;
   leadBenefitType?: string;
   agentName?: string;
-  inputRef: React.RefObject<HTMLInputElement>;
+  inputRef: React.RefObject<HTMLTextAreaElement | HTMLInputElement>;
   onClose: () => void;
 }
 
