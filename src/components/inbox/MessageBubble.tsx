@@ -10,7 +10,17 @@ import { cn } from '@/lib/utils';
 import { useAudioTranscription } from '@/hooks/useAudioTranscription';
 import { useSignedUrl } from '@/hooks/useSignedUrl';
 import { AudioPlayer } from '@/components/inbox/AudioPlayer';
+import { ImageLightbox } from '@/components/inbox/ImageLightbox';
+import { DocumentPreview } from '@/components/inbox/DocumentPreview';
 import type { Database } from '@/integrations/supabase/types';
+
+// Placeholder texts to filter out from message content display
+const MEDIA_PLACEHOLDERS = [
+  '[Áudio]', '[audio]', '[Audio]',
+  '[Imagem]', '[imagem]', '[Image]', '[image]',
+  '[Video]', '[video]', '[Vídeo]', '[vídeo]',
+  '[Documento]', '[documento]', '[Document]', '[document]',
+];
 
 type Message = Database['public']['Tables']['messages']['Row'] & {
   is_starred?: boolean;
@@ -82,19 +92,37 @@ export function MessageBubble({
     
     if (!resolvedMediaUrl) return null;
 
+    // Helper to extract filename from content or URL
+    const getFileName = (): string => {
+      // If content looks like a filename (has file extension)
+      if (message.content && /\.\w{2,5}$/.test(message.content) && !MEDIA_PLACEHOLDERS.includes(message.content)) {
+        return message.content;
+      }
+      // Fallback: extract from URL path
+      if (message.media_url) {
+        const urlPath = message.media_url.split('/').pop()?.split('?')[0];
+        if (urlPath && /\.\w{2,5}$/.test(urlPath)) {
+          return urlPath;
+        }
+      }
+      return 'Documento';
+    };
+
     switch (message.type) {
       case 'image':
         return (
           <div className="mb-2">
-            <img
-              src={resolvedMediaUrl}
-              alt="Imagem"
-              className="max-w-full rounded-lg max-h-64 object-cover"
-              onError={(e) => {
-                console.error('[MessageBubble] Erro ao carregar imagem:', message.media_url);
-                e.currentTarget.style.display = 'none';
-              }}
-            />
+            <ImageLightbox src={resolvedMediaUrl} alt="Imagem da conversa">
+              <img
+                src={resolvedMediaUrl}
+                alt="Imagem"
+                className="max-w-full rounded-lg max-h-64 object-cover cursor-pointer hover:brightness-95 transition-all"
+                onError={(e) => {
+                  console.error('[MessageBubble] Erro ao carregar imagem:', message.media_url);
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            </ImageLightbox>
           </div>
         );
       case 'video':
@@ -162,15 +190,13 @@ export function MessageBubble({
         );
       case 'document':
         return (
-          <a
-            href={resolvedMediaUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 p-2 bg-background/50 rounded-lg mb-2 hover:bg-background/80 transition-colors"
-          >
-            <FileText className="w-5 h-5" />
-            <span className="text-sm underline">Documento</span>
-          </a>
+          <div className="mb-2">
+            <DocumentPreview 
+              url={resolvedMediaUrl} 
+              fileName={getFileName()}
+              isAgent={isAgent}
+            />
+          </div>
         );
       default:
         return null;
@@ -226,7 +252,7 @@ export function MessageBubble({
         >
           {renderMedia()}
           
-          {message.content && message.content !== '[Áudio]' && message.content !== '[audio]' && (
+          {message.content && !MEDIA_PLACEHOLDERS.includes(message.content) && !/\.\w{2,5}$/.test(message.content) && (
             <p className="text-sm whitespace-pre-wrap">{message.content}</p>
           )}
           
