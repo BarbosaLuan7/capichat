@@ -55,11 +55,9 @@ import type { Database } from '@/integrations/supabase/types';
 type LabelCategory = Database['public']['Enums']['label_category'];
 type LabelRow = Database['public']['Tables']['labels']['Row'];
 
-const CATEGORY_LABELS: Record<LabelCategory, string> = {
-  origem: 'Origem/Campanha',
+const CATEGORY_LABELS: Partial<Record<LabelCategory, string>> = {
   beneficio: 'Tipo de Benefício',
   condicao_saude: 'Condição de Saúde',
-  prioridade: 'Prioridade',
   status: 'Status/Workflow',
   interesse: 'Interesse',
   desqualificacao: 'Desqualificação',
@@ -67,11 +65,9 @@ const CATEGORY_LABELS: Record<LabelCategory, string> = {
   perda: 'Motivo de Perda',
 };
 
-const CATEGORY_COLORS: Record<LabelCategory, string> = {
-  origem: 'bg-blue-500/10 text-blue-600',
+const CATEGORY_COLORS: Partial<Record<LabelCategory, string>> = {
   beneficio: 'bg-green-500/10 text-green-600',
   condicao_saude: 'bg-red-500/10 text-red-600',
-  prioridade: 'bg-orange-500/10 text-orange-600',
   status: 'bg-purple-500/10 text-purple-600',
   interesse: 'bg-cyan-500/10 text-cyan-600',
   desqualificacao: 'bg-gray-500/10 text-gray-600',
