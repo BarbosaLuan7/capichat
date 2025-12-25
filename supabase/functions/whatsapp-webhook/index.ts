@@ -250,15 +250,38 @@ async function uploadMediaToStorage(
   supabase: any,
   mediaUrl: string,
   type: string,
-  leadId: string
+  leadId: string,
+  wahaConfig?: { baseUrl: string; apiKey: string; sessionName: string } | null
 ): Promise<string | null> {
   try {
-    console.log('[whatsapp-webhook] Baixando mídia de:', mediaUrl);
+    // Corrigir URL localhost para usar base_url do WAHA
+    let correctedUrl = mediaUrl;
+    const urlObj = new URL(mediaUrl);
+    const isLocalhost = urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1';
+    
+    if (isLocalhost && wahaConfig?.baseUrl) {
+      // Reescrever URL usando base_url do WAHA config
+      const wahaUrlObj = new URL(wahaConfig.baseUrl);
+      correctedUrl = `${wahaUrlObj.protocol}//${wahaUrlObj.host}${urlObj.pathname}${urlObj.search}`;
+      console.log('[whatsapp-webhook] URL localhost corrigida:', mediaUrl, '->', correctedUrl);
+    }
+    
+    console.log('[whatsapp-webhook] Baixando mídia de:', correctedUrl);
+    
+    // Preparar headers de autenticação se for URL do WAHA
+    const headers: Record<string, string> = {};
+    const isWahaUrl = wahaConfig?.baseUrl && correctedUrl.includes(new URL(wahaConfig.baseUrl).host);
+    
+    if (isWahaUrl && wahaConfig?.apiKey) {
+      headers['X-Api-Key'] = wahaConfig.apiKey;
+      headers['Authorization'] = `Bearer ${wahaConfig.apiKey}`;
+      console.log('[whatsapp-webhook] Adicionando headers de autenticação para WAHA');
+    }
     
     // Baixar o arquivo
-    const response = await fetch(mediaUrl);
+    const response = await fetch(correctedUrl, { headers });
     if (!response.ok) {
-      console.error('[whatsapp-webhook] Erro ao baixar mídia:', response.status);
+      console.error('[whatsapp-webhook] Erro ao baixar mídia:', response.status, await response.text().catch(() => ''));
       return null;
     }
     
@@ -325,13 +348,11 @@ async function uploadMediaToStorage(
       return null;
     }
     
-    // Gerar URL pública
-    const { data: { publicUrl } } = supabase.storage
-      .from('message-attachments')
-      .getPublicUrl(data.path);
-    
-    console.log('[whatsapp-webhook] Mídia salva em:', publicUrl);
-    return publicUrl;
+    // Retornar storage ref em vez de publicUrl (bucket é privado)
+    // Frontend vai gerar signed URL quando precisar exibir
+    const storageRef = `storage://message-attachments/${data.path}`;
+    console.log('[whatsapp-webhook] Mídia salva em storage:', storageRef);
+    return storageRef;
   } catch (error) {
     console.error('[whatsapp-webhook] Erro ao processar mídia:', error);
     return null;
@@ -375,26 +396,53 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
       return { content: '', type: 'text', isSystemMessage: true };
     }
     
-    let type = 'text';
+    // Extrair mediaUrl de múltiplas fontes possíveis no WAHA
+    const extractedMediaUrl = msg.mediaUrl || msg.media?.url || (msg as any)._data?.media?.url || (msg as any)._data?.deprecatedMms3Url;
     
-    if (msg.type === 'ptt' || msg.type === 'audio') {
+    // Extrair mimetype de várias fontes
+    const mimetype = msg.media?.mimetype || (msg as any)._data?.mimetype || (msg as any)._data?.media?.mimetype || '';
+    
+    // Detectar tipo primeiro pelo msg.type, depois pelo _data.type, depois pelo mimetype
+    let type = 'text';
+    const msgType = msg.type || (msg as any)._data?.type || '';
+    
+    if (msgType === 'ptt' || msgType === 'audio') {
       type = 'audio';
-    } else if (msg.type === 'image') {
+    } else if (msgType === 'image') {
       type = 'image';
-    } else if (msg.type === 'video') {
+    } else if (msgType === 'video') {
       type = 'video';
-    } else if (msg.type === 'document') {
+    } else if (msgType === 'document') {
       type = 'document';
+    } else if (msgType === 'chat' && (msg.hasMedia || extractedMediaUrl)) {
+      // msg.type = 'chat' mas tem mídia - inferir pelo mimetype
+      if (mimetype.startsWith('audio/') || mimetype.includes('ogg')) {
+        type = 'audio';
+      } else if (mimetype.startsWith('image/')) {
+        type = 'image';
+      } else if (mimetype.startsWith('video/')) {
+        type = 'video';
+      } else if (mimetype.startsWith('application/') || mimetype.includes('pdf') || mimetype.includes('document')) {
+        type = 'document';
+      } else if (extractedMediaUrl) {
+        // Fallback: tem URL de mídia mas mimetype desconhecido - tentar inferir pela URL
+        const urlLower = extractedMediaUrl.toLowerCase();
+        if (urlLower.includes('ptt') || urlLower.includes('audio') || urlLower.includes('.ogg') || urlLower.includes('.mp3') || urlLower.includes('.m4a')) {
+          type = 'audio';
+        } else if (urlLower.includes('.jpg') || urlLower.includes('.jpeg') || urlLower.includes('.png') || urlLower.includes('.webp')) {
+          type = 'image';
+        } else if (urlLower.includes('.mp4') || urlLower.includes('.mov') || urlLower.includes('.avi')) {
+          type = 'video';
+        } else {
+          type = 'document'; // Default para mídia desconhecida
+        }
+      }
     }
     
-    // Extrair mediaUrl de múltiplas fontes possíveis no WAHA
-    // O WAHA pode enviar a URL em: msg.mediaUrl, msg.media?.url, ou msg._data?.media?.url
-    const extractedMediaUrl = msg.mediaUrl || msg.media?.url || (msg as any)._data?.media?.url;
+    console.log('[whatsapp-webhook] Detecção de tipo - msg.type:', msgType, 'mimetype:', mimetype, 'hasMedia:', msg.hasMedia, 'type detectado:', type, 'mediaUrl:', extractedMediaUrl);
     
-    console.log('[whatsapp-webhook] Extração de mídia - hasMedia:', msg.hasMedia, 'type:', type, 'mediaUrl:', msg.mediaUrl, 'media?.url:', msg.media?.url, 'extractedMediaUrl:', extractedMediaUrl);
-    
-    // Só mostrar [Mídia] se realmente tiver mídia
-    const hasRealMedia = msg.hasMedia === true && (extractedMediaUrl || type !== 'text');
+    // Tem mídia se hasMedia = true ou se tem URL de mídia
+    const hasRealMedia = (msg.hasMedia === true || !!extractedMediaUrl) && type !== 'text';
     let content = msg.body || '';
     
     if (!content && hasRealMedia) {
@@ -405,7 +453,7 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
         'document': '[Documento]',
       };
       content = mediaLabels[type] || '[Mídia]';
-    } else if (!content) {
+    } else if (!content && !hasRealMedia) {
       // Mensagem vazia sem mídia - provavelmente notificação do sistema
       return { content: '', type: 'text', isSystemMessage: true };
     }
@@ -944,8 +992,11 @@ serve(async (req) => {
     // Se tiver mídia, fazer upload para o storage permanente
     let finalMediaUrl = mediaUrl;
     if (mediaUrl && type !== 'text') {
-      console.log('[whatsapp-webhook] Processando mídia para storage...');
-      const storageUrl = await uploadMediaToStorage(supabase, mediaUrl, type, lead.id);
+      console.log('[whatsapp-webhook] Processando mídia para storage...', 'type:', type, 'mediaUrl:', mediaUrl);
+      
+      // Buscar config do WAHA para corrigir URL localhost e autenticar download
+      const wahaConfig = await getWAHAConfig(supabase);
+      const storageUrl = await uploadMediaToStorage(supabase, mediaUrl, type, lead.id, wahaConfig);
       if (storageUrl) {
         finalMediaUrl = storageUrl;
         console.log('[whatsapp-webhook] Mídia salva no storage:', storageUrl);
