@@ -81,7 +81,7 @@ export function ConversationStatusTabs({ value, onChange, counts }: Conversation
                     "flex items-center justify-center gap-1 px-2 py-2 text-xs font-medium transition-all",
                     "hover:bg-background/50 active:scale-[0.98]",
                     "data-[state=active]:bg-background data-[state=active]:shadow-sm",
-                    isActive && tab.colorClass
+                    (tab.value === 'pending' && count > 0) ? tab.colorClass : (isActive && tab.colorClass)
                   )}
                 >
                   <Icon className="w-3.5 h-3.5 shrink-0" />
