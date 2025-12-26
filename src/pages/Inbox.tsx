@@ -853,23 +853,38 @@ const Inbox = () => {
                           >
                             {conversation.status === 'open' ? 'Aberta' : conversation.status === 'pending' ? 'Pendente' : 'Resolvida'}
                           </Badge>
-                          {convLead?.lead_labels?.slice(0, 1).map((ll: any) => (
+                          {convLead?.lead_labels?.length === 1 ? (
                             <Badge
-                              key={ll.labels?.id}
-                              className="text-[10px] px-1.5 py-0 h-5 border-0 max-w-[70px] truncate"
+                              className="text-[10px] px-1.5 py-0 h-5 border-0 max-w-[140px] truncate"
                               style={{
-                                backgroundColor: ll.labels?.color,
+                                backgroundColor: convLead.lead_labels[0]?.labels?.color,
                                 color: 'white',
                               }}
-                              title={ll.labels?.name}
+                              title={convLead.lead_labels[0]?.labels?.name}
                             >
-                              {ll.labels?.name}
+                              {convLead.lead_labels[0]?.labels?.name}
                             </Badge>
-                          ))}
-                          {convLead?.lead_labels?.length > 1 && (
-                            <Badge variant="secondary" className="text-[10px] px-1 py-0 h-5">
-                              +{convLead.lead_labels.length - 1}
-                            </Badge>
+                          ) : (
+                            <>
+                              {convLead?.lead_labels?.slice(0, 1).map((ll: any) => (
+                                <Badge
+                                  key={ll.labels?.id}
+                                  className="text-[10px] px-1.5 py-0 h-5 border-0 max-w-[80px] truncate"
+                                  style={{
+                                    backgroundColor: ll.labels?.color,
+                                    color: 'white',
+                                  }}
+                                  title={ll.labels?.name}
+                                >
+                                  {ll.labels?.name}
+                                </Badge>
+                              ))}
+                              {convLead?.lead_labels?.length > 1 && (
+                                <Badge variant="secondary" className="text-[10px] px-1 py-0 h-5">
+                                  +{convLead.lead_labels.length - 1}
+                                </Badge>
+                              )}
+                            </>
                           )}
                         </div>
                       </div>

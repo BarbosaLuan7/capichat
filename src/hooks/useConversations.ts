@@ -69,6 +69,19 @@ export function useConversations() {
           queryClient.invalidateQueries({ queryKey: ['conversations'] });
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'lead_labels',
+        },
+        (payload) => {
+          console.log('[Realtime] Lead labels change:', payload.eventType);
+          // Invalidate conversations to update labels in list
+          queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        }
+      )
       .subscribe((status) => {
         console.log('[Realtime] Inbox subscription status:', status);
       });
