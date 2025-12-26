@@ -62,20 +62,17 @@ function MessageBubbleComponent({
     }
   };
 
-  // Auto-transcribe audio messages from leads
+  // Only load cached transcription on mount - no auto-transcribe to avoid rate limiting
+  // Users can click "Transcrever áudio" to transcribe on-demand
   useEffect(() => {
-    if (message.type === 'audio' && resolvedMediaUrl && !isAgent && !hasAttempted) {
+    if (message.type === 'audio' && !isAgent) {
       const cached = getTranscription(message.id);
       if (cached) {
         setTranscription(cached);
-      } else {
         setHasAttempted(true);
-        transcribeAudio(message.id, resolvedMediaUrl).then((text) => {
-          if (text) setTranscription(text);
-        });
       }
     }
-  }, [message.id, message.type, resolvedMediaUrl, isAgent, hasAttempted, transcribeAudio, getTranscription]);
+  }, [message.id, message.type, isAgent, getTranscription]);
 
   const renderMedia = () => {
     if (!message.media_url) return null;
@@ -170,11 +167,12 @@ function MessageBubbleComponent({
                   </div>
                 )}
                 
-                {!isLoading(message.id) && !transcription && hasAttempted && (
+                {!isLoading(message.id) && !transcription && (
                   <button
                     className="text-[#3B82F6] hover:text-[#2563EB] text-xs underline"
                     onClick={() => {
                       if (resolvedMediaUrl) {
+                        setHasAttempted(true);
                         transcribeAudio(message.id, resolvedMediaUrl).then((text) => {
                           if (text) setTranscription(text);
                         });

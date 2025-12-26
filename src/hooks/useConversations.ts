@@ -154,8 +154,24 @@ export function useMarkConversationAsRead() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    onMutate: async (conversationId) => {
+      // Optimistic update
+      await queryClient.cancelQueries({ queryKey: ['conversations'] });
+      const previousConversations = queryClient.getQueryData(['conversations']);
+      
+      queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
+        if (!old) return old;
+        return old.map(conv => 
+          conv.id === conversationId ? { ...conv, unread_count: 0 } : conv
+        );
+      });
+      
+      return { previousConversations };
+    },
+    onError: (_, __, context) => {
+      if (context?.previousConversations) {
+        queryClient.setQueryData(['conversations'], context.previousConversations);
+      }
     },
   });
 }
@@ -175,8 +191,29 @@ export function useToggleConversationFavorite() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    onMutate: async ({ conversationId, isFavorite }) => {
+      await queryClient.cancelQueries({ queryKey: ['conversations'] });
+      const previousConversations = queryClient.getQueryData(['conversations']);
+      
+      queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
+        if (!old) return old;
+        return old.map(conv => 
+          conv.id === conversationId ? { ...conv, is_favorite: isFavorite } : conv
+        );
+      });
+      
+      // Also update the single conversation cache
+      queryClient.setQueryData(['conversations', conversationId], (old: any) => {
+        if (!old) return old;
+        return { ...old, is_favorite: isFavorite };
+      });
+      
+      return { previousConversations };
+    },
+    onError: (_, __, context) => {
+      if (context?.previousConversations) {
+        queryClient.setQueryData(['conversations'], context.previousConversations);
+      }
     },
   });
 }
@@ -239,8 +276,28 @@ export function useUpdateConversationStatus() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    onMutate: async ({ conversationId, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['conversations'] });
+      const previousConversations = queryClient.getQueryData(['conversations']);
+      
+      queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
+        if (!old) return old;
+        return old.map(conv => 
+          conv.id === conversationId ? { ...conv, status } : conv
+        );
+      });
+      
+      queryClient.setQueryData(['conversations', conversationId], (old: any) => {
+        if (!old) return old;
+        return { ...old, status };
+      });
+      
+      return { previousConversations };
+    },
+    onError: (_, __, context) => {
+      if (context?.previousConversations) {
+        queryClient.setQueryData(['conversations'], context.previousConversations);
+      }
     },
   });
 }

@@ -6,7 +6,7 @@ type Template = Database['public']['Tables']['templates']['Row'];
 type TemplateInsert = Database['public']['Tables']['templates']['Insert'];
 type TemplateUpdate = Database['public']['Tables']['templates']['Update'];
 
-export function useTemplates() {
+export function useTemplates(enabled: boolean = true) {
   return useQuery({
     queryKey: ['templates'],
     queryFn: async () => {
@@ -18,6 +18,8 @@ export function useTemplates() {
       if (error) throw error;
       return data as Template[];
     },
+    enabled,
+    staleTime: 60000, // 1 minute cache
   });
 }
 

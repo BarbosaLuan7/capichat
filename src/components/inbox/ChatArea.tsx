@@ -143,9 +143,28 @@ export function ChatArea({
     }
   }, [conversation?.id, isLoadingMessages, messages?.length]);
 
-  // Fetch AI suggestions when conversation changes
+  // Fetch AI suggestions when conversation changes (with throttling)
+  const lastSuggestionFetchRef = useRef<number>(0);
+  const suggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
   useEffect(() => {
-    if (messages && messages.length > 0 && lead) {
+    // Clear pending timeout on conversation change
+    if (suggestionTimeoutRef.current) {
+      clearTimeout(suggestionTimeoutRef.current);
+      suggestionTimeoutRef.current = null;
+    }
+    
+    if (!messages || messages.length === 0 || !lead || !conversation?.id) return;
+    
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastSuggestionFetchRef.current;
+    const THROTTLE_MS = 3000; // 3 seconds throttle
+    
+    // Throttle: wait at least 3s between fetches
+    const delay = Math.max(0, THROTTLE_MS - timeSinceLastFetch);
+    
+    suggestionTimeoutRef.current = setTimeout(() => {
+      lastSuggestionFetchRef.current = Date.now();
       aiSuggestions.fetchSuggestions(
         messages.slice(-10),
         {
@@ -155,7 +174,13 @@ export function ChatArea({
           labels: lead.labels,
         }
       );
-    }
+    }, delay);
+    
+    return () => {
+      if (suggestionTimeoutRef.current) {
+        clearTimeout(suggestionTimeoutRef.current);
+      }
+    };
   }, [conversation?.id, messages?.length]);
 
   const handleMessagesScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {

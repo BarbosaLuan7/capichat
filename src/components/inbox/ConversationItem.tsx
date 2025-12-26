@@ -1,5 +1,4 @@
 import React, { memo } from 'react';
-import { motion } from 'framer-motion';
 import { Star } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -69,9 +68,7 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
   const displayName = convLead?.whatsapp_name || (!isPhoneAsName ? convLead?.name : null) || formatPhoneNumber(convLead?.phone || '');
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+    <div
       onClick={onClick}
       className={cn(
         'px-3 py-3 cursor-pointer transition-colors hover:bg-muted/50',
@@ -168,7 +165,7 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

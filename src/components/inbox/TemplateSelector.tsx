@@ -27,7 +27,8 @@ export function TemplateSelector({
 }: TemplateSelectorProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const { data: templates, isLoading } = useTemplates();
+  // Only fetch templates when popover is open (lazy loading)
+  const { data: templates, isLoading } = useTemplates(open);
 
   const filteredTemplates = templates?.filter(
     (t) =>
