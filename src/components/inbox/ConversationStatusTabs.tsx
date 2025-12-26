@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -53,7 +54,7 @@ const tabs = [
   },
 ] as const;
 
-export function ConversationStatusTabs({ value, onChange, counts }: ConversationStatusTabsProps) {
+function ConversationStatusTabsComponent({ value, onChange, counts }: ConversationStatusTabsProps) {
   const getCount = (tabValue: string) => {
     switch (tabValue) {
       case 'all': return counts.all;
@@ -98,3 +99,14 @@ export function ConversationStatusTabs({ value, onChange, counts }: Conversation
     </Tabs>
   );
 }
+
+// Memoize to prevent re-renders when parent updates
+export const ConversationStatusTabs = memo(ConversationStatusTabsComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.value === nextProps.value &&
+    prevProps.counts.all === nextProps.counts.all &&
+    prevProps.counts.open === nextProps.counts.open &&
+    prevProps.counts.pending === nextProps.counts.pending &&
+    prevProps.counts.resolved === nextProps.counts.resolved
+  );
+});

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -36,7 +36,7 @@ interface MessageBubbleProps {
   onToggleStar?: (messageId: string, isStarred: boolean) => void;
 }
 
-export function MessageBubble({
+function MessageBubbleComponent({
   message,
   isAgent,
   showAvatar,
@@ -304,3 +304,14 @@ export function MessageBubble({
     </motion.div>
   );
 }
+
+// Memoize to prevent unnecessary re-renders
+export const MessageBubble = memo(MessageBubbleComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.message.id === nextProps.message.id &&
+    prevProps.message.status === nextProps.message.status &&
+    prevProps.message.is_starred === nextProps.message.is_starred &&
+    prevProps.isAgent === nextProps.isAgent &&
+    prevProps.showAvatar === nextProps.showAvatar
+  );
+});
