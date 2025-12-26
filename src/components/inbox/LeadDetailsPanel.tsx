@@ -162,23 +162,8 @@ export function LeadDetailsPanel({
                   </>
                 );
               })()}
-              <div className="flex items-center gap-2 mt-1">
-                <Badge
-                  className={cn(
-                    'text-xs',
-                    lead.temperature === 'hot' &&
-                      'bg-destructive/10 text-destructive',
-                    lead.temperature === 'warm' && 'bg-warning/10 text-warning',
-                    lead.temperature === 'cold' && 'bg-primary/10 text-primary'
-                  )}
-                >
-                  {lead.temperature === 'hot'
-                    ? '🔥 Quente'
-                    : lead.temperature === 'warm'
-                    ? '🌡️ Morno'
-                    : '❄️ Frio'}
-                </Badge>
-                {lead.funnel_stages && (
+              {lead.funnel_stages && (
+                <div className="flex items-center gap-2 mt-1">
                   <Badge
                     variant="outline"
                     className="text-xs"
@@ -189,8 +174,8 @@ export function LeadDetailsPanel({
                   >
                     {lead.funnel_stages.name}
                   </Badge>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
 
