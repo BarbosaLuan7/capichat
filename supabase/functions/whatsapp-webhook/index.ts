@@ -515,6 +515,55 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
   }
 }
 
+// Helper function to verify webhook signature using HMAC-SHA256
+async function verifyWebhookSignature(
+  rawBody: string, 
+  signature: string | null, 
+  secret: string
+): Promise<boolean> {
+  if (!signature || !secret) {
+    return false;
+  }
+  
+  try {
+    // Clean the signature - remove any prefix like 'sha256='
+    const cleanSignature = signature.replace(/^sha256=/, '').toLowerCase();
+    
+    // Create HMAC-SHA256 hash
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(secret);
+    const messageData = encoder.encode(rawBody);
+    
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      keyData,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    
+    const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+    const expectedSignature = Array.from(new Uint8Array(signatureBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+    
+    // Constant-time comparison to prevent timing attacks
+    if (cleanSignature.length !== expectedSignature.length) {
+      return false;
+    }
+    
+    let mismatch = 0;
+    for (let i = 0; i < cleanSignature.length; i++) {
+      mismatch |= cleanSignature.charCodeAt(i) ^ expectedSignature.charCodeAt(i);
+    }
+    
+    return mismatch === 0;
+  } catch (error) {
+    console.error('[whatsapp-webhook] Error verifying signature:', error);
+    return false;
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -533,7 +582,41 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const body = await req.json();
+    // Read raw body for signature verification
+    const rawBody = await req.text();
+    
+    // Get signature from various possible headers (different providers use different header names)
+    const signature = req.headers.get('x-webhook-signature') || 
+                     req.headers.get('x-hub-signature-256') || 
+                     req.headers.get('x-signature') ||
+                     req.headers.get('x-waha-signature');
+    
+    // Get active WhatsApp config to retrieve webhook_secret
+    const { data: activeConfig } = await supabase
+      .from('whatsapp_config')
+      .select('webhook_secret, provider')
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle();
+    
+    // If we have a webhook_secret configured, enforce signature verification
+    if (activeConfig?.webhook_secret) {
+      const isValidSignature = await verifyWebhookSignature(rawBody, signature, activeConfig.webhook_secret);
+      
+      if (!isValidSignature) {
+        console.warn('[whatsapp-webhook] Invalid or missing webhook signature');
+        return new Response(
+          JSON.stringify({ error: 'Invalid webhook signature' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      console.log('[whatsapp-webhook] Webhook signature verified successfully');
+    } else {
+      // Log warning but allow request if no secret is configured (for backwards compatibility)
+      console.warn('[whatsapp-webhook] No webhook_secret configured - signature verification skipped. Configure webhook_secret for better security.');
+    }
+
+    const body = JSON.parse(rawBody);
     console.log('[whatsapp-webhook] Recebido:', JSON.stringify(body).substring(0, 1000));
 
     // Detectar provider pelo formato do payload
