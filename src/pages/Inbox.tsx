@@ -121,6 +121,7 @@ const Inbox = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
   const [sortOrder, setSortOrder] = useState<'recent' | 'oldest'>('recent');
+  const [labelSearchTerm, setLabelSearchTerm] = useState('');
   const LEAD_PANEL_STORAGE_KEY = 'inbox-show-lead-panel-v2';
   const [showLeadPanel, setShowLeadPanel] = useState(() => {
     const saved = localStorage.getItem(LEAD_PANEL_STORAGE_KEY);
@@ -323,6 +324,25 @@ const Inbox = () => {
     acc[category].push(label);
     return acc;
   }, {} as Record<string, typeof allLabels>) || {};
+
+  // Filter labels by search term
+  const filteredLabelsByCategory = useMemo(() => {
+    if (!labelSearchTerm.trim()) return labelsByCategory;
+    
+    const term = labelSearchTerm.toLowerCase();
+    const filtered: Record<string, typeof allLabels> = {};
+    
+    Object.entries(labelsByCategory).forEach(([category, labels]) => {
+      const matchingLabels = labels?.filter(
+        (label) => label.name.toLowerCase().includes(term)
+      );
+      if (matchingLabels?.length) {
+        filtered[category] = matchingLabels;
+      }
+    });
+    
+    return filtered;
+  }, [labelsByCategory, labelSearchTerm]);
 
   const categoryLabels: Record<string, string> = {
     origem: 'Origem',
@@ -635,8 +655,8 @@ const Inbox = () => {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-72 p-0 max-h-96 flex flex-col" align="start">
-                <div className="p-3 border-b border-border bg-popover sticky top-0 z-10 shrink-0">
+              <PopoverContent className="w-72 p-0" align="start">
+                <div className="p-3 border-b border-border bg-popover shrink-0">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Filtrar por etiquetas</span>
                     {selectedLabelIds.length > 0 && (
@@ -646,9 +666,20 @@ const Inbox = () => {
                     )}
                   </div>
                 </div>
-                <ScrollArea className="flex-1">
+                <div className="p-2 border-b border-border">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar etiqueta..."
+                      value={labelSearchTerm}
+                      onChange={(e) => setLabelSearchTerm(e.target.value)}
+                      className="pl-8 h-8 text-sm"
+                    />
+                  </div>
+                </div>
+                <ScrollArea className="h-[280px]">
                   <div className="p-2 space-y-3">
-                    {Object.entries(labelsByCategory).map(([category, labels]) => (
+                    {Object.entries(filteredLabelsByCategory).map(([category, labels]) => (
                       <div key={category}>
                         <p className="text-xs font-medium text-muted-foreground mb-1.5 px-1">
                           {categoryLabels[category] || category}
@@ -673,6 +704,11 @@ const Inbox = () => {
                         </div>
                       </div>
                     ))}
+                    {Object.keys(filteredLabelsByCategory).length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Nenhuma etiqueta encontrada
+                      </p>
+                    )}
                   </div>
                 </ScrollArea>
               </PopoverContent>
