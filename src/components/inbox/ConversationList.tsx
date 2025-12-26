@@ -33,6 +33,29 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { useLabels } from '@/hooks/useLabels';
 import type { Database } from '@/integrations/supabase/types';
 
+// Wrapper to prevent inline onClick from breaking React.memo
+const MemoizedConversationItem = React.memo(function MemoizedConversationItem({
+  conversation,
+  isSelected,
+  onSelect,
+}: {
+  conversation: ConversationData;
+  isSelected: boolean;
+  onSelect: (id: string) => void;
+}) {
+  const handleClick = useCallback(() => {
+    onSelect(conversation.id);
+  }, [onSelect, conversation.id]);
+
+  return (
+    <ConversationItem
+      conversation={conversation}
+      isSelected={isSelected}
+      onClick={handleClick}
+    />
+  );
+});
+
 type ConversationStatus = Database['public']['Enums']['conversation_status'];
 type StatusFilter = ConversationStatus | 'all';
 type InboxFilter = 'novos' | 'meus' | 'outros';
@@ -405,11 +428,11 @@ export function ConversationList({
         ) : (
           <div className="divide-y divide-border">
             {filteredConversations.map((conversation) => (
-              <ConversationItem
+              <MemoizedConversationItem
                 key={conversation.id}
                 conversation={conversation}
                 isSelected={selectedConversationId === conversation.id}
-                onClick={() => onSelectConversation(conversation.id)}
+                onSelect={onSelectConversation}
               />
             ))}
           </div>

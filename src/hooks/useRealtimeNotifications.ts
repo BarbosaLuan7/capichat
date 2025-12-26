@@ -13,24 +13,7 @@ export function useRealtimeNotifications(userId?: string) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const handleMessageInsert = useCallback((payload: RealtimePayload) => {
-    const message = payload.new as { 
-      sender_type: string; 
-      content: string; 
-      conversation_id: string;
-    };
-    
-    // Only notify for incoming messages from leads
-    if (message.sender_type === 'lead') {
-      toast({
-        title: 'Nova mensagem recebida',
-        description: message.content?.substring(0, 100) + (message.content?.length > 100 ? '...' : ''),
-      });
-      
-      // Invalidate conversations query to update unread count
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
-    }
-  }, [toast, queryClient]);
+  // NOTE: handleMessageInsert removed - now handled by useInboxRealtime
 
   const handleLeadChange = useCallback((payload: RealtimePayload) => {
     const lead = payload.new as { name: string; stage_id: string };
@@ -51,9 +34,7 @@ export function useRealtimeNotifications(userId?: string) {
     queryClient.invalidateQueries({ queryKey: ['leads'] });
   }, [toast, queryClient]);
 
-  const handleConversationChange = useCallback((payload: RealtimePayload) => {
-    queryClient.invalidateQueries({ queryKey: ['conversations'] });
-  }, [queryClient]);
+  // NOTE: handleConversationChange removed - now handled by useInboxRealtime
 
   const handleNotificationInsert = useCallback((payload: RealtimePayload) => {
     const notification = payload.new as { 
@@ -91,27 +72,14 @@ export function useRealtimeNotifications(userId?: string) {
   useEffect(() => {
     if (!userId) return;
 
-    console.log('[Realtime] Setting up subscriptions for user:', userId);
+    console.log('[Realtime] Setting up global subscriptions for user:', userId);
 
-    // Subscribe to messages
-    const messagesChannel = supabase
-      .channel('realtime-messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-        },
-        (payload) => handleMessageInsert(payload as unknown as RealtimePayload)
-      )
-      .subscribe((status) => {
-        console.log('[Realtime] Messages channel status:', status);
-      });
+    // NOTE: messages and conversations are handled by useInboxRealtime in the Inbox page
+    // This hook only handles leads, notifications, and tasks (used across the app)
 
-    // Subscribe to leads
+    // Subscribe to leads (used in Leads page, Funnel, etc.)
     const leadsChannel = supabase
-      .channel('realtime-leads')
+      .channel('realtime-leads-global')
       .on(
         'postgres_changes',
         {
@@ -125,25 +93,9 @@ export function useRealtimeNotifications(userId?: string) {
         console.log('[Realtime] Leads channel status:', status);
       });
 
-    // Subscribe to conversations
-    const conversationsChannel = supabase
-      .channel('realtime-conversations')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'conversations',
-        },
-        (payload) => handleConversationChange(payload as unknown as RealtimePayload)
-      )
-      .subscribe((status) => {
-        console.log('[Realtime] Conversations channel status:', status);
-      });
-
     // Subscribe to notifications
     const notificationsChannel = supabase
-      .channel('realtime-notifications')
+      .channel('realtime-notifications-global')
       .on(
         'postgres_changes',
         {
@@ -159,7 +111,7 @@ export function useRealtimeNotifications(userId?: string) {
 
     // Subscribe to tasks
     const tasksChannel = supabase
-      .channel('realtime-tasks')
+      .channel('realtime-tasks-global')
       .on(
         'postgres_changes',
         {
@@ -174,18 +126,14 @@ export function useRealtimeNotifications(userId?: string) {
       });
 
     return () => {
-      console.log('[Realtime] Cleaning up subscriptions');
-      supabase.removeChannel(messagesChannel);
+      console.log('[Realtime] Cleaning up global subscriptions');
       supabase.removeChannel(leadsChannel);
-      supabase.removeChannel(conversationsChannel);
       supabase.removeChannel(notificationsChannel);
       supabase.removeChannel(tasksChannel);
     };
   }, [
     userId,
-    handleMessageInsert,
     handleLeadChange,
-    handleConversationChange,
     handleNotificationInsert,
     handleTaskChange,
   ]);
