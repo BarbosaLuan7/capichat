@@ -18,6 +18,8 @@ import {
   ArrowLeft,
   Menu,
   ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -608,54 +610,39 @@ const Inbox = () => {
           <Button
             size="sm"
             onClick={() => setShowNewConversationModal(true)}
-            className="h-8 gap-1.5"
+            className="h-7 gap-1 text-xs px-2"
           >
-            <Plus className="w-4 h-4" />
-            Nova conversa
+            <Plus className="w-3.5 h-3.5" />
+            Nova
           </Button>
         </div>
         
-        {/* Search and Filter */}
-        <div className="p-4 space-y-3 border-b border-border bg-card sticky top-0 z-30 shadow-sm isolate">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar conversas..." 
-              className="pl-9"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+        {/* Search, Filters and Tabs - Compact Layout */}
+        <div className="p-2 space-y-2 border-b border-border bg-card sticky top-0 z-30 shadow-sm isolate">
+          {/* Search + Labels + Sort in one row */}
+          <div className="flex items-center gap-1.5">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input 
+                placeholder="Buscar..." 
+                className="pl-8 h-8 text-sm"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
 
-          <ConversationStatusTabs
-            value={statusFilter}
-            onChange={setStatusFilter}
-            counts={statusCounts}
-          />
-
-          <Tabs value={filter} onValueChange={(v) => setFilter(v as InboxFilter)}>
-            <TabsList className="w-full bg-muted relative z-10">
-              <TabsTrigger value="novos" className="flex-1 text-xs">Novos</TabsTrigger>
-              <TabsTrigger value="meus" className="flex-1 text-xs">Meus</TabsTrigger>
-              <TabsTrigger value="outros" className="flex-1 text-xs">Outros</TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          {/* Label Filter & Sort */}
-          <div className="flex items-center gap-2">
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1.5">
+                <Button variant="outline" size="sm" className="h-8 gap-1 px-2 shrink-0">
                   <Tag className="w-3.5 h-3.5" />
-                  Etiquetas
                   {selectedLabelIds.length > 0 && (
-                    <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">
+                    <Badge variant="secondary" className="px-1 py-0 text-[10px] h-4 min-w-4 flex items-center justify-center">
                       {selectedLabelIds.length}
                     </Badge>
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-72 p-0" align="start">
+              <PopoverContent className="w-72 p-0" align="end">
                 <div className="p-3 border-b border-border bg-popover shrink-0">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Filtrar por etiquetas</span>
@@ -717,55 +704,75 @@ const Inbox = () => {
             {/* Sort Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1.5">
-                  <ArrowUpDown className="w-3.5 h-3.5" />
+                <Button variant="outline" size="sm" className="h-8 px-2 shrink-0">
+                  {sortOrder === 'recent' ? (
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  ) : (
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="bg-popover">
+              <DropdownMenuContent align="end" className="bg-popover">
                 <DropdownMenuItem 
                   onClick={() => setSortOrder('recent')}
                   className={sortOrder === 'recent' ? 'bg-accent' : ''}
                 >
-                  Últimas interações primeiro
+                  Recentes primeiro
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => setSortOrder('oldest')}
                   className={sortOrder === 'oldest' ? 'bg-accent' : ''}
                 >
-                  Mais antigos primeiro
+                  Antigos primeiro
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-
-            {/* Selected Labels Pills */}
-            {selectedLabelIds.length > 0 && (
-              <div className="flex items-center gap-1 flex-wrap flex-1">
-                {selectedLabelIds.slice(0, 2).map((labelId) => {
-                  const label = allLabels?.find((l) => l.id === labelId);
-                  if (!label) return null;
-                  return (
-                    <Badge
-                      key={labelId}
-                      className="text-xs px-1.5 py-0 gap-1 cursor-pointer border-0"
-                      style={{
-                        backgroundColor: label.color,
-                        color: 'white',
-                      }}
-                      onClick={() => toggleLabelFilter(labelId)}
-                    >
-                      {label.name}
-                      <X className="w-2.5 h-2.5" />
-                    </Badge>
-                  );
-                })}
-                {selectedLabelIds.length > 2 && (
-                  <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                    +{selectedLabelIds.length - 2}
-                  </Badge>
-                )}
-              </div>
-            )}
           </div>
+
+          {/* Status Tabs */}
+          <ConversationStatusTabs
+            value={statusFilter}
+            onChange={setStatusFilter}
+            counts={statusCounts}
+          />
+
+          {/* Assignment Filter Tabs */}
+          <Tabs value={filter} onValueChange={(v) => setFilter(v as InboxFilter)}>
+            <TabsList className="w-full bg-muted relative z-10 h-8">
+              <TabsTrigger value="novos" className="flex-1 text-xs h-7">Novos</TabsTrigger>
+              <TabsTrigger value="meus" className="flex-1 text-xs h-7">Meus</TabsTrigger>
+              <TabsTrigger value="outros" className="flex-1 text-xs h-7">Outros</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {/* Selected Labels Pills - only show if any selected */}
+          {selectedLabelIds.length > 0 && (
+            <div className="flex items-center gap-1 flex-wrap">
+              {selectedLabelIds.slice(0, 3).map((labelId) => {
+                const label = allLabels?.find((l) => l.id === labelId);
+                if (!label) return null;
+                return (
+                  <Badge
+                    key={labelId}
+                    className="text-[10px] px-1.5 py-0 gap-0.5 cursor-pointer border-0 h-5"
+                    style={{
+                      backgroundColor: label.color,
+                      color: 'white',
+                    }}
+                    onClick={() => toggleLabelFilter(labelId)}
+                  >
+                    {label.name}
+                    <X className="w-2.5 h-2.5" />
+                  </Badge>
+                );
+              })}
+              {selectedLabelIds.length > 3 && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
+                  +{selectedLabelIds.length - 3}
+                </Badge>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Conversations */}
