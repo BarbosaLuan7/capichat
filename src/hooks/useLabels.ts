@@ -118,6 +118,7 @@ export function useAddLeadLabel() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['lead_labels', variables.leadId] });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },
   });
 }
@@ -138,6 +139,7 @@ export function useRemoveLeadLabel() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['lead_labels', variables.leadId] });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },
   });
 }
