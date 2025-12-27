@@ -104,14 +104,24 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
   // Handle message updates (status changes, starred, etc.)
   const handleMessageUpdate = useCallback((payload: any) => {
     const updatedMessage = payload.new as Message;
+    const oldMessage = payload.old as Message | undefined;
     const conversationId = updatedMessage.conversation_id;
     
-    console.log('[InboxRealtime] Message updated:', updatedMessage.id);
+    // Log status changes specifically
+    if (oldMessage && oldMessage.status !== updatedMessage.status) {
+      console.log('[InboxRealtime] Message status changed:', {
+        id: updatedMessage.id,
+        oldStatus: oldMessage.status,
+        newStatus: updatedMessage.status
+      });
+    } else {
+      console.log('[InboxRealtime] Message updated:', updatedMessage.id);
+    }
 
-    // Update message in cache
+    // Update message in cache with optimistic update
     queryClient.setQueryData(['messages', conversationId], (old: Message[] | undefined) => {
       if (!old) return old;
-      return old.map(m => m.id === updatedMessage.id ? updatedMessage : m);
+      return old.map(m => m.id === updatedMessage.id ? { ...m, ...updatedMessage } : m);
     });
   }, [queryClient]);
 
