@@ -52,9 +52,22 @@ paths:
   /api-leads:
     get:
       tags: [Leads]
-      summary: Listar leads
-      description: Retorna lista paginada de leads com filtros opcionais
+      summary: Listar leads ou buscar por ID/telefone
+      description: |
+        Retorna lista paginada de leads com filtros opcionais.
+        Use o parâmetro `id` para buscar um lead específico, ou `phone` para buscar por telefone.
       parameters:
+        - name: id
+          in: query
+          description: ID do lead (retorna apenas o lead específico)
+          schema:
+            type: string
+            format: uuid
+        - name: phone
+          in: query
+          description: Telefone do lead (busca exata)
+          schema:
+            type: string
         - name: page
           in: query
           schema:
@@ -88,20 +101,24 @@ paths:
             format: uuid
       responses:
         '200':
-          description: Lista de leads
+          description: Lead(s) encontrado(s)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Lead'
-                  pagination:
-                    $ref: '#/components/schemas/Pagination'
+                oneOf:
+                  - $ref: '#/components/schemas/Lead'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Lead'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
     post:
       tags: [Leads]
@@ -130,34 +147,15 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api-leads?id={id}:
-    get:
-      tags: [Leads]
-      summary: Buscar lead por ID
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Lead encontrado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Lead'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
     put:
       tags: [Leads]
       summary: Atualizar lead
+      description: Atualiza um lead existente. O parâmetro `id` é obrigatório.
       parameters:
         - name: id
           in: query
           required: true
+          description: ID do lead a ser atualizado
           schema:
             type: string
             format: uuid
@@ -176,14 +174,18 @@ paths:
                 $ref: '#/components/schemas/Lead'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
     delete:
       tags: [Leads]
       summary: Remover lead
+      description: Remove um lead. O parâmetro `id` é obrigatório.
       parameters:
         - name: id
           in: query
           required: true
+          description: ID do lead a ser removido
           schema:
             type: string
             format: uuid
@@ -197,6 +199,8 @@ paths:
                 properties:
                   success:
                     type: boolean
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /api-messages-send:
     post:
@@ -258,8 +262,17 @@ paths:
   /api-conversations:
     get:
       tags: [Conversas]
-      summary: Listar conversas
+      summary: Listar conversas ou buscar por ID
+      description: |
+        Retorna lista paginada de conversas com filtros opcionais.
+        Use o parâmetro `id` para buscar uma conversa específica com suas mensagens.
       parameters:
+        - name: id
+          in: query
+          description: ID da conversa (retorna conversa com mensagens)
+          schema:
+            type: string
+            format: uuid
         - name: page
           in: query
           schema:
@@ -287,18 +300,31 @@ paths:
             format: uuid
       responses:
         '200':
-          description: Lista de conversas
+          description: Conversa(s) encontrada(s)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Conversation'
-                  pagination:
-                    $ref: '#/components/schemas/Pagination'
+                oneOf:
+                  - allOf:
+                      - $ref: '#/components/schemas/Conversation'
+                      - type: object
+                        properties:
+                          messages:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Message'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Conversation'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
     post:
       tags: [Conversas]
@@ -328,40 +354,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Conversation'
-
-  /api-conversations?id={id}:
-    get:
-      tags: [Conversas]
-      summary: Buscar conversa com mensagens
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Conversa com mensagens
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/Conversation'
-                  - type: object
-                    properties:
-                      messages:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Message'
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
     put:
       tags: [Conversas]
       summary: Atualizar conversa
+      description: Atualiza uma conversa existente. O parâmetro `id` é obrigatório.
       parameters:
         - name: id
           in: query
           required: true
+          description: ID da conversa a ser atualizada
           schema:
             type: string
             format: uuid
@@ -387,95 +391,162 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Conversation'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
     delete:
       tags: [Conversas]
       summary: Remover conversa
+      description: Remove uma conversa. O parâmetro `id` é obrigatório.
       parameters:
         - name: id
           in: query
           required: true
+          description: ID da conversa a ser removida
           schema:
             type: string
             format: uuid
       responses:
         '200':
           description: Conversa removida
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /api-tags:
     get:
       tags: [Tags]
-      summary: Listar etiquetas
-      parameters:
-        - name: category
-          in: query
-          schema:
-            type: string
-            enum: [origem, interesse, prioridade, status, beneficio, condicao_saude, desqualificacao, situacao, perda]
-      responses:
-        '200':
-          description: Lista de etiquetas
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Tag'
-
-    post:
-      tags: [Tags]
-      summary: Criar etiqueta
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [name]
-              properties:
-                name:
-                  type: string
-                color:
-                  type: string
-                  default: "#6B7280"
-                category:
-                  type: string
-                  enum: [origem, interesse, prioridade, status, beneficio, condicao_saude, desqualificacao, situacao, perda]
-                  default: status
-      responses:
-        '201':
-          description: Etiqueta criada
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Tag'
-
-  /api-tags?id={id}:
-    get:
-      tags: [Tags]
-      summary: Buscar etiqueta por ID
+      summary: Listar etiquetas ou buscar por ID
+      description: |
+        Retorna lista de etiquetas, opcionalmente filtradas por categoria.
+        Use o parâmetro `id` para buscar uma etiqueta específica.
+        Use `action=lead` com `lead_id` para listar etiquetas de um lead específico.
       parameters:
         - name: id
           in: query
-          required: true
+          description: ID da etiqueta (retorna apenas a etiqueta específica)
+          schema:
+            type: string
+            format: uuid
+        - name: category
+          in: query
+          description: Filtrar por categoria
+          schema:
+            type: string
+            enum: [origem, interesse, prioridade, status, beneficio, condicao_saude, desqualificacao, situacao, perda]
+        - name: action
+          in: query
+          description: Use 'lead' para operações com etiquetas do lead
+          schema:
+            type: string
+            enum: [lead]
+        - name: lead_id
+          in: query
+          description: ID do lead (requerido quando action=lead)
           schema:
             type: string
             format: uuid
       responses:
         '200':
-          description: Etiqueta encontrada
+          description: Etiqueta(s) encontrada(s)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Tag'
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/Tag'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [Tags]
+      summary: Criar etiqueta ou adicionar etiquetas ao lead
+      description: |
+        Cria uma nova etiqueta.
+        Use `action=lead` com `lead_id` para adicionar etiquetas a um lead.
+      parameters:
+        - name: action
+          in: query
+          description: Use 'lead' para adicionar etiquetas ao lead
+          schema:
+            type: string
+            enum: [lead]
+        - name: lead_id
+          in: query
+          description: ID do lead (requerido quando action=lead)
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  description: Criar nova etiqueta
+                  required: [name]
+                  properties:
+                    name:
+                      type: string
+                    color:
+                      type: string
+                      default: "#6B7280"
+                    category:
+                      type: string
+                      enum: [origem, interesse, prioridade, status, beneficio, condicao_saude, desqualificacao, situacao, perda]
+                      default: status
+                - type: object
+                  description: Adicionar etiquetas ao lead
+                  properties:
+                    tag_id:
+                      type: string
+                      format: uuid
+                    tag_ids:
+                      type: array
+                      items:
+                        type: string
+                        format: uuid
+            examples:
+              criar_etiqueta:
+                summary: Criar nova etiqueta
+                value:
+                  name: "Cliente VIP"
+                  color: "#10B981"
+                  category: "prioridade"
+              adicionar_ao_lead:
+                summary: Adicionar etiquetas ao lead
+                value:
+                  tag_ids: ["uuid-1", "uuid-2"]
+      responses:
+        '201':
+          description: Etiqueta criada ou adicionada
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Tag'
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
     put:
       tags: [Tags]
       summary: Atualizar etiqueta
+      description: Atualiza uma etiqueta existente. O parâmetro `id` é obrigatório.
       parameters:
         - name: id
           in: query
           required: true
+          description: ID da etiqueta a ser atualizada
           schema:
             type: string
             format: uuid
@@ -492,120 +563,76 @@ paths:
                   type: string
                 category:
                   type: string
+                  enum: [origem, interesse, prioridade, status, beneficio, condicao_saude, desqualificacao, situacao, perda]
       responses:
         '200':
           description: Etiqueta atualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
     delete:
       tags: [Tags]
-      summary: Remover etiqueta
+      summary: Remover etiqueta ou remover etiqueta do lead
+      description: |
+        Remove uma etiqueta. O parâmetro `id` é obrigatório.
+        Use `action=lead` com `lead_id` e `tag_id` para remover etiqueta de um lead.
       parameters:
         - name: id
           in: query
-          required: true
+          description: ID da etiqueta a ser removida
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          description: Use 'lead' para remover etiqueta do lead
+          schema:
+            type: string
+            enum: [lead]
+        - name: lead_id
+          in: query
+          description: ID do lead (requerido quando action=lead)
+          schema:
+            type: string
+            format: uuid
+        - name: tag_id
+          in: query
+          description: ID da etiqueta a remover do lead (requerido quando action=lead)
           schema:
             type: string
             format: uuid
       responses:
         '200':
           description: Etiqueta removida
-
-  /api-tags?action=lead&lead_id={lead_id}:
-    get:
-      tags: [Tags]
-      summary: Listar etiquetas do lead
-      parameters:
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [lead]
-        - name: lead_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Etiquetas do lead
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Tag'
-
-    post:
-      tags: [Tags]
-      summary: Adicionar etiquetas ao lead
-      parameters:
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [lead]
-        - name: lead_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                tag_id:
-                  type: string
-                  format: uuid
-                tag_ids:
-                  type: array
-                  items:
-                    type: string
-                    format: uuid
-            example:
-              tag_ids: ["uuid-1", "uuid-2"]
-      responses:
-        '201':
-          description: Etiquetas adicionadas
-
-  /api-tags?action=lead&lead_id={lead_id}&tag_id={tag_id}:
-    delete:
-      tags: [Tags]
-      summary: Remover etiqueta do lead
-      parameters:
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [lead]
-        - name: lead_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: tag_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Etiqueta removida do lead
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /api-templates:
     get:
       tags: [Templates]
-      summary: Listar templates
+      summary: Listar templates ou buscar por ID/atalho
+      description: |
+        Retorna lista de templates.
+        Use o parâmetro `id` para buscar um template específico.
+        Use o parâmetro `shortcut` para buscar por atalho.
       parameters:
+        - name: id
+          in: query
+          description: ID do template
+          schema:
+            type: string
+            format: uuid
         - name: shortcut
           in: query
           description: Buscar por atalho
@@ -613,13 +640,19 @@ paths:
             type: string
       responses:
         '200':
-          description: Lista de templates
+          description: Template(s) encontrado(s)
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Template'
+                oneOf:
+                  - $ref: '#/components/schemas/Template'
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/Template'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
     post:
       tags: [Templates]
@@ -651,33 +684,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Template'
-
-  /api-templates?id={id}:
-    get:
-      tags: [Templates]
-      summary: Buscar template por ID
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Template encontrado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Template'
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
     put:
       tags: [Templates]
       summary: Atualizar template
+      description: Atualiza um template existente. O parâmetro `id` é obrigatório.
       parameters:
         - name: id
           in: query
           required: true
+          description: ID do template a ser atualizado
           schema:
             type: string
             format: uuid
@@ -697,20 +715,37 @@ paths:
       responses:
         '200':
           description: Template atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
     delete:
       tags: [Templates]
       summary: Remover template
+      description: Remove um template. O parâmetro `id` é obrigatório.
       parameters:
         - name: id
           in: query
           required: true
+          description: ID do template a ser removido
           schema:
             type: string
             format: uuid
       responses:
         '200':
           description: Template removido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '404':
+          $ref: '#/components/responses/NotFound'
 
 components:
   securitySchemes:
