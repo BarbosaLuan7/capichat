@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { Star } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { cn, getContrastTextColor } from '@/lib/utils';
 import { formatPhoneNumber } from '@/lib/masks';
 import { format, isSameDay, isYesterday, differenceInMinutes, differenceInHours, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -149,10 +149,12 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
             </Badge>
             {convLead?.lead_labels?.length === 1 ? (
               <Badge
-                className="text-[10px] px-1.5 py-0 h-5 border-0 max-w-[140px] truncate"
+                className={cn(
+                  "text-[10px] px-1.5 py-0 h-5 border-0 max-w-[140px] truncate",
+                  getContrastTextColor(convLead.lead_labels[0]?.labels?.color || '')
+                )}
                 style={{
                   backgroundColor: convLead.lead_labels[0]?.labels?.color,
-                  color: 'white',
                 }}
                 title={convLead.lead_labels[0]?.labels?.name}
               >
@@ -163,10 +165,12 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
                 {convLead?.lead_labels?.slice(0, 1).map((ll) => (
                   <Badge
                     key={ll.labels?.id}
-                    className="text-[10px] px-1.5 py-0 h-5 border-0 max-w-[80px] truncate"
+                    className={cn(
+                      "text-[10px] px-1.5 py-0 h-5 border-0 max-w-[80px] truncate",
+                      getContrastTextColor(ll.labels?.color || '')
+                    )}
                     style={{
                       backgroundColor: ll.labels?.color,
-                      color: 'white',
                     }}
                     title={ll.labels?.name}
                   >

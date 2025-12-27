@@ -21,6 +21,7 @@ import { useLeadLabels } from '@/hooks/useLabels';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useInboxRealtime } from '@/hooks/useInboxRealtime';
+import { useNotificationSound } from '@/hooks/useNotificationSound';
 import { useAppStore } from '@/store/appStore';
 
 // Components
@@ -52,7 +53,7 @@ const Inbox = () => {
   const userClickedConversationRef = useRef(false);
 
   // Data hooks
-  const { data: conversations, isLoading: loadingConversations } = useConversations();
+  const { data: conversations, isLoading: loadingConversations, isError: conversationsError, refetch: refetchConversations } = useConversations();
   const { data: selectedConversation } = useConversation(selectedConversationId || undefined);
   const { data: messages, isLoading: loadingMessages } = useMessages(selectedConversationId || undefined);
   const { data: leadData, refetch: refetchLead, isLoading: loadingLead } = useLead(selectedConversation?.lead_id || undefined);
@@ -67,11 +68,15 @@ const Inbox = () => {
   const updateLead = useUpdateLead();
   const updateConversationStatus = useUpdateConversationStatus();
 
+  // Notification sound hook
+  const { notify } = useNotificationSound();
+
   // Unified realtime subscription
   useInboxRealtime({
     selectedConversationId,
-    onNewIncomingMessage: (message) => {
-      // Could add notification sound/visual here if needed
+    onNewIncomingMessage: (message, leadName) => {
+      // Play sound and show toast for messages from non-selected conversations
+      notify(message.content, leadName);
       console.log('[Inbox] New incoming message:', message.id);
     },
   });
@@ -201,6 +206,8 @@ const Inbox = () => {
             onSelectConversation={handleSelectConversation}
             onNewConversation={() => setShowNewConversationModal(true)}
             isLoading={loadingConversations}
+            isError={conversationsError}
+            onRetry={() => refetchConversations()}
             userId={user?.id}
           />
         </div>
