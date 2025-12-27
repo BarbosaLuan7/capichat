@@ -114,17 +114,33 @@ export function ConversationList({
   // Fetch labels
   const { data: allLabels } = useLabels();
 
-  // Calculate status counts
+  // Filter conversations by assignment first (for accurate status counts)
+  const assignmentFilteredConversations = useMemo(() => {
+    return conversations?.filter((conv) => {
+      if (filter === 'novos') {
+        const isRecent = new Date(conv.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000;
+        const hasUnread = (conv.unread_count || 0) > 0;
+        return !conv.assigned_to || isRecent || hasUnread;
+      } else if (filter === 'meus') {
+        return conv.assigned_to === userId;
+      } else if (filter === 'outros') {
+        return !!conv.assigned_to && conv.assigned_to !== userId;
+      }
+      return true;
+    }) || [];
+  }, [conversations, filter, userId]);
+
+  // Calculate status counts based on assignment-filtered conversations
   const statusCounts = useMemo(() => {
     const counts = { all: 0, open: 0, pending: 0, resolved: 0 };
-    conversations?.forEach((conv) => {
+    assignmentFilteredConversations.forEach((conv) => {
       counts.all++;
       if (conv.status === 'open') counts.open++;
       else if (conv.status === 'pending') counts.pending++;
       else if (conv.status === 'resolved') counts.resolved++;
     });
     return counts;
-  }, [conversations]);
+  }, [assignmentFilteredConversations]);
 
   // Group labels by category (memoized)
   const labelsByCategory = useMemo(() => {
@@ -155,24 +171,12 @@ export function ConversationList({
     return filtered;
   }, [labelsByCategory, labelSearchTerm]);
 
-  // Filter and sort conversations
+  // Filter and sort conversations (uses pre-filtered by assignment)
   const filteredConversations = useMemo(() => {
-    let filtered = conversations?.filter((conv) => {
+    let filtered = assignmentFilteredConversations.filter((conv) => {
       // Filter by status tab
       if (statusFilter !== 'all' && conv.status !== statusFilter) {
         return false;
-      }
-
-      // Filter by assignment tab
-      let matchesFilter = true;
-      if (filter === 'novos') {
-        const isRecent = new Date(conv.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000;
-        const hasUnread = (conv.unread_count || 0) > 0;
-        matchesFilter = !conv.assigned_to || isRecent || hasUnread;
-      } else if (filter === 'meus') {
-        matchesFilter = conv.assigned_to === userId;
-      } else if (filter === 'outros') {
-        matchesFilter = !!conv.assigned_to && conv.assigned_to !== userId;
       }
       
       const matchesSearch = !debouncedSearchQuery || 
@@ -185,8 +189,8 @@ export function ConversationList({
           conv.leads?.lead_labels?.some((ll: any) => ll.labels?.id === labelId)
         );
 
-      return matchesFilter && matchesSearch && matchesLabels;
-    }) || [];
+      return matchesSearch && matchesLabels;
+    });
 
     // Sort by date
     filtered = filtered.sort((a, b) => {
@@ -196,7 +200,7 @@ export function ConversationList({
     });
 
     return filtered;
-  }, [conversations, statusFilter, filter, userId, debouncedSearchQuery, selectedLabelIds, sortOrder]);
+  }, [assignmentFilteredConversations, statusFilter, debouncedSearchQuery, selectedLabelIds, sortOrder]);
 
   const toggleLabelFilter = useCallback((labelId: string) => {
     setSelectedLabelIds((prev) =>

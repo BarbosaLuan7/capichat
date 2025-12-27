@@ -32,6 +32,7 @@ import { useCreateConversation, useSendMessage } from '@/hooks/useConversations'
 import { useFunnelStages } from '@/hooks/useFunnelStages';
 import { useTemplates } from '@/hooks/useTemplates';
 import { normalizePhoneNumber, isValidPhone } from '@/lib/masks';
+import { replaceTemplateVariables } from '@/lib/templateVariables';
 
 interface NewConversationModalProps {
   open: boolean;
@@ -159,14 +160,16 @@ export function NewConversationModal({
     return `Lead ${lastDigits}`;
   };
   
-  // Replace template variables
+  // Replace template variables using centralized function
   const processMessage = (content: string) => {
-    const leadName = getDefaultName();
-    const firstName = leadName.split(' ')[0];
-    
-    return content
-      .replace(/\{\{nome\}\}/gi, leadName)
-      .replace(/\{\{primeiro_nome\}\}/gi, firstName);
+    return replaceTemplateVariables(content, {
+      lead: {
+        name: name.trim() || getDefaultName(),
+        phone: normalizedPhone,
+        benefit_type: benefitType || null,
+      },
+      removeUnmatched: true,
+    });
   };
   
   // Handle template selection
