@@ -2,10 +2,11 @@ import React, { useState, useEffect, memo } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Check, CheckCheck, Star, Image, FileText, Video, Mic, Sparkles, Loader2, Copy } from 'lucide-react';
+import { Check, CheckCheck, Star, Image, FileText, Video, Mic, Sparkles, Loader2, Copy, Clock, AlertCircle, ImageOff, VideoOff, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useAudioTranscription } from '@/hooks/useAudioTranscription';
 import { useSignedUrl } from '@/hooks/useSignedUrl';
@@ -22,6 +23,8 @@ const MEDIA_PLACEHOLDERS = [
   '[Documento]', '[documento]', '[Document]', '[document]',
 ];
 
+type MessageStatus = 'sent' | 'delivered' | 'read' | 'pending' | 'failed';
+
 type Message = Database['public']['Tables']['messages']['Row'] & {
   is_starred?: boolean;
 };
@@ -34,6 +37,48 @@ interface MessageBubbleProps {
   leadAvatarUrl?: string | null;
   agentName?: string;
   onToggleStar?: (messageId: string, isStarred: boolean) => void;
+}
+
+// Helper function for status icon configuration
+function getStatusConfig(status: MessageStatus) {
+  switch (status) {
+    case 'read':
+      return {
+        icon: CheckCheck,
+        className: 'text-blue-400',
+        label: 'Lida',
+      };
+    case 'delivered':
+      return {
+        icon: CheckCheck,
+        className: 'text-primary-foreground/70',
+        label: 'Entregue',
+      };
+    case 'sent':
+      return {
+        icon: Check,
+        className: 'text-primary-foreground/70',
+        label: 'Enviada',
+      };
+    case 'pending':
+      return {
+        icon: Clock,
+        className: 'text-primary-foreground/50 animate-pulse',
+        label: 'Enviando...',
+      };
+    case 'failed':
+      return {
+        icon: AlertCircle,
+        className: 'text-destructive',
+        label: 'Falha ao enviar',
+      };
+    default:
+      return {
+        icon: Check,
+        className: 'text-primary-foreground/70',
+        label: 'Enviada',
+      };
+  }
 }
 
 function MessageBubbleComponent({
@@ -49,9 +94,17 @@ function MessageBubbleComponent({
   const [transcription, setTranscription] = useState<string | null>(null);
   const [hasAttempted, setHasAttempted] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [videoError, setVideoError] = useState(false);
   
   // Usar signed URL para mídias em buckets privados
   const { signedUrl: resolvedMediaUrl, isLoading: isLoadingUrl } = useSignedUrl(message.media_url);
+  
+  // Reset error states when media_url changes
+  useEffect(() => {
+    setImageError(false);
+    setVideoError(false);
+  }, [message.media_url]);
 
   const handleCopyTranscription = () => {
     if (transcription) {
@@ -107,6 +160,25 @@ function MessageBubbleComponent({
 
     switch (message.type) {
       case 'image':
+        if (imageError) {
+          return (
+            <div className="mb-2 p-3 rounded-lg bg-muted/50 border border-border">
+              <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                <ImageOff className="w-5 h-5" />
+                <span className="text-sm">Erro ao carregar imagem</span>
+              </div>
+              <a 
+                href={resolvedMediaUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-xs text-primary hover:underline flex items-center gap-1"
+              >
+                <ExternalLink className="w-3 h-3" />
+                Abrir em nova aba
+              </a>
+            </div>
+          );
+        }
         return (
           <div className="mb-2">
             <ImageLightbox src={resolvedMediaUrl} alt={`Imagem ${isAgent ? 'enviada pelo atendente' : `de ${leadName}`}`}>
@@ -114,15 +186,35 @@ function MessageBubbleComponent({
                 src={resolvedMediaUrl}
                 alt={`Imagem ${isAgent ? 'enviada pelo atendente' : `enviada por ${leadName}`}`}
                 className="max-w-full rounded-lg max-h-64 object-cover cursor-pointer hover:brightness-95 transition-all"
-                onError={(e) => {
+                loading="lazy"
+                onError={() => {
                   console.error('[MessageBubble] Erro ao carregar imagem:', message.media_url);
-                  e.currentTarget.style.display = 'none';
+                  setImageError(true);
                 }}
               />
             </ImageLightbox>
           </div>
         );
       case 'video':
+        if (videoError) {
+          return (
+            <div className="mb-2 p-3 rounded-lg bg-muted/50 border border-border">
+              <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                <VideoOff className="w-5 h-5" />
+                <span className="text-sm">Erro ao carregar vídeo</span>
+              </div>
+              <a 
+                href={resolvedMediaUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-xs text-primary hover:underline flex items-center gap-1"
+              >
+                <ExternalLink className="w-3 h-3" />
+                Abrir em nova aba
+              </a>
+            </div>
+          );
+        }
         return (
           <div className="mb-2">
             <video
@@ -130,6 +222,10 @@ function MessageBubbleComponent({
               controls
               aria-label={`Vídeo ${isAgent ? 'enviado pelo atendente' : `de ${leadName}`}`}
               className="max-w-full rounded-lg max-h-64"
+              onError={() => {
+                console.error('[MessageBubble] Erro ao carregar vídeo:', message.media_url);
+                setVideoError(true);
+              }}
             />
           </div>
         );
@@ -233,7 +329,7 @@ function MessageBubbleComponent({
             }
           />
           <AvatarFallback>
-            {isAgent ? agentName.charAt(0) : leadName.charAt(0)}
+            {isAgent ? (agentName?.charAt(0) || 'A') : (leadName?.charAt(0) || '?')}
           </AvatarFallback>
         </Avatar>
       ) : (
@@ -265,17 +361,24 @@ function MessageBubbleComponent({
             >
               {format(new Date(message.created_at), 'HH:mm', { locale: ptBR })}
             </span>
-            {isAgent && (
-              <span className={message.status === 'read' ? 'text-blue-400' : 'text-primary-foreground/70'}>
-                {message.status === 'read' ? (
-                  <CheckCheck className="w-3.5 h-3.5" />
-                ) : message.status === 'delivered' ? (
-                  <CheckCheck className="w-3.5 h-3.5" />
-                ) : (
-                  <Check className="w-3.5 h-3.5" />
-                )}
-              </span>
-            )}
+            {isAgent && (() => {
+              const statusConfig = getStatusConfig(message.status as MessageStatus);
+              const StatusIcon = statusConfig.icon;
+              return (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className={statusConfig.className}>
+                        <StatusIcon className="w-3.5 h-3.5" aria-label={statusConfig.label} />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      {statusConfig.label}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              );
+            })()}
           </div>
         </div>
 
@@ -283,6 +386,7 @@ function MessageBubbleComponent({
           <Button
             variant="ghost"
             size="icon"
+            aria-label={message.is_starred ? 'Remover destaque' : 'Destacar mensagem'}
             className={cn(
               'absolute -right-8 top-0 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6',
               message.is_starred && 'opacity-100'
@@ -296,6 +400,7 @@ function MessageBubbleComponent({
                   ? 'fill-warning text-warning'
                   : 'text-muted-foreground'
               )}
+              aria-hidden="true"
             />
           </Button>
         )}
