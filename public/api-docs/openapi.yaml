@@ -47,6 +47,8 @@ tags:
     description: Gerenciamento de etiquetas
   - name: Templates
     description: Templates de mensagens
+  - name: Webhooks
+    description: Endpoints para receber eventos de provedores externos (WAHA, Evolution API)
 
 paths:
   /api-leads:
@@ -779,6 +781,140 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /whatsapp-webhook:
+    post:
+      tags: [Webhooks]
+      summary: Webhook WAHA / Evolution API
+      description: |
+        Endpoint para receber eventos do WAHA (WhatsApp HTTP API) ou Evolution API.
+        Configure este URL no seu provedor de WhatsApp como webhook.
+        
+        **Formatos suportados:**
+        - WAHA (WhatsApp HTTP API)
+        - Evolution API
+        
+        **Eventos processados:**
+        - `message` / `message.any` - Nova mensagem recebida
+        - `message.ack` - Atualizacao de status de mensagem
+        - `messages.upsert` (Evolution) - Nova mensagem
+        - `messages.update` (Evolution) - Atualizacao de mensagem
+        
+        **Configuracao:**
+        1. Acesse Configuracoes > WhatsApp no CRM
+        2. Configure a URL base do seu provedor WAHA/Evolution
+        3. Use esta URL como webhook no seu provedor
+        4. (Opcional) Configure um webhook_secret para validacao HMAC-SHA256
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/WAHAWebhookPayload'
+                - $ref: '#/components/schemas/EvolutionWebhookPayload'
+            examples:
+              waha_message:
+                summary: Mensagem WAHA (texto)
+                value:
+                  event: message
+                  session: default
+                  payload:
+                    id: "wamid.HBgNNTU0NTk5OTk1Nzg1MRUCABIYIDc4YzZkM2E0"
+                    timestamp: 1735300000
+                    from: "5545999957851@c.us"
+                    to: "5545000000000@c.us"
+                    body: "Ola, preciso de ajuda com o BPC"
+                    hasMedia: false
+                    type: chat
+                    fromMe: false
+                  me:
+                    id: "5545000000000@c.us"
+                    pushName: "GaranteDireito"
+              waha_media:
+                summary: Mensagem WAHA (imagem)
+                value:
+                  event: message
+                  session: default
+                  payload:
+                    id: "wamid.HBgNNTU0NTk5OTk1Nzg1MRUCABIYIDc4YzZkM2E0"
+                    timestamp: 1735300000
+                    from: "5545999957851@c.us"
+                    to: "5545000000000@c.us"
+                    body: "Segue meu documento"
+                    hasMedia: true
+                    type: image
+                    fromMe: false
+                    mediaUrl: "https://api.example.com/media/xxx"
+                  me:
+                    id: "5545000000000@c.us"
+              waha_ack:
+                summary: Confirmacao de leitura WAHA
+                value:
+                  event: message.ack
+                  session: default
+                  payload:
+                    id: "wamid.xxx"
+                    ack: 3
+                    ackName: read
+              evolution_message:
+                summary: Mensagem Evolution API
+                value:
+                  event: messages.upsert
+                  instance: minha-instancia
+                  data:
+                    key:
+                      remoteJid: "5545999957851@s.whatsapp.net"
+                      fromMe: false
+                      id: "3EB0XXXX"
+                    pushName: "Joao Silva"
+                    message:
+                      conversation: "Preciso de ajuda"
+      responses:
+        '200':
+          description: Evento processado (ignorado ou duplicado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ignored
+                  message:
+                    type: string
+        '201':
+          description: Mensagem criada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: created
+                  message_id:
+                    type: string
+                    format: uuid
+                  lead_id:
+                    type: string
+                    format: uuid
+                  conversation_id:
+                    type: string
+                    format: uuid
+        '400':
+          description: Payload invalido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Assinatura do webhook invalida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -1160,6 +1296,165 @@ components:
       properties:
         error:
           type: string
+
+    WAHAWebhookPayload:
+      type: object
+      description: Payload enviado pelo WAHA (WhatsApp HTTP API)
+      required: [event, session, payload]
+      properties:
+        event:
+          type: string
+          enum: [message, message.any, message.ack, session.status]
+          description: Tipo do evento WAHA
+        session:
+          type: string
+          description: Nome da sessao WAHA (ex - default)
+          example: default
+        payload:
+          $ref: '#/components/schemas/WAHAMessage'
+        me:
+          type: object
+          description: Informacoes do numero conectado
+          properties:
+            id:
+              type: string
+              description: "ID do numero (formato: numero@c.us)"
+              example: "5545000000000@c.us"
+            pushName:
+              type: string
+              description: Nome exibido no WhatsApp
+              example: GaranteDireito
+
+    WAHAMessage:
+      type: object
+      description: Dados da mensagem no formato WAHA
+      properties:
+        id:
+          type: string
+          description: "ID unico da mensagem (wamid)"
+          example: "wamid.HBgNNTU0NTk5OTk1Nzg1MRUCABIYIDc4YzZkM2E0"
+        timestamp:
+          type: integer
+          description: Timestamp Unix da mensagem (segundos)
+          example: 1735300000
+        from:
+          type: string
+          description: "Remetente (formato: numero@c.us)"
+          example: "5545999957851@c.us"
+        to:
+          type: string
+          description: "Destinatario (formato: numero@c.us)"
+          example: "5545000000000@c.us"
+        body:
+          type: string
+          description: Conteudo da mensagem de texto
+          example: "Ola, preciso de ajuda"
+        hasMedia:
+          type: boolean
+          description: Indica se a mensagem contem midia
+          example: false
+        type:
+          type: string
+          enum: [chat, image, video, audio, document, ptt, sticker]
+          description: Tipo da mensagem
+          example: chat
+        fromMe:
+          type: boolean
+          description: True se a mensagem foi enviada por nos
+          example: false
+        pushName:
+          type: string
+          description: Nome do contato no WhatsApp
+          example: "Joao Silva"
+        mediaUrl:
+          type: string
+          format: uri
+          description: URL da midia (quando hasMedia = true)
+        ack:
+          type: integer
+          enum: [0, 1, 2, 3, 4]
+          description: "Status de confirmacao (0=pending, 1=sent, 2=delivered, 3=read, 4=played)"
+        ackName:
+          type: string
+          enum: [pending, sent, delivered, read, played]
+          description: Nome do status de confirmacao
+
+    EvolutionWebhookPayload:
+      type: object
+      description: Payload enviado pela Evolution API
+      required: [event, instance, data]
+      properties:
+        event:
+          type: string
+          enum: [messages.upsert, messages.update, connection.update]
+          description: Tipo do evento Evolution
+        instance:
+          type: string
+          description: Nome da instancia Evolution
+          example: minha-instancia
+        data:
+          $ref: '#/components/schemas/EvolutionMessageData'
+
+    EvolutionMessageData:
+      type: object
+      description: Dados da mensagem no formato Evolution API
+      properties:
+        key:
+          type: object
+          properties:
+            remoteJid:
+              type: string
+              description: "JID do contato (formato: numero@s.whatsapp.net)"
+              example: "5545999957851@s.whatsapp.net"
+            fromMe:
+              type: boolean
+              description: True se a mensagem foi enviada por nos
+            id:
+              type: string
+              description: ID da mensagem
+              example: "3EB0XXXX"
+        pushName:
+          type: string
+          description: Nome do contato
+          example: "Joao Silva"
+        message:
+          type: object
+          description: Conteudo da mensagem
+          properties:
+            conversation:
+              type: string
+              description: Texto da mensagem (mensagens simples)
+            extendedTextMessage:
+              type: object
+              properties:
+                text:
+                  type: string
+            imageMessage:
+              type: object
+              properties:
+                url:
+                  type: string
+                caption:
+                  type: string
+            audioMessage:
+              type: object
+              properties:
+                url:
+                  type: string
+            videoMessage:
+              type: object
+              properties:
+                url:
+                  type: string
+                caption:
+                  type: string
+            documentMessage:
+              type: object
+              properties:
+                url:
+                  type: string
+                fileName:
+                  type: string
 
   responses:
     BadRequest:
