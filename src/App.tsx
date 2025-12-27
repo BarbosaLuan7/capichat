@@ -102,6 +102,10 @@ function AppContent() {
       <Routes>
         <Route path="/auth" element={<Auth />} />
         <Route path="/login" element={<Navigate to="/auth" replace />} />
+        
+        {/* Rota pública - Documentação da API */}
+        <Route path="/api-docs" element={<ApiDocs />} />
+        
         <Route
           path="/"
           element={
@@ -129,7 +133,6 @@ function AppContent() {
           <Route path="settings/webhooks" element={<WebhooksSettings />} />
           <Route path="settings/whatsapp" element={<WhatsAppSettings />} />
           <Route path="settings/api" element={<ApiSettings />} />
-          <Route path="api-docs" element={<ApiDocs />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

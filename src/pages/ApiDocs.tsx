@@ -1,14 +1,18 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, FileJson, Copy, Check } from 'lucide-react';
-import { useState } from 'react';
+import { ExternalLink, FileJson, Copy, Check, ArrowLeft, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
+import { Toaster } from '@/components/ui/sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function ApiDocs() {
   const swaggerContainerRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
+  const navigate = useNavigate();
+  const { isAuthenticated, loading } = useAuth();
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || 'vnsypopnzwtkmyvxvqpu';
   const baseUrl = `https://${projectId}.supabase.co/functions/v1`;
@@ -60,14 +64,57 @@ export default function ApiDocs() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleNavigate = () => {
+    if (isAuthenticated) {
+      navigate('/settings/api');
+    } else {
+      navigate('/auth');
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Documentação da API</h1>
-        <p className="text-muted-foreground mt-1">
-          Referência completa dos endpoints disponíveis para integração externa
-        </p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <Toaster />
+      
+      {/* Header */}
+      <header className="border-b bg-card sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-sm">GD</span>
+            </div>
+            <div>
+              <h1 className="text-xl font-bold">GaranteDireito API</h1>
+              <p className="text-sm text-muted-foreground">Documentação pública</p>
+            </div>
+          </div>
+          
+          {!loading && (
+            <Button onClick={handleNavigate} variant="outline">
+              {isAuthenticated ? (
+                <>
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Voltar ao Sistema
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Fazer Login
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-6 space-y-6">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Documentação da API</h2>
+          <p className="text-muted-foreground mt-1">
+            Referência completa dos endpoints disponíveis para integração externa
+          </p>
+        </div>
 
       {/* Quick Reference Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -202,6 +249,7 @@ lead = response.json()`}
           />
         </CardContent>
       </Card>
+      </main>
 
       {/* Custom Swagger UI Styles */}
       <style>{`
