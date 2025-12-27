@@ -6,6 +6,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper: Validate phone number format
+function validatePhone(phone: string): { valid: boolean; normalized: string; error?: string } {
+  const normalized = phone.replace(/\D/g, '');
+  if (normalized.length < 10) {
+    return { valid: false, normalized, error: 'Phone number too short (min 10 digits)' };
+  }
+  if (normalized.length > 15) {
+    return { valid: false, normalized, error: 'Phone number too long (max 15 digits)' };
+  }
+  return { valid: true, normalized };
+}
+
+// Helper: Return safe error response (don't expose internal details)
+function safeErrorResponse(
+  internalError: unknown, 
+  publicMessage: string, 
+  status: number = 500
+): Response {
+  console.error('[api-messages-send] Internal error:', internalError);
+  return new Response(
+    JSON.stringify({ success: false, error: publicMessage }),
+    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
 interface SendMessagePayload {
   phone: string;
   message: string;
@@ -459,9 +484,18 @@ serve(async (req) => {
     const payload: SendMessagePayload = await req.json();
     console.log('[api-messages-send] Payload:', { ...payload, message: payload.message?.substring(0, 50) + '...' });
 
-    if (!payload.phone || !payload.message) {
+    // Validate phone format
+    const phoneValidation = validatePhone(payload.phone);
+    if (!phoneValidation.valid) {
       return new Response(
-        JSON.stringify({ error: 'phone e message são obrigatórios' }),
+        JSON.stringify({ success: false, error: phoneValidation.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!payload.message) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'message is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -623,10 +657,6 @@ serve(async (req) => {
     );
 
   } catch (error: unknown) {
-    console.error('[api-messages-send] Erro não tratado:', error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno do servidor' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return safeErrorResponse(error, 'An unexpected error occurred');
   }
 });

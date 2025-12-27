@@ -23,6 +23,31 @@ interface LeadPayload {
   custom_fields?: Record<string, unknown>;
 }
 
+// Helper: Validate phone number format
+function validatePhone(phone: string): { valid: boolean; normalized: string; error?: string } {
+  const normalized = phone.replace(/\D/g, '');
+  if (normalized.length < 10) {
+    return { valid: false, normalized, error: 'Phone number too short (min 10 digits)' };
+  }
+  if (normalized.length > 15) {
+    return { valid: false, normalized, error: 'Phone number too long (max 15 digits)' };
+  }
+  return { valid: true, normalized };
+}
+
+// Helper: Return safe error response (don't expose internal details)
+function safeErrorResponse(
+  internalError: unknown, 
+  publicMessage: string, 
+  status: number = 500
+): Response {
+  console.error('Internal error:', internalError);
+  return new Response(
+    JSON.stringify({ success: false, error: publicMessage }),
+    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -52,14 +77,14 @@ Deno.serve(async (req) => {
     });
 
     if (apiKeyError || !apiKeyId) {
-      console.error('Invalid API key:', apiKeyError?.message);
+      console.error('Invalid API key');
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid API key' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('API key validated successfully:', apiKeyId);
+    console.log('API key validated successfully');
 
     const url = new URL(req.url);
     const method = req.method;
@@ -80,11 +105,7 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         if (error) {
-          console.error('Error fetching lead:', error);
-          return new Response(
-            JSON.stringify({ success: false, error: error.message }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return safeErrorResponse(error, 'Error fetching lead');
         }
 
         if (!data) {
@@ -94,7 +115,7 @@ Deno.serve(async (req) => {
           );
         }
 
-        console.log('Lead found by ID:', id);
+        console.log('Lead found by ID');
         return new Response(
           JSON.stringify({ success: true, data }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -102,8 +123,16 @@ Deno.serve(async (req) => {
       }
 
       if (phone) {
-        // Normalize phone number for search
-        const normalizedPhone = phone.replace(/\D/g, '');
+        // Validate phone format
+        const phoneValidation = validatePhone(phone);
+        if (!phoneValidation.valid) {
+          return new Response(
+            JSON.stringify({ success: false, error: phoneValidation.error }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        const normalizedPhone = phoneValidation.normalized;
         
         const { data, error } = await supabase
           .from('leads')
@@ -112,11 +141,7 @@ Deno.serve(async (req) => {
           .limit(10);
 
         if (error) {
-          console.error('Error searching lead by phone:', error);
-          return new Response(
-            JSON.stringify({ success: false, error: error.message }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return safeErrorResponse(error, 'Error searching lead by phone');
         }
 
         console.log('Leads found by phone:', data?.length || 0);
@@ -134,11 +159,7 @@ Deno.serve(async (req) => {
         .range(offset, offset + limit - 1);
 
       if (error) {
-        console.error('Error listing leads:', error);
-        return new Response(
-          JSON.stringify({ success: false, error: error.message }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return safeErrorResponse(error, 'Error listing leads');
       }
 
       console.log('Leads listed:', data?.length || 0);
@@ -160,8 +181,26 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Validate name length
+      if (body.name.trim().length < 2) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'name must have at least 2 characters' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Validate phone format
+      const phoneValidation = validatePhone(body.phone);
+      if (!phoneValidation.valid) {
+        return new Response(
+          JSON.stringify({ success: false, error: phoneValidation.error }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const normalizedPhone = phoneValidation.normalized;
+
       // Check if lead already exists with same phone
-      const normalizedPhone = body.phone.replace(/\D/g, '');
       const { data: existingLead } = await supabase
         .from('leads')
         .select('id, name, phone')
@@ -169,7 +208,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (existingLead) {
-        console.log('Lead already exists:', existingLead.id);
+        console.log('Lead already exists');
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -196,7 +235,7 @@ Deno.serve(async (req) => {
 
       // Create lead
       const leadData = {
-        name: body.name,
+        name: body.name.trim(),
         phone: body.phone,
         email: body.email,
         cpf: body.cpf,
@@ -219,14 +258,10 @@ Deno.serve(async (req) => {
         .single();
 
       if (createError) {
-        console.error('Error creating lead:', createError);
-        return new Response(
-          JSON.stringify({ success: false, error: createError.message }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return safeErrorResponse(createError, 'Error creating lead');
       }
 
-      console.log('Lead created successfully:', newLead.id);
+      console.log('Lead created successfully');
 
       // Dispatch webhook for lead.created
       try {
@@ -261,6 +296,17 @@ Deno.serve(async (req) => {
 
       const body = await req.json();
 
+      // Validate phone if provided
+      if (body.phone) {
+        const phoneValidation = validatePhone(body.phone);
+        if (!phoneValidation.valid) {
+          return new Response(
+            JSON.stringify({ success: false, error: phoneValidation.error }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
       // Get current lead state for webhook comparison
       const { data: currentLead } = await supabase
         .from('leads')
@@ -287,14 +333,10 @@ Deno.serve(async (req) => {
         .single();
 
       if (updateError) {
-        console.error('Error updating lead:', updateError);
-        return new Response(
-          JSON.stringify({ success: false, error: updateError.message }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return safeErrorResponse(updateError, 'Error updating lead');
       }
 
-      console.log('Lead updated successfully:', id);
+      console.log('Lead updated successfully');
 
       // Dispatch webhooks based on what changed
       try {
@@ -390,14 +432,10 @@ Deno.serve(async (req) => {
         .eq('id', id);
 
       if (deleteError) {
-        console.error('Error deleting lead:', deleteError);
-        return new Response(
-          JSON.stringify({ success: false, error: deleteError.message }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return safeErrorResponse(deleteError, 'Error deleting lead');
       }
 
-      console.log('Lead deleted successfully:', id);
+      console.log('Lead deleted successfully');
 
       // Dispatch webhook for lead.deleted
       try {
@@ -425,11 +463,6 @@ Deno.serve(async (req) => {
     );
 
   } catch (err: unknown) {
-    const error = err as Error;
-    console.error('Unexpected error:', error);
-    return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return safeErrorResponse(err, 'An unexpected error occurred');
   }
 });

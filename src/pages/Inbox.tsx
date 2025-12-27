@@ -23,7 +23,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useInboxRealtime } from '@/hooks/useInboxRealtime';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
-import { useAppStore } from '@/store/appStore';
+import { useUIStore } from '@/store/uiStore';
 
 // Components
 import { ConversationList } from '@/components/inbox/ConversationList';
@@ -42,7 +42,7 @@ const Inbox = () => {
   const { user, authUser } = useAuth();
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { setSidebarCollapsed } = useAppStore();
+  const { setSidebarCollapsed } = useUIStore();
 
   // Orchestration state
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
