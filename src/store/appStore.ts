@@ -69,6 +69,17 @@ interface AppState {
   markConversationAsRead: (conversationId: string) => void;
 }
 
+const SIDEBAR_COLLAPSED_KEY = 'sidebar-collapsed';
+
+const getInitialSidebarState = (): boolean => {
+  try {
+    const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
+    return saved === 'true';
+  } catch {
+    return false;
+  }
+};
+
 export const useAppStore = create<AppState>((set, get) => ({
   // Initial data
   leads: mockLeads,
@@ -86,13 +97,28 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedLeadId: null,
   
   // UI State
-  sidebarCollapsed: false,
+  sidebarCollapsed: getInitialSidebarState(),
   
   // Actions
   setSelectedConversation: (id) => set({ selectedConversationId: id }),
   setSelectedLead: (id) => set({ selectedLeadId: id }),
-  setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
-  toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+  setSidebarCollapsed: (collapsed) => {
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed));
+    } catch {
+      // Ignore localStorage errors
+    }
+    set({ sidebarCollapsed: collapsed });
+  },
+  toggleSidebar: () => set((state) => {
+    const newValue = !state.sidebarCollapsed;
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(newValue));
+    } catch {
+      // Ignore localStorage errors
+    }
+    return { sidebarCollapsed: newValue };
+  }),
   
   // Lead actions
   updateLeadStage: (leadId, stageId) => set((state) => ({

@@ -21,6 +21,7 @@ import { useLeadLabels } from '@/hooks/useLabels';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useInboxRealtime } from '@/hooks/useInboxRealtime';
+import { useAppStore } from '@/store/appStore';
 
 // Components
 import { ConversationList } from '@/components/inbox/ConversationList';
@@ -39,6 +40,7 @@ const Inbox = () => {
   const { user, authUser } = useAuth();
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { setSidebarCollapsed } = useAppStore();
 
   // Orchestration state
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -115,7 +117,9 @@ const Inbox = () => {
   const handleSelectConversation = useCallback((id: string) => {
     userClickedConversationRef.current = true;
     setSelectedConversationId(id);
-  }, []);
+    // Auto-colapsar sidebar para focar na conversa
+    setSidebarCollapsed(true);
+  }, [setSidebarCollapsed]);
 
   const handleSendMessage = useCallback(async (content: string, type: string, mediaUrl?: string | null) => {
     if (!selectedConversationId || !user) return;
