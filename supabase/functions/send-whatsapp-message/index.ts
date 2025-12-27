@@ -419,20 +419,28 @@ async function sendWAHA(config: WhatsAppConfig, phone: string, message: string, 
 
     try {
       const data = JSON.parse(responseText);
-      // Extrair ID corretamente - garantir que é string simples, não objeto
+      // Extrair ID corretamente - WAHA retorna em formato aninhado
+      // Estrutura: { id: { fromMe: true, id: "3EB0...", _serialized: "true_555..._3EB0..." }, _data: {...} }
       let messageId: string | undefined;
       
+      // Formato 1: data.id é string direta (raro)
       if (typeof data.id === 'string') {
         messageId = data.id;
-      } else if (data.key && typeof data.key.id === 'string') {
+      }
+      // Formato 2: data.id é objeto com .id interno (comum no WAHA)
+      else if (data.id && typeof data.id === 'object') {
+        messageId = data.id.id || data.id._serialized;
+      }
+      // Formato 3: data.key.id
+      else if (data.key && typeof data.key.id === 'string') {
         messageId = data.key.id;
-      } else if (data.key && typeof data.key === 'object') {
-        // Se data.key é objeto, extrair o id dele
-        console.warn('[WAHA] Formato inesperado - key é objeto:', JSON.stringify(data.key));
-        messageId = data.key.id?.toString?.();
+      }
+      // Formato 4: data._data.id (fallback)
+      else if (data._data?.id && typeof data._data.id === 'object') {
+        messageId = data._data.id.id || data._data.id._serialized;
       }
       
-      console.log('[WAHA] MessageId extraído:', messageId, 'de resposta:', typeof data.id, typeof data.key?.id);
+      console.log('[WAHA] MessageId extraído:', messageId, 'de data.id:', typeof data.id, data.id?.id || data.id);
       return { success: true, messageId };
     } catch {
       return { success: true, messageId: undefined };
