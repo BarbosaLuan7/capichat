@@ -15,6 +15,31 @@ interface MessagePayload {
   sender_name?: string;
 }
 
+// Helper: Validate phone number format
+function validatePhone(phone: string): { valid: boolean; normalized: string; error?: string } {
+  const normalized = phone.replace(/\D/g, '');
+  if (normalized.length < 10) {
+    return { valid: false, normalized, error: 'Phone number too short (min 10 digits)' };
+  }
+  if (normalized.length > 15) {
+    return { valid: false, normalized, error: 'Phone number too long (max 15 digits)' };
+  }
+  return { valid: true, normalized };
+}
+
+// Helper: Return safe error response (don't expose internal details)
+function safeErrorResponse(
+  internalError: unknown, 
+  publicMessage: string, 
+  status: number = 500
+): Response {
+  console.error('Internal error:', internalError);
+  return new Response(
+    JSON.stringify({ success: false, error: publicMessage }),
+    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -51,7 +76,7 @@ Deno.serve(async (req) => {
     });
 
     if (apiKeyError || !apiKeyId) {
-      console.error('Invalid API key:', apiKeyError?.message);
+      console.error('Invalid API key');
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid API key' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -70,10 +95,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('Received message from phone:', body.phone);
+    // Validate phone format
+    const phoneValidation = validatePhone(body.phone);
+    if (!phoneValidation.valid) {
+      return new Response(
+        JSON.stringify({ success: false, error: phoneValidation.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Received message from phone');
 
     // Normalize phone number for search - remove country code (55) if present
-    let normalizedPhone = body.phone.replace(/\D/g, '');
+    let normalizedPhone = phoneValidation.normalized;
     if (normalizedPhone.startsWith('55') && normalizedPhone.length >= 12) {
       normalizedPhone = normalizedPhone.substring(2);
     }
@@ -99,7 +133,7 @@ Deno.serve(async (req) => {
 
     if (existingLead) {
       lead = existingLead;
-      console.log('Found existing lead:', lead.id);
+      console.log('Found existing lead');
 
       // Update lead with WhatsApp name if provided
       if (body.sender_name && !existingLead.whatsapp_name) {
@@ -142,15 +176,11 @@ Deno.serve(async (req) => {
         .single();
 
       if (createLeadError) {
-        console.error('Error creating lead:', createLeadError);
-        return new Response(
-          JSON.stringify({ success: false, error: 'Error creating lead' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return safeErrorResponse(createLeadError, 'Error creating lead');
       }
 
       lead = newLead;
-      console.log('Created new lead:', lead.id);
+      console.log('Created new lead');
 
       // Dispatch webhook for lead.created
       try {
@@ -178,7 +208,7 @@ Deno.serve(async (req) => {
 
     if (existingConversation) {
       conversation = existingConversation;
-      console.log('Found existing conversation:', conversation.id);
+      console.log('Found existing conversation');
 
       // Update conversation
       await supabase
@@ -204,15 +234,11 @@ Deno.serve(async (req) => {
         .single();
 
       if (createConvError) {
-        console.error('Error creating conversation:', createConvError);
-        return new Response(
-          JSON.stringify({ success: false, error: 'Error creating conversation' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return safeErrorResponse(createConvError, 'Error creating conversation');
       }
 
       conversation = newConversation;
-      console.log('Created new conversation:', conversation.id);
+      console.log('Created new conversation');
 
       // Dispatch webhook for conversation.created
       try {
@@ -246,14 +272,10 @@ Deno.serve(async (req) => {
       .single();
 
     if (createMsgError) {
-      console.error('Error creating message:', createMsgError);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Error creating message' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return safeErrorResponse(createMsgError, 'Error creating message');
     }
 
-    console.log('Message created successfully:', message.id);
+    console.log('Message created successfully');
 
     // Create notification for assigned user
     if (conversation.assigned_to) {
@@ -308,11 +330,6 @@ Deno.serve(async (req) => {
     );
 
   } catch (err: unknown) {
-    const error = err as Error;
-    console.error('Unexpected error:', error);
-    return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return safeErrorResponse(err, 'An unexpected error occurred');
   }
 });

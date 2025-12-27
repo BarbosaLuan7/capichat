@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import { useAppStore } from '@/store/appStore';
+import { useUIStore } from '@/store/uiStore';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -77,7 +77,7 @@ const SIDEBAR_SETTINGS_KEY = 'sidebar-settings-open';
 const AppSidebar = () => {
   const location = useLocation();
   const { authUser: user, signOut } = useAuth();
-  const { sidebarCollapsed, toggleSidebar } = useAppStore();
+  const { sidebarCollapsed, toggleSidebar } = useUIStore();
   const [settingsOpen, setSettingsOpen] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_SETTINGS_KEY);
     if (saved !== null) return JSON.parse(saved);

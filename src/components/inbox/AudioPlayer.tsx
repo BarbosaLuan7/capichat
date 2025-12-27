@@ -91,21 +91,29 @@ export function AudioPlayer({ src, className, 'aria-label': ariaLabel }: AudioPl
     <div className={cn("flex items-center gap-2 p-2 bg-muted/50 rounded-lg min-w-[200px]", className)} role="region" aria-label={ariaLabel || 'Player de áudio'}>
       <audio ref={audioRef} src={src} preload="metadata" />
       
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 shrink-0"
-        onClick={togglePlay}
-        disabled={!isLoaded}
-        aria-label={isPlaying ? 'Pausar áudio' : 'Reproduzir áudio'}
-        title={isPlaying ? 'Pausar' : 'Reproduzir'}
-      >
-        {isPlaying ? (
-          <Pause className="w-4 h-4" />
-        ) : (
-          <Play className="w-4 h-4" />
-        )}
-      </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={togglePlay}
+              disabled={!isLoaded}
+              aria-label={isPlaying ? 'Pausar áudio' : 'Reproduzir áudio'}
+            >
+              {isPlaying ? (
+                <Pause className="w-4 h-4" />
+              ) : (
+                <Play className="w-4 h-4" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>{isPlaying ? 'Pausar' : 'Reproduzir'}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
       <div className="flex-1 flex items-center gap-2">
         <span className="text-xs text-muted-foreground w-10 shrink-0">
