@@ -149,7 +149,7 @@ const AppSidebar = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto scrollbar-thin">
+      <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto scrollbar-thin" aria-label="Menu principal">
         {menuItems.map((item) => {
           const active = isActive(item.path);
           const parentActive = isParentActive(item);
@@ -165,13 +165,15 @@ const AppSidebar = () => {
                 <CollapsibleTrigger asChild>
                   <button
                     className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group',
+                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group focusable',
                       parentActive
                         ? 'bg-sidebar-accent text-sidebar-foreground'
                         : 'text-sidebar-foreground hover:bg-sidebar-accent'
                     )}
+                    aria-expanded={settingsOpen}
+                    aria-controls="settings-submenu"
                   >
-                    <item.icon className="w-5 h-5 flex-shrink-0" />
+                    <item.icon className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
                     <span className="font-medium whitespace-nowrap flex-1 text-left">
                       {item.label}
                     </span>
@@ -180,10 +182,11 @@ const AppSidebar = () => {
                         'w-4 h-4 transition-transform',
                         settingsOpen && 'rotate-180'
                       )}
+                      aria-hidden="true"
                     />
                   </button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="pl-4 mt-1 space-y-1">
+                <CollapsibleContent id="settings-submenu" className="pl-4 mt-1 space-y-1">
                   {item.children.map((child) => {
                     const childActive = isActive(child.path);
                     return (
@@ -191,13 +194,13 @@ const AppSidebar = () => {
                         key={child.path}
                         to={child.path}
                         className={cn(
-                          'flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200',
+                          'flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 focusable',
                           childActive
                             ? 'bg-sidebar-primary text-sidebar-primary-foreground'
                             : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground'
                         )}
                       >
-                        <child.icon className="w-4 h-4" />
+                        <child.icon className="w-4 h-4" aria-hidden="true" />
                         <span className="text-sm">{child.label}</span>
                       </Link>
                     );
@@ -312,9 +315,10 @@ const AppSidebar = () => {
                   variant="ghost"
                   size="icon"
                   onClick={() => logout()}
-                  className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                  className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent focusable"
+                  aria-label="Sair da conta"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-4 h-4" aria-hidden="true" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Sair</TooltipContent>

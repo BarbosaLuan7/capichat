@@ -4,6 +4,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Utility: focusable - standard focus visible styling */
+.focusable {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+}
+
+/* Skip Link for keyboard navigation */
+.skip-link {
+  @apply absolute left-0 top-0 -translate-y-full bg-primary text-primary-foreground px-4 py-2 font-medium z-[100] transition-transform duration-200;
+}
+.skip-link:focus {
+  @apply translate-y-0;
+}
+
 @layer base {
   :root {
     --background: 220 20% 97%;

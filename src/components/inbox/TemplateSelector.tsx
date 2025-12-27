@@ -77,38 +77,41 @@ export function TemplateSelector({
       <PopoverContent className="w-80 p-0" align="start" side="top">
         <div className="p-3 border-b border-border">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
             <Input
               placeholder="Buscar template ou atalho..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
+              aria-label="Buscar template"
             />
           </div>
         </div>
         
         <ScrollArea className="max-h-64">
           {isLoading ? (
-            <div className="p-4 text-center text-muted-foreground">
+            <div className="p-4 text-center text-muted-foreground" role="status" aria-live="polite">
               Carregando...
             </div>
           ) : filteredTemplates.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">
+            <div className="p-4 text-center text-muted-foreground" role="status" aria-live="polite">
               Nenhum template encontrado
             </div>
           ) : (
-            <div className="p-2 space-y-1">
+            <div className="p-2 space-y-1" role="listbox" aria-label="Lista de templates">
               {filteredTemplates.map((template) => (
                 <button
                   key={template.id}
                   onClick={() => handleSelectTemplate(template.content)}
-                  className="w-full p-3 text-left rounded-lg hover:bg-muted/50 transition-colors"
+                  className="w-full p-3 text-left rounded-lg hover:bg-muted/50 transition-colors focusable"
+                  role="option"
+                  aria-label={`Usar template ${template.name}`}
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-medium text-sm text-foreground">
                       {template.name}
                     </span>
-                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded" aria-hidden="true">
                       /{template.shortcut}
                     </span>
                   </div>
