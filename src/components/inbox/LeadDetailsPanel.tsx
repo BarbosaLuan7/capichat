@@ -25,7 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { cn } from '@/lib/utils';
+import { cn, getContrastTextColor } from '@/lib/utils';
 import { toast } from 'sonner';
 import { TransferLeadModal } from './TransferLeadModal';
 import { LeadLabelsModal } from './LeadLabelsModal';
@@ -357,8 +357,8 @@ export function LeadDetailsPanel({
                       {lead.labels.map((label) => (
                         <Badge
                           key={label.id}
-                          className="text-xs border-0"
-                          style={{ backgroundColor: label.color, color: 'white' }}
+                          className={cn("text-xs border-0", getContrastTextColor(label.color))}
+                          style={{ backgroundColor: label.color }}
                         >
                           {label.name}
                         </Badge>

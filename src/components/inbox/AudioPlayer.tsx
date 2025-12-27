@@ -2,7 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { Play, Pause, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+
+const PLAYBACK_SPEEDS = [1, 1.5, 2, 0.5] as const;
 
 interface AudioPlayerProps {
   src: string;
@@ -16,6 +19,7 @@ export function AudioPlayer({ src, className, 'aria-label': ariaLabel }: AudioPl
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -67,6 +71,15 @@ export function AudioPlayer({ src, className, 'aria-label': ariaLabel }: AudioPl
     setCurrentTime(newTime);
   };
 
+  const cyclePlaybackRate = () => {
+    const currentIndex = PLAYBACK_SPEEDS.indexOf(playbackRate as typeof PLAYBACK_SPEEDS[number]);
+    const nextSpeed = PLAYBACK_SPEEDS[(currentIndex + 1) % PLAYBACK_SPEEDS.length];
+    setPlaybackRate(nextSpeed);
+    if (audioRef.current) {
+      audioRef.current.playbackRate = nextSpeed;
+    }
+  };
+
   const formatTime = (seconds: number) => {
     if (!isFinite(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
@@ -113,7 +126,26 @@ export function AudioPlayer({ src, className, 'aria-label': ariaLabel }: AudioPl
         </span>
       </div>
 
-      <Volume2 className="w-4 h-4 text-muted-foreground shrink-0" />
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs font-medium shrink-0"
+              onClick={cyclePlaybackRate}
+              aria-label={`Velocidade de reprodução: ${playbackRate}x. Clique para alterar.`}
+            >
+              {playbackRate}x
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>Velocidade de reprodução (clique para alterar)</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <Volume2 className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
     </div>
   );
 }

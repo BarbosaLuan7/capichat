@@ -364,10 +364,18 @@ export const NewConversationModal = ({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ex: Maria Silva"
+              className={name.length > 0 && name.trim() === '' ? 'border-destructive focus-visible:ring-destructive' : ''}
+              aria-invalid={name.length > 0 && name.trim() === ''}
             />
-            <p className="text-xs text-muted-foreground">
-              Se vazio, será usado "Lead + últimos 4 dígitos"
-            </p>
+            {name.length > 0 && name.trim() === '' ? (
+              <p className="text-xs text-destructive">
+                Nome não pode conter apenas espaços
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Se vazio, será usado "Lead + últimos 4 dígitos"
+              </p>
+            )}
           </div>
           
           {/* Benefit Type */}

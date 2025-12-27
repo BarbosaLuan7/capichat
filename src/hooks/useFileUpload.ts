@@ -14,12 +14,15 @@ export function useFileUpload() {
   });
 
   const uploadFile = async (file: File, folder: string = 'attachments'): Promise<string | null> => {
+    const UPLOAD_TIMEOUT_MS = 60000; // 60 seconds timeout
+
     try {
       setUploadProgress({ progress: 0, uploading: true });
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error('Você precisa estar logado para enviar arquivos');
+        setUploadProgress({ progress: 0, uploading: false });
         return null;
       }
 
@@ -34,12 +37,21 @@ export function useFileUpload() {
         }));
       }, 100);
 
-      const { data, error } = await supabase.storage
+      // Create promise with timeout
+      const uploadPromise = supabase.storage
         .from('message-attachments')
         .upload(fileName, file, {
           cacheControl: '3600',
           upsert: false,
         });
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('UPLOAD_TIMEOUT'));
+        }, UPLOAD_TIMEOUT_MS);
+      });
+
+      const { data, error } = await Promise.race([uploadPromise, timeoutPromise]);
 
       clearInterval(progressInterval);
 
@@ -58,7 +70,13 @@ export function useFileUpload() {
       return storageRef;
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('Erro ao enviar arquivo');
+      
+      if (error instanceof Error && error.message === 'UPLOAD_TIMEOUT') {
+        toast.error('Upload demorou demais. Verifique sua conexão e tente novamente.');
+      } else {
+        toast.error('Erro ao enviar arquivo');
+      }
+      
       setUploadProgress({ progress: 0, uploading: false });
       return null;
     }
