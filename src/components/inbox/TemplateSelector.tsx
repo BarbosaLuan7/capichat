@@ -7,6 +7,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Zap, Search } from 'lucide-react';
 import { useTemplates } from '@/hooks/useTemplates';
 import { replaceTemplateVariables, type LeadData } from '@/lib/templateVariables';
@@ -63,18 +64,23 @@ export function TemplateSelector({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-muted-foreground hover:text-foreground"
-          title="Selecionar template"
-        >
-          <Zap className="w-5 h-5" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="start" side="top">
+    <TooltipProvider>
+      <Tooltip>
+        <Popover open={open} onOpenChange={setOpen}>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="Selecionar template de mensagem"
+              >
+                <Zap className="w-5 h-5" aria-hidden="true" />
+              </Button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="top">Usar template</TooltipContent>
+          <PopoverContent className="w-80 p-0" align="start" side="top">
         <div className="p-3 border-b border-border">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
@@ -123,7 +129,9 @@ export function TemplateSelector({
             </div>
           )}
         </ScrollArea>
-      </PopoverContent>
-    </Popover>
+        </PopoverContent>
+        </Popover>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

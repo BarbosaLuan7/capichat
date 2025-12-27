@@ -38,7 +38,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { User, UserRole } from '@/types';
-import { useAppStore } from '@/store/appStore';
+import { useTeams } from '@/hooks/useTeams';
 import { getRoleLabel } from '@/lib/permissions';
 
 const userSchema = z.object({
@@ -60,7 +60,8 @@ interface UserModalProps {
 }
 
 export const UserModal = ({ open, onOpenChange, user, onSave, onDelete }: UserModalProps) => {
-  const { teams } = useAppStore();
+  const { data: teamsData } = useTeams();
+  const teams = teamsData || [];
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const form = useForm<UserFormData>({

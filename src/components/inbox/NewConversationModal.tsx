@@ -27,6 +27,7 @@ import { MaskedInput } from '@/components/ui/masked-input';
 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/logger';
 import { useCreateLead } from '@/hooks/useLeads';
 import { useCreateConversation, useSendMessage } from '@/hooks/useConversations';
 import { useFunnelStages } from '@/hooks/useFunnelStages';
@@ -126,12 +127,12 @@ export const NewConversationModal = ({
           .maybeSingle();
         
         if (error) {
-          console.error('Error checking phone duplicity:', error);
+          logger.error('[NewConversation] Error checking phone duplicity:', error);
         } else {
           setExistingLead(data);
         }
       } catch (error) {
-        console.error('Error checking phone duplicity:', error);
+        logger.error('[NewConversation] Error checking phone duplicity:', error);
       } finally {
         setIsCheckingDuplicity(false);
       }
@@ -246,7 +247,7 @@ export const NewConversationModal = ({
         temperature: 'warm',
       });
       
-      console.log('[NewConversation] Lead created:', lead.id);
+      logger.log('[NewConversation] Lead created:', lead.id);
       
       // 2. Create conversation
       const conversation = await createConversation.mutateAsync({
@@ -255,7 +256,7 @@ export const NewConversationModal = ({
         status: 'open',
       });
       
-      console.log('[NewConversation] Conversation created:', conversation.id);
+      logger.log('[NewConversation] Conversation created:', conversation.id);
       
       // 3. Send message if requested
       if (shouldSendMessage && message.trim()) {
@@ -269,7 +270,7 @@ export const NewConversationModal = ({
           type: 'text',
         });
         
-        console.log('[NewConversation] Message sent');
+        logger.log('[NewConversation] Message sent');
         toast.success('Conversa criada e mensagem enviada!');
       } else {
         toast.success('Conversa criada com sucesso!');
@@ -280,7 +281,7 @@ export const NewConversationModal = ({
       onConversationCreated?.(conversation.id);
       
     } catch (error) {
-      console.error('[NewConversation] Error:', error);
+      logger.error('[NewConversation] Error:', error);
       const msg = error instanceof Error ? error.message : 'Erro ao criar conversa';
       toast.error(msg);
     } finally {

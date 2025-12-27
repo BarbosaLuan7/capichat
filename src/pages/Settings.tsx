@@ -20,7 +20,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { useAuthStore } from '@/store/authStore';
+import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 import { toast } from 'sonner';
@@ -48,7 +48,7 @@ const settingsMenu = [
 
 const SettingsPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { authUser: user } = useAuth();
 
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>(() => {
     const saved = localStorage.getItem(NOTIFICATION_PREFS_KEY);
