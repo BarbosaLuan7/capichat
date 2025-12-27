@@ -24,6 +24,15 @@ verify_jwt = false
 [functions.api-messages-send]
 verify_jwt = false
 
+[functions.api-conversations]
+verify_jwt = false
+
+[functions.api-tags]
+verify_jwt = false
+
+[functions.api-templates]
+verify_jwt = false
+
 [functions.dispatch-webhook]
 verify_jwt = false
 

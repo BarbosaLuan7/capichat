@@ -1,0 +1,1011 @@
+openapi: 3.0.3
+info:
+  title: GaranteDireito CRM API
+  version: 1.0.0
+  description: |
+    API RESTful para integração externa com o GaranteDireito CRM.
+    
+    ## Autenticação
+    
+    Todas as requisições devem incluir um header de autorização com a API Key:
+    
+    ```
+    Authorization: Bearer {sua_api_key}
+    ```
+    
+    ## Rate Limiting
+    
+    - 100 requests/minuto para envio de mensagens
+    - 1000 requests/minuto para operações de leitura
+    
+    ## Paginação
+    
+    Endpoints de listagem suportam paginação via query params:
+    - `page`: Número da página (padrão: 1)
+    - `page_size`: Itens por página (padrão: 50, máximo: 100)
+  contact:
+    name: GaranteDireito Suporte
+    email: suporte@garantedireito.com
+  license:
+    name: Proprietária
+
+servers:
+  - url: https://vnsypopnzwtkmyvxvqpu.supabase.co/functions/v1
+    description: Produção
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Leads
+    description: Gerenciamento de leads/contatos
+  - name: Mensagens
+    description: Envio e recebimento de mensagens
+  - name: Conversas
+    description: Gerenciamento de conversas/atendimentos
+  - name: Tags
+    description: Gerenciamento de etiquetas
+  - name: Templates
+    description: Templates de mensagens
+
+paths:
+  /api-leads:
+    get:
+      tags: [Leads]
+      summary: Listar leads
+      description: Retorna lista paginada de leads com filtros opcionais
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, archived, converted, lost]
+        - name: temperature
+          in: query
+          schema:
+            type: string
+            enum: [cold, warm, hot]
+        - name: stage_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: assigned_to
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lista de leads
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Lead'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Leads]
+      summary: Criar lead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLeadRequest'
+            example:
+              name: Maria Silva
+              phone: "5545999957851"
+              email: maria@email.com
+              source: facebook_ads
+              temperature: warm
+      responses:
+        '201':
+          description: Lead criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lead'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api-leads?id={id}:
+    get:
+      tags: [Leads]
+      summary: Buscar lead por ID
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lead encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lead'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Leads]
+      summary: Atualizar lead
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLeadRequest'
+      responses:
+        '200':
+          description: Lead atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lead'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    delete:
+      tags: [Leads]
+      summary: Remover lead
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lead removido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /api-messages-send:
+    post:
+      tags: [Mensagens]
+      summary: Enviar mensagem
+      description: Envia mensagem de texto, mídia ou template via WhatsApp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/SendTextMessage'
+                - $ref: '#/components/schemas/SendMediaMessage'
+            examples:
+              text:
+                summary: Mensagem de texto
+                value:
+                  phone: "5545999957851"
+                  message: "Olá, tudo bem?"
+              image:
+                summary: Enviar imagem
+                value:
+                  phone: "5545999957851"
+                  type: image
+                  media_url: "https://example.com/image.jpg"
+                  message: "Veja esta imagem"
+      responses:
+        '200':
+          description: Mensagem enviada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          description: Rate limit excedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api-messages-receive:
+    post:
+      tags: [Mensagens]
+      summary: Receber mensagem (webhook)
+      description: Endpoint para receber mensagens do WAHA/Evolution/Z-API
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Mensagem processada
+
+  /api-conversations:
+    get:
+      tags: [Conversas]
+      summary: Listar conversas
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, pending, resolved]
+        - name: assigned_to
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: lead_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lista de conversas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conversation'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags: [Conversas]
+      summary: Criar conversa
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lead_id]
+              properties:
+                lead_id:
+                  type: string
+                  format: uuid
+                assigned_to:
+                  type: string
+                  format: uuid
+                status:
+                  type: string
+                  enum: [open, pending, resolved]
+                  default: open
+      responses:
+        '201':
+          description: Conversa criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+
+  /api-conversations?id={id}:
+    get:
+      tags: [Conversas]
+      summary: Buscar conversa com mensagens
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Conversa com mensagens
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Conversation'
+                  - type: object
+                    properties:
+                      messages:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Message'
+
+    put:
+      tags: [Conversas]
+      summary: Atualizar conversa
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [open, pending, resolved]
+                assigned_to:
+                  type: string
+                  format: uuid
+                is_favorite:
+                  type: boolean
+      responses:
+        '200':
+          description: Conversa atualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+
+    delete:
+      tags: [Conversas]
+      summary: Remover conversa
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Conversa removida
+
+  /api-tags:
+    get:
+      tags: [Tags]
+      summary: Listar etiquetas
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [origem, interesse, prioridade, status, beneficio, condicao_saude, desqualificacao, situacao, perda]
+      responses:
+        '200':
+          description: Lista de etiquetas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tag'
+
+    post:
+      tags: [Tags]
+      summary: Criar etiqueta
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                color:
+                  type: string
+                  default: "#6B7280"
+                category:
+                  type: string
+                  enum: [origem, interesse, prioridade, status, beneficio, condicao_saude, desqualificacao, situacao, perda]
+                  default: status
+      responses:
+        '201':
+          description: Etiqueta criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+
+  /api-tags?id={id}:
+    get:
+      tags: [Tags]
+      summary: Buscar etiqueta por ID
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Etiqueta encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+
+    put:
+      tags: [Tags]
+      summary: Atualizar etiqueta
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                color:
+                  type: string
+                category:
+                  type: string
+      responses:
+        '200':
+          description: Etiqueta atualizada
+
+    delete:
+      tags: [Tags]
+      summary: Remover etiqueta
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Etiqueta removida
+
+  /api-tags?action=lead&lead_id={lead_id}:
+    get:
+      tags: [Tags]
+      summary: Listar etiquetas do lead
+      parameters:
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [lead]
+        - name: lead_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Etiquetas do lead
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tag'
+
+    post:
+      tags: [Tags]
+      summary: Adicionar etiquetas ao lead
+      parameters:
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [lead]
+        - name: lead_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tag_id:
+                  type: string
+                  format: uuid
+                tag_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+            example:
+              tag_ids: ["uuid-1", "uuid-2"]
+      responses:
+        '201':
+          description: Etiquetas adicionadas
+
+  /api-tags?action=lead&lead_id={lead_id}&tag_id={tag_id}:
+    delete:
+      tags: [Tags]
+      summary: Remover etiqueta do lead
+      parameters:
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [lead]
+        - name: lead_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tag_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Etiqueta removida do lead
+
+  /api-templates:
+    get:
+      tags: [Templates]
+      summary: Listar templates
+      parameters:
+        - name: shortcut
+          in: query
+          description: Buscar por atalho
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Template'
+
+    post:
+      tags: [Templates]
+      summary: Criar template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, shortcut, content]
+              properties:
+                name:
+                  type: string
+                shortcut:
+                  type: string
+                  description: Atalho para usar com /
+                content:
+                  type: string
+                  description: Conteúdo com variáveis {{nome}}, {{telefone}}, etc.
+            example:
+              name: Boas-vindas
+              shortcut: oi
+              content: "Olá {{nome}}! Bem-vindo à GaranteDireito. Como posso ajudar?"
+      responses:
+        '201':
+          description: Template criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+
+  /api-templates?id={id}:
+    get:
+      tags: [Templates]
+      summary: Buscar template por ID
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Template encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+
+    put:
+      tags: [Templates]
+      summary: Atualizar template
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                shortcut:
+                  type: string
+                content:
+                  type: string
+      responses:
+        '200':
+          description: Template atualizado
+
+    delete:
+      tags: [Templates]
+      summary: Remover template
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Template removido
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: API Key obtida em Configurações > API
+
+  schemas:
+    Lead:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        cpf:
+          type: string
+        birth_date:
+          type: string
+          format: date
+        source:
+          type: string
+        status:
+          type: string
+          enum: [active, archived, converted, lost]
+        temperature:
+          type: string
+          enum: [cold, warm, hot]
+        stage_id:
+          type: string
+          format: uuid
+        assigned_to:
+          type: string
+          format: uuid
+        benefit_type:
+          type: string
+        case_status:
+          type: string
+        avatar_url:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateLeadRequest:
+      type: object
+      required: [name, phone]
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        cpf:
+          type: string
+        source:
+          type: string
+          default: api
+        temperature:
+          type: string
+          enum: [cold, warm, hot]
+          default: cold
+        stage_id:
+          type: string
+          format: uuid
+        assigned_to:
+          type: string
+          format: uuid
+        benefit_type:
+          type: string
+
+    UpdateLeadRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        cpf:
+          type: string
+        status:
+          type: string
+          enum: [active, archived, converted, lost]
+        temperature:
+          type: string
+          enum: [cold, warm, hot]
+        stage_id:
+          type: string
+          format: uuid
+        assigned_to:
+          type: string
+          format: uuid
+        benefit_type:
+          type: string
+        case_status:
+          type: string
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        lead_id:
+          type: string
+          format: uuid
+        assigned_to:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [open, pending, resolved]
+        is_favorite:
+          type: boolean
+        unread_count:
+          type: integer
+        last_message_at:
+          type: string
+          format: date-time
+        last_message_content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        lead:
+          $ref: '#/components/schemas/LeadSummary'
+
+    LeadSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        phone:
+          type: string
+        avatar_url:
+          type: string
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversation_id:
+          type: string
+          format: uuid
+        sender_id:
+          type: string
+          format: uuid
+        sender_type:
+          type: string
+          enum: [lead, agent]
+        type:
+          type: string
+          enum: [text, image, audio, video, document]
+        content:
+          type: string
+        media_url:
+          type: string
+        status:
+          type: string
+          enum: [sent, delivered, read]
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        created_at:
+          type: string
+          format: date-time
+
+    SendTextMessage:
+      type: object
+      required: [phone, message]
+      properties:
+        phone:
+          type: string
+          description: Número do WhatsApp com código do país (ex: 5545999957851)
+        message:
+          type: string
+          description: Texto da mensagem
+        lead_id:
+          type: string
+          format: uuid
+          description: ID do lead (opcional, será criado se não existir)
+
+    SendMediaMessage:
+      type: object
+      required: [phone, type, media_url]
+      properties:
+        phone:
+          type: string
+        type:
+          type: string
+          enum: [image, audio, video, document]
+        media_url:
+          type: string
+          format: uri
+        message:
+          type: string
+          description: Legenda da mídia
+        lead_id:
+          type: string
+          format: uuid
+
+    MessageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message_id:
+          type: string
+        status:
+          type: string
+
+    Tag:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        color:
+          type: string
+        category:
+          type: string
+          enum: [origem, interesse, prioridade, status, beneficio, condicao_saude, desqualificacao, situacao, perda]
+        created_at:
+          type: string
+          format: date-time
+
+    Template:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        shortcut:
+          type: string
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total:
+          type: integer
+        total_pages:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Requisição inválida
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: API Key inválida ou ausente
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

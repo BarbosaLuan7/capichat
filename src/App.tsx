@@ -28,6 +28,7 @@ import TemplatesSettings from "./pages/settings/TemplatesSettings";
 import WebhooksSettings from "./pages/settings/WebhooksSettings";
 import WhatsAppSettings from "./pages/settings/WhatsAppSettings";
 import ApiSettings from "./pages/settings/ApiSettings";
+import ApiDocs from "./pages/ApiDocs";
 import NotFound from "./pages/NotFound";
 import React from "react";
 
@@ -128,6 +129,7 @@ function AppContent() {
           <Route path="settings/webhooks" element={<WebhooksSettings />} />
           <Route path="settings/whatsapp" element={<WhatsAppSettings />} />
           <Route path="settings/api" element={<ApiSettings />} />
+          <Route path="api-docs" element={<ApiDocs />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>
