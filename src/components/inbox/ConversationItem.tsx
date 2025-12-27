@@ -79,8 +79,17 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
   return (
     <div
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={`Conversa com ${displayName}${conversation.unread_count > 0 ? `, ${conversation.unread_count} mensagens não lidas` : ''}`}
       className={cn(
-        'px-3 py-3 cursor-pointer transition-colors hover:bg-muted/50 border-l-4 border-l-transparent',
+        'px-3 py-3 cursor-pointer transition-colors hover:bg-muted/50 border-l-4 border-l-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         isSelected && 'bg-blue-50 border-l-blue-600'
       )}
     >
