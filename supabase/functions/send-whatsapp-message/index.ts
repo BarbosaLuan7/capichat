@@ -26,6 +26,47 @@ function normalizeUrl(url: string): string {
   return url.replace(/\/+$/, '');
 }
 
+// Converte storage:// URLs para signed URLs públicas
+// deno-lint-ignore no-explicit-any
+async function resolveStorageUrl(
+  supabase: any,
+  storageUrl: string | undefined
+): Promise<string | undefined> {
+  if (!storageUrl) {
+    return undefined;
+  }
+  
+  // Se não é storage://, retorna como está
+  if (!storageUrl.startsWith('storage://')) {
+    return storageUrl;
+  }
+  
+  console.log('[send-whatsapp-message] Convertendo storage URL:', storageUrl);
+  
+  // storage://bucket-name/path/to/file.ext
+  const withoutProtocol = storageUrl.replace('storage://', '');
+  const [bucket, ...pathParts] = withoutProtocol.split('/');
+  const path = pathParts.join('/');
+  
+  if (!bucket || !path) {
+    console.error('[send-whatsapp-message] URL storage:// malformada:', storageUrl);
+    throw new Error(`URL de mídia inválida: ${storageUrl}`);
+  }
+  
+  // Gerar signed URL com validade de 1 hora
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(path, 3600); // 1 hora
+  
+  if (error || !data?.signedUrl) {
+    console.error('[send-whatsapp-message] Erro ao gerar signed URL:', error);
+    throw new Error(`Falha ao gerar URL pública para mídia: ${error?.message || 'erro desconhecido'}`);
+  }
+  
+  console.log('[send-whatsapp-message] Signed URL gerada:', data.signedUrl.substring(0, 80) + '...');
+  return data.signedUrl;
+}
+
 // DDDs válidos do Brasil (11-99, excluindo alguns inexistentes)
 const VALID_DDDS = new Set([
   // Região Sudeste
@@ -689,18 +730,33 @@ serve(async (req) => {
     const messageType = payload.type || 'text';
     let result: { success: boolean; messageId?: string; error?: string };
     
+    // Converter storage:// URL para signed URL pública antes de enviar
+    let resolvedMediaUrl: string | undefined;
+    try {
+      resolvedMediaUrl = await resolveStorageUrl(supabase, payload.media_url);
+    } catch (urlError) {
+      console.error('[send-whatsapp-message] Erro ao resolver URL de mídia:', urlError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: urlError instanceof Error ? urlError.message : 'Erro ao processar URL de mídia' 
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     switch (config.provider) {
       case 'waha':
-        result = await sendWAHA(config, validatedPhone, messageContent, messageType, payload.media_url);
+        result = await sendWAHA(config, validatedPhone, messageContent, messageType, resolvedMediaUrl);
         break;
       case 'evolution':
-        result = await sendEvolution(config, validatedPhone, messageContent, messageType, payload.media_url);
+        result = await sendEvolution(config, validatedPhone, messageContent, messageType, resolvedMediaUrl);
         break;
       case 'z-api':
-        result = await sendZAPI(config, validatedPhone, messageContent, messageType, payload.media_url);
+        result = await sendZAPI(config, validatedPhone, messageContent, messageType, resolvedMediaUrl);
         break;
       case 'custom':
-        result = await sendCustom(config, validatedPhone, messageContent, messageType, payload.media_url);
+        result = await sendCustom(config, validatedPhone, messageContent, messageType, resolvedMediaUrl);
         break;
       default:
         result = { success: false, error: 'Provider desconhecido' };
