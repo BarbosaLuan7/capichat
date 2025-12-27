@@ -7,7 +7,7 @@ type Message = Database['public']['Tables']['messages']['Row'];
 
 interface UseInboxRealtimeOptions {
   selectedConversationId?: string | null;
-  onNewIncomingMessage?: (message: Message) => void;
+  onNewIncomingMessage?: (message: Message, leadName?: string) => void;
 }
 
 /**
@@ -60,9 +60,13 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
       });
     }
 
-    // Notify for incoming messages from leads
-    if (newMessage.sender_type === 'lead' && onNewIncomingMessageRef.current) {
-      onNewIncomingMessageRef.current(newMessage);
+    // Notify for incoming messages from leads (if not the selected conversation)
+    if (newMessage.sender_type === 'lead' && conversationId !== currentSelectedId && onNewIncomingMessageRef.current) {
+      // Get lead name from conversations cache if available
+      const conversations = queryClient.getQueryData<any[]>(['conversations']);
+      const conv = conversations?.find(c => c.id === conversationId);
+      const leadName = conv?.leads?.whatsapp_name || conv?.leads?.name;
+      onNewIncomingMessageRef.current(newMessage, leadName);
     }
 
     // Update conversation list (for last_message_at, unread_count, etc.)

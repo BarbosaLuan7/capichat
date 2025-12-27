@@ -35,8 +35,9 @@ export function useAISuggestions() {
       return;
     }
 
-    // Check cache first (unless forcing refresh)
-    const cacheKey = generateMessagesKey('suggestions', messages);
+    // Check cache first (unless forcing refresh) - include lead context in cache key
+    const leadContext = lead ? { labels: lead.labels, stage: lead.stage } : undefined;
+    const cacheKey = generateMessagesKey('suggestions', messages, undefined, leadContext);
     
     if (!forceRefresh) {
       const cached = aiCache.get<AISuggestion[]>(cacheKey);

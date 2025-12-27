@@ -5,6 +5,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { cn, getContrastTextColor } from '@/lib/utils';
 
 interface Label {
   id: string;
@@ -34,10 +35,9 @@ export function LabelBadges({ labels, maxVisible = 2, size = 'sm' }: LabelBadges
       {visibleLabels.map((label) => (
         <Badge
           key={label.id}
-          className={`${badgeClasses} max-w-[80px] truncate`}
+          className={cn(badgeClasses, 'max-w-[80px] truncate', getContrastTextColor(label.color))}
           style={{
             backgroundColor: label.color,
-            color: 'white',
           }}
           title={label.name}
         >
@@ -58,10 +58,12 @@ export function LabelBadges({ labels, maxVisible = 2, size = 'sm' }: LabelBadges
                 {hiddenLabels.map((label) => (
                   <Badge
                     key={label.id}
-                    className="text-[10px] px-1.5 py-0 border-0"
+                    className={cn(
+                      "text-[10px] px-1.5 py-0 border-0",
+                      getContrastTextColor(label.color)
+                    )}
                     style={{
                       backgroundColor: label.color,
-                      color: 'white',
                     }}
                   >
                     {label.name}

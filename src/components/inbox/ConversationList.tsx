@@ -81,6 +81,8 @@ interface ConversationListProps {
   onSelectConversation: (id: string) => void;
   onNewConversation: () => void;
   isLoading: boolean;
+  isError?: boolean;
+  onRetry?: () => void;
   userId?: string;
 }
 
@@ -102,6 +104,8 @@ export function ConversationList({
   onSelectConversation,
   onNewConversation,
   isLoading,
+  isError,
+  onRetry,
   userId,
 }: ConversationListProps) {
   const [filter, setFilter] = useState<InboxFilter>('meus');
@@ -439,7 +443,24 @@ export function ConversationList({
 
       {/* Conversations List */}
       <ScrollArea className="flex-1 overflow-hidden">
-        {isLoading ? (
+        {isError ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4 text-destructive">
+              <AlertCircle className="w-8 h-8" aria-hidden="true" />
+            </div>
+            <h3 className="text-base font-medium text-foreground mb-1">
+              Erro ao carregar conversas
+            </h3>
+            <p className="text-sm text-muted-foreground max-w-xs mb-4">
+              Não foi possível carregar as conversas. Verifique sua conexão e tente novamente.
+            </p>
+            {onRetry && (
+              <Button size="sm" variant="outline" onClick={onRetry}>
+                Tentar novamente
+              </Button>
+            )}
+          </div>
+        ) : isLoading ? (
           <div className="divide-y divide-border">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="p-4 flex items-start gap-3 animate-pulse">
