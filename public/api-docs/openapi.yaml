@@ -669,10 +669,10 @@ paths:
                   type: string
                 shortcut:
                   type: string
-                  description: Atalho para usar com /
+                  description: "Atalho para usar com /"
                 content:
                   type: string
-                  description: Conteúdo com variáveis {{nome}}, {{telefone}}, etc.
+                  description: "Conteúdo com variáveis {{nome}}, {{telefone}}, etc."
             example:
               name: Boas-vindas
               shortcut: oi
@@ -936,7 +936,7 @@ components:
       properties:
         phone:
           type: string
-          description: Número do WhatsApp com código do país (ex: 5545999957851)
+          description: "Número do WhatsApp com código do país (ex: 5545999957851)"
         message:
           type: string
           description: Texto da mensagem
