@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -16,6 +16,9 @@ import {
   Brain,
   ClipboardList,
   Loader2,
+  StickyNote,
+  Activity,
+  Filter,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +36,15 @@ import { AIConversationSummary } from './AIConversationSummary';
 import { DocumentChecklist } from './DocumentChecklist';
 import { formatPhoneNumber, formatCPF, toWhatsAppFormat } from '@/lib/masks';
 import { useLeadActivities, formatActivityMessage } from '@/hooks/useLeadActivities';
+import { useInternalNotes } from '@/hooks/useInternalNotes';
+import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { Database } from '@/integrations/supabase/types';
 
 type Lead = Database['public']['Tables']['leads']['Row'];
@@ -62,9 +74,11 @@ export function LeadDetailsPanel({
 }: LeadDetailsPanelProps) {
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showLabelsModal, setShowLabelsModal] = useState(false);
+  const [activityFilter, setActivityFilter] = useState<string>('all');
 
-  // Fetch lead activities from database
+  // Fetch lead activities and notes from database
   const { data: activities, isLoading: activitiesLoading } = useLeadActivities(lead.id);
+  const { data: notes } = useInternalNotes(conversationId);
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -98,23 +112,34 @@ export function LeadDetailsPanel({
     }
   };
 
-  const timelineEvents = activities?.map(activity => ({
-    id: activity.id,
-    type: getEventType(activity.action),
-    title: formatActivityMessage(activity.action, activity.details || {}),
-    description: activity.details?.description || activity.details?.content,
-    createdAt: new Date(activity.created_at),
-    user: activity.profiles?.name,
-  })) || [
-    // Fallback: show lead creation if no activities
-    {
+  const allTimelineEvents = useMemo(() => {
+    const events = activities?.map(activity => ({
+      id: activity.id,
+      type: getEventType(activity.action),
+      title: formatActivityMessage(activity.action, activity.details || {}),
+      description: activity.details?.description || activity.details?.content,
+      createdAt: new Date(activity.created_at),
+      user: activity.profiles?.name,
+    })) || [];
+
+    // Always add lead creation event
+    events.push({
       id: 'created',
       type: 'assigned' as const,
       title: 'Lead criado',
       description: `Origem: ${lead.source}`,
       createdAt: new Date(lead.created_at),
-    },
-  ];
+      user: undefined,
+    });
+
+    return events.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }, [activities, lead.source, lead.created_at]);
+
+  // Filter events based on selected filter
+  const filteredEvents = useMemo(() => {
+    if (activityFilter === 'all') return allTimelineEvents;
+    return allTimelineEvents.filter(event => event.type === activityFilter);
+  }, [allTimelineEvents, activityFilter]);
 
   return (
     <>
@@ -228,6 +253,11 @@ export function LeadDetailsPanel({
             <TabsTrigger value="historico" className="text-xs gap-1 data-[state=active]:bg-muted">
               <History className="w-3 h-3" />
               Histórico
+              {(notes?.length ?? 0) > 0 && (
+                <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">
+                  {notes?.length}
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -460,19 +490,55 @@ export function LeadDetailsPanel({
           {/* Histórico Tab */}
           <TabsContent value="historico" className="flex-1 m-0 min-h-0 overflow-hidden data-[state=inactive]:hidden">
             <ScrollArea className="h-full">
-              <div className="p-4 space-y-4">
-                {/* Adicionar nota no topo */}
-                <InternalNotes conversationId={conversationId} />
-                
-                {/* Timeline de atividades */}
-                {activitiesLoading ? (
-                  <div className="flex items-center justify-center py-8 text-muted-foreground">
-                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                    Carregando histórico...
+              <div className="p-4 space-y-6">
+                {/* Seção de Notas Internas */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <StickyNote className="w-4 h-4 text-warning" />
+                    <h3 className="font-medium text-sm">Notas Internas</h3>
+                    {(notes?.length ?? 0) > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {notes?.length}
+                      </Badge>
+                    )}
                   </div>
-                ) : (
-                  <LeadTimeline events={timelineEvents} />
-                )}
+                  <InternalNotes conversationId={conversationId} />
+                </div>
+
+                <Separator />
+
+                {/* Seção de Histórico de Atividades */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-primary" />
+                      <h3 className="font-medium text-sm">Histórico de Atividades</h3>
+                    </div>
+                    <Select value={activityFilter} onValueChange={setActivityFilter}>
+                      <SelectTrigger className="w-[140px] h-7 text-xs">
+                        <Filter className="w-3 h-3 mr-1" />
+                        <SelectValue placeholder="Filtrar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="stage_change">Mudanças de etapa</SelectItem>
+                        <SelectItem value="label_added">Etiquetas</SelectItem>
+                        <SelectItem value="assigned">Atribuições</SelectItem>
+                        <SelectItem value="note">Notas</SelectItem>
+                        <SelectItem value="message">Mensagens</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {activitiesLoading ? (
+                    <div className="flex items-center justify-center py-8 text-muted-foreground">
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      Carregando histórico...
+                    </div>
+                  ) : (
+                    <LeadTimeline events={filteredEvents} />
+                  )}
+                </div>
               </div>
             </ScrollArea>
           </TabsContent>
