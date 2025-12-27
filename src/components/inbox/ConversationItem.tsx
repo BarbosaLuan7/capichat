@@ -18,6 +18,7 @@ interface ConversationLead {
   temperature?: string;
   avatar_url?: string | null;
   whatsapp_name?: string | null;
+  benefit_type?: string | null;
   lead_labels?: Array<{
     labels?: {
       id: string;
@@ -54,19 +55,17 @@ const sanitizePreviewContent = (content: string | null | undefined): string => {
     .trim();
 };
 
-// Format conversation date intelligently
+// Format conversation date - always show time, with date prefix for older messages
 const formatConversationDate = (date: Date): string => {
   const now = new Date();
-  const diffMins = differenceInMinutes(now, date);
-  const diffHours = differenceInHours(now, date);
-  const diffDays = differenceInDays(now, date);
   
-  if (diffMins < 1) return 'agora';
-  if (diffMins < 60) return `${diffMins}min`;
-  if (isSameDay(date, now)) return format(date, 'HH:mm');
-  if (isYesterday(date)) return 'ontem';
-  if (diffDays < 7) return format(date, 'EEEE', { locale: ptBR });
-  return format(date, 'dd/MM');
+  if (isSameDay(date, now)) {
+    return format(date, 'HH:mm');
+  }
+  if (isYesterday(date)) {
+    return `ontem ${format(date, 'HH:mm')}`;
+  }
+  return format(date, 'dd/MM HH:mm');
 };
 
 function ConversationItemComponent({ conversation, isSelected, onClick }: ConversationItemProps) {
@@ -81,8 +80,8 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
     <div
       onClick={onClick}
       className={cn(
-        'px-3 py-3 cursor-pointer transition-colors hover:bg-muted/50',
-        isSelected && 'bg-[#EDE9FE] border-l-[3px] border-l-[#7C3AED]'
+        'px-3 py-3 cursor-pointer transition-colors hover:bg-muted/50 border-l-4 border-l-transparent',
+        isSelected && 'bg-blue-50 border-l-blue-600'
       )}
     >
       <div className="flex gap-3">
@@ -119,12 +118,21 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
                 <span className="text-sm">🔥</span>
               )}
               {conversation.unread_count > 0 && (
-                <span className="min-w-[20px] h-5 w-5 bg-[#EF4444] text-white text-xs font-bold rounded-full flex items-center justify-center">
+                <span className="min-w-[20px] h-5 w-5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center">
                   {conversation.unread_count > 9 ? '9+' : conversation.unread_count}
                 </span>
               )}
             </div>
           </div>
+
+          {/* Row 2.5: Benefit type badge */}
+          {convLead?.benefit_type && (
+            <div className="mt-1">
+              <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 bg-green-100 text-green-800 rounded border border-green-200">
+                {convLead.benefit_type}
+              </span>
+            </div>
+          )}
 
           {/* Row 3: Status badge + Labels */}
           <div className="flex items-center gap-1.5 mt-0.5">
@@ -191,6 +199,7 @@ export const ConversationItem = memo(ConversationItemComponent, (prevProps, next
     prevProps.conversation.last_message_content === nextProps.conversation.last_message_content &&
     prevProps.conversation.is_favorite === nextProps.conversation.is_favorite &&
     prevProps.conversation.leads?.temperature === nextProps.conversation.leads?.temperature &&
+    prevProps.conversation.leads?.benefit_type === nextProps.conversation.leads?.benefit_type &&
     prevProps.conversation.leads?.lead_labels?.length === nextProps.conversation.leads?.lead_labels?.length
   );
 });
