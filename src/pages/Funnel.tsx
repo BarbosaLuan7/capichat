@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   DndContext,
   DragEndEvent,
@@ -22,6 +23,8 @@ import {
   MoreVertical,
   MessageSquare,
   Loader2,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -29,14 +32,37 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { useFunnelStages } from '@/hooks/useFunnelStages';
-import { useLeads, useUpdateLeadStage } from '@/hooks/useLeads';
+import { useLeads, useUpdateLeadStage, useDeleteLead } from '@/hooks/useLeads';
 import { useLabels } from '@/hooks/useLabels';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
+import { LeadModal } from '@/components/leads/LeadModal';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -51,9 +77,12 @@ interface LeadCardProps {
   labels: Database['public']['Tables']['labels']['Row'][];
   leadLabels: { lead_id: string; label_id: string }[];
   isDragging?: boolean;
+  onEdit?: (leadId: string) => void;
+  onDelete?: (leadId: string) => void;
+  onOpenConversation?: (leadId: string) => void;
 }
 
-const LeadCard = ({ lead, labels, leadLabels, isDragging }: LeadCardProps) => {
+const LeadCard = ({ lead, labels, leadLabels, isDragging, onEdit, onDelete, onOpenConversation }: LeadCardProps) => {
   // Get labels for this lead
   const leadLabelIds = leadLabels
     .filter((ll) => ll.lead_id === lead.id)
@@ -78,9 +107,39 @@ const LeadCard = ({ lead, labels, leadLabels, isDragging }: LeadCardProps) => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
             <h4 className="font-semibold text-foreground truncate">{lead.name}</h4>
-            <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2" aria-label={`Mais opções para ${lead.name}`}>
-              <MoreVertical className="w-4 h-4" aria-hidden="true" />
-            </Button>
+            <DropdownMenu>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-6 w-6 -mr-2" 
+                        aria-label={`Mais opções para ${lead.name}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreVertical className="w-4 h-4" aria-hidden="true" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>Opções</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem onClick={() => onEdit?.(lead.id)}>
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Editar Lead
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => onDelete?.(lead.id)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Excluir Lead
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           <div className="space-y-1.5 text-sm text-muted-foreground">
@@ -127,9 +186,25 @@ const LeadCard = ({ lead, labels, leadLabels, isDragging }: LeadCardProps) => {
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-border text-xs text-muted-foreground">
             <span>{format(new Date(lead.created_at), "dd/MM", { locale: ptBR })}</span>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={`Abrir conversa com ${lead.name}`}>
-                <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6" 
+                      aria-label={`Abrir conversa com ${lead.name}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenConversation?.(lead.id);
+                      }}
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Abrir conversa</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         </div>
@@ -142,9 +217,12 @@ interface SortableLeadCardProps {
   lead: Lead;
   labels: Database['public']['Tables']['labels']['Row'][];
   leadLabels: { lead_id: string; label_id: string }[];
+  onEdit?: (leadId: string) => void;
+  onDelete?: (leadId: string) => void;
+  onOpenConversation?: (leadId: string) => void;
 }
 
-const SortableLeadCard = ({ lead, labels, leadLabels }: SortableLeadCardProps) => {
+const SortableLeadCard = ({ lead, labels, leadLabels, onEdit, onDelete, onOpenConversation }: SortableLeadCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: lead.id,
     data: {
@@ -160,7 +238,15 @@ const SortableLeadCard = ({ lead, labels, leadLabels }: SortableLeadCardProps) =
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <LeadCard lead={lead} labels={labels} leadLabels={leadLabels} isDragging={isDragging} />
+      <LeadCard 
+        lead={lead} 
+        labels={labels} 
+        leadLabels={leadLabels} 
+        isDragging={isDragging}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onOpenConversation={onOpenConversation}
+      />
     </div>
   );
 };
@@ -170,9 +256,12 @@ interface FunnelColumnProps {
   leads: Lead[];
   labels: Database['public']['Tables']['labels']['Row'][];
   leadLabels: { lead_id: string; label_id: string }[];
+  onEditLead?: (leadId: string) => void;
+  onDeleteLead?: (leadId: string) => void;
+  onOpenConversation?: (leadId: string) => void;
 }
 
-const FunnelColumn = ({ stage, leads, labels, leadLabels }: FunnelColumnProps) => {
+const FunnelColumn = ({ stage, leads, labels, leadLabels, onEditLead, onDeleteLead, onOpenConversation }: FunnelColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({
     id: `stage-${stage.id}`,
     data: {
@@ -213,7 +302,15 @@ const FunnelColumn = ({ stage, leads, labels, leadLabels }: FunnelColumnProps) =
           <SortableContext items={leads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-3 pr-2">
               {leads.map((lead) => (
-                <SortableLeadCard key={lead.id} lead={lead} labels={labels} leadLabels={leadLabels} />
+                <SortableLeadCard 
+                  key={lead.id} 
+                  lead={lead} 
+                  labels={labels} 
+                  leadLabels={leadLabels}
+                  onEdit={onEditLead}
+                  onDelete={onDeleteLead}
+                  onOpenConversation={onOpenConversation}
+                />
               ))}
             </div>
           </SortableContext>
@@ -246,14 +343,25 @@ const FunnelSkeleton = () => (
 );
 
 const Funnel = () => {
+  const navigate = useNavigate();
   const { data: stages = [], isLoading: stagesLoading } = useFunnelStages();
   const { data: leadsResult, isLoading: leadsLoading } = useLeads();
   const { data: labelsData = [] } = useLabels();
   const updateLeadStage = useUpdateLeadStage();
+  const deleteLead = useDeleteLead();
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [leadLabels, setLeadLabels] = useState<{ lead_id: string; label_id: string }[]>([]);
+  
+  // Modal states
+  const [showLeadModal, setShowLeadModal] = useState(false);
+  const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
+  const [leadModalMode, setLeadModalMode] = useState<'create' | 'edit' | 'view'>('create');
+  
+  // Delete confirmation state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
 
   // Fetch lead_labels from database
   useEffect(() => {
@@ -326,6 +434,43 @@ const Funnel = () => {
     }
   };
 
+  const handleEditLead = (leadId: string) => {
+    setEditingLeadId(leadId);
+    setLeadModalMode('edit');
+    setShowLeadModal(true);
+  };
+
+  const handleDeleteLead = (leadId: string) => {
+    const lead = leads.find((l) => l.id === leadId);
+    if (lead) {
+      setLeadToDelete(lead);
+      setDeleteConfirmOpen(true);
+    }
+  };
+
+  const confirmDeleteLead = async () => {
+    if (!leadToDelete) return;
+    try {
+      await deleteLead.mutateAsync(leadToDelete.id);
+      toast.success('Lead excluído com sucesso');
+    } catch (error) {
+      toast.error('Erro ao excluir lead');
+    } finally {
+      setDeleteConfirmOpen(false);
+      setLeadToDelete(null);
+    }
+  };
+
+  const handleOpenConversation = (leadId: string) => {
+    navigate(`/inbox?leadId=${leadId}`);
+  };
+
+  const handleNewLead = () => {
+    setEditingLeadId(null);
+    setLeadModalMode('create');
+    setShowLeadModal(true);
+  };
+
   const activeLead = activeId ? leads.find((l) => l.id === activeId) : null;
 
   const isLoading = stagesLoading || leadsLoading;
@@ -347,7 +492,10 @@ const Funnel = () => {
             )}
           </p>
         </div>
-        <Button className="gradient-primary text-primary-foreground">
+        <Button 
+          className="gradient-primary text-primary-foreground"
+          onClick={handleNewLead}
+        >
           Novo Lead
         </Button>
       </div>
@@ -372,6 +520,9 @@ const Funnel = () => {
                   leads={stageLeads}
                   labels={labelsData}
                   leadLabels={leadLabels}
+                  onEditLead={handleEditLead}
+                  onDeleteLead={handleDeleteLead}
+                  onOpenConversation={handleOpenConversation}
                 />
               );
             })}
@@ -384,6 +535,35 @@ const Funnel = () => {
           </DragOverlay>
         </DndContext>
       )}
+
+      {/* Lead Modal */}
+      <LeadModal
+        open={showLeadModal}
+        onOpenChange={setShowLeadModal}
+        leadId={editingLeadId}
+        mode={leadModalMode}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir lead?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O lead "{leadToDelete?.name}" será permanentemente removido do sistema.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteLead}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

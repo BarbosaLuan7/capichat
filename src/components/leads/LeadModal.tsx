@@ -11,6 +11,17 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
   Form,
   FormControl,
   FormField,
@@ -193,6 +204,34 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
     { value: 'organico', label: 'Orgânico' },
   ];
 
+  const DeleteButton = () => (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button type="button" variant="destructive" size="sm">
+          <Trash2 className="w-4 h-4 mr-2" />
+          Excluir
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Excluir lead?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Esta ação não pode ser desfeita. O lead "{lead?.name}" será permanentemente removido do sistema.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleDelete}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            Excluir
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -312,10 +351,7 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
 
             {/* Actions */}
             <div className="flex justify-between pt-4 border-t">
-              <Button variant="destructive" size="sm" onClick={handleDelete}>
-                <Trash2 className="w-4 h-4 mr-2" />
-                Excluir
-              </Button>
+              <DeleteButton />
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Fechar
               </Button>
@@ -490,12 +526,7 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
               />
 
               <div className="flex justify-between pt-4">
-                {leadId && currentMode === 'edit' && (
-                  <Button type="button" variant="destructive" onClick={handleDelete}>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Excluir
-                  </Button>
-                )}
+                {leadId && currentMode === 'edit' && <DeleteButton />}
                 <div className="flex gap-2 ml-auto">
                   <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                     Cancelar
