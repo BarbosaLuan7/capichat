@@ -12,6 +12,17 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
   Form,
   FormControl,
   FormField,
@@ -36,9 +47,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Task, Subtask, TaskPriority, TaskStatus } from '@/types';
-import { mockUsers, mockLeads } from '@/data/mockData';
+import { useProfiles } from '@/hooks/useProfiles';
+import { useLeads } from '@/hooks/useLeads';
 
 const taskSchema = z.object({
   title: z.string().min(1, 'Título obrigatório'),
@@ -63,6 +76,11 @@ interface TaskModalProps {
 export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete }: TaskModalProps) => {
   const [subtasks, setSubtasks] = useState<Subtask[]>(task?.subtasks || []);
   const [newSubtask, setNewSubtask] = useState('');
+
+  // Use real data from database
+  const { data: profiles, isLoading: loadingProfiles } = useProfiles();
+  const { data: leadsResult, isLoading: loadingLeads } = useLeads();
+  const leads = leadsResult?.leads || [];
 
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
@@ -151,6 +169,8 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete }: TaskMo
     { value: 'done', label: 'Concluída' },
   ];
 
+  const activeProfiles = profiles?.filter(p => p.is_active) || [];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -207,11 +227,21 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete }: TaskMo
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {mockUsers.filter(u => u.isActive).map(user => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name}
-                          </SelectItem>
-                        ))}
+                        {loadingProfiles ? (
+                          <div className="p-2">
+                            <Skeleton className="h-5 w-full" />
+                          </div>
+                        ) : activeProfiles.length === 0 ? (
+                          <div className="p-2 text-sm text-muted-foreground">
+                            Nenhum usuário disponível
+                          </div>
+                        ) : (
+                          activeProfiles.map(profile => (
+                            <SelectItem key={profile.id} value={profile.id}>
+                              {profile.name}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -233,11 +263,17 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete }: TaskMo
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="none">Nenhum</SelectItem>
-                        {mockLeads.map(lead => (
-                          <SelectItem key={lead.id} value={lead.id}>
-                            {lead.name}
-                          </SelectItem>
-                        ))}
+                        {loadingLeads ? (
+                          <div className="p-2">
+                            <Skeleton className="h-5 w-full" />
+                          </div>
+                        ) : (
+                          leads.map(lead => (
+                            <SelectItem key={lead.id} value={lead.id}>
+                              {lead.name}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -381,17 +417,34 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete }: TaskMo
 
             <div className="flex justify-between pt-4">
               {task && onDelete && (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => {
-                    onDelete(task.id);
-                    onOpenChange(false);
-                  }}
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Excluir
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button type="button" variant="destructive">
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Excluir
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta ação não pode ser desfeita. A tarefa "{task.title}" será permanentemente removida.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => {
+                          onDelete(task.id);
+                          onOpenChange(false);
+                        }}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Excluir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
               <div className="flex gap-2 ml-auto">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
