@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { logger } from '@/lib/logger';
 
 interface RealtimePayload {
   eventType: 'INSERT' | 'UPDATE' | 'DELETE';
@@ -72,7 +73,7 @@ export function useRealtimeNotifications(userId?: string) {
   useEffect(() => {
     if (!userId) return;
 
-    console.log('[Realtime] Setting up global subscriptions for user:', userId);
+    logger.log('[Realtime] Setting up global subscriptions for user:', userId);
 
     // NOTE: messages and conversations are handled by useInboxRealtime in the Inbox page
     // This hook only handles leads, notifications, and tasks (used across the app)
@@ -90,7 +91,7 @@ export function useRealtimeNotifications(userId?: string) {
         (payload) => handleLeadChange(payload as unknown as RealtimePayload)
       )
       .subscribe((status) => {
-        console.log('[Realtime] Leads channel status:', status);
+        logger.log('[Realtime] Leads channel status:', status);
       });
 
     // Subscribe to notifications
@@ -106,7 +107,7 @@ export function useRealtimeNotifications(userId?: string) {
         (payload) => handleNotificationInsert(payload as unknown as RealtimePayload)
       )
       .subscribe((status) => {
-        console.log('[Realtime] Notifications channel status:', status);
+        logger.log('[Realtime] Notifications channel status:', status);
       });
 
     // Subscribe to tasks
@@ -122,11 +123,11 @@ export function useRealtimeNotifications(userId?: string) {
         (payload) => handleTaskChange(payload as unknown as RealtimePayload)
       )
       .subscribe((status) => {
-        console.log('[Realtime] Tasks channel status:', status);
+        logger.log('[Realtime] Tasks channel status:', status);
       });
 
     return () => {
-      console.log('[Realtime] Cleaning up global subscriptions');
+      logger.log('[Realtime] Cleaning up global subscriptions');
       supabase.removeChannel(leadsChannel);
       supabase.removeChannel(notificationsChannel);
       supabase.removeChannel(tasksChannel);

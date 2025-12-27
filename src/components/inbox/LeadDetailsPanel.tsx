@@ -25,6 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn, getContrastTextColor } from '@/lib/utils';
 import { toast } from 'sonner';
 import { TransferLeadModal } from './TransferLeadModal';
@@ -156,20 +157,30 @@ function LeadDetailsPanelComponent({
                   {lead.name.charAt(0)}
                 </AvatarFallback>
               </Avatar>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  'absolute -right-1 -top-1 h-6 w-6 rounded-full bg-card border border-border',
-                  isFavorite && 'text-warning'
-                )}
-                onClick={onToggleFavorite}
-                title={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
-              >
-                <Star
-                  className={cn('w-3 h-3', isFavorite && 'fill-warning')}
-                />
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'absolute -right-1 -top-1 h-6 w-6 rounded-full bg-card border border-border',
+                        isFavorite && 'text-warning'
+                      )}
+                      onClick={onToggleFavorite}
+                      aria-label={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                    >
+                      <Star
+                        className={cn('w-3 h-3', isFavorite && 'fill-warning')}
+                        aria-hidden="true"
+                      />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             <div className="flex-1 min-w-0">
               {(() => {
@@ -225,15 +236,22 @@ function LeadDetailsPanelComponent({
               <Tag className="w-3 h-3 mr-1" />
               Etiquetar
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs"
-              onClick={openWhatsApp}
-              title="Abrir conversa no WhatsApp"
-            >
-              <ExternalLink className="w-3 h-3" />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={openWhatsApp}
+                    aria-label="Abrir conversa no WhatsApp"
+                  >
+                    <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Abrir no WhatsApp</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
 

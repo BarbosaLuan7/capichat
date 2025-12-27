@@ -38,7 +38,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Team } from '@/types';
-import { useAppStore } from '@/store/appStore';
+import { useProfiles } from '@/hooks/useProfiles';
 
 const teamSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -57,8 +57,18 @@ interface TeamModalProps {
 }
 
 export const TeamModal = ({ open, onOpenChange, team, onSave, onDelete }: TeamModalProps) => {
-  const { users } = useAppStore();
+  const { data: profilesData } = useProfiles();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  
+  // Map profiles to users format for backwards compatibility
+  const users = profilesData?.map(p => ({
+    id: p.id,
+    name: p.name,
+    email: p.email,
+    role: 'agent' as const, // Default role - roles are stored separately
+    isActive: p.is_active,
+    teamId: p.team_id,
+  })) || [];
 
   const form = useForm<TeamFormData>({
     resolver: zodResolver(teamSchema),
@@ -69,8 +79,9 @@ export const TeamModal = ({ open, onOpenChange, team, onSave, onDelete }: TeamMo
     },
   });
 
-  const managers = users.filter(u => u.role === 'manager' || u.role === 'admin');
-  const agents = users.filter(u => u.role === 'agent');
+  // For TeamModal, we use profiles as list - roles are handled by parent
+  const managers = users;
+  const agents = users;
 
   useEffect(() => {
     if (team) {

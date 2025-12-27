@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 import { useAudioTranscription } from '@/hooks/useAudioTranscription';
 import { useSignedUrl } from '@/hooks/useSignedUrl';
 import { AudioPlayer } from '@/components/inbox/AudioPlayer';
@@ -188,7 +189,7 @@ function MessageBubbleComponent({
                 className="max-w-full rounded-lg max-h-64 object-cover cursor-pointer hover:brightness-95 transition-all"
                 loading="lazy"
                 onError={() => {
-                  console.error('[MessageBubble] Erro ao carregar imagem:', message.media_url);
+                  logger.error('[MessageBubble] Erro ao carregar imagem:', message.media_url);
                   setImageError(true);
                 }}
               />
@@ -223,7 +224,7 @@ function MessageBubbleComponent({
               aria-label={`Vídeo ${isAgent ? 'enviado pelo atendente' : `de ${leadName}`}`}
               className="max-w-full rounded-lg max-h-64"
               onError={() => {
-                console.error('[MessageBubble] Erro ao carregar vídeo:', message.media_url);
+                logger.error('[MessageBubble] Erro ao carregar vídeo:', message.media_url);
                 setVideoError(true);
               }}
             />

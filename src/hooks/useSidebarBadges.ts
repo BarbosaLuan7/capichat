@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import { useConversations } from './useConversations';
 import { useAllTasks } from './useTasks';
-import { useAuthStore } from '@/store/authStore';
+import { useAuth } from '@/hooks/useAuth';
 
 export function useSidebarBadges() {
-  const { user } = useAuthStore();
+  const { authUser: user } = useAuth();
   const { data: conversations } = useConversations();
   const { data: tasks } = useAllTasks();
 

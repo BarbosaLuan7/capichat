@@ -34,6 +34,7 @@ import { ConversationStatusTabs } from '@/components/inbox/ConversationStatusTab
 import { ConversationItem } from '@/components/inbox/ConversationItem';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useLabels } from '@/hooks/useLabels';
+import { logger } from '@/lib/logger';
 import type { Database } from '@/integrations/supabase/types';
 
 // Wrapper to prevent inline onClick from breaking React.memo
@@ -128,7 +129,7 @@ export function ConversationList({
   const assignmentFilteredConversations = useMemo(() => {
     // Handle unauthenticated user for assignment-based filters
     if (!isUserAuthenticated && (filter === 'meus' || filter === 'outros')) {
-      console.warn('[ConversationList] userId undefined - cannot filter by assignment');
+      logger.warn('[ConversationList] userId undefined - cannot filter by assignment');
       return [];
     }
 

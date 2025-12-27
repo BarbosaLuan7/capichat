@@ -26,7 +26,7 @@ import {
   Key,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuthStore } from '@/store/authStore';
+import { useAuth } from '@/hooks/useAuth';
 import { useAppStore } from '@/store/appStore';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -76,7 +76,7 @@ const SIDEBAR_SETTINGS_KEY = 'sidebar-settings-open';
 
 const AppSidebar = () => {
   const location = useLocation();
-  const { user, logout } = useAuthStore();
+  const { authUser: user, signOut } = useAuth();
   const { sidebarCollapsed, toggleSidebar } = useAppStore();
   const [settingsOpen, setSettingsOpen] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_SETTINGS_KEY);
@@ -314,7 +314,7 @@ const AppSidebar = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => logout()}
+                  onClick={() => signOut()}
                   className="text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent focusable"
                   aria-label="Sair da conta"
                 >
