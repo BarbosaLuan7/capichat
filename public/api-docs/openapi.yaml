@@ -248,16 +248,48 @@ paths:
     post:
       tags: [Mensagens]
       summary: Receber mensagem (webhook)
-      description: Endpoint para receber mensagens do WAHA/Evolution/Z-API
+      description: |
+        Endpoint para receber mensagens de provedores externos (WAHA, Evolution, Z-API).
+        
+        Este endpoint é chamado pelos webhooks dos provedores de WhatsApp quando uma nova mensagem é recebida.
+        O sistema automaticamente:
+        - Cria ou atualiza o lead baseado no número do telefone
+        - Cria ou atualiza a conversa
+        - Dispara webhooks configurados para `message.received`
+        - Dispara automações configuradas
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
+              $ref: '#/components/schemas/ReceiveMessageRequest'
+            examples:
+              texto:
+                summary: Mensagem de texto
+                value:
+                  phone: "5545999957851"
+                  message: "Olá, gostaria de informações sobre o BPC"
+                  type: text
+                  sender_name: "João Silva"
+              imagem:
+                summary: Mensagem com imagem
+                value:
+                  phone: "5545999957851"
+                  message: "Segue meu documento"
+                  type: image
+                  media_url: "https://example.com/image.jpg"
+                  external_id: "wamid.xxx"
       responses:
         '200':
-          description: Mensagem processada
+          description: Mensagem processada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceiveMessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /api-conversations:
     get:
@@ -940,10 +972,19 @@ components:
         message:
           type: string
           description: Texto da mensagem
+        type:
+          type: string
+          enum: [text, image, audio, video, document]
+          default: text
+          description: Tipo da mensagem (padrão: text)
         lead_id:
           type: string
           format: uuid
-          description: ID do lead (opcional, será criado se não existir)
+          description: ID do lead (opcional, será buscado pelo telefone se não informado)
+        conversation_id:
+          type: string
+          format: uuid
+          description: ID da conversa (opcional, será buscada ou criada automaticamente)
 
     SendMediaMessage:
       type: object
@@ -951,28 +992,123 @@ components:
       properties:
         phone:
           type: string
+          description: "Número do WhatsApp com código do país (ex: 5545999957851)"
         type:
           type: string
           enum: [image, audio, video, document]
         media_url:
           type: string
           format: uri
+          description: URL pública da mídia a ser enviada
         message:
           type: string
           description: Legenda da mídia
         lead_id:
           type: string
           format: uuid
+          description: ID do lead (opcional)
+        conversation_id:
+          type: string
+          format: uuid
+          description: ID da conversa (opcional)
 
     MessageResponse:
       type: object
       properties:
         success:
           type: boolean
-        message_id:
+          description: Indica se a mensagem foi enviada com sucesso
+        messageId:
           type: string
-        status:
+          description: ID da mensagem no provedor (WAHA/Evolution/Z-API)
+        provider:
           type: string
+          enum: [waha, evolution, z-api, custom]
+          description: Provedor utilizado para enviar a mensagem
+        conversation_id:
+          type: string
+          format: uuid
+          description: ID da conversa onde a mensagem foi salva
+        lead_id:
+          type: string
+          format: uuid
+          description: ID do lead associado
+
+    ReceiveMessageRequest:
+      type: object
+      required: [phone, message]
+      description: Payload recebido do webhook do provedor de WhatsApp
+      properties:
+        phone:
+          type: string
+          description: "Número do WhatsApp do remetente com código do país"
+          example: "5545999957851"
+        message:
+          type: string
+          description: Conteúdo da mensagem
+        type:
+          type: string
+          enum: [text, image, audio, video, document]
+          default: text
+          description: Tipo da mensagem
+        media_url:
+          type: string
+          format: uri
+          description: URL da mídia (quando type != text)
+        timestamp:
+          type: string
+          format: date-time
+          description: Data/hora da mensagem no WhatsApp
+        external_id:
+          type: string
+          description: ID único da mensagem no provedor (wamid)
+        sender_name:
+          type: string
+          description: Nome do contato no WhatsApp
+
+    ReceiveMessageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            message:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                content:
+                  type: string
+                type:
+                  type: string
+                created_at:
+                  type: string
+                  format: date-time
+            lead:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                phone:
+                  type: string
+                is_new:
+                  type: boolean
+                  description: True se o lead foi criado nesta requisição
+            conversation:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                is_new:
+                  type: boolean
+                  description: True se a conversa foi criada nesta requisição
 
     Tag:
       type: object
