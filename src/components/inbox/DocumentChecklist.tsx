@@ -34,6 +34,7 @@ export function DocumentChecklist({ leadId, customFields, labels = [], onUpdate 
     getProgress,
     isDocumentChecked,
     isSaving,
+    pendingSave,
   } = useDocumentChecklist({
     leadId,
     customFields,
@@ -204,9 +205,19 @@ export function DocumentChecklist({ leadId, customFields, labels = [], onUpdate 
           </div>
 
           {/* Status de salvamento */}
-          {isSaving && (
-            <div className="text-xs text-muted-foreground text-center animate-pulse">
-              Salvando...
+          {(isSaving || pendingSave) && (
+            <div className="text-xs text-muted-foreground text-center animate-pulse flex items-center justify-center gap-1.5">
+              {isSaving ? (
+                <>
+                  <Check className="w-3 h-3" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Circle className="w-3 h-3" />
+                  Alterações pendentes...
+                </>
+              )}
             </div>
           )}
         </>

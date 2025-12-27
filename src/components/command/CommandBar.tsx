@@ -24,10 +24,14 @@ import {
   Search,
   User,
   Phone,
+  FileText,
 } from 'lucide-react';
 import { useLeads } from '@/hooks/useLeads';
 import { useTasks } from '@/hooks/useTasks';
+import { useMessageSearch } from '@/hooks/useMessageSearch';
 import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface CommandBarProps {
   open: boolean;
@@ -43,6 +47,9 @@ export function CommandBar({ open, onOpenChange, onNewLead, onNewTask }: Command
   const leads = leadsData?.leads || [];
   const tasks = tasksData?.tasks || [];
   const [search, setSearch] = useState('');
+  
+  // Search messages when search term is >= 3 chars
+  const { data: messageResults = [], isLoading: isSearchingMessages } = useMessageSearch(search, open);
 
   // Reset search when dialog closes
   useEffect(() => {
@@ -106,6 +113,39 @@ export function CommandBar({ open, onOpenChange, onNewLead, onNewTask }: Command
     onOpenChange(false);
   };
 
+  const handleSelectConversation = (conversationId: string) => {
+    navigate(`/inbox?conversation=${conversationId}`);
+    onOpenChange(false);
+  };
+
+  // Highlight search term in text
+  const highlightText = (text: string, term: string) => {
+    if (!term || term.length < 3) return text;
+    const parts = text.split(new RegExp(`(${term})`, 'gi'));
+    return parts.map((part, i) =>
+      part.toLowerCase() === term.toLowerCase() ? (
+        <mark key={i} className="bg-primary/20 text-primary px-0.5 rounded">
+          {part}
+        </mark>
+      ) : (
+        part
+      )
+    );
+  };
+
+  // Truncate message content around the search term
+  const truncateContent = (content: string, term: string, maxLength = 60) => {
+    const index = content.toLowerCase().indexOf(term.toLowerCase());
+    if (index === -1) return content.slice(0, maxLength) + (content.length > maxLength ? '...' : '');
+    
+    const start = Math.max(0, index - 20);
+    const end = Math.min(content.length, index + term.length + 40);
+    let result = content.slice(start, end);
+    if (start > 0) result = '...' + result;
+    if (end < content.length) result = result + '...';
+    return result;
+  };
+
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput
@@ -162,6 +202,40 @@ export function CommandBar({ open, onOpenChange, onNewLead, onNewTask }: Command
           </CommandGroup>
         )}
 
+        {/* Mensagens encontradas */}
+        {messageResults.length > 0 && (
+          <CommandGroup heading="Mensagens">
+            {messageResults.map((result) => (
+              <CommandItem
+                key={result.messageId}
+                onSelect={() => handleSelectConversation(result.conversationId)}
+                className="flex flex-col items-start gap-1 py-2"
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="font-medium text-sm">{result.leadName}</span>
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    {format(new Date(result.createdAt), 'dd/MM HH:mm', { locale: ptBR })}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground ml-6 line-clamp-1">
+                  {highlightText(truncateContent(result.content, search), search)}
+                </p>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {/* Loading state for message search */}
+        {isSearchingMessages && search.length >= 3 && (
+          <CommandGroup heading="Mensagens">
+            <CommandItem disabled className="text-muted-foreground">
+              <Search className="w-4 h-4 mr-2 animate-pulse" />
+              Buscando mensagens...
+            </CommandItem>
+          </CommandGroup>
+        )}
+
         <CommandSeparator />
 
         {/* Ações rápidas */}
@@ -177,7 +251,6 @@ export function CommandBar({ open, onOpenChange, onNewLead, onNewTask }: Command
             </CommandItem>
           ))}
         </CommandGroup>
-
         <CommandSeparator />
 
         {/* Navegação */}
