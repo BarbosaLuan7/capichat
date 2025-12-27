@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { getEdgeFunctionErrorMessage } from '@/lib/edgeFunctionErrors';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 type Conversation = Database['public']['Tables']['conversations']['Row'];
 type ConversationInsert = Database['public']['Tables']['conversations']['Insert'];
@@ -105,7 +106,7 @@ export function useSendMessage() {
 
   return useMutation({
     mutationFn: async (message: MessageInsert) => {
-      console.log('[useSendMessage] Enviando via edge function:', message.conversation_id);
+      logger.log('[useSendMessage] Enviando via edge function:', message.conversation_id);
 
       const { data, error } = await supabase.functions.invoke('send-whatsapp-message', {
         body: {
@@ -117,17 +118,17 @@ export function useSendMessage() {
       });
 
       if (error) {
-        console.error('[useSendMessage] Edge function error:', error);
+        logger.error('[useSendMessage] Edge function error:', error);
         const friendly = getEdgeFunctionErrorMessage(error);
         throw new Error(friendly || 'Erro ao enviar mensagem');
       }
 
       if (!data?.success) {
-        console.error('[useSendMessage] API error:', data?.error);
+        logger.error('[useSendMessage] API error:', data?.error);
         throw new Error(data?.error || 'Erro ao enviar mensagem via WhatsApp');
       }
 
-      console.log('[useSendMessage] Mensagem enviada:', data);
+      logger.log('[useSendMessage] Mensagem enviada:', data);
       return data.message;
     },
     onSuccess: (_, variables) => {
@@ -135,7 +136,7 @@ export function useSendMessage() {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },
     onError: (error) => {
-      console.error('[useSendMessage] Mutation error:', error);
+      logger.error('[useSendMessage] Mutation error:', error);
       const message = error instanceof Error ? error.message : 'Erro ao enviar mensagem';
       toast.error(message);
     },

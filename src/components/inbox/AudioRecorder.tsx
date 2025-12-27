@@ -1,3 +1,4 @@
+import { useMemo, forwardRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, Square, Trash2, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -13,7 +14,7 @@ interface AudioRecorderProps {
   onSend: () => void;
 }
 
-export function AudioRecorder({
+export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(function AudioRecorder({
   isRecording,
   duration,
   audioUrl,
@@ -22,13 +23,19 @@ export function AudioRecorder({
   onStop,
   onCancel,
   onSend,
-}: AudioRecorderProps) {
+}, ref) {
+  // Generate stable bar heights once to prevent layout thrashing
+  const barHeights = useMemo(() => 
+    [...Array(20)].map(() => Math.random() * 20 + 8),
+    []
+  );
+
   if (!isRecording && !audioUrl) {
     return null;
   }
 
   return (
-    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border">
+    <div ref={ref} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border">
       {isRecording ? (
         <>
           <div className="flex items-center gap-2">
@@ -40,7 +47,7 @@ export function AudioRecorder({
           
           <div className="flex-1 flex items-center justify-center">
             <div className="flex items-center gap-1">
-              {[...Array(20)].map((_, i) => (
+              {barHeights.map((height, i) => (
                 <div
                   key={i}
                   className={cn(
@@ -48,7 +55,7 @@ export function AudioRecorder({
                     isRecording && "animate-pulse"
                   )}
                   style={{
-                    height: `${Math.random() * 20 + 8}px`,
+                    height: `${height}px`,
                     animationDelay: `${i * 50}ms`,
                   }}
                 />
@@ -62,7 +69,7 @@ export function AudioRecorder({
               size="icon"
               onClick={onCancel}
               className="text-destructive hover:text-destructive hover:bg-destructive/10"
-              title="Cancelar gravação"
+              aria-label="Cancelar gravação"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -71,7 +78,7 @@ export function AudioRecorder({
               size="icon"
               onClick={onStop}
               className="bg-primary hover:bg-primary/90"
-              title="Parar gravação"
+              aria-label="Parar gravação"
             >
               <Square className="w-4 h-4" />
             </Button>
@@ -87,7 +94,7 @@ export function AudioRecorder({
               size="icon"
               onClick={onCancel}
               className="text-destructive hover:text-destructive hover:bg-destructive/10"
-              title="Descartar áudio"
+              aria-label="Descartar áudio"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -96,7 +103,7 @@ export function AudioRecorder({
               size="icon"
               onClick={onSend}
               className="gradient-primary"
-              title="Enviar áudio"
+              aria-label="Enviar áudio"
             >
               <Send className="w-4 h-4" />
             </Button>
@@ -105,4 +112,4 @@ export function AudioRecorder({
       ) : null}
     </div>
   );
-}
+});

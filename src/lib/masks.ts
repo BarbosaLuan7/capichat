@@ -97,6 +97,15 @@ export function formatCPF(value: string): string {
 }
 
 /**
+ * Mask CPF for display (shows only last 5 digits): ***.***123-45
+ */
+export function maskCPF(cpf: string): string {
+  const digits = cpf.replace(/\D/g, '');
+  if (digits.length !== 11) return formatCPF(cpf);
+  return `***.***${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+/**
  * Remove CPF formatting, returns only digits
  */
 export function unformatCPF(value: string): string {

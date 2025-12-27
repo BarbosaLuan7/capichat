@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 // Hooks
 import {
@@ -77,7 +78,7 @@ const Inbox = () => {
     onNewIncomingMessage: (message, leadName) => {
       // Play sound and show toast for messages from non-selected conversations
       notify(message.content, leadName);
-      console.log('[Inbox] New incoming message:', message.id);
+      logger.log('[Inbox] New incoming message:', message.id);
     },
   });
 
