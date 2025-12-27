@@ -29,18 +29,18 @@ export function EmojiPicker({ onEmojiSelect }: EmojiPickerProps) {
           variant="ghost"
           size="icon"
           className="text-muted-foreground hover:text-foreground"
-          title="Inserir emoji"
+          aria-label="Inserir emoji"
         >
-          <Smile className="w-5 h-5" />
+          <Smile className="w-5 h-5" aria-hidden="true" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-2" align="end" side="top">
-        <div className="grid grid-cols-8 gap-1">
+        <div className="grid grid-cols-8 gap-1" role="grid" aria-label="Seletor de emojis">
           {commonEmojis.map((emoji) => (
             <button
               key={emoji}
               onClick={() => handleSelect(emoji)}
-              className="p-2 text-xl hover:bg-muted rounded transition-colors"
+              className="p-2 text-xl hover:bg-muted rounded transition-colors focusable"
               aria-label={`Inserir emoji ${emoji}`}
             >
               {emoji}

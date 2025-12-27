@@ -413,27 +413,34 @@ export function ConversationList({
 
         {/* Selected Labels Pills */}
         {selectedLabelIds.length > 0 && (
-          <div className="flex items-center gap-1 flex-wrap">
+          <div className="flex items-center gap-1 flex-wrap" role="group" aria-label="Filtros de etiquetas ativos">
             {selectedLabelIds.slice(0, 3).map((labelId) => {
               const label = allLabels?.find((l) => l.id === labelId);
               if (!label) return null;
               return (
-                <Badge
+                <button
                   key={labelId}
-                  className="text-[10px] px-1.5 py-0 gap-0.5 cursor-pointer border-0 h-5"
+                  className="inline-flex items-center text-2xs px-1.5 py-0 gap-0.5 cursor-pointer border-0 h-5 rounded-full focusable"
                   style={{
                     backgroundColor: label.color,
                     color: 'white',
                   }}
                   onClick={() => toggleLabelFilter(labelId)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggleLabelFilter(labelId);
+                    }
+                  }}
+                  aria-label={`Remover filtro ${label.name}`}
                 >
                   {label.name}
-                  <X className="w-2.5 h-2.5" />
-                </Badge>
+                  <X className="w-2.5 h-2.5" aria-hidden="true" />
+                </button>
               );
             })}
             {selectedLabelIds.length > 3 && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
+              <Badge variant="secondary" className="text-2xs px-1.5 py-0 h-5">
                 +{selectedLabelIds.length - 3}
               </Badge>
             )}
@@ -521,7 +528,7 @@ export function ConversationList({
             )}
           </div>
         ) : (
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-border" role="list" aria-label="Lista de conversas">
             {filteredConversations.map((conversation) => (
               <MemoizedConversationItem
                 key={conversation.id}

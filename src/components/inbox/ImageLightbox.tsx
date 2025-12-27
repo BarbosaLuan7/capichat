@@ -36,11 +36,22 @@ export function ImageLightbox({ src, alt = 'Imagem', children }: ImageLightboxPr
   const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.25, 3));
   const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.25, 0.5));
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setOpen(true);
+    }
+  };
+
   return (
     <>
       <div 
-        className="cursor-pointer hover:opacity-90 transition-opacity"
+        className="cursor-pointer hover:opacity-90 transition-opacity focusable rounded-lg"
         onClick={() => setOpen(true)}
+        onKeyDown={handleKeyDown}
+        role="button"
+        tabIndex={0}
+        aria-label={`Ampliar imagem: ${alt}`}
       >
         {children}
       </div>
@@ -52,28 +63,28 @@ export function ImageLightbox({ src, alt = 'Imagem', children }: ImageLightboxPr
           </VisuallyHidden>
           
           {/* Controls bar */}
-          <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-3 bg-gradient-to-b from-black/60 to-transparent">
-            <div className="flex items-center gap-2">
+          <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-3 bg-gradient-to-b from-black/60 to-transparent" role="toolbar" aria-label="Controles da imagem">
+            <div className="flex items-center gap-2" role="group" aria-label="Controles de zoom">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-white hover:bg-white/20"
+                className="h-8 w-8 text-white hover:bg-white/20 focusable"
                 onClick={handleZoomOut}
                 disabled={zoom <= 0.5}
-                title="Diminuir zoom"
+                aria-label="Diminuir zoom"
               >
-                <ZoomOut className="w-4 h-4" />
+                <ZoomOut className="w-4 h-4" aria-hidden="true" />
               </Button>
-              <span className="text-white text-sm min-w-[3rem] text-center">{Math.round(zoom * 100)}%</span>
+              <span className="text-white text-sm min-w-[3rem] text-center" aria-live="polite">{Math.round(zoom * 100)}%</span>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-white hover:bg-white/20"
+                className="h-8 w-8 text-white hover:bg-white/20 focusable"
                 onClick={handleZoomIn}
                 disabled={zoom >= 3}
-                title="Aumentar zoom"
+                aria-label="Aumentar zoom"
               >
-                <ZoomIn className="w-4 h-4" />
+                <ZoomIn className="w-4 h-4" aria-hidden="true" />
               </Button>
             </div>
 
@@ -81,20 +92,20 @@ export function ImageLightbox({ src, alt = 'Imagem', children }: ImageLightboxPr
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-white hover:bg-white/20"
+                className="h-8 w-8 text-white hover:bg-white/20 focusable"
                 onClick={handleDownload}
-                title="Baixar imagem"
+                aria-label="Baixar imagem"
               >
-                <Download className="w-4 h-4" />
+                <Download className="w-4 h-4" aria-hidden="true" />
               </Button>
               <DialogClose asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-white hover:bg-white/20"
-                  title="Fechar"
+                  className="h-8 w-8 text-white hover:bg-white/20 focusable"
+                  aria-label="Fechar visualização"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-5 h-5" aria-hidden="true" />
                 </Button>
               </DialogClose>
             </div>

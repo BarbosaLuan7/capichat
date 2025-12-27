@@ -66,6 +66,8 @@ const LeadCard = ({ lead, labels, leadLabels, isDragging }: LeadCardProps) => {
         'p-4 cursor-grab active:cursor-grabbing transition-all',
         isDragging ? 'shadow-lg rotate-2 scale-105 opacity-90' : 'hover:shadow-md'
       )}
+      role="article"
+      aria-label={`Lead ${lead.name}${lead.estimated_value ? `, valor estimado R$ ${Number(lead.estimated_value).toLocaleString('pt-BR')}` : ''}`}
     >
       <div className="flex items-start gap-3">
         <Avatar className="w-10 h-10">
@@ -76,8 +78,8 @@ const LeadCard = ({ lead, labels, leadLabels, isDragging }: LeadCardProps) => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
             <h4 className="font-semibold text-foreground truncate">{lead.name}</h4>
-            <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2">
-              <MoreVertical className="w-4 h-4" />
+            <Button variant="ghost" size="icon" className="h-6 w-6 -mr-2" aria-label={`Mais opções para ${lead.name}`}>
+              <MoreVertical className="w-4 h-4" aria-hidden="true" />
             </Button>
           </div>
 
@@ -125,8 +127,8 @@ const LeadCard = ({ lead, labels, leadLabels, isDragging }: LeadCardProps) => {
           <div className="flex items-center justify-between mt-3 pt-3 border-t border-border text-xs text-muted-foreground">
             <span>{format(new Date(lead.created_at), "dd/MM", { locale: ptBR })}</span>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="h-6 w-6">
-                <MessageSquare className="w-3.5 h-3.5" />
+              <Button variant="ghost" size="icon" className="h-6 w-6" aria-label={`Abrir conversa com ${lead.name}`}>
+                <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
               </Button>
             </div>
           </div>
@@ -182,12 +184,16 @@ const FunnelColumn = ({ stage, leads, labels, leadLabels }: FunnelColumnProps) =
   const totalValue = leads.reduce((sum, lead) => sum + (Number(lead.estimated_value) || 0), 0);
 
   return (
-    <div className="flex-shrink-0 w-80">
+    <section 
+      className="flex-shrink-0 w-80"
+      aria-label={`Etapa ${stage.name} - ${leads.length} leads`}
+      aria-roledescription="Coluna do funil"
+    >
       <div className="mb-4">
         <div className="flex items-center gap-2 mb-2">
-          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} />
+          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} aria-hidden="true" />
           <h3 className="font-semibold text-foreground">{stage.name}</h3>
-          <Badge variant="secondary" className="ml-auto">
+          <Badge variant="secondary" className="ml-auto" aria-label={`${leads.length} leads`}>
             {leads.length}
           </Badge>
         </div>
@@ -219,7 +225,7 @@ const FunnelColumn = ({ stage, leads, labels, leadLabels }: FunnelColumnProps) =
           )}
         </ScrollArea>
       </div>
-    </div>
+    </section>
   );
 };
 
