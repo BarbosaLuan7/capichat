@@ -28,6 +28,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
@@ -58,9 +64,11 @@ import {
   type PeriodFilter,
 } from '@/hooks/useMetrics';
 import { useLabels } from '@/hooks/useLabels';
+import { useReportExport } from '@/hooks/useReportExport';
 
 const Metrics = () => {
   const [periodo, setPeriodo] = useState<PeriodFilter>('month');
+  const { exportReport, isExporting } = useReportExport();
 
   const { data: leadMetrics, isLoading: loadingLeads, refetch: refetchLeads } = useLeadMetrics(periodo);
   const { data: funnelMetrics, isLoading: loadingFunnel, refetch: refetchFunnel } = useFunnelMetrics(periodo);
@@ -138,14 +146,31 @@ const Metrics = () => {
             </TooltipTrigger>
             <TooltipContent>Atualizar dados</TooltipContent>
           </Tooltip>
-          <Button variant="outline" className="gap-2">
-            <Download className="w-4 h-4" />
-            Exportar
-          </Button>
-          <Button variant="outline" className="gap-2">
-            <Download className="w-4 h-4" />
-            Exportar
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2" disabled={isExporting}>
+                <Download className={cn("w-4 h-4", isExporting && "animate-pulse")} />
+                Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => exportReport('leads', 'csv')}>
+                Leads (CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportReport('funnel', 'csv')}>
+                Funil (CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportReport('conversations', 'csv')}>
+                Conversas (CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportReport('agents', 'csv')}>
+                Atendentes (CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportReport('full', 'csv')}>
+                Tudo (CSV)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

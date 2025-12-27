@@ -1,15 +1,25 @@
+import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import AppSidebar from './AppSidebar';
 import TopBar from './TopBar';
 import { useAuth } from '@/hooks/useAuth';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import { GlobalLiveRegion } from '@/components/accessibility/LiveRegion';
+import { KeyboardShortcutsHelp } from '@/components/accessibility/KeyboardShortcutsHelp';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 const MainLayout = () => {
   const { user } = useAuth();
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   
   // Enable realtime notifications for the current user
   useRealtimeNotifications(user?.id);
+
+  // Handle keyboard shortcuts
+  useKeyboardShortcuts({
+    onHelp: () => setShowShortcutsHelp(true),
+    enabled: true,
+  });
 
   return (
     <>
@@ -33,6 +43,12 @@ const MainLayout = () => {
           </main>
         </div>
       </div>
+
+      {/* Keyboard shortcuts help modal */}
+      <KeyboardShortcutsHelp 
+        open={showShortcutsHelp} 
+        onOpenChange={setShowShortcutsHelp}
+      />
     </>
   );
 };

@@ -12,6 +12,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAppStore } from '@/store/appStore';
 import { Team } from '@/types';
@@ -22,6 +32,8 @@ const TeamsSettings = () => {
   const { teams, users, leads, addTeam, updateTeam, deleteTeam } = useAppStore();
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
   const { toast } = useToast();
 
   const getUserById = (id: string) => users.find(u => u.id === id);
@@ -41,9 +53,18 @@ const TeamsSettings = () => {
     }
   };
 
-  const handleDelete = (teamId: string) => {
-    deleteTeam(teamId);
-    toast({ title: 'Equipe excluída', variant: 'destructive' });
+  const confirmDelete = (team: Team) => {
+    setTeamToDelete(team);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (teamToDelete) {
+      deleteTeam(teamToDelete.id);
+      toast({ title: 'Equipe excluída', variant: 'destructive' });
+      setDeleteDialogOpen(false);
+      setTeamToDelete(null);
+    }
   };
 
   const openEditModal = (team: Team) => {
@@ -116,7 +137,7 @@ const TeamsSettings = () => {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"
-                          onClick={() => handleDelete(team.id)}
+                          onClick={() => confirmDelete(team)}
                         >
                           Excluir
                         </DropdownMenuItem>
@@ -204,8 +225,32 @@ const TeamsSettings = () => {
         onOpenChange={setModalOpen}
         team={selectedTeam}
         onSave={handleSave}
-        onDelete={handleDelete}
+        onDelete={(teamId) => {
+          const team = teams.find(t => t.id === teamId);
+          if (team) confirmDelete(team);
+        }}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir equipe?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a equipe <span className="font-medium">{teamToDelete?.name}</span>? 
+              Os membros não serão excluídos, apenas desvinculados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
