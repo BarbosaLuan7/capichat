@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { getEdgeFunctionErrorMessage } from '@/lib/edgeFunctionErrors';
+import { toast } from 'sonner';
 
 type Conversation = Database['public']['Tables']['conversations']['Row'];
 type ConversationInsert = Database['public']['Tables']['conversations']['Insert'];
@@ -135,6 +136,8 @@ export function useSendMessage() {
     },
     onError: (error) => {
       console.error('[useSendMessage] Mutation error:', error);
+      const message = error instanceof Error ? error.message : 'Erro ao enviar mensagem';
+      toast.error(message);
     },
   });
 }

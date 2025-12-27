@@ -67,8 +67,25 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
 
     // Update conversation list (for last_message_at, unread_count, etc.)
     // Use setQueryData for optimistic update if we have the conversation
+    // Only update if values actually changed to avoid unnecessary re-renders
     queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
       if (!old) return old;
+      
+      const existingConv = old.find(conv => conv.id === conversationId);
+      if (!existingConv) return old;
+      
+      // Check if update is actually needed
+      const newUnreadCount = newMessage.sender_type === 'lead' 
+        ? (existingConv.unread_count || 0) + 1 
+        : existingConv.unread_count;
+      
+      if (
+        existingConv.last_message_at === newMessage.created_at &&
+        existingConv.last_message_content === newMessage.content &&
+        existingConv.unread_count === newUnreadCount
+      ) {
+        return old; // No change needed, return same reference
+      }
       
       return old.map(conv => {
         if (conv.id === conversationId) {
@@ -76,9 +93,7 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
             ...conv,
             last_message_at: newMessage.created_at,
             last_message_content: newMessage.content,
-            unread_count: newMessage.sender_type === 'lead' 
-              ? (conv.unread_count || 0) + 1 
-              : conv.unread_count,
+            unread_count: newUnreadCount,
           };
         }
         return conv;
