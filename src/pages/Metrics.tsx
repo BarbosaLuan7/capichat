@@ -365,9 +365,9 @@ const Metrics = () => {
                 ) : (
                   <div className="space-y-6 py-4">
                     {[
-                      { label: 'Frios', value: leadMetrics?.leadsByTemperature.cold || 0, color: 'bg-blue-500', description: 'Sem interação recente' },
-                      { label: 'Mornos', value: leadMetrics?.leadsByTemperature.warm || 0, color: 'bg-yellow-500', description: 'Demonstrando interesse' },
-                      { label: 'Quentes', value: leadMetrics?.leadsByTemperature.hot || 0, color: 'bg-red-500', description: 'Prontos para fechar' },
+                      { label: 'Frios', value: leadMetrics?.leadsByTemperature.cold || 0, color: 'bg-temp-cold', description: 'Sem interação recente' },
+                      { label: 'Mornos', value: leadMetrics?.leadsByTemperature.warm || 0, color: 'bg-temp-warm', description: 'Demonstrando interesse' },
+                      { label: 'Quentes', value: leadMetrics?.leadsByTemperature.hot || 0, color: 'bg-temp-hot', description: 'Prontos para fechar' },
                     ].map((temp, index) => {
                       const total = leadMetrics?.totalLeads || 1;
                       const percentage = total > 0 ? (temp.value / total) * 100 : 0;

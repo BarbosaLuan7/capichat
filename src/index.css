@@ -140,6 +140,12 @@
 }
 
 @layer utilities {
+  /* Extra small text */
+  .text-2xs {
+    font-size: 0.625rem; /* 10px */
+    line-height: 0.875rem; /* 14px */
+  }
+
   .gradient-primary {
     background: var(--gradient-primary);
   }

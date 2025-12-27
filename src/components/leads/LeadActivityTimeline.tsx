@@ -120,7 +120,7 @@ export function LeadActivityTimeline({ leadId }: LeadActivityTimelineProps) {
                       <div className="flex items-center gap-2 mt-1">
                         <Avatar className="w-5 h-5">
                           <AvatarImage src={activity.profiles.avatar || undefined} />
-                          <AvatarFallback className="text-[10px]">
+                          <AvatarFallback className="text-2xs">
                             {activity.profiles.name?.charAt(0)}
                           </AvatarFallback>
                         </Avatar>

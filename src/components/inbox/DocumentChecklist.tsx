@@ -184,7 +184,7 @@ export function DocumentChecklist({ leadId, customFields, labels = [], onUpdate 
                               {doc.name}
                             </span>
                             {doc.required && (
-                              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+                              <Badge variant="outline" className="text-2xs px-1 py-0 h-4">
                                 Obrigatório
                               </Badge>
                             )}

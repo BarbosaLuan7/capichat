@@ -32,13 +32,13 @@ const typeIcons = {
 };
 
 const typeColors = {
-  info: 'text-blue-500',
-  success: 'text-green-500',
-  warning: 'text-yellow-500',
-  error: 'text-red-500',
+  info: 'text-primary',
+  success: 'text-success',
+  warning: 'text-warning',
+  error: 'text-destructive',
   message: 'text-primary',
-  task: 'text-purple-500',
-  lead: 'text-orange-500',
+  task: 'text-accent',
+  lead: 'text-warning',
 };
 
 export function NotificationCenter({ userId }: NotificationCenterProps) {

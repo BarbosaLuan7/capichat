@@ -256,7 +256,7 @@ function LeadDetailsPanelComponent({
               <History className="w-3 h-3" />
               Histórico
               {(notes?.length ?? 0) > 0 && (
-                <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">
+                <Badge variant="secondary" className="ml-1 h-4 px-1 text-2xs">
                   {notes?.length}
                 </Badge>
               )}

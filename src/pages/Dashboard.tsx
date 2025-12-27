@@ -379,9 +379,9 @@ const Dashboard = () => {
             ) : (
               <div className="space-y-6 py-4">
                 {[
-                  { label: 'Frios', value: leadMetrics?.leadsByTemperature.cold || 0, color: 'bg-blue-500', textColor: 'text-blue-500' },
-                  { label: 'Mornos', value: leadMetrics?.leadsByTemperature.warm || 0, color: 'bg-yellow-500', textColor: 'text-yellow-500' },
-                  { label: 'Quentes', value: leadMetrics?.leadsByTemperature.hot || 0, color: 'bg-red-500', textColor: 'text-red-500' },
+                  { label: 'Frios', value: leadMetrics?.leadsByTemperature.cold || 0, color: 'bg-temp-cold', textColor: 'text-temp-cold' },
+                  { label: 'Mornos', value: leadMetrics?.leadsByTemperature.warm || 0, color: 'bg-temp-warm', textColor: 'text-temp-warm' },
+                  { label: 'Quentes', value: leadMetrics?.leadsByTemperature.hot || 0, color: 'bg-temp-hot', textColor: 'text-temp-hot' },
                 ].map((temp) => {
                   const total = (leadMetrics?.totalLeads || 1);
                   const percentage = total > 0 ? (temp.value / total) * 100 : 0;
@@ -492,9 +492,9 @@ const Dashboard = () => {
             ) : (
               <div className="space-y-6 py-4">
                 {[
-                  { label: 'Abertas', value: conversationMetrics?.open || 0, color: 'bg-blue-500', icon: MessageSquare },
-                  { label: 'Pendentes', value: conversationMetrics?.pending || 0, color: 'bg-yellow-500', icon: AlertCircle },
-                  { label: 'Resolvidas', value: conversationMetrics?.resolved || 0, color: 'bg-green-500', icon: CheckCircle2 },
+                  { label: 'Abertas', value: conversationMetrics?.open || 0, color: 'bg-primary', icon: MessageSquare },
+                  { label: 'Pendentes', value: conversationMetrics?.pending || 0, color: 'bg-warning', icon: AlertCircle },
+                  { label: 'Resolvidas', value: conversationMetrics?.resolved || 0, color: 'bg-success', icon: CheckCircle2 },
                 ].map((status, index) => {
                   const total = conversationMetrics?.total || 1;
                   const percentage = total > 0 ? (status.value / total) * 100 : 0;

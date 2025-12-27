@@ -211,7 +211,7 @@ export function CategorizedLabelsSummary({
             color: label.color,
           }}
         >
-          <span className="text-[10px] mr-0.5 opacity-70">
+          <span className="text-2xs mr-0.5 opacity-70">
             {categoryConfig[label.category]?.icon}
           </span>
           {label.name}
