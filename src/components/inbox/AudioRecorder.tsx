@@ -62,6 +62,7 @@ export function AudioRecorder({
               size="icon"
               onClick={onCancel}
               className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              title="Cancelar gravação"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -70,6 +71,7 @@ export function AudioRecorder({
               size="icon"
               onClick={onStop}
               className="bg-primary hover:bg-primary/90"
+              title="Parar gravação"
             >
               <Square className="w-4 h-4" />
             </Button>
@@ -85,6 +87,7 @@ export function AudioRecorder({
               size="icon"
               onClick={onCancel}
               className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              title="Descartar áudio"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -93,6 +96,7 @@ export function AudioRecorder({
               size="icon"
               onClick={onSend}
               className="gradient-primary"
+              title="Enviar áudio"
             >
               <Send className="w-4 h-4" />
             </Button>

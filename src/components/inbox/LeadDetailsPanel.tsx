@@ -164,6 +164,7 @@ export function LeadDetailsPanel({
                   isFavorite && 'text-warning'
                 )}
                 onClick={onToggleFavorite}
+                title={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
               >
                 <Star
                   className={cn('w-3 h-3', isFavorite && 'fill-warning')}
@@ -229,6 +230,7 @@ export function LeadDetailsPanel({
               size="sm"
               className="text-xs"
               onClick={openWhatsApp}
+              title="Abrir conversa no WhatsApp"
             >
               <ExternalLink className="w-3 h-3" />
             </Button>
@@ -295,6 +297,7 @@ export function LeadDetailsPanel({
                           size="icon"
                           className="h-5 w-5"
                           onClick={() => handleCopy(lead.phone, 'Telefone')}
+                          title="Copiar telefone"
                         >
                           <Copy className="w-2.5 h-2.5" />
                         </Button>
@@ -303,6 +306,7 @@ export function LeadDetailsPanel({
                           size="icon"
                           className="h-5 w-5 text-success"
                           onClick={openWhatsApp}
+                          title="Abrir no WhatsApp"
                         >
                           <MessageSquare className="w-2.5 h-2.5" />
                         </Button>
@@ -317,6 +321,7 @@ export function LeadDetailsPanel({
                           size="icon"
                           className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => handleCopy(lead.email!, 'Email')}
+                          title="Copiar email"
                         >
                           <Copy className="w-2.5 h-2.5" />
                         </Button>
@@ -333,6 +338,7 @@ export function LeadDetailsPanel({
                           size="icon"
                           className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => handleCopy(lead.cpf!, 'CPF')}
+                          title="Copiar CPF"
                         >
                           <Copy className="w-2.5 h-2.5" />
                         </Button>

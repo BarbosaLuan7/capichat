@@ -85,6 +85,7 @@ export function AudioPlayer({ src, className, 'aria-label': ariaLabel }: AudioPl
         onClick={togglePlay}
         disabled={!isLoaded}
         aria-label={isPlaying ? 'Pausar áudio' : 'Reproduzir áudio'}
+        title={isPlaying ? 'Pausar' : 'Reproduzir'}
       >
         {isPlaying ? (
           <Pause className="w-4 h-4" />

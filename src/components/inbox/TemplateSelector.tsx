@@ -67,6 +67,7 @@ export function TemplateSelector({
           variant="ghost"
           size="icon"
           className="text-muted-foreground hover:text-foreground"
+          title="Selecionar template"
         >
           <Zap className="w-5 h-5" />
         </Button>

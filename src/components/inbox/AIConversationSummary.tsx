@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Sparkles, 
@@ -10,7 +10,9 @@ import {
   Calendar,
   AlertCircle,
   Lightbulb,
-  Save
+  Save,
+  Check,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -41,13 +43,18 @@ export function AIConversationSummary({
   className,
 }: AIConversationSummaryProps) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [autoSaved, setAutoSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const previousLeadIdRef = useRef<string>(lead.id);
+  
   const { summaryResult, isLoading, fetchSummary, clearSummary } = useAISummary();
   const updateLead = useUpdateLead();
 
   const handleRefresh = () => {
+    setAutoSaved(false);
     if (messages && messages.length > 0) {
       fetchSummary(messages, {
-        id: lead.id,  // Include lead.id to isolate cache per lead
+        id: lead.id,
         name: lead.name,
         phone: lead.phone,
         source: lead.source,
@@ -56,18 +63,46 @@ export function AIConversationSummary({
     }
   };
 
-  const handleSave = async (summary: string) => {
+  const handleSave = useCallback(async (summary: string, isAuto = false) => {
+    if (isSaving) return;
+    setIsSaving(true);
     try {
       await updateLead.mutateAsync({
         id: lead.id,
         ai_summary: summary,
       });
-      toast.success('Resumo salvo no lead');
+      if (isAuto) {
+        setAutoSaved(true);
+      } else {
+        toast.success('Resumo salvo no lead');
+      }
       onSummaryGenerated?.();
     } catch (error) {
-      toast.error('Erro ao salvar resumo');
+      if (!isAuto) {
+        toast.error('Erro ao salvar resumo');
+      }
+    } finally {
+      setIsSaving(false);
     }
-  };
+  }, [lead.id, updateLead, onSummaryGenerated, isSaving]);
+
+  // Reset autoSaved when lead changes
+  useEffect(() => {
+    if (previousLeadIdRef.current !== lead.id) {
+      setAutoSaved(false);
+      previousLeadIdRef.current = lead.id;
+    }
+  }, [lead.id]);
+
+  // Auto-save summary 3 seconds after generation
+  useEffect(() => {
+    if (summaryResult?.summary && !autoSaved && !isSaving) {
+      const timer = setTimeout(() => {
+        handleSave(summaryResult.summary, true);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [summaryResult?.summary, autoSaved, isSaving, handleSave]);
 
   if (isLoading) {
     return (
@@ -137,18 +172,30 @@ export function AIConversationSummary({
               >
                 <RefreshCw className="w-3 h-3" />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSave(summary);
-                }}
-                title="Salvar no lead"
-              >
-                <Save className="w-3 h-3" />
-              </Button>
+              {autoSaved ? (
+                <div className="flex items-center gap-1 px-2 text-xs text-success" title="Salvo automaticamente">
+                  <Check className="w-3 h-3" />
+                  <span>Salvo</span>
+                </div>
+              ) : isSaving ? (
+                <div className="flex items-center gap-1 px-2 text-xs text-muted-foreground" title="Salvando...">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>Salvando</span>
+                </div>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSave(summary);
+                  }}
+                  title="Salvar no lead"
+                >
+                  <Save className="w-3 h-3" />
+                </Button>
+              )}
               {isExpanded ? (
                 <ChevronUp className="w-4 h-4 text-muted-foreground" />
               ) : (

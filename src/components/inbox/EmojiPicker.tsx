@@ -29,6 +29,7 @@ export function EmojiPicker({ onEmojiSelect }: EmojiPickerProps) {
           variant="ghost"
           size="icon"
           className="text-muted-foreground hover:text-foreground"
+          title="Inserir emoji"
         >
           <Smile className="w-5 h-5" />
         </Button>

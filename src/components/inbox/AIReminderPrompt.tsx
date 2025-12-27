@@ -110,6 +110,7 @@ export function AIReminderPrompt({
             size="icon"
             className="h-6 w-6"
             onClick={onClose}
+            title="Fechar"
           >
             <X className="w-3.5 h-3.5" />
           </Button>
