@@ -208,6 +208,7 @@ export function AIClassificationSuggestion({
             size="icon"
             className="h-6 w-6"
             onClick={() => setIsExpanded(!isExpanded)}
+            title={isExpanded ? 'Recolher' : 'Expandir'}
           >
             {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </Button>
@@ -216,6 +217,7 @@ export function AIClassificationSuggestion({
             size="icon"
             className="h-6 w-6 text-muted-foreground"
             onClick={handleDismiss}
+            title="Dispensar sugestão"
           >
             <X className="w-3.5 h-3.5" />
           </Button>

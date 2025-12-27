@@ -245,17 +245,18 @@ function MessageBubbleComponent({
                 )}
                 
                 {transcription && (
-                  <div className="p-2 rounded-md bg-gray-100 dark:bg-gray-800">
+                  <div className="p-2 rounded-md bg-muted/80 border border-border/50">
                     <div className="flex items-center justify-between gap-2 mb-1">
-                      <div className="flex items-center gap-1 text-primary/70">
-                        <Sparkles className="w-3 h-3" />
-                        <span className="font-medium text-xs">Transcrição:</span>
+                      <div className="flex items-center gap-1 text-success">
+                        <Check className="w-3 h-3" />
+                        <span className="font-medium text-xs">Transcrito</span>
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-5 w-5"
                         onClick={handleCopyTranscription}
+                        title={copied ? 'Copiado!' : 'Copiar transcrição'}
                       >
                         {copied ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3" />}
                       </Button>
@@ -266,7 +267,7 @@ function MessageBubbleComponent({
                 
                 {!isLoading(message.id) && !transcription && (
                   <button
-                    className="text-[#3B82F6] hover:text-[#2563EB] text-xs underline"
+                    className="text-primary hover:text-primary/80 text-xs underline flex items-center gap-1"
                     onClick={() => {
                       if (resolvedMediaUrl) {
                         setHasAttempted(true);
@@ -275,8 +276,10 @@ function MessageBubbleComponent({
                         });
                       }
                     }}
+                    title={hasAttempted ? 'Tentar transcrever novamente' : 'Transcrever áudio com IA'}
                   >
-                    Transcrever áudio
+                    <Sparkles className="w-3 h-3" />
+                    {hasAttempted ? 'Tentar novamente' : 'Transcrever áudio'}
                   </button>
                 )}
               </div>

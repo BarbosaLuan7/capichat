@@ -60,6 +60,7 @@ export function ImageLightbox({ src, alt = 'Imagem', children }: ImageLightboxPr
                 className="h-8 w-8 text-white hover:bg-white/20"
                 onClick={handleZoomOut}
                 disabled={zoom <= 0.5}
+                title="Diminuir zoom"
               >
                 <ZoomOut className="w-4 h-4" />
               </Button>
@@ -70,6 +71,7 @@ export function ImageLightbox({ src, alt = 'Imagem', children }: ImageLightboxPr
                 className="h-8 w-8 text-white hover:bg-white/20"
                 onClick={handleZoomIn}
                 disabled={zoom >= 3}
+                title="Aumentar zoom"
               >
                 <ZoomIn className="w-4 h-4" />
               </Button>
@@ -81,6 +83,7 @@ export function ImageLightbox({ src, alt = 'Imagem', children }: ImageLightboxPr
                 size="icon"
                 className="h-8 w-8 text-white hover:bg-white/20"
                 onClick={handleDownload}
+                title="Baixar imagem"
               >
                 <Download className="w-4 h-4" />
               </Button>
@@ -89,6 +92,7 @@ export function ImageLightbox({ src, alt = 'Imagem', children }: ImageLightboxPr
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-white hover:bg-white/20"
+                  title="Fechar"
                 >
                   <X className="w-5 h-5" />
                 </Button>

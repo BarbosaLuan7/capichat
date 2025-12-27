@@ -68,7 +68,7 @@ export function AttachmentMenu({ onFileSelect, onAudioRecordStart }: AttachmentM
 
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" title="Anexar arquivo">
             <Paperclip className="w-5 h-5" />
           </Button>
         </PopoverTrigger>
