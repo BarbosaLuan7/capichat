@@ -28,6 +28,7 @@ export function useAISummary() {
   const fetchSummary = useCallback(async (
     messages: any[],
     lead: {
+      id: string;  // Required to isolate cache per lead
       name: string;
       phone?: string;
       source?: string;
@@ -40,8 +41,8 @@ export function useAISummary() {
       return;
     }
 
-    // Check cache first (unless forcing refresh)
-    const cacheKey = generateMessagesKey('summary', messages);
+    // Check cache first (unless forcing refresh) - use lead.id to isolate cache per lead
+    const cacheKey = generateMessagesKey('summary', messages, lead.id);
     
     if (!forceRefresh) {
       const cached = aiCache.get<AISummaryResult>(cacheKey);

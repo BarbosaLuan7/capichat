@@ -39,9 +39,17 @@ serve(async (req) => {
       })
       .join('\n') || '';
 
+    const leadName = lead?.name || 'Cliente';
+    
     const systemPrompt = `Você é um assistente jurídico da GaranteDireito, especializado em Direito Previdenciário.
 
 Seu objetivo é criar um resumo estruturado da conversa para que advogados e atendentes entendam rapidamente o caso.
+
+REGRAS CRÍTICAS DE CONTEXTO:
+- Você está analisando EXCLUSIVAMENTE a conversa com o cliente "${leadName}"
+- NÃO mencione nomes de outros clientes ou contextos de outras conversas
+- Use APENAS as informações fornecidas nas mensagens abaixo
+- Se mencionar o cliente, use o nome "${leadName}"
 
 O resumo deve destacar:
 1. SITUAÇÃO: Breve descrição do caso/pedido do cliente
@@ -52,7 +60,7 @@ O resumo deve destacar:
 6. PENDÊNCIAS: Próximos passos necessários
 7. OBSERVAÇÕES: Informações relevantes para o advogado
 
-REGRAS:
+REGRAS DE FORMATO:
 - Seja objetivo e conciso
 - Use bullet points
 - Destaque informações críticas

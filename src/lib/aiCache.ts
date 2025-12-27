@@ -46,12 +46,18 @@ class AICache {
   }
 }
 
-// Generate cache key from messages (use last message ID + count as fingerprint)
-export function generateMessagesKey(prefix: string, messages: any[]): string {
-  if (!messages || messages.length === 0) return `${prefix}:empty`;
+// Generate cache key from messages (use context ID + last message ID + count as fingerprint)
+export function generateMessagesKey(
+  prefix: string, 
+  messages: any[], 
+  contextId?: string  // lead_id or conversation_id to isolate cache per lead
+): string {
+  const context = contextId || 'unknown';
+  
+  if (!messages || messages.length === 0) return `${prefix}:${context}:empty`;
   
   const lastMessage = messages[messages.length - 1];
-  const fingerprint = `${messages.length}-${lastMessage?.id || lastMessage?.created_at || 'unknown'}`;
+  const fingerprint = `${context}-${messages.length}-${lastMessage?.id || lastMessage?.created_at || 'unknown'}`;
   
   return `${prefix}:${fingerprint}`;
 }
