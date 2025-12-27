@@ -23,6 +23,118 @@ interface WhatsAppConfig {
   instance_name: string | null;
 }
 
+interface LeadData {
+  name?: string;
+  phone?: string;
+  estimated_value?: number | null;
+  benefit_type?: string | null;
+  cpf?: string | null;
+  email?: string | null;
+  created_at?: string | null;
+}
+
+/**
+ * Formats a value as Brazilian currency
+ */
+function formatCurrency(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '';
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value);
+}
+
+/**
+ * Formats a date string to DD/MM/YYYY
+ */
+function formatDateBR(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('pt-BR');
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Formats phone number for display
+ */
+function formatPhoneNumber(phone: string | null | undefined): string {
+  if (!phone) return '';
+  let numbers = phone.replace(/\D/g, '');
+  // Remove country code if present
+  if (numbers.startsWith('55') && numbers.length >= 12) {
+    numbers = numbers.substring(2);
+  }
+  // Format as (XX) 9XXXX-XXXX
+  if (numbers.length === 11) {
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
+  }
+  if (numbers.length === 10) {
+    return `(${numbers.slice(0, 2)}) 9${numbers.slice(2, 6)}-${numbers.slice(6)}`;
+  }
+  return phone;
+}
+
+/**
+ * Formats CPF for display
+ */
+function formatCPF(cpf: string | null | undefined): string {
+  if (!cpf) return '';
+  const digits = cpf.replace(/\D/g, '');
+  if (digits.length !== 11) return cpf;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
+}
+
+/**
+ * Replaces template variables in message content
+ * Supports both {{variable}} and {variable} formats
+ */
+function replaceTemplateVariables(content: string, lead: LeadData | null, agentName?: string): string {
+  let result = content;
+  
+  const firstName = lead?.name ? lead.name.split(' ')[0] : '';
+  const now = new Date();
+  
+  // Build replacements map
+  const replacements: Record<string, string> = {
+    'nome': lead?.name || '',
+    'primeiro_nome': firstName,
+    'telefone': lead?.phone ? formatPhoneNumber(lead.phone) : '',
+    'valor': formatCurrency(lead?.estimated_value),
+    'data': now.toLocaleDateString('pt-BR'),
+    'hora': now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    'data_inicio': formatDateBR(lead?.created_at) || now.toLocaleDateString('pt-BR'),
+    'beneficio': lead?.benefit_type || '',
+    'tipo_beneficio': lead?.benefit_type || '',
+    'atendente': agentName || '',
+    'cpf': lead?.cpf ? formatCPF(lead.cpf) : '',
+    'email': lead?.email || '',
+  };
+  
+  // Replace {{variable}} and {variable} patterns
+  for (const [key, value] of Object.entries(replacements)) {
+    const doublePattern = new RegExp(`\\{\\{${key}\\}\\}`, 'gi');
+    const singlePattern = new RegExp(`\\{${key}\\}`, 'gi');
+    
+    if (value) {
+      result = result.replace(doublePattern, value);
+      result = result.replace(singlePattern, value);
+    } else {
+      // Remove unmatched variables
+      result = result.replace(doublePattern, '');
+      result = result.replace(singlePattern, '');
+    }
+  }
+  
+  // Remove any remaining unmatched variables
+  result = result.replace(/\{\{(\w+)\}\}/g, '');
+  result = result.replace(/\{(\w+)\}/g, '');
+  
+  return result;
+}
+
 // Normaliza URL removendo barras finais
 function normalizeUrl(url: string): string {
   return url.replace(/\/+$/, '');
@@ -354,6 +466,47 @@ serve(async (req) => {
       );
     }
 
+    // Find lead data for variable replacement
+    let leadData: LeadData | null = null;
+    let leadId = payload.lead_id;
+    let conversationId = payload.conversation_id;
+    
+    // Try to find lead by ID or phone
+    if (payload.lead_id) {
+      const { data: lead } = await supabase
+        .from('leads')
+        .select('id, name, phone, estimated_value, benefit_type, cpf, email, created_at')
+        .eq('id', payload.lead_id)
+        .single();
+      
+      if (lead) {
+        leadData = lead;
+        leadId = lead.id;
+      }
+    } else if (payload.phone) {
+      // Normalize phone for search
+      const normalizedPhone = payload.phone.replace(/\D/g, '');
+      const phoneWithoutCountry = normalizedPhone.startsWith('55') && normalizedPhone.length >= 12 
+        ? normalizedPhone.substring(2) 
+        : normalizedPhone;
+      
+      const { data: lead } = await supabase
+        .from('leads')
+        .select('id, name, phone, estimated_value, benefit_type, cpf, email, created_at')
+        .or(`phone.eq.${normalizedPhone},phone.eq.${phoneWithoutCountry}`)
+        .limit(1)
+        .single();
+      
+      if (lead) {
+        leadData = lead;
+        leadId = lead.id;
+      }
+    }
+
+    // Replace template variables in message
+    const processedMessage = replaceTemplateVariables(payload.message, leadData);
+    console.log('[api-messages-send] Mensagem processada:', processedMessage.substring(0, 50) + '...');
+
     // Get active WhatsApp config
     const { data: configs, error: configError } = await supabase
       .from('whatsapp_config')
@@ -379,21 +532,27 @@ serve(async (req) => {
     const config = configs[0] as WhatsAppConfig;
     console.log('[api-messages-send] Provider:', config.provider, 'Instance:', config.instance_name);
 
+    // Create payload with processed message
+    const processedPayload: SendMessagePayload = {
+      ...payload,
+      message: processedMessage,
+    };
+
     // Send message based on provider
     let result: { success: boolean; messageId?: string; error?: string };
     
     switch (config.provider) {
       case 'waha':
-        result = await sendWAHA(config, payload);
+        result = await sendWAHA(config, processedPayload);
         break;
       case 'evolution':
-        result = await sendEvolution(config, payload);
+        result = await sendEvolution(config, processedPayload);
         break;
       case 'z-api':
-        result = await sendZAPI(config, payload);
+        result = await sendZAPI(config, processedPayload);
         break;
       case 'custom':
-        result = await sendCustom(config, payload);
+        result = await sendCustom(config, processedPayload);
         break;
       default:
         result = { success: false, error: 'Provider desconhecido' };
@@ -407,34 +566,19 @@ serve(async (req) => {
       );
     }
 
-    // Find or create conversation if lead_id provided
-    let conversationId = payload.conversation_id;
-    let leadId = payload.lead_id;
-
-    if (!conversationId && payload.phone) {
-      // Try to find lead by phone
-      const { data: lead } = await supabase
-        .from('leads')
+    // Find existing conversation if we have a lead
+    if (!conversationId && leadId) {
+      const { data: conversation } = await supabase
+        .from('conversations')
         .select('id')
-        .eq('phone', payload.phone)
+        .eq('lead_id', leadId)
+        .in('status', ['open', 'pending'])
+        .order('last_message_at', { ascending: false })
+        .limit(1)
         .single();
 
-      if (lead) {
-        leadId = lead.id;
-        
-        // Find existing conversation
-        const { data: conversation } = await supabase
-          .from('conversations')
-          .select('id')
-          .eq('lead_id', lead.id)
-          .in('status', ['open', 'pending'])
-          .order('last_message_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        if (conversation) {
-          conversationId = conversation.id;
-        }
+      if (conversation) {
+        conversationId = conversation.id;
       }
     }
 
@@ -445,7 +589,7 @@ serve(async (req) => {
         .insert({
           conversation_id: conversationId,
           lead_id: leadId,
-          content: payload.message,
+          content: processedMessage,
           type: payload.type || 'text',
           media_url: payload.media_url,
           sender_type: 'agent',

@@ -7,27 +7,32 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTemplates } from '@/hooks/useTemplates';
 import { cn } from '@/lib/utils';
+import { replaceTemplateVariables, type LeadData } from '@/lib/templateVariables';
 
 interface SlashCommandPopoverProps {
   inputValue: string;
   onSelectTemplate: (content: string) => void;
-  leadName?: string;
-  leadPhone?: string;
-  leadBenefitType?: string;
+  lead?: LeadData;
   agentName?: string;
   inputRef: React.RefObject<HTMLTextAreaElement | HTMLInputElement>;
   onClose: () => void;
+  // Legacy props for backwards compatibility
+  leadName?: string;
+  leadPhone?: string;
+  leadBenefitType?: string;
 }
 
 export function SlashCommandPopover({
   inputValue,
   onSelectTemplate,
-  leadName,
-  leadPhone,
-  leadBenefitType,
+  lead,
   agentName,
   inputRef,
   onClose,
+  // Legacy props
+  leadName,
+  leadPhone,
+  leadBenefitType,
 }: SlashCommandPopoverProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const { data: templates } = useTemplates();
@@ -101,19 +106,18 @@ export function SlashCommandPopover({
   const handleSelect = (template: { content: string; shortcut: string }) => {
     if (!template) return;
 
-    let processedContent = template.content;
+    // Build lead data from props (support both new and legacy props)
+    const leadData: LeadData = lead || {
+      name: leadName,
+      phone: leadPhone,
+      benefit_type: leadBenefitType,
+    };
     
-    // Substituir variáveis conhecidas
-    const firstName = leadName ? leadName.split(' ')[0] : '';
-    
-    processedContent = processedContent.replace(/\{\{nome\}\}/gi, leadName || '[nome]');
-    processedContent = processedContent.replace(/\{\{primeiro_nome\}\}/gi, firstName || '[nome]');
-    processedContent = processedContent.replace(/\{\{telefone\}\}/gi, leadPhone || '[telefone]');
-    processedContent = processedContent.replace(/\{\{beneficio\}\}/gi, leadBenefitType || '[benefício]');
-    processedContent = processedContent.replace(/\{\{atendente\}\}/gi, agentName || '[atendente]');
-    
-    // Substituir variáveis não mapeadas por placeholder
-    processedContent = processedContent.replace(/\{\{(\w+)\}\}/g, '[$1]');
+    const processedContent = replaceTemplateVariables(template.content, {
+      lead: leadData,
+      agentName,
+      removeUnmatched: false,
+    });
     
     // Get text before the "/"
     const textBefore = inputValue.slice(0, slashIndex);
