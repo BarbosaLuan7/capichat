@@ -8,12 +8,15 @@ import {
   ArrowUp,
   ArrowDown,
   MessageSquare,
+  AlertCircle,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import {
   Popover,
@@ -108,6 +111,9 @@ export function ConversationList({
   const [sortOrder, setSortOrder] = useState<'recent' | 'oldest'>('recent');
   const [labelSearchTerm, setLabelSearchTerm] = useState('');
 
+  // Track if user is authenticated
+  const isUserAuthenticated = Boolean(userId);
+
   // Debounce search query
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
@@ -116,6 +122,12 @@ export function ConversationList({
 
   // Filter conversations by assignment first (for accurate status counts)
   const assignmentFilteredConversations = useMemo(() => {
+    // Handle unauthenticated user for assignment-based filters
+    if (!isUserAuthenticated && (filter === 'meus' || filter === 'outros')) {
+      console.warn('[ConversationList] userId undefined - cannot filter by assignment');
+      return [];
+    }
+
     return conversations?.filter((conv) => {
       if (filter === 'novos') {
         const isRecent = new Date(conv.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000;
@@ -128,7 +140,12 @@ export function ConversationList({
       }
       return true;
     }) || [];
-  }, [conversations, filter, userId]);
+  }, [conversations, filter, userId, isUserAuthenticated]);
+
+  // Clear search handler
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery('');
+  }, []);
 
   // Calculate status counts based on assignment-filtered conversations
   const statusCounts = useMemo(() => {
@@ -179,9 +196,11 @@ export function ConversationList({
         return false;
       }
       
+      const searchLower = debouncedSearchQuery.toLowerCase();
       const matchesSearch = !debouncedSearchQuery || 
-        conv.leads?.name?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-        conv.leads?.phone?.includes(debouncedSearchQuery);
+        conv.leads?.name?.toLowerCase().includes(searchLower) ||
+        conv.leads?.phone?.includes(debouncedSearchQuery) ||
+        conv.leads?.whatsapp_name?.toLowerCase().includes(searchLower);
 
       // Filter by labels
       const matchesLabels = selectedLabelIds.length === 0 || 
@@ -234,111 +253,142 @@ export function ConversationList({
         {/* Search + Labels + Sort in one row */}
         <div className="flex items-center gap-1.5">
           <div className="relative flex-1 min-w-0">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
             <Input 
-              placeholder="Buscar..." 
-              className="pl-8 h-8 text-sm"
+              placeholder="Buscar nome, telefone..." 
+              className={cn("pl-8 h-8 text-sm", searchQuery && "pr-8")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Buscar conversas"
             />
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
+                onClick={handleClearSearch}
+                aria-label="Limpar busca"
+              >
+                <X className="w-3.5 h-3.5" />
+              </Button>
+            )}
           </div>
 
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 gap-1 px-2 shrink-0">
-                <Tag className="w-3.5 h-3.5" />
-                {selectedLabelIds.length > 0 && (
-                  <Badge variant="secondary" className="px-1 py-0 text-[10px] h-4 min-w-4 flex items-center justify-center">
-                    {selectedLabelIds.length}
-                  </Badge>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-72 p-0" align="end">
-              <div className="p-3 border-b border-border bg-popover shrink-0">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Filtrar por etiquetas</span>
-                  {selectedLabelIds.length > 0 && (
-                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={clearLabelFilters}>
-                      Limpar
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 gap-1 px-2 shrink-0" aria-label="Filtrar por etiquetas">
+                      <Tag className="w-3.5 h-3.5" aria-hidden="true" />
+                      {selectedLabelIds.length > 0 && (
+                        <Badge variant="secondary" className="px-1 py-0 text-[10px] h-4 min-w-4 flex items-center justify-center">
+                          {selectedLabelIds.length}
+                        </Badge>
+                      )}
                     </Button>
-                  )}
-                </div>
-              </div>
-              <div className="p-2 border-b border-border">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar etiqueta..."
-                    value={labelSearchTerm}
-                    onChange={(e) => setLabelSearchTerm(e.target.value)}
-                    className="pl-8 h-8 text-sm"
-                  />
-                </div>
-              </div>
-              <ScrollArea className="h-[280px]">
-                <div className="p-2 space-y-3">
-                  {Object.entries(filteredLabelsByCategory).map(([category, labels]) => (
-                    <div key={category}>
-                      <p className="text-xs font-medium text-muted-foreground mb-1.5 px-1">
-                        {categoryLabels[category] || category}
-                      </p>
-                      <div className="space-y-0.5">
-                        {labels?.map((label) => (
-                          <label
-                            key={label.id}
-                            className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 cursor-pointer"
-                          >
-                            <Checkbox
-                              checked={selectedLabelIds.includes(label.id)}
-                              onCheckedChange={() => toggleLabelFilter(label.id)}
-                            />
-                            <span
-                              className="w-2.5 h-2.5 rounded-full"
-                              style={{ backgroundColor: label.color }}
-                            />
-                            <span className="text-sm">{label.name}</span>
-                          </label>
-                        ))}
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 p-0" align="end">
+                    <div className="p-3 border-b border-border bg-popover shrink-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Filtrar por etiquetas</span>
+                        {selectedLabelIds.length > 0 && (
+                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={clearLabelFilters}>
+                            Limpar
+                          </Button>
+                        )}
                       </div>
                     </div>
-                  ))}
-                  {Object.keys(filteredLabelsByCategory).length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Nenhuma etiqueta encontrada
-                    </p>
-                  )}
-                </div>
-              </ScrollArea>
-            </PopoverContent>
-          </Popover>
+                    <div className="p-2 border-b border-border">
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
+                        <Input
+                          placeholder="Buscar etiqueta..."
+                          value={labelSearchTerm}
+                          onChange={(e) => setLabelSearchTerm(e.target.value)}
+                          className="pl-8 h-8 text-sm"
+                          aria-label="Buscar etiqueta"
+                        />
+                      </div>
+                    </div>
+                    <ScrollArea className="h-[280px]">
+                      <div className="p-2 space-y-3">
+                        {Object.entries(filteredLabelsByCategory).map(([category, labels]) => (
+                          <div key={category}>
+                            <p className="text-xs font-medium text-muted-foreground mb-1.5 px-1">
+                              {categoryLabels[category] || category}
+                            </p>
+                            <div className="space-y-0.5">
+                              {labels?.map((label) => (
+                                <label
+                                  key={label.id}
+                                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 cursor-pointer"
+                                >
+                                  <Checkbox
+                                    checked={selectedLabelIds.includes(label.id)}
+                                    onCheckedChange={() => toggleLabelFilter(label.id)}
+                                    aria-label={`Filtrar por ${label.name}`}
+                                  />
+                                  <span
+                                    className="w-2.5 h-2.5 rounded-full"
+                                    style={{ backgroundColor: label.color }}
+                                    aria-hidden="true"
+                                  />
+                                  <span className="text-sm">{label.name}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                        {Object.keys(filteredLabelsByCategory).length === 0 && (
+                          <p className="text-sm text-muted-foreground text-center py-4">
+                            Nenhuma etiqueta encontrada
+                          </p>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </PopoverContent>
+                </Popover>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Filtrar por etiquetas</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           {/* Sort Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 px-2 shrink-0">
-                {sortOrder === 'recent' ? (
-                  <ArrowDown className="w-3.5 h-3.5" />
-                ) : (
-                  <ArrowUp className="w-3.5 h-3.5" />
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-popover">
-              <DropdownMenuItem 
-                onClick={() => setSortOrder('recent')}
-                className={sortOrder === 'recent' ? 'bg-accent' : ''}
-              >
-                Recentes primeiro
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => setSortOrder('oldest')}
-                className={sortOrder === 'oldest' ? 'bg-accent' : ''}
-              >
-                Antigos primeiro
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 px-2 shrink-0" aria-label="Ordenar conversas">
+                      {sortOrder === 'recent' ? (
+                        <ArrowDown className="w-3.5 h-3.5" aria-hidden="true" />
+                      ) : (
+                        <ArrowUp className="w-3.5 h-3.5" aria-hidden="true" />
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-popover">
+                    <DropdownMenuItem 
+                      onClick={() => setSortOrder('recent')}
+                      className={sortOrder === 'recent' ? 'bg-accent' : ''}
+                    >
+                      Recentes primeiro
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => setSortOrder('oldest')}
+                      className={sortOrder === 'oldest' ? 'bg-accent' : ''}
+                    >
+                      Antigos primeiro
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {sortOrder === 'recent' ? 'Recentes primeiro' : 'Antigos primeiro'}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         {/* Status Tabs */}
@@ -408,10 +458,30 @@ export function ConversationList({
               </div>
             ))}
           </div>
+        ) : !isUserAuthenticated && (filter === 'meus' || filter === 'outros') ? (
+          <div className="p-4">
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Você precisa estar autenticado para ver suas conversas.
+              </AlertDescription>
+            </Alert>
+            <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4 text-muted-foreground">
+                <MessageSquare className="w-8 h-8" aria-hidden="true" />
+              </div>
+              <h3 className="text-base font-medium text-foreground mb-1">
+                Sessão não identificada
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-xs">
+                Faça login para acessar suas conversas atribuídas.
+              </p>
+            </div>
+          </div>
         ) : filteredConversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4 text-primary">
-              <MessageSquare className="w-8 h-8" />
+              <MessageSquare className="w-8 h-8" aria-hidden="true" />
             </div>
             <h3 className="text-base font-medium text-foreground mb-1">
               {searchQuery ? 'Nenhum resultado' : 'Nenhuma conversa'}
@@ -424,7 +494,7 @@ export function ConversationList({
             </p>
             {!searchQuery && (
               <Button size="sm" onClick={onNewConversation}>
-                <Plus className="w-4 h-4 mr-1" />
+                <Plus className="w-4 h-4 mr-1" aria-hidden="true" />
                 Nova conversa
               </Button>
             )}
