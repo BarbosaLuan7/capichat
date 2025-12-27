@@ -48,6 +48,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { Task, Subtask, TaskPriority, TaskStatus } from '@/types';
 import { useProfiles } from '@/hooks/useProfiles';
@@ -409,9 +410,14 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete }: TaskMo
                   onChange={e => setNewSubtask(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addSubtask())}
                 />
-                <Button type="button" variant="outline" size="icon" onClick={addSubtask}>
-                  <Plus className="w-4 h-4" />
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button type="button" variant="outline" size="icon" onClick={addSubtask}>
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Adicionar subtarefa</TooltipContent>
+                </Tooltip>
               </div>
             </div>
 

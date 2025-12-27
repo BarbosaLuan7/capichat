@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 import { cn } from '@/lib/utils';
 import {
@@ -37,7 +38,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -129,8 +130,17 @@ const Metrics = () => {
               <SelectItem value="quarter">Trimestre</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isLoading}>
-            <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isLoading}>
+                <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Atualizar dados</TooltipContent>
+          </Tooltip>
+          <Button variant="outline" className="gap-2">
+            <Download className="w-4 h-4" />
+            Exportar
           </Button>
           <Button variant="outline" className="gap-2">
             <Download className="w-4 h-4" />
@@ -246,7 +256,7 @@ const Metrics = () => {
                           fontSize={12} 
                           width={115} 
                         />
-                        <Tooltip content={<CustomTooltip />} />
+                        <RechartsTooltip content={<CustomTooltip />} />
                         <Bar dataKey="count" name="Leads" radius={[0, 4, 4, 0]}>
                           {funnelMetrics.stages.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
@@ -332,7 +342,7 @@ const Metrics = () => {
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                         <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                        <Tooltip content={<CustomTooltip />} />
+                        <RechartsTooltip content={<CustomTooltip />} />
                         <Area 
                           type="monotone" 
                           dataKey="leads" 
@@ -503,7 +513,7 @@ const Metrics = () => {
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
-                        <Tooltip content={<CustomTooltip />} />
+                        <RechartsTooltip content={<CustomTooltip />} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
