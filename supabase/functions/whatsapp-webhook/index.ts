@@ -254,9 +254,16 @@ async function uploadMediaToStorage(
   wahaConfig?: { baseUrl: string; apiKey: string; sessionName: string } | null
 ): Promise<string | null> {
   try {
+    // Normalizar URL - adicionar https:// se não tiver protocolo
+    let normalizedUrl = mediaUrl;
+    if (!mediaUrl.startsWith('http://') && !mediaUrl.startsWith('https://')) {
+      normalizedUrl = `https://${mediaUrl}`;
+      console.log('[whatsapp-webhook] URL normalizada (protocolo adicionado):', mediaUrl, '->', normalizedUrl);
+    }
+    
     // Corrigir URL localhost para usar base_url do WAHA
-    let correctedUrl = mediaUrl;
-    const urlObj = new URL(mediaUrl);
+    let correctedUrl = normalizedUrl;
+    const urlObj = new URL(normalizedUrl);
     const isLocalhost = urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1';
     
     if (isLocalhost && wahaConfig?.baseUrl) {
