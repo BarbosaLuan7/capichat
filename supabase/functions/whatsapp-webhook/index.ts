@@ -653,11 +653,12 @@ serve(async (req) => {
       // ========== WAHA: Evento de ACK (status delivered/read) ==========
       if (event === 'message.ack') {
         const payload = body.payload || {};
-        const messageId = payload.id || payload.key?.id || payload.ids?.[0];
+        // Extrair messageId - pode vir em vários formatos
+        let rawMessageId = payload.id || payload.key?.id || payload.ids?.[0];
         const ackName = payload.ackName || payload.receipt_type || payload.ack;
         const ackNumber = payload.ack;
         
-        console.log('[whatsapp-webhook] ACK recebido:', { messageId, ackName, ackNumber, payload: JSON.stringify(payload) });
+        console.log('[whatsapp-webhook] ACK recebido:', { messageId: rawMessageId, ackName, ackNumber, payload: JSON.stringify(payload) });
         
         let newStatus: 'delivered' | 'read' | null = null;
         
@@ -669,40 +670,69 @@ serve(async (req) => {
           newStatus = 'read';
         }
         
-        if (newStatus && messageId) {
-          // Tentar match exato primeiro
-          const { data: exactMatch, error: exactError } = await supabase
-            .from('messages')
-            .update({ status: newStatus })
-            .eq('external_id', messageId)
-            .select('id');
+        if (newStatus && rawMessageId) {
+          // Extrair o ID curto se vier no formato serializado
+          // "true_554599957851@c.us_3EB0725EB8EE5F6CC14B33" → "3EB0725EB8EE5F6CC14B33"
+          let shortId: string | null = null;
+          if (typeof rawMessageId === 'string' && rawMessageId.includes('_')) {
+            const parts = rawMessageId.split('_');
+            shortId = parts[parts.length - 1]; // Último segmento é o ID curto
+          }
           
-          if (exactError) {
-            console.error('[whatsapp-webhook] Erro ao atualizar status (exato):', exactError);
-          } else if (exactMatch && exactMatch.length > 0) {
-            console.log('[whatsapp-webhook] Status atualizado (match exato) para:', newStatus, 'messageId:', messageId);
-          } else {
-            // Se não encontrou, tentar busca parcial para formatos JSON antigos
+          console.log('[whatsapp-webhook] IDs para busca:', { rawMessageId, shortId });
+          
+          // Tentar match com ID curto primeiro (formato novo)
+          let found = false;
+          if (shortId) {
+            const { data: shortMatch, error: shortError } = await supabase
+              .from('messages')
+              .update({ status: newStatus })
+              .eq('external_id', shortId)
+              .select('id');
+            
+            if (!shortError && shortMatch && shortMatch.length > 0) {
+              console.log('[whatsapp-webhook] Status atualizado (match shortId) para:', newStatus, 'shortId:', shortId);
+              found = true;
+            }
+          }
+          
+          // Tentar match exato com ID completo (serializado)
+          if (!found) {
+            const { data: exactMatch, error: exactError } = await supabase
+              .from('messages')
+              .update({ status: newStatus })
+              .eq('external_id', rawMessageId)
+              .select('id');
+            
+            if (!exactError && exactMatch && exactMatch.length > 0) {
+              console.log('[whatsapp-webhook] Status atualizado (match exato) para:', newStatus, 'messageId:', rawMessageId);
+              found = true;
+            }
+          }
+          
+          // Tentar busca parcial para formatos JSON antigos
+          if (!found && shortId) {
             console.log('[whatsapp-webhook] Match exato não encontrou, tentando busca parcial...');
             
             const { data: partialMatch, error: partialError } = await supabase
               .from('messages')
               .update({ status: newStatus })
-              .like('external_id', `%"id":"${messageId}"%`)
+              .like('external_id', `%${shortId}%`)
               .select('id');
             
-            if (partialError) {
-              console.error('[whatsapp-webhook] Erro ao atualizar status (parcial):', partialError);
-            } else if (partialMatch && partialMatch.length > 0) {
+            if (!partialError && partialMatch && partialMatch.length > 0) {
               console.log('[whatsapp-webhook] Status atualizado (match parcial) para:', newStatus, 'encontradas:', partialMatch.length);
-            } else {
-              console.warn('[whatsapp-webhook] Nenhuma mensagem encontrada para messageId:', messageId);
+              found = true;
             }
+          }
+          
+          if (!found) {
+            console.warn('[whatsapp-webhook] Nenhuma mensagem encontrada para messageId:', rawMessageId, 'shortId:', shortId);
           }
         }
         
         return new Response(
-          JSON.stringify({ success: true, event: 'ack', status: newStatus, messageId }),
+          JSON.stringify({ success: true, event: 'ack', status: newStatus, messageId: rawMessageId }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
