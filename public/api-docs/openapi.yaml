@@ -704,7 +704,7 @@ paths:
                   description: "Atalho para usar com /"
                 content:
                   type: string
-                  description: "Conteúdo com variáveis {{nome}}, {{telefone}}, etc."
+                  description: "Conteudo com variaveis {{nome}}, {{telefone}}, etc."
             example:
               name: Boas-vindas
               shortcut: oi
@@ -976,15 +976,15 @@ components:
           type: string
           enum: [text, image, audio, video, document]
           default: text
-          description: Tipo da mensagem (padrão: text)
+          description: "Tipo da mensagem (padrao: text)"
         lead_id:
           type: string
           format: uuid
-          description: ID do lead (opcional, será buscado pelo telefone se não informado)
+          description: "ID do lead (opcional, sera buscado pelo telefone se nao informado)"
         conversation_id:
           type: string
           format: uuid
-          description: ID da conversa (opcional, será buscada ou criada automaticamente)
+          description: "ID da conversa (opcional, sera buscada ou criada automaticamente)"
 
     SendMediaMessage:
       type: object
@@ -1050,21 +1050,21 @@ components:
           type: string
           enum: [text, image, audio, video, document]
           default: text
-          description: Tipo da mensagem
+          description: "Tipo da mensagem"
         media_url:
           type: string
           format: uri
-          description: URL da mídia (quando type != text)
+          description: "URL da midia (quando type != text)"
         timestamp:
           type: string
           format: date-time
-          description: Data/hora da mensagem no WhatsApp
+          description: "Data/hora da mensagem no WhatsApp"
         external_id:
           type: string
-          description: ID único da mensagem no provedor (wamid)
+          description: "ID unico da mensagem no provedor (wamid)"
         sender_name:
           type: string
-          description: Nome do contato no WhatsApp
+          description: "Nome do contato no WhatsApp"
 
     ReceiveMessageResponse:
       type: object
@@ -1099,7 +1099,7 @@ components:
                   type: string
                 is_new:
                   type: boolean
-                  description: True se o lead foi criado nesta requisição
+                  description: "True se o lead foi criado nesta requisicao"
             conversation:
               type: object
               properties:
@@ -1108,7 +1108,7 @@ components:
                   format: uuid
                 is_new:
                   type: boolean
-                  description: True se a conversa foi criada nesta requisição
+                  description: "True se a conversa foi criada nesta requisicao"
 
     Tag:
       type: object
