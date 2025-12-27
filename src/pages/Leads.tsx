@@ -57,15 +57,31 @@ import { LeadImportModal } from '@/components/leads/LeadImportModal';
 import { BulkActionsBar } from '@/components/leads/BulkActionsBar';
 import { LeadFilters, LeadFiltersState } from '@/components/leads/LeadFilters';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
-import { cn } from '@/lib/utils';
+import { cn, getContrastColor } from '@/lib/utils';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from '@/components/ui/pagination';
+
+const PAGE_SIZE = 50;
 
 const Leads = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: leads, isLoading } = useLeads();
+  const [currentPage, setCurrentPage] = useState(1);
+  const { data: leadsData, isLoading } = useLeads(currentPage, PAGE_SIZE);
+  const leads = leadsData?.leads || [];
+  const totalCount = leadsData?.totalCount || 0;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+  
   const { data: funnelStages } = useFunnelStages();
   const { data: allLabels } = useLabels();
   const { data: profiles } = useProfiles();
@@ -226,7 +242,7 @@ const Leads = () => {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Leads</h1>
           <p className="text-muted-foreground">
-            {leads?.length || 0} leads no total · {filteredLeads.length} exibidos
+            {totalCount} leads no total · {filteredLeads.length} exibidos
           </p>
         </div>
         <div className="flex gap-2">
@@ -328,7 +344,7 @@ const Leads = () => {
                             <Badge
                               key={label.id}
                               className="text-xs h-5 border-0"
-                              style={{ backgroundColor: label.color, color: 'white' }}
+                              style={{ backgroundColor: label.color, color: getContrastColor(label.color) }}
                             >
                               {label.name}
                             </Badge>
@@ -392,7 +408,12 @@ const Leads = () => {
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="opacity-0 group-hover:opacity-100"
+                          aria-label="Mais opções"
+                        >
                           <MoreVertical className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -422,6 +443,58 @@ const Leads = () => {
             })}
           </TableBody>
         </Table>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+            <p className="text-sm text-muted-foreground">
+              Mostrando {((currentPage - 1) * PAGE_SIZE) + 1}-{Math.min(currentPage * PAGE_SIZE, totalCount)} de {totalCount}
+            </p>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    aria-label="Página anterior"
+                  />
+                </PaginationItem>
+                
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  return (
+                    <PaginationItem key={pageNum}>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(pageNum)}
+                        isActive={currentPage === pageNum}
+                        className="cursor-pointer"
+                      >
+                        {pageNum}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
+                
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    aria-label="Próxima página"
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
       </Card>
 
       {/* Lead Modal */}

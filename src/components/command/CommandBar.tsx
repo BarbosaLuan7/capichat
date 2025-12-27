@@ -38,8 +38,10 @@ interface CommandBarProps {
 
 export function CommandBar({ open, onOpenChange, onNewLead, onNewTask }: CommandBarProps) {
   const navigate = useNavigate();
-  const { data: leads = [] } = useLeads();
-  const { data: tasks = [] } = useTasks();
+  const { data: leadsData } = useLeads();
+  const { data: tasksData } = useTasks();
+  const leads = leadsData?.leads || [];
+  const tasks = tasksData?.tasks || [];
   const [search, setSearch] = useState('');
 
   // Reset search when dialog closes

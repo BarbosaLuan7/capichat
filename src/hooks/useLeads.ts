@@ -6,20 +6,30 @@ type Lead = Database['public']['Tables']['leads']['Row'];
 type LeadInsert = Database['public']['Tables']['leads']['Insert'];
 type LeadUpdate = Database['public']['Tables']['leads']['Update'];
 
-export function useLeads() {
+interface PaginatedLeadsResult {
+  leads: (Lead & { funnel_stages?: { id: string; name: string; color: string } | null })[];
+  totalCount: number;
+}
+
+export function useLeads(page: number = 1, pageSize: number = 50) {
   return useQuery({
-    queryKey: ['leads'],
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryKey: ['leads', page, pageSize],
+    queryFn: async (): Promise<PaginatedLeadsResult> => {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await supabase
         .from('leads')
         .select(`
           *,
-          funnel_stages (id, name, color)
-        `)
-        .order('created_at', { ascending: false });
+          funnel_stages (id, name, color),
+          lead_labels (label_id, labels(*))
+        `, { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
       
       if (error) throw error;
-      return data;
+      return { leads: data || [], totalCount: count || 0 };
     },
   });
 }

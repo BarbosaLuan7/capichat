@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 import { useConversations } from './useConversations';
-import { useTasks } from './useTasks';
+import { useAllTasks } from './useTasks';
 import { useAuthStore } from '@/store/authStore';
 
 export function useSidebarBadges() {
   const { user } = useAuthStore();
   const { data: conversations } = useConversations();
-  const { data: tasks } = useTasks();
+  const { data: tasks } = useAllTasks();
 
   const badges = useMemo(() => {
     // Total de mensagens não lidas em todas as conversas visíveis
