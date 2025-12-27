@@ -27,6 +27,7 @@ export function useTasks(page: number = 1, pageSize: number = 50) {
       if (error) throw error;
       return { tasks: data || [], totalCount: count || 0 };
     },
+    staleTime: 30 * 1000, // 30 segundos
   });
 }
 
@@ -43,6 +44,7 @@ export function useAllTasks() {
       if (error) throw error;
       return data;
     },
+    staleTime: 30 * 1000, // 30 segundos
   });
 }
 
@@ -61,6 +63,7 @@ export function useTask(id: string | undefined) {
       return data;
     },
     enabled: !!id,
+    staleTime: 30 * 1000, // 30 segundos
   });
 }
 

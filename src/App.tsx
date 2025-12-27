@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,28 +9,31 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { CommandBar } from "@/components/command/CommandBar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import MainLayout from "./components/layout/MainLayout";
-import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import Inbox from "./pages/Inbox";
-import Funnel from "./pages/Funnel";
-import Leads from "./pages/Leads";
-import LeadDetail from "./pages/LeadDetail";
-import Tasks from "./pages/Tasks";
-import Calendar from "./pages/Calendar";
-import Automations from "./pages/Automations";
-import ChatbotBuilder from "./pages/ChatbotBuilder";
-import Metrics from "./pages/Metrics";
-import Settings from "./pages/Settings";
-import UsersSettings from "./pages/settings/UsersSettings";
-import TeamsSettings from "./pages/settings/TeamsSettings";
-import LabelsSettings from "./pages/settings/LabelsSettings";
-import TemplatesSettings from "./pages/settings/TemplatesSettings";
-import WebhooksSettings from "./pages/settings/WebhooksSettings";
-import WhatsAppSettings from "./pages/settings/WhatsAppSettings";
-import ApiSettings from "./pages/settings/ApiSettings";
-import ApiDocs from "./pages/ApiDocs";
-import NotFound from "./pages/NotFound";
+import { PageSkeleton } from "./components/layout/PageSkeleton";
 import React from "react";
+
+// Lazy load all pages for better initial bundle size
+const Auth = lazy(() => import("./pages/Auth"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Inbox = lazy(() => import("./pages/Inbox"));
+const Funnel = lazy(() => import("./pages/Funnel"));
+const Leads = lazy(() => import("./pages/Leads"));
+const LeadDetail = lazy(() => import("./pages/LeadDetail"));
+const Tasks = lazy(() => import("./pages/Tasks"));
+const Calendar = lazy(() => import("./pages/Calendar"));
+const Automations = lazy(() => import("./pages/Automations"));
+const ChatbotBuilder = lazy(() => import("./pages/ChatbotBuilder"));
+const Metrics = lazy(() => import("./pages/Metrics"));
+const Settings = lazy(() => import("./pages/Settings"));
+const UsersSettings = lazy(() => import("./pages/settings/UsersSettings"));
+const TeamsSettings = lazy(() => import("./pages/settings/TeamsSettings"));
+const LabelsSettings = lazy(() => import("./pages/settings/LabelsSettings"));
+const TemplatesSettings = lazy(() => import("./pages/settings/TemplatesSettings"));
+const WebhooksSettings = lazy(() => import("./pages/settings/WebhooksSettings"));
+const WhatsAppSettings = lazy(() => import("./pages/settings/WhatsAppSettings"));
+const ApiSettings = lazy(() => import("./pages/settings/ApiSettings"));
+const ApiDocs = lazy(() => import("./pages/ApiDocs"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -99,43 +102,45 @@ function AppContent() {
         open={commandBarOpen}
         onOpenChange={setCommandBarOpen}
       />
-      <Routes>
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/login" element={<Navigate to="/auth" replace />} />
-        
-        {/* Rota pública - Documentação da API */}
-        <Route path="/api-docs" element={<ApiDocs />} />
-        
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="inbox" element={<Inbox />} />
-          <Route path="funnel" element={<Funnel />} />
-          <Route path="leads" element={<Leads />} />
-          <Route path="leads/:id" element={<LeadDetail />} />
-          <Route path="tasks" element={<Tasks />} />
-          <Route path="calendar" element={<Calendar />} />
-          <Route path="automations" element={<Automations />} />
-          <Route path="chatbot" element={<ChatbotBuilder />} />
-          <Route path="metrics" element={<Metrics />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="settings/users" element={<UsersSettings />} />
-          <Route path="settings/teams" element={<TeamsSettings />} />
-          <Route path="settings/labels" element={<LabelsSettings />} />
-          <Route path="settings/templates" element={<TemplatesSettings />} />
-          <Route path="settings/webhooks" element={<WebhooksSettings />} />
-          <Route path="settings/whatsapp" element={<WhatsAppSettings />} />
-          <Route path="settings/api" element={<ApiSettings />} />
-        </Route>
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <Suspense fallback={<PageSkeleton />}>
+        <Routes>
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/login" element={<Navigate to="/auth" replace />} />
+          
+          {/* Rota pública - Documentação da API */}
+          <Route path="/api-docs" element={<ApiDocs />} />
+          
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <MainLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="inbox" element={<Inbox />} />
+            <Route path="funnel" element={<Funnel />} />
+            <Route path="leads" element={<Leads />} />
+            <Route path="leads/:id" element={<LeadDetail />} />
+            <Route path="tasks" element={<Tasks />} />
+            <Route path="calendar" element={<Calendar />} />
+            <Route path="automations" element={<Automations />} />
+            <Route path="chatbot" element={<ChatbotBuilder />} />
+            <Route path="metrics" element={<Metrics />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="settings/users" element={<UsersSettings />} />
+            <Route path="settings/teams" element={<TeamsSettings />} />
+            <Route path="settings/labels" element={<LabelsSettings />} />
+            <Route path="settings/templates" element={<TemplatesSettings />} />
+            <Route path="settings/webhooks" element={<WebhooksSettings />} />
+            <Route path="settings/whatsapp" element={<WhatsAppSettings />} />
+            <Route path="settings/api" element={<ApiSettings />} />
+          </Route>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

@@ -19,6 +19,7 @@ export function useLabels() {
       if (error) throw error;
       return data as Label[];
     },
+    staleTime: 60 * 1000, // 1 minuto - labels mudam pouco
   });
 }
 
@@ -98,6 +99,7 @@ export function useLeadLabels(leadId: string | undefined) {
       return data;
     },
     enabled: !!leadId,
+    staleTime: 30 * 1000, // 30 segundos
   });
 }
 

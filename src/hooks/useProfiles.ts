@@ -17,6 +17,7 @@ export function useProfiles() {
       if (error) throw error;
       return data as Profile[];
     },
+    staleTime: 5 * 60 * 1000, // 5 minutos - usuários mudam raramente
   });
 }
 
@@ -35,6 +36,7 @@ export function useProfile(id: string | undefined) {
       return data as Profile | null;
     },
     enabled: !!id,
+    staleTime: 5 * 60 * 1000, // 5 minutos
   });
 }
 
@@ -70,5 +72,6 @@ export function useUserRoles() {
       if (error) throw error;
       return data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutos
   });
 }

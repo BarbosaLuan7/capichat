@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import {
   Dialog,
   DialogContent,
@@ -52,6 +53,7 @@ export function LeadLabelsModal({
   currentLabelIds,
 }: LeadLabelsModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 200);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const { data: labels, isLoading } = useLabels();
   const addLabel = useAddLeadLabel();
@@ -82,16 +84,16 @@ export function LeadLabelsModal({
       return true;
     });
     
-    // Filtra pelo termo de busca
-    if (!searchTerm.trim()) return deduplicated;
+    // Filtra pelo termo de busca (usando valor debounced)
+    if (!debouncedSearchTerm.trim()) return deduplicated;
     
-    const term = searchTerm.toLowerCase();
+    const term = debouncedSearchTerm.toLowerCase();
     return deduplicated.filter(
       (label) =>
         label.name.toLowerCase().includes(term) ||
         label.category.toLowerCase().includes(term)
     );
-  }, [labels, searchTerm]);
+  }, [labels, debouncedSearchTerm]);
 
   // Etiquetas selecionadas
   const selectedLabels = useMemo(() => {
@@ -121,7 +123,7 @@ export function LeadLabelsModal({
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
   // Auto-expandir categorias com selecionados quando abre o modal
-  useMemo(() => {
+  useEffect(() => {
     if (open) {
       const initial: Record<string, boolean> = {};
       groupedLabels.forEach(([category, categoryLabels]) => {

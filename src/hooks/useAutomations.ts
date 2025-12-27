@@ -18,6 +18,7 @@ export function useAutomations() {
       if (error) throw error;
       return data;
     },
+    staleTime: 60 * 1000, // 1 minuto
   });
 }
 
@@ -36,6 +37,7 @@ export function useAutomation(id: string | undefined) {
       return data;
     },
     enabled: !!id,
+    staleTime: 60 * 1000, // 1 minuto
   });
 }
 
