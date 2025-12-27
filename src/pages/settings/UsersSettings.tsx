@@ -30,6 +30,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAppStore } from '@/store/appStore';
 import { User } from '@/types';
@@ -43,6 +53,8 @@ const UsersSettings = () => {
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const { toast } = useToast();
 
   const filteredUsers = users.filter(user =>
@@ -66,9 +78,18 @@ const UsersSettings = () => {
     }
   };
 
-  const handleDelete = (userId: string) => {
-    deleteUser(userId);
-    toast({ title: 'Usuário excluído', variant: 'destructive' });
+  const confirmDelete = (user: User) => {
+    setUserToDelete(user);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (userToDelete) {
+      deleteUser(userToDelete.id);
+      toast({ title: 'Usuário excluído', variant: 'destructive' });
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+    }
   };
 
   const handleToggleStatus = (userId: string) => {
@@ -216,7 +237,7 @@ const UsersSettings = () => {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"
-                          onClick={() => handleDelete(user.id)}
+                          onClick={() => confirmDelete(user)}
                         >
                           Excluir
                         </DropdownMenuItem>
@@ -243,8 +264,32 @@ const UsersSettings = () => {
         onOpenChange={setModalOpen}
         user={selectedUser}
         onSave={handleSave}
-        onDelete={handleDelete}
+        onDelete={(userId) => {
+          const user = users.find(u => u.id === userId);
+          if (user) confirmDelete(user);
+        }}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir usuário?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir <span className="font-medium">{userToDelete?.name}</span>? 
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

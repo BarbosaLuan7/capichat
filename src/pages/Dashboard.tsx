@@ -13,6 +13,7 @@ import {
   Target,
   Zap,
   Timer,
+  Download,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -22,8 +23,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -53,9 +61,11 @@ import {
   useConversationMetrics,
   type PeriodFilter,
 } from '@/hooks/useMetrics';
+import { useReportExport } from '@/hooks/useReportExport';
 
 const Dashboard = () => {
   const [period, setPeriod] = useState<PeriodFilter>('month');
+  const { exportReport, isExporting } = useReportExport();
 
   const { data: leadMetrics, isLoading: loadingLeads } = useLeadMetrics(period);
   const { data: funnelMetrics, isLoading: loadingFunnel } = useFunnelMetrics(period);
@@ -154,6 +164,31 @@ const Dashboard = () => {
               <SelectItem value="quarter">Este Trimestre</SelectItem>
             </SelectContent>
           </Select>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2" disabled={isExporting}>
+                <Download className={cn("w-4 h-4", isExporting && "animate-pulse")} />
+                Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => exportReport('leads', 'csv')}>
+                Leads (CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportReport('funnel', 'csv')}>
+                Funil (CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportReport('conversations', 'csv')}>
+                Conversas (CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportReport('agents', 'csv')}>
+                Atendentes (CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportReport('full', 'csv')}>
+                Tudo (CSV)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="w-4 h-4" />
             <span className="hidden sm:inline">Tempo real</span>

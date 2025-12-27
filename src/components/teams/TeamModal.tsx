@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -24,11 +24,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Team, User } from '@/types';
-import { mockUsers } from '@/data/mockData';
+import { Team } from '@/types';
+import { useAppStore } from '@/store/appStore';
 
 const teamSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -47,6 +57,9 @@ interface TeamModalProps {
 }
 
 export const TeamModal = ({ open, onOpenChange, team, onSave, onDelete }: TeamModalProps) => {
+  const { users } = useAppStore();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
   const form = useForm<TeamFormData>({
     resolver: zodResolver(teamSchema),
     defaultValues: {
@@ -56,8 +69,8 @@ export const TeamModal = ({ open, onOpenChange, team, onSave, onDelete }: TeamMo
     },
   });
 
-  const managers = mockUsers.filter(u => u.role === 'manager' || u.role === 'admin');
-  const agents = mockUsers.filter(u => u.role === 'agent');
+  const managers = users.filter(u => u.role === 'manager' || u.role === 'admin');
+  const agents = users.filter(u => u.role === 'agent');
 
   useEffect(() => {
     if (team) {
@@ -84,6 +97,14 @@ export const TeamModal = ({ open, onOpenChange, team, onSave, onDelete }: TeamMo
     };
     onSave(teamData);
     onOpenChange(false);
+  };
+
+  const handleDelete = () => {
+    if (team && onDelete) {
+      onDelete(team.id);
+      setDeleteDialogOpen(false);
+      onOpenChange(false);
+    }
   };
 
   const memberIds = form.watch('memberIds');
@@ -184,10 +205,7 @@ export const TeamModal = ({ open, onOpenChange, team, onSave, onDelete }: TeamMo
                 <Button
                   type="button"
                   variant="destructive"
-                  onClick={() => {
-                    onDelete(team.id);
-                    onOpenChange(false);
-                  }}
+                  onClick={() => setDeleteDialogOpen(true)}
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Excluir
@@ -205,6 +223,27 @@ export const TeamModal = ({ open, onOpenChange, team, onSave, onDelete }: TeamMo
           </form>
         </Form>
       </DialogContent>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir equipe?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a equipe <span className="font-medium">{team?.name}</span>? 
+              Os membros não serão excluídos, apenas desvinculados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };

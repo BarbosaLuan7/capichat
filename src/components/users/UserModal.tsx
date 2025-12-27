@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -24,11 +24,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { User, UserRole } from '@/types';
-import { mockTeams } from '@/data/mockData';
+import { useAppStore } from '@/store/appStore';
 import { getRoleLabel } from '@/lib/permissions';
 
 const userSchema = z.object({
@@ -50,6 +60,9 @@ interface UserModalProps {
 }
 
 export const UserModal = ({ open, onOpenChange, user, onSave, onDelete }: UserModalProps) => {
+  const { teams } = useAppStore();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
   const form = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
     defaultValues: {
@@ -92,6 +105,14 @@ export const UserModal = ({ open, onOpenChange, user, onSave, onDelete }: UserMo
     };
     onSave(userData);
     onOpenChange(false);
+  };
+
+  const handleDelete = () => {
+    if (user && onDelete) {
+      onDelete(user.id);
+      setDeleteDialogOpen(false);
+      onOpenChange(false);
+    }
   };
 
   const roles: UserRole[] = ['admin', 'manager', 'agent', 'viewer'];
@@ -173,7 +194,7 @@ export const UserModal = ({ open, onOpenChange, user, onSave, onDelete }: UserMo
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="">Nenhuma</SelectItem>
-                        {mockTeams.map(team => (
+                        {teams.map(team => (
                           <SelectItem key={team.id} value={team.id}>
                             {team.name}
                           </SelectItem>
@@ -212,10 +233,7 @@ export const UserModal = ({ open, onOpenChange, user, onSave, onDelete }: UserMo
                 <Button
                   type="button"
                   variant="destructive"
-                  onClick={() => {
-                    onDelete(user.id);
-                    onOpenChange(false);
-                  }}
+                  onClick={() => setDeleteDialogOpen(true)}
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Excluir
@@ -233,6 +251,27 @@ export const UserModal = ({ open, onOpenChange, user, onSave, onDelete }: UserMo
           </form>
         </Form>
       </DialogContent>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir usuário?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir <span className="font-medium">{user?.name}</span>? 
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };
