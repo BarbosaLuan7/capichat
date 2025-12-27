@@ -54,7 +54,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useTasks, useUpdateTaskStatus, useDeleteTask, useCreateTask, useUpdateTask } from '@/hooks/useTasks';
+import { useAllTasks, useUpdateTaskStatus, useDeleteTask, useCreateTask, useUpdateTask } from '@/hooks/useTasks';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useLeads } from '@/hooks/useLeads';
 import { cn } from '@/lib/utils';
@@ -267,9 +267,10 @@ const TaskCard = ({ task, onStatusChange, onEdit, onDelete, onSubtaskToggle, isD
 };
 
 const Tasks = () => {
-  const { data: tasks, isLoading } = useTasks();
+  const { data: tasks, isLoading } = useAllTasks();
   const { data: profiles } = useProfiles();
-  const { data: leads } = useLeads();
+  const { data: leadsData } = useLeads();
+  const leads = leadsData?.leads;
   const updateStatus = useUpdateTaskStatus();
   const updateTask = useUpdateTask();
   const deleteTaskMutation = useDeleteTask();

@@ -74,8 +74,10 @@ const Dashboard = () => {
     {
       title: 'Total de Leads',
       value: leadMetrics?.totalLeads || 0,
-      change: '+12%',
-      isPositive: true,
+      change: leadMetrics?.changePercent !== undefined 
+        ? `${leadMetrics.changePercent >= 0 ? '+' : ''}${leadMetrics.changePercent}%`
+        : 'N/A',
+      isPositive: (leadMetrics?.changePercent || 0) >= 0,
       icon: Users,
       color: 'text-primary',
       bgColor: 'bg-primary/10',

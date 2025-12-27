@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -72,14 +72,23 @@ const menuItemsConfig: MenuItem[] = [
   },
 ];
 
+const SIDEBAR_SETTINGS_KEY = 'sidebar-settings-open';
+
 const AppSidebar = () => {
   const location = useLocation();
   const { user, logout } = useAuthStore();
   const { sidebarCollapsed, toggleSidebar } = useAppStore();
-  const [settingsOpen, setSettingsOpen] = useState(
-    location.pathname.startsWith('/settings')
-  );
+  const [settingsOpen, setSettingsOpen] = useState(() => {
+    const saved = localStorage.getItem(SIDEBAR_SETTINGS_KEY);
+    if (saved !== null) return JSON.parse(saved);
+    return location.pathname.startsWith('/settings');
+  });
   const badges = useSidebarBadges();
+
+  // Persist settings submenu state
+  React.useEffect(() => {
+    localStorage.setItem(SIDEBAR_SETTINGS_KEY, JSON.stringify(settingsOpen));
+  }, [settingsOpen]);
 
   // Memoize menu items with dynamic badges
   const menuItems = useMemo(() => {
@@ -129,6 +138,7 @@ const AppSidebar = () => {
           size="icon"
           onClick={toggleSidebar}
           className="text-sidebar-foreground hover:bg-sidebar-accent"
+          aria-label={sidebarCollapsed ? "Expandir menu lateral" : "Recolher menu lateral"}
         >
           {sidebarCollapsed ? (
             <ChevronRight className="w-5 h-5" />

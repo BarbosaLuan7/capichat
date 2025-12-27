@@ -105,6 +105,7 @@ export function ChatArea({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const ignoreScrollRef = useRef(false);
+  const isNearBottomRef = useRef(true);
 
   // Hooks
   const { uploadFile, uploadProgress } = useFileUpload();
@@ -113,12 +114,12 @@ export function ChatArea({
   const aiReminders = useAIReminders();
   const { data: internalNotes } = useInternalNotes(conversation?.id || undefined);
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll to bottom when messages change (only if user is near bottom)
   useEffect(() => {
-    if (!showScrollButton && messages?.length) {
+    if (isNearBottomRef.current && messages?.length) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages?.length, showScrollButton]);
+  }, [messages?.length]);
 
   // Auto-scroll when conversation changes
   useEffect(() => {
@@ -188,12 +189,16 @@ export function ChatArea({
     
     const target = e.currentTarget;
     const distanceFromBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    
+    // Update near bottom state (within 100px of bottom)
+    isNearBottomRef.current = distanceFromBottom < 100;
     setShowScrollButton(distanceFromBottom > 200);
   }, []);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     setShowScrollButton(false);
+    isNearBottomRef.current = true;
   }, []);
 
   // Merge messages and notes for inline display
@@ -405,6 +410,7 @@ export function ChatArea({
             variant="ghost" 
             size="icon"
             onClick={onToggleFavorite}
+            aria-label={conversation.is_favorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
           >
             <Star className={cn(
               "w-4 h-4",
@@ -415,7 +421,7 @@ export function ChatArea({
             variant={showLeadPanel ? "secondary" : "ghost"}
             size="icon"
             onClick={onToggleLeadPanel}
-            title={showLeadPanel ? "Ocultar detalhes do lead" : "Mostrar detalhes do lead"}
+            aria-label={showLeadPanel ? "Ocultar detalhes do lead" : "Mostrar detalhes do lead"}
             className={cn(
               "transition-colors",
               !showLeadPanel && "text-primary hover:text-primary hover:bg-primary/10"

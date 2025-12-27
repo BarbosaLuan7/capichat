@@ -6,9 +6,34 @@ type Task = Database['public']['Tables']['tasks']['Row'];
 type TaskInsert = Database['public']['Tables']['tasks']['Insert'];
 type TaskUpdate = Database['public']['Tables']['tasks']['Update'];
 
-export function useTasks() {
+interface PaginatedTasksResult {
+  tasks: Task[];
+  totalCount: number;
+}
+
+export function useTasks(page: number = 1, pageSize: number = 50) {
   return useQuery({
-    queryKey: ['tasks'],
+    queryKey: ['tasks', page, pageSize],
+    queryFn: async (): Promise<PaginatedTasksResult> => {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data, error, count } = await supabase
+        .from('tasks')
+        .select('*', { count: 'exact' })
+        .order('due_date', { ascending: true })
+        .range(from, to);
+      
+      if (error) throw error;
+      return { tasks: data || [], totalCount: count || 0 };
+    },
+  });
+}
+
+// Hook to get ALL tasks (for calendar/kanban view without pagination)
+export function useAllTasks() {
+  return useQuery({
+    queryKey: ['tasks-all'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tasks')

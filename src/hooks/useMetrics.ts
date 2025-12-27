@@ -21,14 +21,26 @@ function getDateRange(period: PeriodFilter) {
   }
 }
 
+// Helper to get the previous period dates for comparison
+function getPreviousPeriodDates(period: PeriodFilter) {
+  const { start, end } = getDateRange(period);
+  const duration = end.getTime() - start.getTime();
+  
+  return {
+    start: new Date(start.getTime() - duration),
+    end: new Date(start.getTime() - 1), // 1ms before current period starts
+  };
+}
+
 // Hook para buscar métricas de leads
 export function useLeadMetrics(period: PeriodFilter) {
   const { start, end } = getDateRange(period);
+  const previousPeriod = getPreviousPeriodDates(period);
 
   return useQuery({
     queryKey: ['lead-metrics', period],
     queryFn: async () => {
-      // Total de leads no período
+      // Total de leads no período atual
       const { data: leads, error: leadsError } = await supabase
         .from('leads')
         .select('id, created_at, temperature, stage_id, assigned_to')
@@ -36,6 +48,26 @@ export function useLeadMetrics(period: PeriodFilter) {
         .lte('created_at', end.toISOString());
 
       if (leadsError) throw leadsError;
+
+      // Total de leads no período anterior (para cálculo de variação)
+      const { data: previousLeads, error: previousError } = await supabase
+        .from('leads')
+        .select('id')
+        .gte('created_at', previousPeriod.start.toISOString())
+        .lte('created_at', previousPeriod.end.toISOString());
+
+      if (previousError) throw previousError;
+
+      const currentCount = leads?.length || 0;
+      const previousCount = previousLeads?.length || 0;
+      
+      // Calcular variação percentual
+      let changePercent = 0;
+      if (previousCount > 0) {
+        changePercent = ((currentCount - previousCount) / previousCount) * 100;
+      } else if (currentCount > 0) {
+        changePercent = 100; // Se não tinha leads antes e tem agora, 100% de crescimento
+      }
 
       // Leads por fonte (via labels de origem)
       const { data: leadLabels, error: labelsError } = await supabase
@@ -71,7 +103,9 @@ export function useLeadMetrics(period: PeriodFilter) {
         .slice(0, 6);
 
       return {
-        totalLeads: leads?.length || 0,
+        totalLeads: currentCount,
+        previousPeriodLeads: previousCount,
+        changePercent: parseFloat(changePercent.toFixed(1)),
         leadsByTemperature: {
           cold: leads?.filter(l => l.temperature === 'cold').length || 0,
           warm: leads?.filter(l => l.temperature === 'warm').length || 0,
