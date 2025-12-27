@@ -657,7 +657,7 @@ serve(async (req) => {
         const ackName = payload.ackName || payload.receipt_type || payload.ack;
         const ackNumber = payload.ack;
         
-        console.log('[whatsapp-webhook] ACK recebido:', { messageId, ackName, ackNumber });
+        console.log('[whatsapp-webhook] ACK recebido:', { messageId, ackName, ackNumber, payload: JSON.stringify(payload) });
         
         let newStatus: 'delivered' | 'read' | null = null;
         
@@ -670,15 +670,34 @@ serve(async (req) => {
         }
         
         if (newStatus && messageId) {
-          const { error: updateError } = await supabase
+          // Tentar match exato primeiro
+          const { data: exactMatch, error: exactError } = await supabase
             .from('messages')
             .update({ status: newStatus })
-            .eq('external_id', messageId);
+            .eq('external_id', messageId)
+            .select('id');
           
-          if (updateError) {
-            console.error('[whatsapp-webhook] Erro ao atualizar status:', updateError);
+          if (exactError) {
+            console.error('[whatsapp-webhook] Erro ao atualizar status (exato):', exactError);
+          } else if (exactMatch && exactMatch.length > 0) {
+            console.log('[whatsapp-webhook] Status atualizado (match exato) para:', newStatus, 'messageId:', messageId);
           } else {
-            console.log('[whatsapp-webhook] Status atualizado para:', newStatus, 'messageId:', messageId);
+            // Se não encontrou, tentar busca parcial para formatos JSON antigos
+            console.log('[whatsapp-webhook] Match exato não encontrou, tentando busca parcial...');
+            
+            const { data: partialMatch, error: partialError } = await supabase
+              .from('messages')
+              .update({ status: newStatus })
+              .like('external_id', `%"id":"${messageId}"%`)
+              .select('id');
+            
+            if (partialError) {
+              console.error('[whatsapp-webhook] Erro ao atualizar status (parcial):', partialError);
+            } else if (partialMatch && partialMatch.length > 0) {
+              console.log('[whatsapp-webhook] Status atualizado (match parcial) para:', newStatus, 'encontradas:', partialMatch.length);
+            } else {
+              console.warn('[whatsapp-webhook] Nenhuma mensagem encontrada para messageId:', messageId);
+            }
           }
         }
         

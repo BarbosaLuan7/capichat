@@ -419,7 +419,21 @@ async function sendWAHA(config: WhatsAppConfig, phone: string, message: string, 
 
     try {
       const data = JSON.parse(responseText);
-      return { success: true, messageId: data.id || data.key?.id };
+      // Extrair ID corretamente - garantir que é string simples, não objeto
+      let messageId: string | undefined;
+      
+      if (typeof data.id === 'string') {
+        messageId = data.id;
+      } else if (data.key && typeof data.key.id === 'string') {
+        messageId = data.key.id;
+      } else if (data.key && typeof data.key === 'object') {
+        // Se data.key é objeto, extrair o id dele
+        console.warn('[WAHA] Formato inesperado - key é objeto:', JSON.stringify(data.key));
+        messageId = data.key.id?.toString?.();
+      }
+      
+      console.log('[WAHA] MessageId extraído:', messageId, 'de resposta:', typeof data.id, typeof data.key?.id);
+      return { success: true, messageId };
     } catch {
       return { success: true, messageId: undefined };
     }
