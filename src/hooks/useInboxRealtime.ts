@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
@@ -18,24 +18,40 @@ interface UseInboxRealtimeOptions {
  * - Single channel instead of 6+ separate channels
  * - Specific invalidations instead of broad ['conversations'] invalidation
  * - Optimistic updates for messages in the selected conversation
+ * - Stable refs to prevent subscription reconnection loops
  */
 export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
   const { selectedConversationId, onNewIncomingMessage } = options;
   const queryClient = useQueryClient();
+  
+  // Use refs to avoid recreating callbacks on every render
+  const selectedConversationIdRef = useRef(selectedConversationId);
+  const onNewIncomingMessageRef = useRef(onNewIncomingMessage);
+  
+  // Keep refs in sync
+  useEffect(() => {
+    selectedConversationIdRef.current = selectedConversationId;
+  }, [selectedConversationId]);
+  
+  useEffect(() => {
+    onNewIncomingMessageRef.current = onNewIncomingMessage;
+  }, [onNewIncomingMessage]);
 
   // Handle new message in selected conversation - optimistic update
+  // Using refs to access current values without recreating callback
   const handleMessageInsert = useCallback((payload: any) => {
     const newMessage = payload.new as Message;
     const conversationId = newMessage.conversation_id;
+    const currentSelectedId = selectedConversationIdRef.current;
     
     console.log('[InboxRealtime] New message:', { 
       messageId: newMessage.id, 
       conversationId,
-      isSelectedConversation: conversationId === selectedConversationId 
+      isSelectedConversation: conversationId === currentSelectedId 
     });
 
     // Optimistic update for messages in selected conversation
-    if (conversationId === selectedConversationId) {
+    if (conversationId === currentSelectedId) {
       queryClient.setQueryData(['messages', conversationId], (old: Message[] | undefined) => {
         if (!old) return [newMessage];
         // Avoid duplicates
@@ -45,8 +61,8 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
     }
 
     // Notify for incoming messages from leads
-    if (newMessage.sender_type === 'lead' && onNewIncomingMessage) {
-      onNewIncomingMessage(newMessage);
+    if (newMessage.sender_type === 'lead' && onNewIncomingMessageRef.current) {
+      onNewIncomingMessageRef.current(newMessage);
     }
 
     // Update conversation list (for last_message_at, unread_count, etc.)
@@ -68,7 +84,7 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
         return conv;
       });
     });
-  }, [selectedConversationId, queryClient, onNewIncomingMessage]);
+  }, [queryClient]); // Only queryClient as dependency - refs are stable
 
   // Handle message updates (status changes, starred, etc.)
   const handleMessageUpdate = useCallback((payload: any) => {
@@ -87,6 +103,7 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
   // Handle conversation updates
   const handleConversationChange = useCallback((payload: any) => {
     console.log('[InboxRealtime] Conversation change:', payload.eventType);
+    const currentSelectedId = selectedConversationIdRef.current;
     
     if (payload.eventType === 'UPDATE') {
       const updated = payload.new;
@@ -96,7 +113,7 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
       });
       
       // Also update single conversation query if selected
-      if (updated.id === selectedConversationId) {
+      if (updated.id === currentSelectedId) {
         queryClient.setQueryData(['conversations', updated.id], (old: any) => {
           if (!old) return old;
           return { ...old, ...updated };
@@ -106,7 +123,7 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
       // New conversation - invalidate to refetch with leads data
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     }
-  }, [queryClient, selectedConversationId]);
+  }, [queryClient]); // Only queryClient - use ref for selectedConversationId
 
   // Handle lead labels changes (for conversation list labels display)
   const handleLeadLabelsChange = useCallback((payload: any) => {
@@ -170,5 +187,8 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
       console.log('[InboxRealtime] Cleaning up subscription');
       supabase.removeChannel(channel);
     };
-  }, [handleMessageInsert, handleMessageUpdate, handleConversationChange, handleLeadLabelsChange]);
+  // Empty dependency array - callbacks use refs for dynamic values
+  // This ensures the subscription is set up once and never recreated
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 }

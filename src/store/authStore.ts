@@ -29,7 +29,7 @@ export const useAuthStore = create<AuthState>()(
       },
     }),
     {
-      name: 'leadflow-auth',
+      name: 'garantedireito-auth',
     }
   )
 );

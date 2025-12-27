@@ -9,8 +9,8 @@ import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/hooks/use-toast';
 
 const Login = () => {
-  const [email, setEmail] = useState('carlos@leadflow.com');
-  const [password, setPassword] = useState('demo123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuthStore();
@@ -24,7 +24,7 @@ const Login = () => {
       const success = await login(email, password);
       if (success) {
         toast({
-          title: 'Bem-vindo ao LeadFlow!',
+          title: 'Bem-vindo à GaranteDireito!',
           description: 'Login realizado com sucesso.',
         });
         navigate('/dashboard');
@@ -56,22 +56,22 @@ const Login = () => {
               <div className="w-12 h-12 rounded-xl bg-primary-foreground/20 backdrop-blur flex items-center justify-center">
                 <MessageSquare className="w-7 h-7" />
               </div>
-              <span className="text-3xl font-bold">LeadFlow</span>
+              <span className="text-3xl font-bold">GaranteDireito</span>
             </div>
 
             <h1 className="text-4xl xl:text-5xl font-bold leading-tight mb-6">
-              Gerencie seus leads e conversas em um só lugar
+              Conquiste seus benefícios previdenciários
             </h1>
 
             <p className="text-lg xl:text-xl text-primary-foreground/80 mb-12 max-w-lg">
-              CRM inteligente integrado com WhatsApp para transformar conversas em vendas.
+              Sistema especializado em Direito Previdenciário para gestão de casos e atendimento via WhatsApp.
             </p>
 
             <div className="space-y-4">
               {[
-                'Atendimento unificado via WhatsApp',
-                'Funil de vendas visual e intuitivo',
-                'Automações para aumentar produtividade',
+                'Atendimento humanizado via WhatsApp',
+                'Gestão completa de casos previdenciários',
+                'Acompanhamento de BPC, aposentadorias e mais',
               ].map((feature, index) => (
                 <motion.div
                   key={feature}
@@ -108,7 +108,7 @@ const Login = () => {
             <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
               <MessageSquare className="w-6 h-6 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold text-foreground">LeadFlow</span>
+            <span className="text-2xl font-bold text-foreground">GaranteDireito</span>
           </div>
 
           <div className="text-center mb-8">
@@ -180,19 +180,9 @@ const Login = () => {
           </form>
 
           <div className="mt-8 p-4 rounded-lg bg-muted/50 border border-border">
-            <p className="text-sm text-muted-foreground text-center mb-3">
-              <strong>Demo:</strong> Use as credenciais abaixo para testar
+            <p className="text-sm text-muted-foreground text-center">
+              Use suas credenciais de acesso ou entre em contato com o administrador
             </p>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Admin:</p>
-                <p className="font-mono text-foreground">carlos@leadflow.com</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Atendente:</p>
-                <p className="font-mono text-foreground">pedro@leadflow.com</p>
-              </div>
-            </div>
           </div>
         </motion.div>
       </div>

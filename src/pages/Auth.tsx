@@ -80,7 +80,7 @@ const Auth = () => {
         }
       } else {
         toast({
-          title: 'Bem-vindo ao LeadFlow!',
+          title: 'Bem-vindo à GaranteDireito!',
           description: 'Login realizado com sucesso.',
         });
         navigate('/dashboard');
@@ -127,7 +127,7 @@ const Auth = () => {
       } else {
         toast({
           title: 'Conta criada!',
-          description: 'Bem-vindo ao LeadFlow. Você já está logado.',
+          description: 'Bem-vindo à GaranteDireito. Você já está logado.',
         });
         navigate('/dashboard');
       }
@@ -152,22 +152,22 @@ const Auth = () => {
               <div className="w-12 h-12 rounded-xl bg-primary-foreground/20 backdrop-blur flex items-center justify-center">
                 <MessageSquare className="w-7 h-7" />
               </div>
-              <span className="text-3xl font-bold">LeadFlow</span>
+              <span className="text-3xl font-bold">GaranteDireito</span>
             </div>
 
             <h1 className="text-4xl xl:text-5xl font-bold leading-tight mb-6">
-              Gerencie seus leads e conversas em um só lugar
+              Conquiste seus benefícios previdenciários
             </h1>
 
             <p className="text-lg xl:text-xl text-primary-foreground/80 mb-12 max-w-lg">
-              CRM inteligente integrado com WhatsApp para transformar conversas em vendas.
+              Sistema especializado em Direito Previdenciário para gestão de casos e atendimento via WhatsApp.
             </p>
 
             <div className="space-y-4">
               {[
-                'Atendimento unificado via WhatsApp',
-                'Funil de vendas visual e intuitivo',
-                'Automações para aumentar produtividade',
+                'Atendimento humanizado via WhatsApp',
+                'Gestão completa de casos previdenciários',
+                'Acompanhamento de BPC, aposentadorias e mais',
               ].map((feature, index) => (
                 <motion.div
                   key={feature}
@@ -204,7 +204,7 @@ const Auth = () => {
             <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
               <MessageSquare className="w-6 h-6 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold text-foreground">LeadFlow</span>
+            <span className="text-2xl font-bold text-foreground">GaranteDireito</span>
           </div>
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'login' | 'signup')} className="w-full">

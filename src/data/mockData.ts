@@ -5,7 +5,7 @@ export const mockUsers: User[] = [
   {
     id: '1',
     name: 'Carlos Silva',
-    email: 'carlos@leadflow.com',
+    email: 'carlos@garantedireito.com',
     role: 'admin',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Carlos',
     teamId: '1',
@@ -15,7 +15,7 @@ export const mockUsers: User[] = [
   {
     id: '2',
     name: 'Ana Rodrigues',
-    email: 'ana@leadflow.com',
+    email: 'ana@garantedireito.com',
     role: 'manager',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ana',
     teamId: '1',
@@ -25,7 +25,7 @@ export const mockUsers: User[] = [
   {
     id: '3',
     name: 'Pedro Santos',
-    email: 'pedro@leadflow.com',
+    email: 'pedro@garantedireito.com',
     role: 'agent',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Pedro',
     teamId: '1',
@@ -35,7 +35,7 @@ export const mockUsers: User[] = [
   {
     id: '4',
     name: 'Maria Oliveira',
-    email: 'maria@leadflow.com',
+    email: 'maria@garantedireito.com',
     role: 'agent',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maria',
     teamId: '2',
@@ -422,7 +422,7 @@ export const mockTemplates: Template[] = [
   {
     id: '1',
     name: 'Boas-vindas',
-    content: 'Olá {{nome}}! Seja bem-vindo(a) à LeadFlow. Sou {{atendente}} e estou aqui para ajudá-lo(a). Como posso auxiliar hoje?',
+    content: 'Olá {{nome}}! Seja bem-vindo(a) à GaranteDireito. Sou {{atendente}} e estou aqui para ajudá-lo(a). Como posso auxiliar hoje?',
     shortcut: '/bemvindo',
     createdAt: new Date('2024-01-01'),
   },
