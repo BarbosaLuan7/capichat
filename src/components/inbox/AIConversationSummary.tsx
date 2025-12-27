@@ -47,6 +47,7 @@ export function AIConversationSummary({
   const handleRefresh = () => {
     if (messages && messages.length > 0) {
       fetchSummary(messages, {
+        id: lead.id,  // Include lead.id to isolate cache per lead
         name: lead.name,
         phone: lead.phone,
         source: lead.source,
