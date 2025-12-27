@@ -38,6 +38,7 @@ import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { useAISuggestions } from '@/hooks/useAISuggestions';
 import { useAIReminders } from '@/hooks/useAIReminders';
 import { useInternalNotes } from '@/hooks/useInternalNotes';
+import { useDraftMessages } from '@/hooks/useDraftMessages';
 
 import type { Database } from '@/integrations/supabase/types';
 
@@ -93,7 +94,6 @@ export function ChatArea({
   onToggleLeadPanel,
   agentName,
 }: ChatAreaProps) {
-  const [messageInput, setMessageInput] = useState('');
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [pendingFile, setPendingFile] = useState<{ file: File; type: 'image' | 'video' | 'audio' | 'document' } | null>(null);
   const [showSlashCommand, setShowSlashCommand] = useState(false);
@@ -106,6 +106,7 @@ export function ChatArea({
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const ignoreScrollRef = useRef(false);
   const isNearBottomRef = useRef(true);
+  const lastMessageIdRef = useRef<string | null>(null);
 
   // Hooks
   const { uploadFile, uploadProgress } = useFileUpload();
@@ -113,13 +114,31 @@ export function ChatArea({
   const aiSuggestions = useAISuggestions();
   const aiReminders = useAIReminders();
   const { data: internalNotes } = useInternalNotes(conversation?.id || undefined);
+  const { draft, saveDraft, clearDraft } = useDraftMessages(conversation?.id);
 
-  // Auto-scroll to bottom when messages change (only if user is near bottom)
+  // Use draft as messageInput value
+  const messageInput = draft;
+  const setMessageInput = saveDraft;
+
+  // Auto-scroll to bottom when NEW messages arrive
+  // Force scroll if message is from lead (response) to ensure user sees it
   useEffect(() => {
-    if (isNearBottomRef.current && messages?.length) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!messages?.length) return;
+    
+    const lastMessage = messages[messages.length - 1];
+    const isNewMessage = lastMessage.id !== lastMessageIdRef.current;
+    
+    if (isNewMessage) {
+      lastMessageIdRef.current = lastMessage.id;
+      
+      // Force scroll if:
+      // 1. User is near the bottom, OR
+      // 2. It's a new message from the lead (response)
+      if (isNearBottomRef.current || lastMessage.sender_type === 'lead') {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
     }
-  }, [messages?.length]);
+  }, [messages]);
 
   // Auto-scroll when conversation changes
   useEffect(() => {
@@ -286,7 +305,7 @@ export function ChatArea({
         mediaUrl
       );
 
-      setMessageInput('');
+      clearDraft();
       inputRef.current?.focus();
       
       // Check for reminders
@@ -328,7 +347,7 @@ export function ChatArea({
   };
 
   const handleEmojiSelect = (emoji: string) => {
-    setMessageInput((prev) => prev + emoji);
+    setMessageInput(messageInput + emoji);
     inputRef.current?.focus();
   };
 
@@ -611,7 +630,10 @@ export function ChatArea({
                 if (showSlashCommand) return;
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  handleSendMessage();
+                  // Prevent double-send: check isSending and uploadProgress
+                  if (!isSending && !uploadProgress.uploading) {
+                    handleSendMessage();
+                  }
                 }
               }}
               placeholder="Digite / para atalhos... (Shift+Enter para nova linha)"
