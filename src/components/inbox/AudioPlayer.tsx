@@ -7,9 +7,10 @@ import { cn } from '@/lib/utils';
 interface AudioPlayerProps {
   src: string;
   className?: string;
+  'aria-label'?: string;
 }
 
-export function AudioPlayer({ src, className }: AudioPlayerProps) {
+export function AudioPlayer({ src, className, 'aria-label': ariaLabel }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -74,7 +75,7 @@ export function AudioPlayer({ src, className }: AudioPlayerProps) {
   };
 
   return (
-    <div className={cn("flex items-center gap-2 p-2 bg-muted/50 rounded-lg min-w-[200px]", className)}>
+    <div className={cn("flex items-center gap-2 p-2 bg-muted/50 rounded-lg min-w-[200px]", className)} role="region" aria-label={ariaLabel || 'Player de áudio'}>
       <audio ref={audioRef} src={src} preload="metadata" />
       
       <Button
@@ -83,6 +84,7 @@ export function AudioPlayer({ src, className }: AudioPlayerProps) {
         className="h-8 w-8 shrink-0"
         onClick={togglePlay}
         disabled={!isLoaded}
+        aria-label={isPlaying ? 'Pausar áudio' : 'Reproduzir áudio'}
       >
         {isPlaying ? (
           <Pause className="w-4 h-4" />

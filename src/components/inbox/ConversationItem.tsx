@@ -44,6 +44,16 @@ interface ConversationItemProps {
   onClick: () => void;
 }
 
+// Remove unreplaced template placeholders from preview text
+const sanitizePreviewContent = (content: string | null | undefined): string => {
+  if (!content) return '';
+  return content
+    .replace(/\{\{[^}]+\}\}/g, '') // Remove {{variable}}
+    .replace(/\{[^}]+\}/g, '')     // Remove {variable}
+    .replace(/\[[^\]]+\]/g, '')    // Remove [variable]
+    .trim();
+};
+
 // Format conversation date intelligently
 const formatConversationDate = (date: Date): string => {
   const now = new Date();
@@ -102,7 +112,7 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
           {/* Row 2: Last message + Unread/Hot indicators */}
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm text-muted-foreground truncate flex-1">
-              {conversation.last_message_content || formatPhoneNumber(convLead?.phone || '')}
+              {sanitizePreviewContent(conversation.last_message_content) || formatPhoneNumber(convLead?.phone || '')}
             </p>
             <div className="flex items-center gap-1.5 shrink-0">
               {convLead?.temperature === 'hot' && (

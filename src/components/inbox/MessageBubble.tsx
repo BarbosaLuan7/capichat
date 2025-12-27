@@ -109,10 +109,10 @@ function MessageBubbleComponent({
       case 'image':
         return (
           <div className="mb-2">
-            <ImageLightbox src={resolvedMediaUrl} alt="Imagem da conversa">
+            <ImageLightbox src={resolvedMediaUrl} alt={`Imagem ${isAgent ? 'enviada pelo atendente' : `de ${leadName}`}`}>
               <img
                 src={resolvedMediaUrl}
-                alt="Imagem"
+                alt={`Imagem ${isAgent ? 'enviada pelo atendente' : `enviada por ${leadName}`}`}
                 className="max-w-full rounded-lg max-h-64 object-cover cursor-pointer hover:brightness-95 transition-all"
                 onError={(e) => {
                   console.error('[MessageBubble] Erro ao carregar imagem:', message.media_url);
@@ -128,6 +128,7 @@ function MessageBubbleComponent({
             <video
               src={resolvedMediaUrl}
               controls
+              aria-label={`Vídeo ${isAgent ? 'enviado pelo atendente' : `de ${leadName}`}`}
               className="max-w-full rounded-lg max-h-64"
             />
           </div>
@@ -135,7 +136,7 @@ function MessageBubbleComponent({
       case 'audio':
         return (
           <div className="mb-2 space-y-2">
-            <AudioPlayer src={resolvedMediaUrl} />
+            <AudioPlayer src={resolvedMediaUrl} aria-label={`Áudio ${isAgent ? 'enviado pelo atendente' : `de ${leadName}`}`} />
             
             {/* Transcription section */}
             {!isAgent && (
