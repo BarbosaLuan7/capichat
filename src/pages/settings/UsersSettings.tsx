@@ -8,13 +8,15 @@ import {
   UserX,
   Mail,
   Shield,
+  Loader2,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,63 +43,109 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useAppStore } from '@/store/appStore';
-import { User } from '@/types';
+import { useProfiles, useUpdateProfile, useUserRoles } from '@/hooks/useProfiles';
+import { useTeams } from '@/hooks/useTeams';
 import { UserModal } from '@/components/users/UserModal';
 import { getRoleLabel } from '@/lib/permissions';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 import { cn } from '@/lib/utils';
+import type { Database } from '@/integrations/supabase/types';
+
+type Profile = Database['public']['Tables']['profiles']['Row'];
+type AppRole = Database['public']['Enums']['app_role'];
 
 const UsersSettings = () => {
-  const { users, teams, addUser, updateUser, deleteUser, toggleUserStatus } = useAppStore();
+  const { data: profiles, isLoading: profilesLoading } = useProfiles();
+  const { data: teamsData } = useTeams();
+  const { data: userRoles } = useUserRoles();
+  const updateProfile = useUpdateProfile();
+
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
   const { toast } = useToast();
+
+  const users = profiles || [];
+  const teams = teamsData || [];
 
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(search.toLowerCase()) ||
     user.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  const getTeamName = (teamId?: string) => {
+  const getTeamName = (teamId?: string | null) => {
     if (!teamId) return '-';
     const team = teams.find(t => t.id === teamId);
     return team?.name || '-';
   };
 
-  const handleSave = (userData: Omit<User, 'id' | 'createdAt' | 'avatar'> & { id?: string }) => {
-    if (userData.id) {
-      updateUser(userData.id, userData);
-      toast({ title: 'Usuário atualizado com sucesso!' });
-    } else {
-      addUser(userData);
-      toast({ title: 'Usuário criado com sucesso!' });
+  const getUserRole = (userId: string): AppRole => {
+    const role = userRoles?.find(r => r.user_id === userId);
+    return role?.role || 'agent';
+  };
+
+  const handleSave = async (userData: {
+    id?: string;
+    name: string;
+    email: string;
+    role: AppRole;
+    teamId?: string;
+    isActive: boolean;
+  }) => {
+    try {
+      if (userData.id) {
+        await updateProfile.mutateAsync({
+          id: userData.id,
+          name: userData.name,
+          team_id: userData.teamId || null,
+          is_active: userData.isActive,
+        });
+        toast({ title: 'Usuário atualizado com sucesso!' });
+      } else {
+        // Note: Creating new users requires Auth API which is handled separately
+        toast({ 
+          title: 'Funcionalidade limitada', 
+          description: 'Novos usuários devem se registrar pelo sistema de autenticação.',
+          variant: 'destructive' 
+        });
+      }
+      setModalOpen(false);
+    } catch (error) {
+      toast({ title: 'Erro ao salvar usuário', variant: 'destructive' });
     }
   };
 
-  const confirmDelete = (user: User) => {
+  const confirmDelete = (user: Profile) => {
     setUserToDelete(user);
     setDeleteDialogOpen(true);
   };
 
   const handleConfirmDelete = () => {
-    if (userToDelete) {
-      deleteUser(userToDelete.id);
-      toast({ title: 'Usuário excluído', variant: 'destructive' });
-      setDeleteDialogOpen(false);
-      setUserToDelete(null);
+    // Note: Deleting users requires Auth API
+    toast({ 
+      title: 'Funcionalidade limitada', 
+      description: 'A exclusão de usuários deve ser feita pelo painel administrativo.',
+      variant: 'destructive' 
+    });
+    setDeleteDialogOpen(false);
+    setUserToDelete(null);
+  };
+
+  const handleToggleStatus = async (user: Profile) => {
+    try {
+      await updateProfile.mutateAsync({
+        id: user.id,
+        is_active: !user.is_active,
+      });
+      toast({ title: 'Status atualizado!' });
+    } catch (error) {
+      toast({ title: 'Erro ao atualizar status', variant: 'destructive' });
     }
   };
 
-  const handleToggleStatus = (userId: string) => {
-    toggleUserStatus(userId);
-    toast({ title: 'Status atualizado!' });
-  };
-
-  const openEditModal = (user: User) => {
+  const openEditModal = (user: Profile) => {
     setSelectedUser(user);
     setModalOpen(true);
   };
@@ -107,7 +155,7 @@ const UsersSettings = () => {
     setModalOpen(true);
   };
 
-  const getRoleBadgeColor = (role: User['role']) => {
+  const getRoleBadgeColor = (role: AppRole) => {
     switch (role) {
       case 'admin':
         return 'bg-primary text-primary-foreground';
@@ -119,6 +167,42 @@ const UsersSettings = () => {
         return 'bg-muted text-muted-foreground';
     }
   };
+
+  // Convert profile to modal format
+  const convertUserForModal = (profile: Profile | null) => {
+    if (!profile) return null;
+    return {
+      id: profile.id,
+      name: profile.name,
+      email: profile.email,
+      role: getUserRole(profile.id),
+      avatar: profile.avatar || undefined,
+      teamId: profile.team_id || undefined,
+      isActive: profile.is_active,
+      createdAt: new Date(profile.created_at),
+    };
+  };
+
+  if (profilesLoading) {
+    return (
+      <div className="p-6 space-y-6">
+        <PageBreadcrumb items={[{ label: 'Configurações', href: '/settings' }, { label: 'Usuários' }]} />
+        <div className="flex items-center justify-between">
+          <div>
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-4 w-48 mt-2" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <Skeleton key={i} className="h-24" />
+          ))}
+        </div>
+        <Skeleton className="h-[400px]" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -139,8 +223,8 @@ const UsersSettings = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
           { label: 'Total de Usuários', value: users.length, icon: Shield },
-          { label: 'Ativos', value: users.filter(u => u.isActive).length, icon: UserCheck },
-          { label: 'Inativos', value: users.filter(u => !u.isActive).length, icon: UserX },
+          { label: 'Ativos', value: users.filter(u => u.is_active).length, icon: UserCheck },
+          { label: 'Inativos', value: users.filter(u => !u.is_active).length, icon: UserX },
           { label: 'Equipes', value: teams.length, icon: Mail },
         ].map((stat, i) => (
           <motion.div
@@ -196,7 +280,7 @@ const UsersSettings = () => {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar>
-                        <AvatarImage src={user.avatar} />
+                        <AvatarImage src={user.avatar || undefined} />
                         <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div>
@@ -206,17 +290,18 @@ const UsersSettings = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={cn('text-xs', getRoleBadgeColor(user.role))}>
-                      {getRoleLabel(user.role)}
+                    <Badge className={cn('text-xs', getRoleBadgeColor(getUserRole(user.id)))}>
+                      {getRoleLabel(getUserRole(user.id))}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {getTeamName(user.teamId)}
+                    {getTeamName(user.team_id)}
                   </TableCell>
                   <TableCell>
                     <Switch
-                      checked={user.isActive}
-                      onCheckedChange={() => handleToggleStatus(user.id)}
+                      checked={user.is_active}
+                      onCheckedChange={() => handleToggleStatus(user)}
+                      disabled={updateProfile.isPending}
                     />
                   </TableCell>
                   <TableCell>
@@ -262,7 +347,7 @@ const UsersSettings = () => {
       <UserModal
         open={modalOpen}
         onOpenChange={setModalOpen}
-        user={selectedUser}
+        user={convertUserForModal(selectedUser)}
         onSave={handleSave}
         onDelete={(userId) => {
           const user = users.find(u => u.id === userId);

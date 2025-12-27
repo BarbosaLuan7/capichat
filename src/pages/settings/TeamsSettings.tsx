@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Users, UserCheck, MoreVertical } from 'lucide-react';
+import { Plus, Users, UserCheck, MoreVertical, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,51 +24,94 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useAppStore } from '@/store/appStore';
-import { Team } from '@/types';
+import { useTeams, useCreateTeam, useUpdateTeam, useDeleteTeam } from '@/hooks/useTeams';
+import { useProfiles } from '@/hooks/useProfiles';
+import { useLeads } from '@/hooks/useLeads';
 import { TeamModal } from '@/components/teams/TeamModal';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
+import type { Database } from '@/integrations/supabase/types';
+
+type DbTeam = Database['public']['Tables']['teams']['Row'] & {
+  supervisor?: { id: string; name: string; email: string; avatar: string | null } | null;
+};
 
 const TeamsSettings = () => {
-  const { teams, users, leads, addTeam, updateTeam, deleteTeam } = useAppStore();
+  const { data: teamsData, isLoading: teamsLoading } = useTeams();
+  const { data: profiles } = useProfiles();
+  const { data: leadsData } = useLeads();
+  const createTeam = useCreateTeam();
+  const updateTeam = useUpdateTeam();
+  const deleteTeamMutation = useDeleteTeam();
+
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<DbTeam | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
+  const [teamToDelete, setTeamToDelete] = useState<DbTeam | null>(null);
   const { toast } = useToast();
+
+  const teams = (teamsData || []) as unknown as DbTeam[];
+  const users = profiles || [];
+  const leads = leadsData?.leads || [];
 
   const getUserById = (id: string) => users.find(u => u.id === id);
 
-  const getTeamLeadsCount = (teamId: string) => {
-    const memberIds = teams.find(t => t.id === teamId)?.memberIds || [];
-    return leads.filter(l => memberIds.includes(l.assignedTo)).length;
+  // Get team members by checking profiles with team_id
+  const getTeamMembers = (teamId: string) => {
+    return users.filter(u => u.team_id === teamId);
   };
 
-  const handleSave = (teamData: Omit<Team, 'id' | 'createdAt'> & { id?: string }) => {
-    if (teamData.id) {
-      updateTeam(teamData.id, teamData);
-      toast({ title: 'Equipe atualizada com sucesso!' });
-    } else {
-      addTeam(teamData);
-      toast({ title: 'Equipe criada com sucesso!' });
+  const getTeamLeadsCount = (teamId: string) => {
+    const members = getTeamMembers(teamId);
+    const memberIds = members.map(m => m.id);
+    return leads.filter(l => l.assigned_to && memberIds.includes(l.assigned_to)).length;
+  };
+
+  const handleSave = async (teamData: {
+    id?: string;
+    name: string;
+    supervisorId: string;
+    memberIds: string[];
+  }) => {
+    try {
+      if (teamData.id) {
+        await updateTeam.mutateAsync({
+          id: teamData.id,
+          name: teamData.name,
+          supervisor_id: teamData.supervisorId || null,
+        });
+        toast({ title: 'Equipe atualizada com sucesso!' });
+      } else {
+        await createTeam.mutateAsync({
+          name: teamData.name,
+          supervisor_id: teamData.supervisorId || null,
+        });
+        toast({ title: 'Equipe criada com sucesso!' });
+      }
+      setModalOpen(false);
+    } catch (error) {
+      toast({ title: 'Erro ao salvar equipe', variant: 'destructive' });
     }
   };
 
-  const confirmDelete = (team: Team) => {
+  const confirmDelete = (team: DbTeam) => {
     setTeamToDelete(team);
     setDeleteDialogOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (teamToDelete) {
-      deleteTeam(teamToDelete.id);
-      toast({ title: 'Equipe excluída', variant: 'destructive' });
-      setDeleteDialogOpen(false);
-      setTeamToDelete(null);
+      try {
+        await deleteTeamMutation.mutateAsync(teamToDelete.id);
+        toast({ title: 'Equipe excluída', variant: 'destructive' });
+        setDeleteDialogOpen(false);
+        setTeamToDelete(null);
+      } catch (error) {
+        toast({ title: 'Erro ao excluir equipe', variant: 'destructive' });
+      }
     }
   };
 
-  const openEditModal = (team: Team) => {
+  const openEditModal = (team: DbTeam) => {
     setSelectedTeam(team);
     setModalOpen(true);
   };
@@ -76,6 +120,39 @@ const TeamsSettings = () => {
     setSelectedTeam(null);
     setModalOpen(true);
   };
+
+  // Convert DB team to modal format
+  const convertTeamForModal = (team: DbTeam | null) => {
+    if (!team) return null;
+    const members = getTeamMembers(team.id);
+    return {
+      id: team.id,
+      name: team.name,
+      supervisorId: team.supervisor_id || '',
+      memberIds: members.map(m => m.id),
+      createdAt: new Date(team.created_at),
+    };
+  };
+
+  if (teamsLoading) {
+    return (
+      <div className="p-6 space-y-6">
+        <PageBreadcrumb items={[{ label: 'Configurações', href: '/settings' }, { label: 'Equipes' }]} />
+        <div className="flex items-center justify-between">
+          <div>
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-4 w-48 mt-2" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map(i => (
+            <Skeleton key={i} className="h-64" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -95,8 +172,8 @@ const TeamsSettings = () => {
       {/* Teams Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {teams.map((team, index) => {
-          const supervisor = getUserById(team.supervisorId);
-          const members = team.memberIds.map(id => getUserById(id)).filter(Boolean);
+          const supervisor = team.supervisor || (team.supervisor_id ? getUserById(team.supervisor_id) : null);
+          const members = getTeamMembers(team.id);
           const leadsCount = getTeamLeadsCount(team.id);
 
           return (
@@ -175,14 +252,14 @@ const TeamsSettings = () => {
                       <div className="flex flex-wrap gap-2">
                         {members.slice(0, 4).map(member => (
                           <div
-                            key={member!.id}
+                            key={member.id}
                             className="flex items-center gap-2 px-2 py-1 rounded-full bg-muted text-sm"
                           >
                             <Avatar className="w-5 h-5">
-                              <AvatarImage src={member!.avatar} />
-                              <AvatarFallback className="text-xs">{member!.name.charAt(0)}</AvatarFallback>
+                              <AvatarImage src={member.avatar || undefined} />
+                              <AvatarFallback className="text-xs">{member.name.charAt(0)}</AvatarFallback>
                             </Avatar>
-                            <span className="text-foreground">{member!.name.split(' ')[0]}</span>
+                            <span className="text-foreground">{member.name.split(' ')[0]}</span>
                           </div>
                         ))}
                         {members.length > 4 && (
@@ -223,7 +300,7 @@ const TeamsSettings = () => {
       <TeamModal
         open={modalOpen}
         onOpenChange={setModalOpen}
-        team={selectedTeam}
+        team={convertTeamForModal(selectedTeam)}
         onSave={handleSave}
         onDelete={(teamId) => {
           const team = teams.find(t => t.id === teamId);
@@ -245,8 +322,16 @@ const TeamsSettings = () => {
             <AlertDialogAction
               onClick={handleConfirmDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteTeamMutation.isPending}
             >
-              Excluir
+              {deleteTeamMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                'Excluir'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
