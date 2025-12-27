@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -37,6 +37,7 @@ import { useFunnelStages } from '@/hooks/useFunnelStages';
 import { useLeads, useUpdateLeadStage } from '@/hooks/useLeads';
 import { useLabels } from '@/hooks/useLabels';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
+import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
 type Lead = Database['public']['Tables']['leads']['Row'] & {
@@ -246,9 +247,21 @@ const Funnel = () => {
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
-
-  // Fetch lead_labels for mapping
   const [leadLabels, setLeadLabels] = useState<{ lead_id: string; label_id: string }[]>([]);
+
+  // Fetch lead_labels from database
+  useEffect(() => {
+    const fetchLeadLabels = async () => {
+      const { data, error } = await supabase
+        .from('lead_labels')
+        .select('lead_id, label_id');
+      
+      if (!error && data) {
+        setLeadLabels(data);
+      }
+    };
+    fetchLeadLabels();
+  }, []);
 
   // Cast leads to correct type
   const leads = leadsData as Lead[];

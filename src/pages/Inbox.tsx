@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -37,6 +38,7 @@ const LEAD_PANEL_STORAGE_KEY = 'inbox-show-lead-panel-v2';
 const Inbox = () => {
   const { user, authUser } = useAuth();
   const isMobile = useIsMobile();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Orchestration state
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -76,6 +78,18 @@ const Inbox = () => {
   useEffect(() => {
     localStorage.setItem(LEAD_PANEL_STORAGE_KEY, String(showLeadPanel));
   }, [showLeadPanel]);
+
+  // Handle conversation from URL query param
+  useEffect(() => {
+    const conversationFromUrl = searchParams.get('conversation');
+    if (conversationFromUrl && !selectedConversationId) {
+      setSelectedConversationId(conversationFromUrl);
+      userClickedConversationRef.current = true;
+      // Clear query param
+      searchParams.delete('conversation');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, selectedConversationId, setSearchParams]);
 
   // Mark as read when user explicitly clicks a conversation
   useEffect(() => {

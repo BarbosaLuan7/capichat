@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -11,6 +12,7 @@ import {
   Tag,
   Building2,
   ChevronRight,
+  Smartphone,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,8 +23,15 @@ import { Separator } from '@/components/ui/separator';
 import { useAuthStore } from '@/store/authStore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
+import { toast } from 'sonner';
 
-import { Smartphone } from 'lucide-react';
+interface NotificationPreferences {
+  browserNotifications: boolean;
+  messageSound: boolean;
+  dailyEmailSummary: boolean;
+}
+
+const NOTIFICATION_PREFS_KEY = 'notification-preferences';
 
 const settingsMenu = [
   { icon: Building2, label: 'Empresa', description: 'Informações da empresa', href: undefined },
@@ -40,6 +49,30 @@ const settingsMenu = [
 const SettingsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>(() => {
+    const saved = localStorage.getItem(NOTIFICATION_PREFS_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return { browserNotifications: true, messageSound: true, dailyEmailSummary: false };
+      }
+    }
+    return { browserNotifications: true, messageSound: true, dailyEmailSummary: false };
+  });
+
+  useEffect(() => {
+    localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(notificationPrefs));
+  }, [notificationPrefs]);
+
+  const handleNotificationToggle = (key: keyof NotificationPreferences) => {
+    setNotificationPrefs((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+    toast.success('Preferência salva');
+  };
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
@@ -130,7 +163,10 @@ const SettingsPage = () => {
               <p className="font-medium text-foreground">Notificações no navegador</p>
               <p className="text-sm text-muted-foreground">Receba alertas em tempo real</p>
             </div>
-            <Switch defaultChecked />
+            <Switch
+              checked={notificationPrefs.browserNotifications}
+              onCheckedChange={() => handleNotificationToggle('browserNotifications')}
+            />
           </div>
           <Separator />
           <div className="flex items-center justify-between">
@@ -138,7 +174,10 @@ const SettingsPage = () => {
               <p className="font-medium text-foreground">Som de nova mensagem</p>
               <p className="text-sm text-muted-foreground">Toque sonoro ao receber mensagens</p>
             </div>
-            <Switch defaultChecked />
+            <Switch
+              checked={notificationPrefs.messageSound}
+              onCheckedChange={() => handleNotificationToggle('messageSound')}
+            />
           </div>
           <Separator />
           <div className="flex items-center justify-between">
@@ -146,7 +185,10 @@ const SettingsPage = () => {
               <p className="font-medium text-foreground">Resumo diário por email</p>
               <p className="text-sm text-muted-foreground">Relatório das atividades do dia</p>
             </div>
-            <Switch />
+            <Switch
+              checked={notificationPrefs.dailyEmailSummary}
+              onCheckedChange={() => handleNotificationToggle('dailyEmailSummary')}
+            />
           </div>
         </CardContent>
       </Card>

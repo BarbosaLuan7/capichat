@@ -1,6 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import {
   Search,
   Plus,
@@ -62,6 +64,7 @@ import { toast } from 'sonner';
 
 const Leads = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { data: leads, isLoading } = useLeads();
   const { data: funnelStages } = useFunnelStages();
   const { data: allLabels } = useLabels();
@@ -182,6 +185,38 @@ const Leads = () => {
     setDeleteDialogOpen(false);
     setLeadToDelete(null);
   };
+
+  const handleOpenConversation = useCallback(async (leadId: string) => {
+    try {
+      // Check for existing conversation
+      const { data: existingConv } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('lead_id', leadId)
+        .maybeSingle();
+
+      if (existingConv) {
+        navigate(`/inbox?conversation=${existingConv.id}`);
+      } else {
+        // Create new conversation
+        const { data: newConv, error } = await supabase
+          .from('conversations')
+          .insert({
+            lead_id: leadId,
+            status: 'open',
+            assigned_to: user?.id,
+          })
+          .select('id')
+          .single();
+
+        if (error) throw error;
+        navigate(`/inbox?conversation=${newConv.id}`);
+      }
+    } catch (error) {
+      console.error('Error opening conversation:', error);
+      toast.error('Erro ao abrir conversa');
+    }
+  }, [navigate, user?.id]);
 
   return (
     <div className="p-6 space-y-6">
@@ -366,7 +401,7 @@ const Leads = () => {
                           <Eye className="w-4 h-4" />
                           Ver detalhes
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2">
+                        <DropdownMenuItem className="gap-2" onClick={() => handleOpenConversation(lead.id)}>
                           <MessageSquare className="w-4 h-4" />
                           Abrir conversa
                         </DropdownMenuItem>
