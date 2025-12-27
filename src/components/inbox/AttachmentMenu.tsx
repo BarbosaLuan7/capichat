@@ -13,11 +13,14 @@ import {
   Mic,
   FileIcon,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface AttachmentMenuProps {
   onFileSelect: (file: File, type: 'image' | 'video' | 'audio' | 'document') => void;
   onAudioRecordStart: () => void;
 }
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export function AttachmentMenu({ onFileSelect, onAudioRecordStart }: AttachmentMenuProps) {
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -30,6 +33,11 @@ export function AttachmentMenu({ onFileSelect, onAudioRecordStart }: AttachmentM
   ) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error('Arquivo muito grande. Limite: 10MB');
+        e.target.value = '';
+        return;
+      }
       onFileSelect(file, type);
     }
     e.target.value = '';

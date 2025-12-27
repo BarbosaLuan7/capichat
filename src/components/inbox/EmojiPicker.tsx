@@ -41,6 +41,7 @@ export function EmojiPicker({ onEmojiSelect }: EmojiPickerProps) {
               key={emoji}
               onClick={() => handleSelect(emoji)}
               className="p-2 text-xl hover:bg-muted rounded transition-colors"
+              aria-label={`Inserir emoji ${emoji}`}
             >
               {emoji}
             </button>

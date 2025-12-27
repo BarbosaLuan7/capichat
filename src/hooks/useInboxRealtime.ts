@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 import type { Database } from '@/integrations/supabase/types';
 
 type Message = Database['public']['Tables']['messages']['Row'];
@@ -44,7 +45,7 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
     const conversationId = newMessage.conversation_id;
     const currentSelectedId = selectedConversationIdRef.current;
     
-    console.log('[InboxRealtime] New message:', { 
+    logger.log('[InboxRealtime] New message:', { 
       messageId: newMessage.id, 
       conversationId,
       isSelectedConversation: conversationId === currentSelectedId 
@@ -113,13 +114,13 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
     
     // Log status changes specifically
     if (oldMessage && oldMessage.status !== updatedMessage.status) {
-      console.log('[InboxRealtime] Message status changed:', {
+      logger.log('[InboxRealtime] Message status changed:', {
         id: updatedMessage.id,
         oldStatus: oldMessage.status,
         newStatus: updatedMessage.status
       });
     } else {
-      console.log('[InboxRealtime] Message updated:', updatedMessage.id);
+      logger.log('[InboxRealtime] Message updated:', updatedMessage.id);
     }
 
     // Update message in cache with optimistic update
@@ -131,7 +132,7 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
 
   // Handle conversation updates
   const handleConversationChange = useCallback((payload: any) => {
-    console.log('[InboxRealtime] Conversation change:', payload.eventType);
+    logger.log('[InboxRealtime] Conversation change:', payload.eventType);
     const currentSelectedId = selectedConversationIdRef.current;
     
     if (payload.eventType === 'UPDATE') {
@@ -156,7 +157,7 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
 
   // Handle lead labels changes (for conversation list labels display)
   const handleLeadLabelsChange = useCallback((payload: any) => {
-    console.log('[InboxRealtime] Lead labels change:', payload.eventType);
+    logger.log('[InboxRealtime] Lead labels change:', payload.eventType);
     // Invalidate conversations to update labels in list
     queryClient.invalidateQueries({ queryKey: ['conversations'] });
     // Also invalidate lead labels query for the detail panel
@@ -164,7 +165,7 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
   }, [queryClient]);
 
   useEffect(() => {
-    console.log('[InboxRealtime] Setting up unified subscription');
+    logger.log('[InboxRealtime] Setting up unified subscription');
 
     const channel = supabase
       .channel('inbox-unified-realtime')
@@ -209,11 +210,11 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
         handleLeadLabelsChange
       )
       .subscribe((status) => {
-        console.log('[InboxRealtime] Subscription status:', status);
+        logger.log('[InboxRealtime] Subscription status:', status);
       });
 
     return () => {
-      console.log('[InboxRealtime] Cleaning up subscription');
+      logger.log('[InboxRealtime] Cleaning up subscription');
       supabase.removeChannel(channel);
     };
   // Empty dependency array - callbacks use refs for dynamic values

@@ -659,6 +659,7 @@ export function ChatArea({
                 setShowAudioRecorder(true);
                 audioRecorder.startRecording();
               }}
+              aria-label="Gravar áudio"
             >
               <Mic className="w-5 h-5" />
             </Button>
@@ -667,6 +668,7 @@ export function ChatArea({
               onClick={handleSendMessage}
               disabled={(!messageInput.trim() && !pendingFile) || isSending || uploadProgress.uploading}
               className="gradient-primary text-primary-foreground min-w-[40px]"
+              aria-label={isSending || uploadProgress.uploading ? "Enviando..." : "Enviar mensagem"}
             >
               {isSending || uploadProgress.uploading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

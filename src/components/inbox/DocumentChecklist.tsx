@@ -152,28 +152,30 @@ export function DocumentChecklist({ leadId, customFields, labels = [], onUpdate 
                   <span>{categoryLabels[category as keyof typeof categoryLabels]}</span>
                 </div>
                 <div className="space-y-1">
-                  {docs.map((doc) => {
+                {docs.map((doc) => {
                     const isChecked = isDocumentChecked(doc.id);
                     return (
                       <div
                         key={doc.id}
                         className={cn(
-                          'flex items-start gap-2 p-2 rounded-md transition-colors cursor-pointer',
+                          'flex items-start gap-2 p-2 rounded-md transition-colors',
                           isChecked 
                             ? 'bg-success/10 border border-success/20' 
                             : 'bg-muted/50 hover:bg-muted border border-transparent'
                         )}
-                        onClick={() => toggleDocument(doc.id)}
                       >
                         <Checkbox
                           checked={isChecked}
                           onCheckedChange={() => toggleDocument(doc.id)}
                           className={cn(
-                            'mt-0.5',
+                            'mt-0.5 cursor-pointer',
                             isChecked && 'border-success data-[state=checked]:bg-success'
                           )}
                         />
-                        <div className="flex-1 min-w-0">
+                        <div 
+                          className="flex-1 min-w-0 cursor-pointer"
+                          onClick={() => toggleDocument(doc.id)}
+                        >
                           <div className="flex items-center gap-2">
                             <span className={cn(
                               'text-sm',

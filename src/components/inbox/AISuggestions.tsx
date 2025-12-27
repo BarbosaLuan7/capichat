@@ -56,6 +56,7 @@ export function AISuggestions({
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.1 }}
               onClick={() => onSelectSuggestion(suggestion.text)}
+              aria-label={`Usar sugestão: ${suggestion.text.substring(0, 50)}`}
               className={cn(
                 'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors shrink-0',
                 intentColors[suggestion.intent] || intentColors.info
@@ -73,7 +74,7 @@ export function AISuggestions({
           size="icon"
           className="h-7 w-7 shrink-0"
           onClick={onRefresh}
-          title="Gerar novas sugestões"
+          aria-label="Gerar novas sugestões"
         >
           <RefreshCw className="w-3.5 h-3.5" />
         </Button>

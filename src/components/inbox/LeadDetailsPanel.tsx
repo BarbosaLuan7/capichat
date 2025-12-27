@@ -34,7 +34,7 @@ import { LeadTimeline } from '@/components/leads/LeadTimeline';
 import { AIClassificationSuggestion } from './AIClassificationSuggestion';
 import { AIConversationSummary } from './AIConversationSummary';
 import { DocumentChecklist } from './DocumentChecklist';
-import { formatPhoneNumber, formatCPF, toWhatsAppFormat } from '@/lib/masks';
+import { formatPhoneNumber, formatCPF, toWhatsAppFormat, maskCPF } from '@/lib/masks';
 import { useLeadActivities, formatActivityMessage } from '@/hooks/useLeadActivities';
 import { useInternalNotes } from '@/hooks/useInternalNotes';
 import { Separator } from '@/components/ui/separator';
@@ -332,13 +332,13 @@ export function LeadDetailsPanel({
                         <span className="text-xs font-medium text-muted-foreground w-4">
                           CPF
                         </span>
-                        <span className="text-sm flex-1">{formatCPF(lead.cpf)}</span>
+                        <span className="text-sm flex-1">{maskCPF(lead.cpf)}</span>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => handleCopy(lead.cpf!, 'CPF')}
-                          title="Copiar CPF"
+                          title="Copiar CPF completo"
                         >
                           <Copy className="w-2.5 h-2.5" />
                         </Button>
