@@ -529,10 +529,9 @@ const Tasks = () => {
         <div className="text-center text-muted-foreground py-12">Carregando tarefas...</div>
       ) : view === 'calendar' ? (
         <TaskCalendar 
-          tasks={(tasks || []).map(convertToTaskFormat)} 
+          tasks={tasks || []} 
           onTaskClick={(t) => {
-            const original = tasks?.find(task => task.id === t.id);
-            if (original) handleEditTask(original as TaskFromDB);
+            handleEditTask(t as TaskFromDB);
           }} 
         />
       ) : view === 'list' ? (

@@ -1,17 +1,18 @@
 import { useState } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Task } from '@/types';
-import { mockUsers } from '@/data/mockData';
+import type { Database } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
 
+type DbTask = Database['public']['Tables']['tasks']['Row'];
+type TaskPriority = Database['public']['Enums']['task_priority'];
+
 interface TaskCalendarProps {
-  tasks: Task[];
-  onTaskClick: (task: Task) => void;
+  tasks: DbTask[];
+  onTaskClick: (task: DbTask) => void;
 }
 
 export const TaskCalendar = ({ tasks, onTaskClick }: TaskCalendarProps) => {
@@ -26,10 +27,10 @@ export const TaskCalendar = ({ tasks, onTaskClick }: TaskCalendarProps) => {
   const emptyDays = Array(firstDayOfWeek).fill(null);
 
   const getTasksForDay = (day: Date) => {
-    return tasks.filter(task => task.dueDate && isSameDay(task.dueDate, day));
+    return tasks.filter(task => task.due_date && isSameDay(new Date(task.due_date), day));
   };
 
-  const getPriorityColor = (priority: Task['priority']) => {
+  const getPriorityColor = (priority: TaskPriority) => {
     switch (priority) {
       case 'urgent':
         return 'bg-destructive';

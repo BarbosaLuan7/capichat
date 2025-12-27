@@ -18,25 +18,41 @@ import {
   Clock,
   User,
   CheckCircle2,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useAppStore } from '@/store/appStore';
-import { Task } from '@/types';
-import { mockUsers, mockLeads } from '@/data/mockData';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useAllTasks, useCreateTask, useUpdateTask, useDeleteTask } from '@/hooks/useTasks';
+import { useProfiles } from '@/hooks/useProfiles';
+import { useLeads } from '@/hooks/useLeads';
+import type { Database } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
 import { TaskModal } from '@/components/tasks/TaskModal';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 import { toast } from '@/hooks/use-toast';
 
+type DbTask = Database['public']['Tables']['tasks']['Row'];
+type TaskPriority = Database['public']['Enums']['task_priority'];
+type TaskStatus = Database['public']['Enums']['task_status'];
+
 const Calendar = () => {
-  const { tasks, addTask, updateTask, deleteTask } = useAppStore();
+  const { data: tasksData, isLoading: tasksLoading } = useAllTasks();
+  const { data: profiles } = useProfiles();
+  const { data: leadsData } = useLeads();
+  const createTask = useCreateTask();
+  const updateTask = useUpdateTask();
+  const deleteTask = useDeleteTask();
+
+  const tasks = tasksData || [];
+  const leads = leadsData?.leads || [];
+
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedTask, setSelectedTask] = useState<DbTask | null>(null);
 
   const days = eachDayOfInterval({
     start: startOfMonth(currentMonth),
@@ -48,12 +64,12 @@ const Calendar = () => {
   const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
   const getTasksForDay = (day: Date) => {
-    return tasks.filter((task) => task.dueDate && isSameDay(task.dueDate, day));
+    return tasks.filter((task) => task.due_date && isSameDay(new Date(task.due_date), day));
   };
 
   const selectedDayTasks = selectedDate ? getTasksForDay(selectedDate) : [];
 
-  const getPriorityColor = (priority: Task['priority']) => {
+  const getPriorityColor = (priority: TaskPriority) => {
     switch (priority) {
       case 'urgent':
         return 'bg-destructive';
@@ -66,7 +82,7 @@ const Calendar = () => {
     }
   };
 
-  const getPriorityLabel = (priority: Task['priority']) => {
+  const getPriorityLabel = (priority: TaskPriority) => {
     switch (priority) {
       case 'urgent':
         return 'Urgente';
@@ -84,37 +100,117 @@ const Calendar = () => {
     setModalOpen(true);
   };
 
-  const handleEditTask = (task: Task) => {
+  const handleEditTask = (task: DbTask) => {
     setSelectedTask(task);
     setModalOpen(true);
   };
 
-  const handleSaveTask = (taskData: Omit<Task, 'id' | 'createdAt'> & { id?: string }) => {
-    if (taskData.id) {
-      updateTask(taskData.id, taskData);
+  const handleSaveTask = async (taskData: {
+    id?: string;
+    title: string;
+    description?: string;
+    leadId?: string;
+    assignedTo: string;
+    dueDate?: Date;
+    priority: TaskPriority;
+    status: TaskStatus;
+    subtasks?: { id: string; title: string; completed: boolean }[];
+  }) => {
+    try {
+      if (taskData.id) {
+        await updateTask.mutateAsync({
+          id: taskData.id,
+          title: taskData.title,
+          description: taskData.description || null,
+          lead_id: taskData.leadId || null,
+          assigned_to: taskData.assignedTo,
+          due_date: taskData.dueDate?.toISOString() || null,
+          priority: taskData.priority,
+          status: taskData.status,
+          subtasks: taskData.subtasks || [],
+        });
+        toast({
+          title: 'Tarefa atualizada',
+          description: 'As alterações foram salvas.',
+        });
+      } else {
+        await createTask.mutateAsync({
+          title: taskData.title,
+          description: taskData.description || null,
+          lead_id: taskData.leadId || null,
+          assigned_to: taskData.assignedTo,
+          due_date: selectedDate?.toISOString() || taskData.dueDate?.toISOString() || null,
+          priority: taskData.priority,
+          status: taskData.status,
+          subtasks: taskData.subtasks || [],
+        });
+        toast({
+          title: 'Tarefa criada',
+          description: 'Nova tarefa adicionada com sucesso.',
+        });
+      }
+      setModalOpen(false);
+    } catch (error) {
       toast({
-        title: 'Tarefa atualizada',
-        description: 'As alterações foram salvas.',
-      });
-    } else {
-      addTask({
-        ...taskData,
-        dueDate: selectedDate || taskData.dueDate,
-      });
-      toast({
-        title: 'Tarefa criada',
-        description: 'Nova tarefa adicionada com sucesso.',
+        title: 'Erro',
+        description: 'Não foi possível salvar a tarefa.',
+        variant: 'destructive',
       });
     }
   };
 
-  const handleDeleteTask = (taskId: string) => {
-    deleteTask(taskId);
-    toast({
-      title: 'Tarefa excluída',
-      description: 'A tarefa foi removida com sucesso.',
-    });
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await deleteTask.mutateAsync(taskId);
+      toast({
+        title: 'Tarefa excluída',
+        description: 'A tarefa foi removida com sucesso.',
+      });
+      setModalOpen(false);
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível excluir a tarefa.',
+        variant: 'destructive',
+      });
+    }
   };
+
+  // Convert DB task to modal format
+  const convertTaskForModal = (task: DbTask | null) => {
+    if (!task) return null;
+    return {
+      id: task.id,
+      title: task.title,
+      description: task.description || undefined,
+      leadId: task.lead_id || undefined,
+      assignedTo: task.assigned_to,
+      dueDate: task.due_date ? new Date(task.due_date) : undefined,
+      priority: task.priority,
+      status: task.status,
+      createdAt: new Date(task.created_at),
+      subtasks: (task.subtasks as { id: string; title: string; completed: boolean }[]) || [],
+    };
+  };
+
+  if (tasksLoading) {
+    return (
+      <div className="p-6 space-y-6">
+        <PageBreadcrumb items={[{ label: 'Calendário' }]} />
+        <div className="flex items-center justify-between">
+          <div>
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-64 mt-2" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Skeleton className="lg:col-span-2 h-[500px]" />
+          <Skeleton className="h-[500px]" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -258,9 +354,9 @@ const Calendar = () => {
               {selectedDayTasks.length > 0 ? (
                 <div className="space-y-3">
                   {selectedDayTasks.map((task) => {
-                    const assignee = mockUsers.find((u) => u.id === task.assignedTo);
-                    const lead = task.leadId
-                      ? mockLeads.find((l) => l.id === task.leadId)
+                    const assignee = profiles?.find((u) => u.id === task.assigned_to);
+                    const lead = task.lead_id
+                      ? leads.find((l) => l.id === task.lead_id)
                       : null;
 
                     return (
@@ -303,10 +399,10 @@ const Calendar = () => {
                                 {getPriorityLabel(task.priority)}
                               </Badge>
 
-                              {task.dueDate && (
+                              {task.due_date && (
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
-                                  {format(task.dueDate, 'HH:mm')}
+                                  {format(new Date(task.due_date), 'HH:mm')}
                                 </span>
                               )}
 
@@ -353,7 +449,7 @@ const Calendar = () => {
       <TaskModal
         open={modalOpen}
         onOpenChange={setModalOpen}
-        task={selectedTask}
+        task={convertTaskForModal(selectedTask)}
         onSave={handleSaveTask}
         onDelete={handleDeleteTask}
       />

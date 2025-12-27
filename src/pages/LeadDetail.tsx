@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -14,6 +14,7 @@ import {
   Calendar,
   User,
   Thermometer,
+  Loader2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -25,6 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -32,48 +34,63 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useAppStore } from '@/store/appStore';
-import { mockUsers, mockLabels, mockFunnelStages } from '@/data/mockData';
+import { useLead, useUpdateLead } from '@/hooks/useLeads';
+import { useFunnelStages } from '@/hooks/useFunnelStages';
+import { useLeadLabels } from '@/hooks/useLabels';
+import { useProfiles } from '@/hooks/useProfiles';
 import { LeadTimeline } from '@/components/leads/LeadTimeline';
 import { LeadActivityTimeline } from '@/components/leads/LeadActivityTimeline';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import type { Database } from '@/integrations/supabase/types';
+
+type LeadTemperature = Database['public']['Enums']['lead_temperature'];
 
 const LeadDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { leads, messages, updateLeadStage, updateLeadTemperature } = useAppStore();
-  const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast();
+  
+  const { data: lead, isLoading: leadLoading } = useLead(id);
+  const { data: stages } = useFunnelStages();
+  const { data: leadLabelsData } = useLeadLabels(id);
+  const { data: profiles } = useProfiles();
+  const updateLead = useUpdateLead();
+  
+  const [isEditing, setIsEditing] = useState(false);
 
-  const lead = leads.find(l => l.id === id);
-  const assignee = lead ? mockUsers.find(u => u.id === lead.assignedTo) : null;
-  const stage = lead ? mockFunnelStages.find(s => s.id === lead.stageId) : null;
-  const leadLabels = lead ? mockLabels.filter(l => lead.labelIds.includes(l.id)) : [];
+  const assignee = lead && profiles ? profiles.find(u => u.id === lead.assigned_to) : null;
+  const stage = lead && stages ? stages.find(s => s.id === lead.stage_id) : null;
+  const leadLabels = leadLabelsData?.map(ll => ll.labels).filter(Boolean) || [];
 
-  // Generate timeline events from messages and lead data
+  // Generate timeline events from lead data
   const timelineEvents = lead ? [
     {
       id: 'created',
       type: 'assigned' as const,
       title: 'Lead criado',
       description: `Origem: ${lead.source}`,
-      createdAt: lead.createdAt,
+      createdAt: new Date(lead.created_at),
     },
-    ...messages
-      .filter(m => {
-        const conv = useAppStore.getState().conversations.find(c => c.leadId === lead.id);
-        return conv && m.conversationId === conv.id;
-      })
-      .map(m => ({
-        id: m.id,
-        type: 'message' as const,
-        title: m.senderType === 'lead' ? 'Mensagem recebida' : 'Mensagem enviada',
-        description: m.content.substring(0, 100) + (m.content.length > 100 ? '...' : ''),
-        createdAt: m.createdAt,
-        user: m.senderType === 'agent' ? mockUsers.find(u => u.id === m.senderId)?.name : lead.name,
-      })),
-  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) : [];
+  ] : [];
+
+  if (leadLoading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-10 w-10" />
+          <div className="flex-1">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-32 mt-1" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Skeleton className="h-[400px]" />
+          <Skeleton className="lg:col-span-2 h-[400px]" />
+        </div>
+      </div>
+    );
+  }
 
   if (!lead) {
     return (
@@ -84,26 +101,34 @@ const LeadDetail = () => {
     );
   }
 
-  const temperatureColors = {
+  const temperatureColors: Record<LeadTemperature, string> = {
     cold: 'bg-blue-500',
     warm: 'bg-yellow-500',
     hot: 'bg-red-500',
   };
 
-  const temperatureLabels = {
+  const temperatureLabels: Record<LeadTemperature, string> = {
     cold: 'Frio',
     warm: 'Morno',
     hot: 'Quente',
   };
 
-  const handleStageChange = (stageId: string) => {
-    updateLeadStage(lead.id, stageId);
-    toast({ title: 'Etapa atualizada!' });
+  const handleStageChange = async (stageId: string) => {
+    try {
+      await updateLead.mutateAsync({ id: lead.id, stage_id: stageId });
+      toast({ title: 'Etapa atualizada!' });
+    } catch (error) {
+      toast({ title: 'Erro ao atualizar etapa', variant: 'destructive' });
+    }
   };
 
-  const handleTemperatureChange = (temp: 'cold' | 'warm' | 'hot') => {
-    updateLeadTemperature(lead.id, temp);
-    toast({ title: 'Temperatura atualizada!' });
+  const handleTemperatureChange = async (temp: LeadTemperature) => {
+    try {
+      await updateLead.mutateAsync({ id: lead.id, temperature: temp });
+      toast({ title: 'Temperatura atualizada!' });
+    } catch (error) {
+      toast({ title: 'Erro ao atualizar temperatura', variant: 'destructive' });
+    }
   };
 
   return (
@@ -186,7 +211,7 @@ const LeadDetail = () => {
                 <div className="flex items-center gap-2">
                   <DollarSign className="w-4 h-4 text-muted-foreground" />
                   <Input
-                    value={lead.estimatedValue?.toLocaleString('pt-BR') || '0'}
+                    value={lead.estimated_value?.toLocaleString('pt-BR') || '0'}
                     disabled={!isEditing}
                   />
                 </div>
@@ -208,12 +233,12 @@ const LeadDetail = () => {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Etapa do Funil</Label>
-                <Select value={lead.stageId} onValueChange={handleStageChange}>
+                <Select value={lead.stage_id || ''} onValueChange={handleStageChange}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Selecione uma etapa" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockFunnelStages.map(s => (
+                    {stages?.map(s => (
                       <SelectItem key={s.id} value={s.id}>
                         <div className="flex items-center gap-2">
                           <span
@@ -242,8 +267,13 @@ const LeadDetail = () => {
                         lead.temperature === temp && 'text-white'
                       )}
                       onClick={() => handleTemperatureChange(temp)}
+                      disabled={updateLead.isPending}
                     >
-                      <Thermometer className="w-3 h-3 mr-1" />
+                      {updateLead.isPending && lead.temperature !== temp ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : (
+                        <Thermometer className="w-3 h-3 mr-1" />
+                      )}
                       {temperatureLabels[temp]}
                     </Button>
                   ))}
@@ -252,10 +282,10 @@ const LeadDetail = () => {
 
               <div className="space-y-2">
                 <Label>Responsável</Label>
-                {assignee && (
+                {assignee ? (
                   <div className="flex items-center gap-2 p-2 rounded-lg bg-muted">
                     <Avatar className="w-8 h-8">
-                      <AvatarImage src={assignee.avatar} />
+                      <AvatarImage src={assignee.avatar || undefined} />
                       <AvatarFallback>{assignee.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
@@ -263,6 +293,8 @@ const LeadDetail = () => {
                       <p className="text-xs text-muted-foreground">{assignee.email}</p>
                     </div>
                   </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Não atribuído</p>
                 )}
               </div>
             </CardContent>
@@ -281,7 +313,7 @@ const LeadDetail = () => {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {leadLabels.map(label => (
+                {leadLabels.map(label => label && (
                   <Badge
                     key={label.id}
                     style={{ backgroundColor: label.color }}
