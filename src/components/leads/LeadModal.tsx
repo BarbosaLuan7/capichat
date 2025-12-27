@@ -44,8 +44,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Phone, Mail, DollarSign, Trash2, MessageSquare, Eye, Pencil, ExternalLink } from 'lucide-react';
+import { Phone, Mail, DollarSign, Trash2, MessageSquare, Eye, Pencil, ExternalLink, Loader2 } from 'lucide-react';
 import { useLeads, useLead, useCreateLead, useUpdateLead, useDeleteLead } from '@/hooks/useLeads';
+import { getErrorWithFallback } from '@/lib/errorMessages';
 import { useFunnelStages } from '@/hooks/useFunnelStages';
 import { useLabels, useLeadLabels, useAddLeadLabel, useRemoveLeadLabel } from '@/hooks/useLabels';
 import { cn } from '@/lib/utils';
@@ -161,7 +162,7 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
       }
       onOpenChange(false);
     } catch (error) {
-      toast.error('Erro ao salvar lead');
+      toast.error(getErrorWithFallback(error, 'Erro ao salvar lead'));
     }
   };
 
@@ -531,7 +532,14 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
                   <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                     Cancelar
                   </Button>
-                  <Button type="submit" className="gradient-primary text-primary-foreground">
+                  <Button 
+                    type="submit" 
+                    className="gradient-primary text-primary-foreground"
+                    disabled={createLead.isPending || updateLead.isPending}
+                  >
+                    {(createLead.isPending || updateLead.isPending) && (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    )}
                     {leadId ? 'Salvar' : 'Criar Lead'}
                   </Button>
                 </div>

@@ -20,6 +20,7 @@ import { ptBR } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -109,20 +110,35 @@ const LeadDetail = () => {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/leads')}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={() => navigate('/leads')}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Voltar para leads</TooltipContent>
+        </Tooltip>
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-foreground">{lead.name}</h1>
           <p className="text-muted-foreground">{lead.phone}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="icon">
-            <Phone className="w-4 h-4" />
-          </Button>
-          <Button variant="outline" size="icon">
-            <Mail className="w-4 h-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Phone className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Ligar para {lead.phone}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Mail className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Enviar email</TooltipContent>
+          </Tooltip>
           <Button onClick={() => navigate('/inbox')} className="gradient-primary text-primary-foreground gap-2">
             <MessageSquare className="w-4 h-4" />
             Conversar
@@ -138,9 +154,14 @@ const LeadDetail = () => {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">Informações</CardTitle>
-                <Button variant="ghost" size="icon" onClick={() => setIsEditing(!isEditing)}>
-                  {isEditing ? <X className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" onClick={() => setIsEditing(!isEditing)}>
+                      {isEditing ? <X className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{isEditing ? 'Cancelar edição' : 'Editar informações'}</TooltipContent>
+                </Tooltip>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">

@@ -58,6 +58,8 @@ import { useAllTasks, useUpdateTaskStatus, useDeleteTask, useCreateTask, useUpda
 import { useProfiles } from '@/hooks/useProfiles';
 import { useLeads } from '@/hooks/useLeads';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { getErrorWithFallback } from '@/lib/errorMessages';
 import { format, isToday, isTomorrow, isPast, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TaskModal } from '@/components/tasks/TaskModal';
@@ -483,27 +485,42 @@ const Tasks = () => {
         </Tabs>
 
         <div className="flex items-center gap-2 ml-auto">
-          <Button
-            variant={view === 'list' ? 'secondary' : 'ghost'}
-            size="icon"
-            onClick={() => setView('list')}
-          >
-            <ListTodo className="w-4 h-4" />
-          </Button>
-          <Button
-            variant={view === 'kanban' ? 'secondary' : 'ghost'}
-            size="icon"
-            onClick={() => setView('kanban')}
-          >
-            <LayoutGrid className="w-4 h-4" />
-          </Button>
-          <Button
-            variant={view === 'calendar' ? 'secondary' : 'ghost'}
-            size="icon"
-            onClick={() => setView('calendar')}
-          >
-            <CalendarIcon className="w-4 h-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={view === 'list' ? 'secondary' : 'ghost'}
+                size="icon"
+                onClick={() => setView('list')}
+              >
+                <ListTodo className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Visualização em lista</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={view === 'kanban' ? 'secondary' : 'ghost'}
+                size="icon"
+                onClick={() => setView('kanban')}
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Visualização Kanban</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={view === 'calendar' ? 'secondary' : 'ghost'}
+                size="icon"
+                onClick={() => setView('calendar')}
+              >
+                <CalendarIcon className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Visualização calendário</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
