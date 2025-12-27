@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUpdateLead } from '@/hooks/useLeads';
 import type { BenefitType } from '@/lib/documentChecklist';
 import { getDocumentsByBenefitType } from '@/lib/documentChecklist';
@@ -15,6 +15,9 @@ interface UseDocumentChecklistOptions {
   onSuccess?: () => void;
 }
 
+// Debounce delay in ms for batch saving
+const SAVE_DEBOUNCE_MS = 1500;
+
 export function useDocumentChecklist({ leadId, customFields, onSuccess }: UseDocumentChecklistOptions) {
   const updateLead = useUpdateLead();
   
@@ -26,8 +29,25 @@ export function useDocumentChecklist({ leadId, customFields, onSuccess }: UseDoc
   
   const [state, setState] = useState<ChecklistState>(initialState);
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingSave, setPendingSave] = useState(false);
+  
+  // Refs for debouncing
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const latestStateRef = useRef<ChecklistState>(state);
+  const leadIdRef = useRef(leadId);
+  const customFieldsRef = useRef(customFields);
 
-  // Atualiza o estado quando customFields muda
+  // Keep refs updated
+  useEffect(() => {
+    latestStateRef.current = state;
+  }, [state]);
+
+  useEffect(() => {
+    leadIdRef.current = leadId;
+    customFieldsRef.current = customFields;
+  }, [leadId, customFields]);
+
+  // Atualiza o estado quando customFields muda (from external source)
   useEffect(() => {
     const checklistData = customFields?.documentChecklist;
     if (checklistData) {
@@ -35,20 +55,31 @@ export function useDocumentChecklist({ leadId, customFields, onSuccess }: UseDoc
     }
   }, [customFields]);
 
-  // Salva no banco de dados
-  const saveToDatabase = useCallback(async (newState: ChecklistState) => {
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Actual save function
+  const performSave = useCallback(async (stateToSave: ChecklistState) => {
     setIsSaving(true);
+    setPendingSave(false);
+    
     try {
       const updatedCustomFields = {
-        ...(customFields || {}),
+        ...(customFieldsRef.current || {}),
         documentChecklist: {
-          benefitType: newState.benefitType,
-          checkedDocuments: newState.checkedDocuments,
+          benefitType: stateToSave.benefitType,
+          checkedDocuments: stateToSave.checkedDocuments,
         },
       };
       
       await updateLead.mutateAsync({
-        id: leadId,
+        id: leadIdRef.current,
         custom_fields: updatedCustomFields as Json,
       });
       onSuccess?.();
@@ -57,16 +88,40 @@ export function useDocumentChecklist({ leadId, customFields, onSuccess }: UseDoc
     } finally {
       setIsSaving(false);
     }
-  }, [leadId, customFields, updateLead, onSuccess]);
+  }, [updateLead, onSuccess]);
 
-  // Define o tipo de benefício
+  // Debounced save - accumulates changes and saves after delay
+  const scheduleSave = useCallback((newState: ChecklistState) => {
+    // Clear any existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    setPendingSave(true);
+    
+    // Schedule new save
+    saveTimeoutRef.current = setTimeout(() => {
+      performSave(latestStateRef.current);
+    }, SAVE_DEBOUNCE_MS);
+  }, [performSave]);
+
+  // Force immediate save (for benefit type change or unmount)
+  const saveNow = useCallback(async (newState: ChecklistState) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    await performSave(newState);
+  }, [performSave]);
+
+  // Define o tipo de benefício (immediate save since it clears documents)
   const setBenefitType = useCallback((type: BenefitType | null) => {
     const newState = { ...state, benefitType: type, checkedDocuments: [] };
     setState(newState);
-    saveToDatabase(newState);
-  }, [state, saveToDatabase]);
+    saveNow(newState);
+  }, [state, saveNow]);
 
-  // Toggle de documento
+  // Toggle de documento (debounced save)
   const toggleDocument = useCallback((documentId: string) => {
     const isChecked = state.checkedDocuments.includes(documentId);
     const newCheckedDocuments = isChecked
@@ -75,10 +130,10 @@ export function useDocumentChecklist({ leadId, customFields, onSuccess }: UseDoc
     
     const newState = { ...state, checkedDocuments: newCheckedDocuments };
     setState(newState);
-    saveToDatabase(newState);
-  }, [state, saveToDatabase]);
+    scheduleSave(newState);
+  }, [state, scheduleSave]);
 
-  // Marcar todos
+  // Marcar todos (debounced save)
   const checkAll = useCallback(() => {
     if (!state.benefitType) return;
     
@@ -88,15 +143,15 @@ export function useDocumentChecklist({ leadId, customFields, onSuccess }: UseDoc
     const allDocIds = benefit.documents.map(d => d.id);
     const newState = { ...state, checkedDocuments: allDocIds };
     setState(newState);
-    saveToDatabase(newState);
-  }, [state, saveToDatabase]);
+    scheduleSave(newState);
+  }, [state, scheduleSave]);
 
-  // Desmarcar todos
+  // Desmarcar todos (debounced save)
   const uncheckAll = useCallback(() => {
     const newState = { ...state, checkedDocuments: [] };
     setState(newState);
-    saveToDatabase(newState);
-  }, [state, saveToDatabase]);
+    scheduleSave(newState);
+  }, [state, scheduleSave]);
 
   // Calcula progresso
   const getProgress = useCallback(() => {
@@ -127,5 +182,6 @@ export function useDocumentChecklist({ leadId, customFields, onSuccess }: UseDoc
     getProgress,
     isDocumentChecked,
     isSaving,
+    pendingSave,
   };
 }
