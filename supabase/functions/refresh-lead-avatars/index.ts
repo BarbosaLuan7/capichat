@@ -14,9 +14,11 @@ async function getProfilePicture(
   contactId: string
 ): Promise<string | null> {
   try {
-    const formattedContact = contactId.includes('@') ? contactId : `${contactId}@c.us`;
+    // Usar apenas o número SEM @c.us, conforme documentação oficial WAHA
+    const cleanNumber = contactId.replace('@c.us', '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
     
-    const url = `${wahaBaseUrl}/api/contacts/profile-picture?contactId=${encodeURIComponent(formattedContact)}&session=${sessionName}`;
+    // Adicionar refresh=true para forçar buscar do WhatsApp (evita cache vazio de 24h)
+    const url = `${wahaBaseUrl}/api/contacts/profile-picture?contactId=${cleanNumber}&session=${sessionName}&refresh=true`;
     
     const response = await fetch(url, {
       method: 'GET',
