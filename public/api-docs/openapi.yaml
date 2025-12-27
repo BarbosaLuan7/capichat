@@ -1299,7 +1299,12 @@ components:
 
     WAHAWebhookPayload:
       type: object
-      description: Payload enviado pelo WAHA (WhatsApp HTTP API)
+      description: |
+        Payload enviado pelo WAHA (WhatsApp HTTP API).
+        
+        **Nota:** O WAHA pode enviar dados adicionais em campos internos como `_data` 
+        que contêm informações extras do WhatsApp (participante real, timestamp detalhado, etc).
+        Esses campos são processados internamente mas não são documentados aqui.
       required: [event, session, payload]
       properties:
         event:
@@ -1310,6 +1315,10 @@ components:
           type: string
           description: Nome da sessao WAHA (ex - default)
           example: default
+        engine:
+          type: string
+          description: "Engine WAHA em uso (WEBJS, NOWEB, VENOM, etc)"
+          example: "NOWEB"
         payload:
           $ref: '#/components/schemas/WAHAMessage'
         me:
@@ -1327,7 +1336,13 @@ components:
 
     WAHAMessage:
       type: object
-      description: Dados da mensagem no formato WAHA
+      description: |
+        Dados da mensagem no formato WAHA.
+        
+        O conteúdo da mensagem pode vir em diferentes campos dependendo do tipo:
+        - Texto: campo `body`
+        - Mídia: campos `mediaUrl` ou objeto `media`
+        - Localização: campos `location.latitude` e `location.longitude`
       properties:
         id:
           type: string
@@ -1345,6 +1360,10 @@ components:
           type: string
           description: "Destinatario (formato: numero@c.us)"
           example: "5545000000000@c.us"
+        chatId:
+          type: string
+          description: "ID do chat (alternativo ao from/to, formato: numero@c.us)"
+          example: "5545999957851@c.us"
         body:
           type: string
           description: Conteudo da mensagem de texto
@@ -1355,7 +1374,7 @@ components:
           example: false
         type:
           type: string
-          enum: [chat, image, video, audio, document, ptt, sticker]
+          enum: [chat, image, video, audio, document, ptt, sticker, location]
           description: Tipo da mensagem
           example: chat
         fromMe:
@@ -1370,6 +1389,38 @@ components:
           type: string
           format: uri
           description: URL da midia (quando hasMedia = true)
+        media:
+          type: object
+          description: "Objeto de mídia alternativo (usado em algumas versões do WAHA)"
+          properties:
+            url:
+              type: string
+              format: uri
+              description: URL para download da mídia
+              example: "https://waha.example.com/api/files/default/media_xxx.jpg"
+            filename:
+              type: string
+              description: Nome do arquivo
+              example: "documento.pdf"
+            mimetype:
+              type: string
+              description: Tipo MIME do arquivo
+              example: "image/jpeg"
+        location:
+          type: object
+          description: "Dados de localização (quando type = location)"
+          properties:
+            latitude:
+              type: number
+              format: double
+              example: -25.4284
+            longitude:
+              type: number
+              format: double
+              example: -49.2733
+            description:
+              type: string
+              description: Descrição do local
         ack:
           type: integer
           enum: [0, 1, 2, 3, 4]
