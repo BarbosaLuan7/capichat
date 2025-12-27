@@ -6,7 +6,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MessageCircle, Clock, CheckCircle2, ChevronDown } from 'lucide-react';
+import { MessageCircle, Clock, CheckCircle2, ChevronDown, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -49,7 +49,11 @@ export function ConversationStatusActions({ currentStatus, onStatusChange, isLoa
           className={cn('gap-1.5 h-8', current.className)}
           disabled={isLoading}
         >
-          <StatusIcon className="w-3.5 h-3.5" />
+          {isLoading ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <StatusIcon className="w-3.5 h-3.5" />
+          )}
           {current.label}
           <ChevronDown className="w-3 h-3 opacity-50" />
         </Button>

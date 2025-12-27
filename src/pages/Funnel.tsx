@@ -241,7 +241,7 @@ const FunnelSkeleton = () => (
 
 const Funnel = () => {
   const { data: stages = [], isLoading: stagesLoading } = useFunnelStages();
-  const { data: leadsData = [], isLoading: leadsLoading } = useLeads();
+  const { data: leadsResult, isLoading: leadsLoading } = useLeads();
   const { data: labelsData = [] } = useLabels();
   const updateLeadStage = useUpdateLeadStage();
 
@@ -263,8 +263,8 @@ const Funnel = () => {
     fetchLeadLabels();
   }, []);
 
-  // Cast leads to correct type
-  const leads = leadsData as Lead[];
+  // Extract leads array from result object safely
+  const leads = (leadsResult?.leads || []) as Lead[];
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
