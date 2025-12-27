@@ -149,7 +149,7 @@ const AppSidebar = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto scrollbar-thin" aria-label="Menu principal">
+      <nav id="main-nav" className="flex-1 py-4 px-3 space-y-1 overflow-y-auto scrollbar-thin" role="navigation" aria-label="Menu principal">
         {menuItems.map((item) => {
           const active = isActive(item.path);
           const parentActive = isParentActive(item);
