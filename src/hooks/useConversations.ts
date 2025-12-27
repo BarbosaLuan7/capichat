@@ -158,10 +158,15 @@ export function useMarkConversationAsRead() {
       return data;
     },
     onMutate: async (conversationId) => {
-      // Optimistic update
+      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['conversations'] });
-      const previousConversations = queryClient.getQueryData(['conversations']);
+      await queryClient.cancelQueries({ queryKey: ['conversations', conversationId] });
       
+      // Snapshot previous values
+      const previousConversations = queryClient.getQueryData(['conversations']);
+      const previousConversation = queryClient.getQueryData(['conversations', conversationId]);
+      
+      // Optimistically update conversation list
       queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
         if (!old) return old;
         return old.map(conv => 
@@ -169,11 +174,21 @@ export function useMarkConversationAsRead() {
         );
       });
       
-      return { previousConversations };
+      // Optimistically update single conversation cache
+      queryClient.setQueryData(['conversations', conversationId], (old: any) => {
+        if (!old) return old;
+        return { ...old, unread_count: 0 };
+      });
+      
+      return { previousConversations, previousConversation };
     },
-    onError: (_, __, context) => {
+    onError: (_, conversationId, context) => {
+      // Rollback on error
       if (context?.previousConversations) {
         queryClient.setQueryData(['conversations'], context.previousConversations);
+      }
+      if (context?.previousConversation) {
+        queryClient.setQueryData(['conversations', conversationId], context.previousConversation);
       }
     },
   });

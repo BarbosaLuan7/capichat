@@ -71,11 +71,11 @@ const ORIGIN_OPTIONS = [
   { value: 'manual', label: 'Manual' },
 ];
 
-export function NewConversationModal({
+export const NewConversationModal = ({
   open,
   onOpenChange,
   onConversationCreated,
-}: NewConversationModalProps) {
+}: NewConversationModalProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
@@ -486,4 +486,6 @@ export function NewConversationModal({
       </DialogContent>
     </Dialog>
   );
-}
+};
+
+NewConversationModal.displayName = 'NewConversationModal';
