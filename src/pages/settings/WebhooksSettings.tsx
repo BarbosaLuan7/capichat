@@ -458,11 +458,11 @@ const WebhooksSettings = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'success':
-        return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+        return <CheckCircle2 className="w-4 h-4 text-success" />;
       case 'failed':
-        return <XCircle className="w-4 h-4 text-red-500" />;
+        return <XCircle className="w-4 h-4 text-destructive" />;
       case 'retrying':
-        return <RefreshCw className="w-4 h-4 text-yellow-500" />;
+        return <RefreshCw className="w-4 h-4 text-warning" />;
       default:
         return <Clock className="w-4 h-4 text-muted-foreground" />;
     }

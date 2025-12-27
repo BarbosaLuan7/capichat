@@ -286,7 +286,7 @@ export function ConversationList({
                     <Button variant="outline" size="sm" className="h-8 gap-1 px-2 shrink-0" aria-label="Filtrar por etiquetas">
                       <Tag className="w-3.5 h-3.5" aria-hidden="true" />
                       {selectedLabelIds.length > 0 && (
-                        <Badge variant="secondary" className="px-1 py-0 text-[10px] h-4 min-w-4 flex items-center justify-center">
+                        <Badge variant="secondary" className="px-1 py-0 text-2xs h-4 min-w-4 flex items-center justify-center">
                           {selectedLabelIds.length}
                         </Badge>
                       )}

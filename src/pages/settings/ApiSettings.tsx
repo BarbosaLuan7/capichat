@@ -310,7 +310,7 @@ const ApiSettings = () => {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          className="text-red-600"
+                          className="text-destructive"
                           onClick={() => handleDelete(apiKey.id)}
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
@@ -375,7 +375,7 @@ const ApiSettings = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-green-500" />
+              <CheckCircle2 className="w-5 h-5 text-success" />
               API Key Criada
             </DialogTitle>
             <DialogDescription>
@@ -384,9 +384,9 @@ const ApiSettings = () => {
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="flex items-center gap-2 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0" />
-              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+            <div className="flex items-center gap-2 p-3 bg-warning/10 border border-warning/20 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-warning flex-shrink-0" />
+              <p className="text-sm text-warning">
                 Guarde esta chave em um local seguro. Por segurança, ela não pode ser visualizada novamente.
               </p>
             </div>
@@ -415,7 +415,7 @@ const ApiSettings = () => {
                   onClick={() => copyToClipboard(newKeyValue)}
                 >
                   {keyCopied ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    <CheckCircle2 className="w-4 h-4 text-success" />
                   ) : (
                     <Copy className="w-4 h-4" />
                   )}
@@ -448,7 +448,7 @@ const ApiSettings = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-destructive hover:bg-destructive/90"
               onClick={() => selectedKeyId && deleteMutation.mutate(selectedKeyId)}
             >
               Revogar

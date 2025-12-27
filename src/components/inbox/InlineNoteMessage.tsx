@@ -29,7 +29,7 @@ export function InlineNoteMessage({ note }: InlineNoteMessageProps) {
             <div className="flex items-center gap-2 mb-1">
               <Avatar className="w-5 h-5">
                 <AvatarImage src={note.profiles?.avatar || undefined} />
-                <AvatarFallback className="text-[10px]">
+                <AvatarFallback className="text-2xs">
                   {note.profiles?.name?.charAt(0) || '?'}
                 </AvatarFallback>
               </Avatar>
@@ -37,7 +37,7 @@ export function InlineNoteMessage({ note }: InlineNoteMessageProps) {
                 {note.profiles?.name || 'Usuário'}
               </span>
               <Lock className="w-3 h-3 text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground ml-auto">
+              <span className="text-2xs text-muted-foreground ml-auto">
                 {format(new Date(note.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
               </span>
             </div>

@@ -106,7 +106,7 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5 min-w-0 max-w-[65%]">
               {isFavorite && <Star className="w-3 h-3 fill-warning text-warning shrink-0" />}
-              <span className="font-semibold text-foreground truncate text-[15px]">
+              <span className="font-semibold text-foreground truncate text-sm">
                 {displayName}
               </span>
             </div>
@@ -137,7 +137,7 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
           {/* Row 2.5: Benefit type badge */}
           {convLead?.benefit_type && (
             <div className="mt-1">
-              <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 bg-green-100 text-green-800 rounded border border-green-200">
+              <span className="text-2xs uppercase tracking-wider px-1.5 py-0.5 bg-success/10 text-success rounded border border-success/20">
                 {convLead.benefit_type}
               </span>
             </div>
@@ -148,7 +148,7 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
             <Badge
               variant="outline"
               className={cn(
-                'text-[10px] px-1.5 py-0 h-5',
+                'text-2xs px-1.5 py-0 h-5',
                 conversation.status === 'open' && 'border-success text-success',
                 conversation.status === 'pending' && 'border-warning text-warning',
                 conversation.status === 'resolved' && 'border-muted-foreground text-muted-foreground'
@@ -159,7 +159,7 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
             {convLead?.lead_labels?.length === 1 ? (
               <Badge
                 className={cn(
-                  "text-[10px] px-1.5 py-0 h-5 border-0 max-w-[140px] truncate",
+                  "text-2xs px-1.5 py-0 h-5 border-0 max-w-[140px] truncate",
                   getContrastTextColor(convLead.lead_labels[0]?.labels?.color || '')
                 )}
                 style={{
@@ -175,7 +175,7 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
                   <Badge
                     key={ll.labels?.id}
                     className={cn(
-                      "text-[10px] px-1.5 py-0 h-5 border-0 max-w-[80px] truncate",
+                      "text-2xs px-1.5 py-0 h-5 border-0 max-w-[80px] truncate",
                       getContrastTextColor(ll.labels?.color || '')
                     )}
                     style={{
@@ -187,7 +187,7 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
                   </Badge>
                 ))}
                 {convLead?.lead_labels && convLead.lead_labels.length > 1 && (
-                  <Badge variant="secondary" className="text-[10px] px-1 py-0 h-5">
+                  <Badge variant="secondary" className="text-2xs px-1 py-0 h-5">
                     +{convLead.lead_labels.length - 1}
                   </Badge>
                 )}

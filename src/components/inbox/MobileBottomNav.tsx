@@ -32,7 +32,7 @@ export function MobileBottomNav() {
               )}
             >
               <item.icon className="w-5 h-5" />
-              <span className="text-[10px] mt-0.5">{item.label}</span>
+              <span className="text-2xs mt-0.5">{item.label}</span>
             </Link>
           );
         })}
