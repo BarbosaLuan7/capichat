@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -63,7 +63,7 @@ interface LeadFiltersProps {
   profiles: Profile[];
 }
 
-export function LeadFilters({
+function LeadFiltersComponent({
   filters,
   onFiltersChange,
   funnelStages,
@@ -305,3 +305,6 @@ export function LeadFilters({
     </div>
   );
 }
+
+// Memoize para evitar re-renders desnecessários
+export const LeadFilters = memo(LeadFiltersComponent);

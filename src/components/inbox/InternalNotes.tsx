@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
@@ -43,7 +43,7 @@ interface InternalNotesProps {
   conversationId: string;
 }
 
-export function InternalNotes({ conversationId }: InternalNotesProps) {
+function InternalNotesComponent({ conversationId }: InternalNotesProps) {
   const [note, setNote] = useState('');
   const [showSaved, setShowSaved] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -291,3 +291,6 @@ export function InternalNotes({ conversationId }: InternalNotesProps) {
     </div>
   );
 }
+
+// Memoize para evitar re-renders desnecessários
+export const InternalNotes = memo(InternalNotesComponent);

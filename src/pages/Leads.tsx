@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, memo } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -103,15 +104,18 @@ const Leads = () => {
   });
   const [importModalOpen, setImportModalOpen] = useState(false);
 
+  // Debounce search query for better performance
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
   const filteredLeads = useMemo(() => {
     if (!leads) return [];
     
     return leads.filter((lead) => {
-      // Search filter
+      // Search filter (using debounced value)
       const matchesSearch =
-        lead.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        lead.phone.includes(searchQuery) ||
-        lead.email?.toLowerCase().includes(searchQuery.toLowerCase());
+        lead.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        lead.phone.includes(debouncedSearchQuery) ||
+        lead.email?.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
       
       if (!matchesSearch) return false;
 
@@ -142,7 +146,7 @@ const Leads = () => {
 
       return true;
     });
-  }, [leads, searchQuery, filters]);
+  }, [leads, debouncedSearchQuery, filters]);
 
   const getStage = (stageId: string | null) => funnelStages?.find((s) => s.id === stageId);
   const getLabels = (leadLabels: any[] | undefined) => {

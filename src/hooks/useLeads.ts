@@ -31,6 +31,7 @@ export function useLeads(page: number = 1, pageSize: number = 50) {
       if (error) throw error;
       return { leads: data || [], totalCount: count || 0 };
     },
+    staleTime: 30 * 1000, // 30 segundos
   });
 }
 
@@ -56,6 +57,7 @@ export function useLead(id: string | undefined) {
       return data;
     },
     enabled: !!id,
+    staleTime: 30 * 1000, // 30 segundos
   });
 }
 

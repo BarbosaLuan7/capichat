@@ -22,6 +22,7 @@ export function useInternalNotes(conversationId: string | undefined) {
       return data;
     },
     enabled: !!conversationId,
+    staleTime: 10 * 1000, // 10 segundos
   });
 
   // Realtime subscription

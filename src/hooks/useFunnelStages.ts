@@ -18,6 +18,7 @@ export function useFunnelStages() {
       if (error) throw error;
       return data as FunnelStage[];
     },
+    staleTime: 5 * 60 * 1000, // 5 minutos - etapas do funil mudam raramente
   });
 }
 

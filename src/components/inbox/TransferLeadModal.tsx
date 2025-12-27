@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Search, UserPlus, UsersRound, AlertCircle } from 'lucide-react';
 import { useProfiles } from '@/hooks/useProfiles';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface TransferLeadModalProps {
   open: boolean;
@@ -27,20 +28,21 @@ export function TransferLeadModal({
   currentAssignee,
 }: TransferLeadModalProps) {
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 200);
   const navigate = useNavigate();
   const { data: profiles, isLoading } = useProfiles();
 
   // All active users except current assignee
-  const availableProfiles = profiles?.filter(
+  const availableProfiles = useMemo(() => profiles?.filter(
     (p) => p.id !== currentAssignee && p.is_active
-  ) || [];
+  ) || [], [profiles, currentAssignee]);
 
-  // Filtered by search
-  const filteredProfiles = availableProfiles.filter(
+  // Filtered by search (using debounced value)
+  const filteredProfiles = useMemo(() => availableProfiles.filter(
     (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.email.toLowerCase().includes(search.toLowerCase())
-  );
+      p.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      p.email.toLowerCase().includes(debouncedSearch.toLowerCase())
+  ), [availableProfiles, debouncedSearch]);
 
   const handleTransfer = (userId: string) => {
     onTransfer(userId);

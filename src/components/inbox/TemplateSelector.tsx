@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Popover,
   PopoverContent,
@@ -10,6 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Zap, Search } from 'lucide-react';
 import { useTemplates } from '@/hooks/useTemplates';
 import { replaceTemplateVariables, type LeadData } from '@/lib/templateVariables';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface TemplateSelectorProps {
   onSelectTemplate: (content: string) => void;
@@ -32,14 +33,15 @@ export function TemplateSelector({
 }: TemplateSelectorProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 200);
   // Only fetch templates when popover is open (lazy loading)
   const { data: templates, isLoading } = useTemplates(open);
 
-  const filteredTemplates = templates?.filter(
+  const filteredTemplates = useMemo(() => templates?.filter(
     (t) =>
-      t.name.toLowerCase().includes(search.toLowerCase()) ||
-      t.shortcut.toLowerCase().includes(search.toLowerCase())
-  ) || [];
+      t.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      t.shortcut.toLowerCase().includes(debouncedSearch.toLowerCase())
+  ) || [], [templates, debouncedSearch]);
 
   const handleSelectTemplate = (content: string) => {
     // Build lead data from props (support both new and legacy props)
