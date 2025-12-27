@@ -20,23 +20,28 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useTemplates } from '@/hooks/useTemplates';
 import { cn } from '@/lib/utils';
+import { replaceTemplateVariables, type LeadData } from '@/lib/templateVariables';
 
 interface TemplatePreviewProps {
   onSend: (content: string) => void;
+  lead?: LeadData;
+  agentName?: string;
+  disabled?: boolean;
+  // Legacy props for backwards compatibility
   leadName?: string;
   leadPhone?: string;
   leadBenefitType?: string;
-  agentName?: string;
-  disabled?: boolean;
 }
 
 export function TemplatePreview({
   onSend,
+  lead,
+  agentName,
+  disabled,
+  // Legacy props
   leadName,
   leadPhone,
   leadBenefitType,
-  agentName,
-  disabled,
 }: TemplatePreviewProps) {
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -61,23 +66,26 @@ export function TemplatePreview({
     );
   }, [templates, search]);
 
+  // Build lead data from props (support both new and legacy props)
+  const leadData: LeadData = lead || {
+    name: leadName,
+    phone: leadPhone,
+    benefit_type: leadBenefitType,
+  };
+
   // Processa variáveis do template com dados reais
   const processContent = (content: string) => {
-    const firstName = leadName ? leadName.split(' ')[0] : '';
-    
-    return content
-      .replace(/\{\{nome\}\}/gi, leadName || '[nome do cliente]')
-      .replace(/\{\{primeiro_nome\}\}/gi, firstName || '[primeiro nome]')
-      .replace(/\{\{telefone\}\}/gi, leadPhone || '[telefone]')
-      .replace(/\{\{beneficio\}\}/gi, leadBenefitType || '[tipo de benefício]')
-      .replace(/\{\{atendente\}\}/gi, agentName || '[nome do atendente]')
-      .replace(/\{\{(\w+)\}\}/g, '[$1]'); // Variáveis não mapeadas
+    return replaceTemplateVariables(content, {
+      lead: leadData,
+      agentName,
+      removeUnmatched: false,
+    });
   };
 
   const previewContent = useMemo(() => {
     if (!selectedTemplate) return '';
     return processContent(selectedTemplate.content);
-  }, [selectedTemplate, leadName, leadPhone, leadBenefitType, agentName]);
+  }, [selectedTemplate, leadData, agentName]);
 
   const handleSelectTemplate = (template: typeof selectedTemplate) => {
     setSelectedTemplate(template);

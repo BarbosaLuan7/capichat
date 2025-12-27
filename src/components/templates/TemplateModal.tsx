@@ -16,6 +16,7 @@ import { useCreateTemplate, useUpdateTemplate } from '@/hooks/useTemplates';
 import { toast } from 'sonner';
 import { Zap, Copy, Eye } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
+import { TEMPLATE_VARIABLES, getTemplatePreview } from '@/lib/templateVariables';
 
 type Template = Database['public']['Tables']['templates']['Row'];
 
@@ -24,14 +25,6 @@ interface TemplateModalProps {
   onOpenChange: (open: boolean) => void;
   template?: Template | null;
 }
-
-const AVAILABLE_VARIABLES = [
-  { key: '{{nome}}', label: 'Nome do Lead', description: 'Nome do lead' },
-  { key: '{{telefone}}', label: 'Telefone', description: 'Telefone do lead' },
-  { key: '{{beneficio}}', label: 'Benefício', description: 'Tipo de benefício' },
-  { key: '{{data}}', label: 'Data', description: 'Data atual' },
-  { key: '{{atendente}}', label: 'Atendente', description: 'Nome do atendente' },
-];
 
 export function TemplateModal({ open, onOpenChange, template }: TemplateModalProps) {
   const [name, setName] = useState('');
@@ -62,15 +55,6 @@ export function TemplateModal({ open, onOpenChange, template }: TemplateModalPro
   const handleCopyShortcut = () => {
     navigator.clipboard.writeText(`/${shortcut}`);
     toast.success('Atalho copiado!');
-  };
-
-  const getPreviewContent = () => {
-    return content
-      .replace(/\{\{nome\}\}/g, 'Maria Silva')
-      .replace(/\{\{telefone\}\}/g, '(11) 99999-9999')
-      .replace(/\{\{beneficio\}\}/g, 'BPC/LOAS')
-      .replace(/\{\{data\}\}/g, new Date().toLocaleDateString('pt-BR'))
-      .replace(/\{\{atendente\}\}/g, 'Dra. Ana');
   };
 
   const handleSubmit = async () => {
@@ -171,7 +155,7 @@ export function TemplateModal({ open, onOpenChange, template }: TemplateModalPro
           <div className="space-y-2">
             <Label>Variáveis Disponíveis</Label>
             <div className="flex flex-wrap gap-2">
-              {AVAILABLE_VARIABLES.map((variable) => (
+              {TEMPLATE_VARIABLES.map((variable) => (
                 <Badge
                   key={variable.key}
                   variant="outline"
@@ -214,7 +198,7 @@ export function TemplateModal({ open, onOpenChange, template }: TemplateModalPro
                 Preview da Mensagem
               </Label>
               <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-                <p className="text-sm whitespace-pre-wrap">{getPreviewContent()}</p>
+                <p className="text-sm whitespace-pre-wrap">{getTemplatePreview(content)}</p>
               </div>
             </div>
           )}

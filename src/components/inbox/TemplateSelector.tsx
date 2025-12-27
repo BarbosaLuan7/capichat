@@ -9,21 +9,26 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Zap, Search } from 'lucide-react';
 import { useTemplates } from '@/hooks/useTemplates';
+import { replaceTemplateVariables, type LeadData } from '@/lib/templateVariables';
 
 interface TemplateSelectorProps {
   onSelectTemplate: (content: string) => void;
+  lead?: LeadData;
+  agentName?: string;
+  // Legacy props for backwards compatibility
   leadName?: string;
   leadPhone?: string;
   leadBenefitType?: string;
-  agentName?: string;
 }
 
 export function TemplateSelector({ 
   onSelectTemplate, 
+  lead,
+  agentName,
+  // Legacy props
   leadName, 
   leadPhone, 
   leadBenefitType,
-  agentName 
 }: TemplateSelectorProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -37,19 +42,18 @@ export function TemplateSelector({
   ) || [];
 
   const handleSelectTemplate = (content: string) => {
-    let processedContent = content;
+    // Build lead data from props (support both new and legacy props)
+    const leadData: LeadData = lead || {
+      name: leadName,
+      phone: leadPhone,
+      benefit_type: leadBenefitType,
+    };
     
-    // Substituir variáveis conhecidas
-    const firstName = leadName ? leadName.split(' ')[0] : '';
-    
-    processedContent = processedContent.replace(/\{\{nome\}\}/gi, leadName || '[nome]');
-    processedContent = processedContent.replace(/\{\{primeiro_nome\}\}/gi, firstName || '[nome]');
-    processedContent = processedContent.replace(/\{\{telefone\}\}/gi, leadPhone || '[telefone]');
-    processedContent = processedContent.replace(/\{\{beneficio\}\}/gi, leadBenefitType || '[benefício]');
-    processedContent = processedContent.replace(/\{\{atendente\}\}/gi, agentName || '[atendente]');
-    
-    // Substituir variáveis não mapeadas por placeholder
-    processedContent = processedContent.replace(/\{\{(\w+)\}\}/g, '[$1]');
+    const processedContent = replaceTemplateVariables(content, {
+      lead: leadData,
+      agentName,
+      removeUnmatched: false,
+    });
     
     onSelectTemplate(processedContent);
     setOpen(false);
