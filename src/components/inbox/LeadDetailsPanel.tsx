@@ -262,7 +262,7 @@ function LeadDetailsPanelComponent({
               <User className="w-3 h-3" />
               Dados
             </TabsTrigger>
-            <TabsTrigger value="docs" className="text-xs gap-1 data-[state=active]:bg-muted">
+            <TabsTrigger value="docs" className="text-xs gap-1 data-[state=active]:bg-muted relative">
               <ClipboardList className="w-3 h-3" />
               Docs
             </TabsTrigger>

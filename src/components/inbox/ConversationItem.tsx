@@ -2,10 +2,10 @@ import React, { memo } from 'react';
 import { Star } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn, getContrastTextColor } from '@/lib/utils';
 import { formatPhoneNumber } from '@/lib/masks';
-import { format, isSameDay, isYesterday, differenceInMinutes, differenceInHours, differenceInDays } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, isSameDay, isYesterday } from 'date-fns';
 import type { Database } from '@/integrations/supabase/types';
 
 type ConversationStatus = Database['public']['Enums']['conversation_status'];
@@ -90,7 +90,7 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
       aria-label={`Conversa com ${displayName}${conversation.unread_count > 0 ? `, ${conversation.unread_count} mensagens não lidas` : ''}`}
       className={cn(
         'px-3 py-3 cursor-pointer transition-colors hover:bg-muted/50 border-l-4 border-l-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-        isSelected && 'bg-blue-50 border-l-blue-600'
+        isSelected && 'bg-primary/10 border-l-primary'
       )}
     >
       <div className="flex gap-3">
@@ -157,39 +157,59 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
               {conversation.status === 'open' ? 'Aberta' : conversation.status === 'pending' ? 'Pendente' : 'Resolvida'}
             </Badge>
             {convLead?.lead_labels?.length === 1 ? (
-              <Badge
-                className={cn(
-                  "text-2xs px-1.5 py-0 h-5 border-0 max-w-[140px] truncate",
-                  getContrastTextColor(convLead.lead_labels[0]?.labels?.color || '')
-                )}
-                style={{
-                  backgroundColor: convLead.lead_labels[0]?.labels?.color,
-                }}
-                title={convLead.lead_labels[0]?.labels?.name}
-              >
-                {convLead.lead_labels[0]?.labels?.name}
-              </Badge>
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      className={cn(
+                        "text-2xs px-1.5 py-0 h-5 border-0 max-w-[140px] truncate cursor-default",
+                        getContrastTextColor(convLead.lead_labels[0]?.labels?.color || '')
+                      )}
+                      style={{
+                        backgroundColor: convLead.lead_labels[0]?.labels?.color,
+                      }}
+                    >
+                      {convLead.lead_labels[0]?.labels?.name}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>{convLead.lead_labels[0]?.labels?.name}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             ) : (
               <>
                 {convLead?.lead_labels?.slice(0, 1).map((ll) => (
-                  <Badge
-                    key={ll.labels?.id}
-                    className={cn(
-                      "text-2xs px-1.5 py-0 h-5 border-0 max-w-[80px] truncate",
-                      getContrastTextColor(ll.labels?.color || '')
-                    )}
-                    style={{
-                      backgroundColor: ll.labels?.color,
-                    }}
-                    title={ll.labels?.name}
-                  >
-                    {ll.labels?.name}
-                  </Badge>
+                  <TooltipProvider key={ll.labels?.id} delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge
+                          className={cn(
+                            "text-2xs px-1.5 py-0 h-5 border-0 max-w-[80px] truncate cursor-default",
+                            getContrastTextColor(ll.labels?.color || '')
+                          )}
+                          style={{
+                            backgroundColor: ll.labels?.color,
+                          }}
+                        >
+                          {ll.labels?.name}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>{ll.labels?.name}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 ))}
                 {convLead?.lead_labels && convLead.lead_labels.length > 1 && (
-                  <Badge variant="secondary" className="text-2xs px-1 py-0 h-5">
-                    +{convLead.lead_labels.length - 1}
-                  </Badge>
+                  <TooltipProvider delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge variant="secondary" className="text-2xs px-1 py-0 h-5 cursor-default">
+                          +{convLead.lead_labels.length - 1}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {convLead.lead_labels.slice(1).map(ll => ll.labels?.name).join(', ')}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
               </>
             )}

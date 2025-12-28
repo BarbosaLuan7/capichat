@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
@@ -79,17 +80,18 @@ export function AttachmentMenu({ onFileSelect, onAudioRecordStart }: AttachmentM
         onChange={handleFileChange('document')}
       />
 
-      <Popover>
-        <PopoverTrigger asChild>
+      <TooltipProvider>
+        <Popover>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                <Paperclip className="w-5 h-5" />
-              </Button>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                  <Paperclip className="w-5 h-5" />
+                </Button>
+              </PopoverTrigger>
             </TooltipTrigger>
             <TooltipContent>Anexar arquivo</TooltipContent>
           </Tooltip>
-        </PopoverTrigger>
         <PopoverContent className="w-48 p-2" align="start">
           <div className="space-y-1">
             <Button
@@ -133,8 +135,9 @@ export function AttachmentMenu({ onFileSelect, onAudioRecordStart }: AttachmentM
               Documento
             </Button>
           </div>
-        </PopoverContent>
-      </Popover>
+          </PopoverContent>
+        </Popover>
+      </TooltipProvider>
     </>
   );
 }

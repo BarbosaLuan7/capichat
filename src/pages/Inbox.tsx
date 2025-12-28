@@ -234,6 +234,7 @@ const Inbox = () => {
           showLeadPanel={showLeadPanel}
           onToggleLeadPanel={() => setShowLeadPanel(!showLeadPanel)}
           agentName={authUser?.name}
+          onBack={() => setSelectedConversationId(null)}
         />
       )}
 

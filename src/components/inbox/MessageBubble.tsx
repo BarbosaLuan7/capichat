@@ -277,7 +277,7 @@ function MessageBubbleComponent({
                         });
                       }
                     }}
-                    title={hasAttempted ? 'Tentar transcrever novamente' : 'Transcrever áudio com IA'}
+                    aria-label={hasAttempted ? 'Tentar transcrever novamente' : 'Transcrever áudio com IA'}
                   >
                     <Sparkles className="w-3 h-3" />
                     {hasAttempted ? 'Tentar novamente' : 'Transcrever áudio'}
