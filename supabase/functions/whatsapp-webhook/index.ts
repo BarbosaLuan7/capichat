@@ -201,7 +201,7 @@ async function getProfilePicture(
   }
 }
 
-// Busca configuração do WAHA no banco
+// Busca configuração do WAHA no banco (genérica - qualquer instância ativa)
 async function getWAHAConfig(supabase: any): Promise<{ baseUrl: string; apiKey: string; sessionName: string; instanceId: string } | null> {
   try {
     const { data } = await supabase
@@ -224,6 +224,42 @@ async function getWAHAConfig(supabase: any): Promise<{ baseUrl: string; apiKey: 
     return null;
   } catch (error) {
     console.error('[whatsapp-webhook] Erro ao buscar config WAHA:', error);
+    return null;
+  }
+}
+
+// Busca configuração do WAHA pela session/instance_name específica (do webhook)
+async function getWAHAConfigBySession(
+  supabase: any, 
+  sessionName: string
+): Promise<{ baseUrl: string; apiKey: string; sessionName: string; instanceId: string } | null> {
+  try {
+    console.log('[whatsapp-webhook] Buscando config WAHA para session:', sessionName);
+    
+    const { data } = await supabase
+      .from('whatsapp_config')
+      .select('id, base_url, api_key, instance_name')
+      .eq('is_active', true)
+      .eq('provider', 'waha')
+      .eq('instance_name', sessionName)
+      .limit(1)
+      .maybeSingle();
+    
+    if (data) {
+      console.log('[whatsapp-webhook] Config encontrada para session:', sessionName, 'instanceId:', data.id);
+      return {
+        baseUrl: data.base_url.replace(/\/$/, ''),
+        apiKey: data.api_key,
+        sessionName: data.instance_name || 'default',
+        instanceId: data.id,
+      };
+    }
+    
+    // Fallback: se não encontrar pela session, buscar qualquer uma ativa
+    console.warn('[whatsapp-webhook] Instância não encontrada para session:', sessionName, '- usando fallback');
+    return getWAHAConfig(supabase);
+  } catch (error) {
+    console.error('[whatsapp-webhook] Erro ao buscar config WAHA por session:', error);
     return null;
   }
 }
@@ -788,7 +824,7 @@ serve(async (req) => {
           
           // Se não conseguiu, tenta via API do WAHA
           if (!realPhone) {
-            const wahaConfig = await getWAHAConfig(supabase);
+            const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
             if (wahaConfig) {
               realPhone = await resolvePhoneFromLID(
                 wahaConfig.baseUrl,
@@ -1141,8 +1177,8 @@ serve(async (req) => {
         })
         .eq('id', conversation.id);
     } else {
-      // Buscar ID da instância WhatsApp ativa
-      const wahaConfig = await getWAHAConfig(supabase);
+      // Buscar ID da instância WhatsApp pela session do webhook (para associar corretamente)
+      const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
       
       // Criar nova conversa - o trigger cuida do unread_count e last_message_at quando a mensagem for inserida
       const { data: newConversation, error: createConvError } = await supabase
@@ -1174,7 +1210,7 @@ serve(async (req) => {
       console.log('[whatsapp-webhook] Processando mídia para storage...', 'type:', type, 'mediaUrl:', mediaUrl);
       
       // Buscar config do WAHA para corrigir URL localhost e autenticar download
-      const wahaConfig = await getWAHAConfig(supabase);
+      const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
       const storageUrl = await uploadMediaToStorage(supabase, mediaUrl, type, lead.id, wahaConfig);
       if (storageUrl) {
         finalMediaUrl = storageUrl;
