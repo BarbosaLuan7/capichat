@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import { motion } from 'framer-motion';
 import {
   Plus,
@@ -158,11 +159,12 @@ const Automations = () => {
   const [selectedAutomation, setSelectedAutomation] = useState<AutomationRow | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [automationToDelete, setAutomationToDelete] = useState<AutomationRow | null>(null);
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  const filteredAutomations = automations.filter((auto) =>
-    auto.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    auto.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredAutomations = useMemo(() => automations.filter((auto) =>
+    auto.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+    auto.description?.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+  ), [automations, debouncedSearchQuery]);
 
   const activeCount = automations.filter((a) => a.is_active).length;
 

@@ -22,7 +22,7 @@ export function useInternalNotes(conversationId: string | undefined) {
       return data;
     },
     enabled: !!conversationId,
-    staleTime: 10 * 1000, // 10 segundos
+    staleTime: 30 * 1000, // 30 seconds - optimized for performance
   });
 
   // Realtime subscription

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { Play, Pause, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -13,7 +13,7 @@ interface AudioPlayerProps {
   'aria-label'?: string;
 }
 
-export function AudioPlayer({ src, className, 'aria-label': ariaLabel }: AudioPlayerProps) {
+function AudioPlayerComponent({ src, className, 'aria-label': ariaLabel }: AudioPlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -157,3 +157,7 @@ export function AudioPlayer({ src, className, 'aria-label': ariaLabel }: AudioPl
     </div>
   );
 }
+
+export const AudioPlayer = memo(AudioPlayerComponent, (prev, next) =>
+  prev.src === next.src && prev.className === next.className
+);

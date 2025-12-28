@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -138,11 +138,14 @@ const Inbox = () => {
     userClickedConversationRef.current = false;
   }, [selectedConversationId, selectedConversation?.unread_count, markAsRead]);
 
-  // Prepare lead with labels
-  const leadWithLabels = leadData ? {
-    ...leadData,
-    labels: leadLabels?.map((ll: any) => ll.labels) || [],
-  } : null;
+  // Prepare lead with labels - memoized to prevent re-renders
+  const leadWithLabels = useMemo(() => {
+    if (!leadData) return null;
+    return {
+      ...leadData,
+      labels: leadLabels?.map((ll: any) => ll.labels) || [],
+    };
+  }, [leadData, leadLabels]);
 
   // Callbacks for child components
   const handleSelectConversation = useCallback((id: string) => {

@@ -64,7 +64,7 @@ export function useMessagesInfinite(conversationId: string | undefined) {
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     enabled: !!conversationId,
-    staleTime: 10000, // 10 seconds
+    staleTime: 30000, // 30 seconds - optimized for performance
   });
 
   // Flatten todas as páginas em uma única lista de mensagens

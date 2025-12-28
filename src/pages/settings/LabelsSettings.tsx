@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import { motion } from 'framer-motion';
 import {
   Plus,
@@ -90,11 +91,13 @@ const LabelsSettings = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [labelToDelete, setLabelToDelete] = useState<LabelRow | null>(null);
 
-  const filteredLabels = labels.filter((label) => {
-    const matchesSearch = label.name.toLowerCase().includes(search.toLowerCase());
+  const debouncedSearch = useDebounce(search, 300);
+
+  const filteredLabels = useMemo(() => labels.filter((label) => {
+    const matchesSearch = label.name.toLowerCase().includes(debouncedSearch.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || label.category === categoryFilter;
     return matchesSearch && matchesCategory;
-  });
+  }), [labels, debouncedSearch, categoryFilter]);
 
   // Group by category for stats
   const categoryStats = labels.reduce((acc, label) => {
