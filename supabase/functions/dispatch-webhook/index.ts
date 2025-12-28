@@ -203,6 +203,22 @@ async function buscarUsuario(supabase: any, userId: string) {
   return { id: gerarIdLegivel('usuario', profile.id), nome: profile.name };
 }
 
+async function buscarInstanciaDoLead(supabase: any, leadId: string) {
+  if (!leadId) return null;
+  
+  // Buscar a conversa mais recente do lead para obter a instância
+  const { data: conv } = await supabase
+    .from('conversations')
+    .select('whatsapp_instance_id')
+    .eq('lead_id', leadId)
+    .order('last_message_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  
+  if (!conv?.whatsapp_instance_id) return null;
+  return await buscarInstanciaWhatsApp(supabase, conv.whatsapp_instance_id);
+}
+
 // ============================================
 // PAYLOAD BUILDERS - LIMPOS E SIMPLES
 // ============================================
@@ -282,10 +298,12 @@ async function buildMensagemEnviada(supabase: any, eventData: any) {
 async function buildLeadCriado(supabase: any, eventData: any) {
   const leadData = eventData?.lead || eventData;
   const lead = leadData?.id ? await buscarLeadCompleto(supabase, leadData.id) : null;
+  const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
   
   return {
     evento: 'lead.criado',
     timestamp: formatTimestamp(),
+    instancia_whatsapp: instancia,
     lead: lead ? {
       id: lead.id,
       nome: lead.nome,
@@ -307,10 +325,12 @@ async function buildLeadCriado(supabase: any, eventData: any) {
 async function buildLeadAtualizado(supabase: any, eventData: any) {
   const leadData = eventData?.lead || eventData;
   const lead = leadData?.id ? await buscarLeadCompleto(supabase, leadData.id) : null;
+  const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
   
   return {
     evento: 'lead.atualizado',
     timestamp: formatTimestamp(),
+    instancia_whatsapp: instancia,
     lead: lead ? {
       id: lead.id,
       nome: lead.nome,
@@ -326,6 +346,7 @@ async function buildLeadEtapaAlterada(supabase: any, eventData: any) {
   const leadData = eventData?.lead || eventData;
   const leadId = leadData?.id || eventData?.lead_id;
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
+  const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
   
   // Buscar nome da etapa anterior
   let etapaAnterior = null;
@@ -352,6 +373,7 @@ async function buildLeadEtapaAlterada(supabase: any, eventData: any) {
   return {
     evento: 'lead.etapa_alterada',
     timestamp: formatTimestamp(),
+    instancia_whatsapp: instancia,
     lead: lead ? {
       id: lead.id,
       nome: lead.nome,
@@ -369,10 +391,12 @@ async function buildLeadTemperaturaAlterada(supabase: any, eventData: any) {
   const leadData = eventData?.lead || eventData;
   const leadId = leadData?.id || eventData?.lead_id;
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
+  const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
   
   return {
     evento: 'lead.temperatura_alterada',
     timestamp: formatTimestamp(),
+    instancia_whatsapp: instancia,
     lead: lead ? {
       id: lead.id,
       nome: lead.nome,
@@ -390,12 +414,14 @@ async function buildLeadTransferido(supabase: any, eventData: any) {
   const leadData = eventData?.lead || eventData;
   const leadId = leadData?.id || eventData?.lead_id;
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
+  const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
   const de = eventData?.previous_assigned_to ? await buscarUsuario(supabase, eventData.previous_assigned_to) : null;
   const para = eventData?.new_assigned_to ? await buscarUsuario(supabase, eventData.new_assigned_to) : null;
   
   return {
     evento: 'lead.transferido',
     timestamp: formatTimestamp(),
+    instancia_whatsapp: instancia,
     lead: lead ? {
       id: lead.id,
       nome: lead.nome,
@@ -412,10 +438,12 @@ async function buildLeadTransferido(supabase: any, eventData: any) {
 async function buildLeadEtiqueta(supabase: any, eventData: any, adicionada: boolean) {
   const leadId = eventData?.lead_id;
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
+  const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
   
   return {
     evento: adicionada ? 'lead.etiqueta_adicionada' : 'lead.etiqueta_removida',
     timestamp: formatTimestamp(),
+    instancia_whatsapp: instancia,
     lead: lead ? {
       id: lead.id,
       nome: lead.nome,
