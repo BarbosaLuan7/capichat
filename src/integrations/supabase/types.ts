@@ -216,6 +216,7 @@ export type Database = {
           lead_id: string
           status: Database["public"]["Enums"]["conversation_status"]
           unread_count: number
+          whatsapp_instance_id: string | null
         }
         Insert: {
           assigned_to?: string | null
@@ -227,6 +228,7 @@ export type Database = {
           lead_id: string
           status?: Database["public"]["Enums"]["conversation_status"]
           unread_count?: number
+          whatsapp_instance_id?: string | null
         }
         Update: {
           assigned_to?: string | null
@@ -238,6 +240,7 @@ export type Database = {
           lead_id?: string
           status?: Database["public"]["Enums"]["conversation_status"]
           unread_count?: number
+          whatsapp_instance_id?: string | null
         }
         Relationships: [
           {
@@ -245,6 +248,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_whatsapp_instance_id_fkey"
+            columns: ["whatsapp_instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_config"
             referencedColumns: ["id"]
           },
         ]
