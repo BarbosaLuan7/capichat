@@ -131,4 +131,38 @@ function LeadDetailsPanelSkeleton() {
   );
 }
 
-export { Skeleton, ConversationSkeleton, MessageSkeleton, LeadDetailsPanelSkeleton }
+// Skeleton for chat area
+function ChatAreaSkeleton() {
+  return (
+    <div className="flex-1 min-w-0 flex flex-col overflow-hidden animate-pulse">
+      {/* Header */}
+      <div className="h-16 px-4 flex items-center gap-3 border-b border-border bg-card">
+        <div className="w-10 h-10 rounded-full bg-muted shrink-0" />
+        <div className="flex-1 space-y-2">
+          <div className="h-4 w-32 bg-muted rounded" />
+          <div className="h-3 w-24 bg-muted rounded" />
+        </div>
+        <div className="flex gap-2">
+          <div className="h-8 w-24 bg-muted rounded" />
+          <div className="h-8 w-8 bg-muted rounded" />
+          <div className="h-8 w-8 bg-muted rounded" />
+        </div>
+      </div>
+
+      {/* Messages Area */}
+      <div className="flex-1 p-4 space-y-4">
+        <MessageSkeleton isAgent={false} />
+        <MessageSkeleton isAgent={true} />
+        <MessageSkeleton isAgent={false} />
+        <MessageSkeleton isAgent={true} />
+      </div>
+
+      {/* Input Area */}
+      <div className="p-4 border-t border-border">
+        <div className="h-12 w-full bg-muted rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+export { Skeleton, ConversationSkeleton, MessageSkeleton, LeadDetailsPanelSkeleton, ChatAreaSkeleton }

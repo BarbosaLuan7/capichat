@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -25,12 +25,14 @@ import { useInboxRealtime } from '@/hooks/useInboxRealtime';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 import { useUIStore } from '@/store/uiStore';
 
-// Components
+// Components - Lazy loaded for better performance
 import { ConversationList } from '@/components/inbox/ConversationList';
-import { ChatArea } from '@/components/inbox/ChatArea';
-import { LeadDetailsPanel } from '@/components/inbox/LeadDetailsPanel';
-import { NewConversationModal } from '@/components/inbox/NewConversationModal';
-import { LeadDetailsPanelSkeleton } from '@/components/ui/skeleton';
+import { LeadDetailsPanelSkeleton, ChatAreaSkeleton } from '@/components/ui/skeleton';
+
+// Lazy load heavy components
+const ChatArea = lazy(() => import('@/components/inbox/ChatArea').then(m => ({ default: m.ChatArea })));
+const LeadDetailsPanel = lazy(() => import('@/components/inbox/LeadDetailsPanel').then(m => ({ default: m.LeadDetailsPanel })));
+const NewConversationModal = lazy(() => import('@/components/inbox/NewConversationModal').then(m => ({ default: m.NewConversationModal })));
 
 import type { Database } from '@/integrations/supabase/types';
 
@@ -245,34 +247,36 @@ const Inbox = () => {
         </div>
       )}
 
-      {/* Chat Area */}
+      {/* Chat Area - Lazy loaded */}
       {showChatArea && (
-        <ChatArea
-          conversation={selectedConversation ? {
-            id: selectedConversation.id,
-            status: selectedConversation.status,
-            is_favorite: (selectedConversation as any).is_favorite,
-            lead_id: selectedConversation.lead_id,
-          } : null}
-          lead={leadWithLabels}
-          messages={messages}
-          isLoadingMessages={loadingMessages}
-          onSendMessage={handleSendMessage}
-          onStatusChange={handleStatusChange}
-          onToggleFavorite={handleToggleFavorite}
-          onToggleMessageStar={handleToggleMessageStar}
-          isUpdatingStatus={updateConversationStatus.isPending}
-          showLeadPanel={showLeadPanel}
-          onToggleLeadPanel={() => setShowLeadPanel(!showLeadPanel)}
-          agentName={authUser?.name}
-          onBack={() => setSelectedConversationId(null)}
-          hasMoreMessages={hasMoreMessages}
-          onLoadMoreMessages={fetchMoreMessages}
-          isLoadingMoreMessages={loadingMoreMessages}
-        />
+        <Suspense fallback={<ChatAreaSkeleton />}>
+          <ChatArea
+            conversation={selectedConversation ? {
+              id: selectedConversation.id,
+              status: selectedConversation.status,
+              is_favorite: (selectedConversation as any).is_favorite,
+              lead_id: selectedConversation.lead_id,
+            } : null}
+            lead={leadWithLabels}
+            messages={messages}
+            isLoadingMessages={loadingMessages}
+            onSendMessage={handleSendMessage}
+            onStatusChange={handleStatusChange}
+            onToggleFavorite={handleToggleFavorite}
+            onToggleMessageStar={handleToggleMessageStar}
+            isUpdatingStatus={updateConversationStatus.isPending}
+            showLeadPanel={showLeadPanel}
+            onToggleLeadPanel={() => setShowLeadPanel(!showLeadPanel)}
+            agentName={authUser?.name}
+            onBack={() => setSelectedConversationId(null)}
+            hasMoreMessages={hasMoreMessages}
+            onLoadMoreMessages={fetchMoreMessages}
+            isLoadingMoreMessages={loadingMoreMessages}
+          />
+        </Suspense>
       )}
 
-      {/* Lead Panel */}
+      {/* Lead Panel - Lazy loaded */}
       <AnimatePresence>
         {selectedConversation && showLeadPanel && (
           isMobile ? (
@@ -297,15 +301,17 @@ const Inbox = () => {
                 {loadingLead ? (
                   <LeadDetailsPanelSkeleton />
                 ) : leadWithLabels ? (
-                  <LeadDetailsPanel
-                    lead={leadWithLabels}
-                    conversationId={selectedConversation.id}
-                    messages={messages}
-                    isFavorite={(selectedConversation as any).is_favorite}
-                    onToggleFavorite={handleToggleFavorite}
-                    onTransfer={handleTransfer}
-                    onLabelsUpdate={() => refetchLead()}
-                  />
+                  <Suspense fallback={<LeadDetailsPanelSkeleton />}>
+                    <LeadDetailsPanel
+                      lead={leadWithLabels}
+                      conversationId={selectedConversation.id}
+                      messages={messages}
+                      isFavorite={(selectedConversation as any).is_favorite}
+                      onToggleFavorite={handleToggleFavorite}
+                      onTransfer={handleTransfer}
+                      onLabelsUpdate={() => refetchLead()}
+                    />
+                  </Suspense>
                 ) : (
                   <LeadDetailsPanelSkeleton />
                 )}
@@ -322,15 +328,17 @@ const Inbox = () => {
               {loadingLead ? (
                 <LeadDetailsPanelSkeleton />
               ) : leadWithLabels ? (
-                <LeadDetailsPanel
-                  lead={leadWithLabels}
-                  conversationId={selectedConversation.id}
-                  messages={messages}
-                  isFavorite={(selectedConversation as any).is_favorite}
-                  onToggleFavorite={handleToggleFavorite}
-                  onTransfer={handleTransfer}
-                  onLabelsUpdate={() => refetchLead()}
-                />
+                <Suspense fallback={<LeadDetailsPanelSkeleton />}>
+                  <LeadDetailsPanel
+                    lead={leadWithLabels}
+                    conversationId={selectedConversation.id}
+                    messages={messages}
+                    isFavorite={(selectedConversation as any).is_favorite}
+                    onToggleFavorite={handleToggleFavorite}
+                    onTransfer={handleTransfer}
+                    onLabelsUpdate={() => refetchLead()}
+                  />
+                </Suspense>
               ) : (
                 <LeadDetailsPanelSkeleton />
               )}
@@ -339,14 +347,16 @@ const Inbox = () => {
         )}
       </AnimatePresence>
 
-      {/* New Conversation Modal */}
-      <NewConversationModal
-        open={showNewConversationModal}
-        onOpenChange={setShowNewConversationModal}
-        onConversationCreated={(conversationId) => {
-          setSelectedConversationId(conversationId);
-        }}
-      />
+      {/* New Conversation Modal - Lazy loaded */}
+      <Suspense fallback={null}>
+        <NewConversationModal
+          open={showNewConversationModal}
+          onOpenChange={setShowNewConversationModal}
+          onConversationCreated={(conversationId) => {
+            setSelectedConversationId(conversationId);
+          }}
+        />
+      </Suspense>
     </div>
   );
 };
