@@ -289,7 +289,7 @@ const TopNavigation = () => {
       </Link>
 
       {/* Desktop Navigation */}
-      <NavigationMenu className="hidden lg:flex flex-1 justify-center">
+      <NavigationMenu className="hidden lg:flex">
         <NavigationMenuList className="gap-1">
           {/* Main items */}
           {mainNavItems.map((item) => {
@@ -390,7 +390,7 @@ const TopNavigation = () => {
       <div className="flex-1 lg:hidden" />
 
       {/* Right side */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 ml-auto">
         {/* Search - Desktop */}
         <div className="hidden md:flex items-center">
           {searchOpen ? (
