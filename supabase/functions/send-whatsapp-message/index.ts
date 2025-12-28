@@ -665,11 +665,13 @@ serve(async (req) => {
     }
 
     // Get conversation with lead info (incluindo mais campos para substituição de variáveis)
+    // IMPORTANTE: Incluir whatsapp_instance_id para usar a mesma instância que recebeu
     const { data: conversation, error: convError } = await supabase
       .from('conversations')
       .select(`
         id,
         lead_id,
+        whatsapp_instance_id,
         leads (
           id,
           phone,
@@ -717,13 +719,24 @@ serve(async (req) => {
 
     const validatedPhone = phoneValidation.normalized!;
     console.log('[send-whatsapp-message] Lead:', lead.name, 'Phone original:', lead.phone, 'Normalizado:', validatedPhone);
+    console.log('[send-whatsapp-message] Conversa whatsapp_instance_id:', conversation.whatsapp_instance_id);
 
-    // Get active WhatsApp config
-    const { data: configs, error: configError } = await supabase
+    // Get WhatsApp config - PRIORIZAR a instância específica da conversa
+    let configQuery = supabase
       .from('whatsapp_config')
       .select('*')
-      .eq('is_active', true)
-      .limit(1);
+      .eq('is_active', true);
+
+    // Se a conversa tem uma instância específica, usar ela
+    if (conversation.whatsapp_instance_id) {
+      console.log('[send-whatsapp-message] Usando instância específica da conversa:', conversation.whatsapp_instance_id);
+      configQuery = configQuery.eq('id', conversation.whatsapp_instance_id);
+    } else {
+      console.log('[send-whatsapp-message] Conversa sem instância específica, usando qualquer ativa');
+      configQuery = configQuery.limit(1);
+    }
+
+    const { data: configs, error: configError } = await configQuery;
 
     if (configError) {
       console.error('[send-whatsapp-message] Config error:', configError);
