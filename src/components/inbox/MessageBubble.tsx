@@ -425,7 +425,8 @@ function MessageBubbleComponent({
             size="icon"
             aria-label={message.is_starred ? 'Remover destaque' : 'Destacar mensagem'}
             className={cn(
-              'absolute -right-8 top-0 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6',
+              'absolute top-0 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6',
+              isAgent ? '-left-8' : '-right-8',
               message.is_starred && 'opacity-100'
             )}
             onClick={() => onToggleStar(message.id, !message.is_starred)}

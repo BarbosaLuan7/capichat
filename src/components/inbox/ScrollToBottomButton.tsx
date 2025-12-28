@@ -18,7 +18,7 @@ function ScrollToBottomButtonComponent({ show, onClick, unreadCount }: ScrollToB
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.8, y: 10 }}
           transition={{ duration: 0.2 }}
-          className="absolute bottom-4 right-4 z-10"
+          className="absolute bottom-4 right-4 z-20"
         >
           <Button
             onClick={onClick}

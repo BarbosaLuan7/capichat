@@ -57,6 +57,7 @@ export function AttachmentMenu({ onFileSelect, onAudioRecordStart }: AttachmentM
         accept="image/*"
         className="hidden"
         onChange={handleFileChange('image')}
+        aria-label="Selecionar imagem"
       />
       <input
         ref={videoInputRef}
@@ -64,6 +65,7 @@ export function AttachmentMenu({ onFileSelect, onAudioRecordStart }: AttachmentM
         accept="video/*"
         className="hidden"
         onChange={handleFileChange('video')}
+        aria-label="Selecionar vídeo"
       />
       <input
         ref={audioInputRef}
@@ -71,6 +73,7 @@ export function AttachmentMenu({ onFileSelect, onAudioRecordStart }: AttachmentM
         accept="audio/*"
         className="hidden"
         onChange={handleFileChange('audio')}
+        aria-label="Selecionar áudio"
       />
       <input
         ref={documentInputRef}
@@ -78,6 +81,7 @@ export function AttachmentMenu({ onFileSelect, onAudioRecordStart }: AttachmentM
         accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
         className="hidden"
         onChange={handleFileChange('document')}
+        aria-label="Selecionar documento"
       />
 
       <TooltipProvider>

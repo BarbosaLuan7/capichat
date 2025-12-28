@@ -148,9 +148,8 @@ export function ConversationList({
 
     return conversations?.filter((conv) => {
       if (filter === 'novos') {
-        const isRecent = new Date(conv.created_at).getTime() > Date.now() - 24 * 60 * 60 * 1000;
-        const hasUnread = (conv.unread_count || 0) > 0;
-        return !conv.assigned_to || isRecent || hasUnread;
+        // Novos = não atribuídos a ninguém
+        return !conv.assigned_to;
       } else if (filter === 'meus') {
         return conv.assigned_to === userId;
       } else if (filter === 'outros') {
