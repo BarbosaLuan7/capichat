@@ -540,6 +540,22 @@ export function ChatArea({
                 </div>
               ))
             )}
+            
+            {/* Sending indicator - shows skeleton message while sending */}
+            {isSending && (
+              <div className="flex gap-2 flex-row-reverse animate-pulse">
+                <div className="w-8 h-8 rounded-full bg-primary/30 shrink-0" />
+                <div className="rounded-2xl rounded-tr-sm bg-primary/40 p-4 max-w-[70%] space-y-2">
+                  <div className="h-3 w-32 bg-primary/30 rounded" />
+                  <div className="h-3 w-20 bg-primary/30 rounded" />
+                  <div className="flex items-center gap-1 justify-end">
+                    <Loader2 className="w-3 h-3 animate-spin text-primary-foreground/50" />
+                    <span className="text-xs text-primary-foreground/50">Enviando...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div ref={messagesEndRef} />
           </div>
         </ScrollArea>

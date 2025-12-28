@@ -10,6 +10,7 @@ import { CommandBar } from "@/components/command/CommandBar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import MainLayout from "./components/layout/MainLayout";
 import { PageSkeleton } from "./components/layout/PageSkeleton";
+import { logger } from "@/lib/logger";
 import React from "react";
 
 // Lazy load all pages for better initial bundle size
@@ -58,7 +59,7 @@ class ErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("React Error Boundary caught an error:", error, errorInfo);
+    logger.error("React Error Boundary caught an error:", error, errorInfo);
   }
 
   render() {

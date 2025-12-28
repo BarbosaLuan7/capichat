@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   Search,
   Filter,
@@ -13,7 +14,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -30,12 +30,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { ConversationStatusTabs } from '@/components/inbox/ConversationStatusTabs';
 import { ConversationItem } from '@/components/inbox/ConversationItem';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useLabels } from '@/hooks/useLabels';
 import { logger } from '@/lib/logger';
 import type { Database } from '@/integrations/supabase/types';
+
+const CONVERSATION_ITEM_HEIGHT = 88; // Approximate height of ConversationItem in px
 
 // Wrapper to prevent inline onClick from breaking React.memo
 const MemoizedConversationItem = React.memo(function MemoizedConversationItem({
@@ -115,6 +118,9 @@ export function ConversationList({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [sortOrder, setSortOrder] = useState<'recent' | 'oldest'>('recent');
   const [labelSearchTerm, setLabelSearchTerm] = useState('');
+  
+  // Ref for virtual list container
+  const parentRef = useRef<HTMLDivElement>(null);
 
   // Track if user is authenticated
   const isUserAuthenticated = Boolean(userId);
@@ -450,7 +456,7 @@ export function ConversationList({
       </div>
 
       {/* Conversations List */}
-      <ScrollArea className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden">
         {isError ? (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
             <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4 text-destructive">
@@ -529,18 +535,74 @@ export function ConversationList({
             )}
           </div>
         ) : (
-          <div className="divide-y divide-border" role="list" aria-label="Lista de conversas">
-            {filteredConversations.map((conversation) => (
+          <VirtualizedConversationList
+            conversations={filteredConversations}
+            selectedConversationId={selectedConversationId}
+            onSelectConversation={onSelectConversation}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Virtualized conversation list component for performance
+function VirtualizedConversationList({
+  conversations,
+  selectedConversationId,
+  onSelectConversation,
+}: {
+  conversations: ConversationData[];
+  selectedConversationId: string | null;
+  onSelectConversation: (id: string) => void;
+}) {
+  const parentRef = useRef<HTMLDivElement>(null);
+  
+  const rowVirtualizer = useVirtualizer({
+    count: conversations.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => CONVERSATION_ITEM_HEIGHT,
+    overscan: 5,
+  });
+
+  return (
+    <div
+      ref={parentRef}
+      className="h-full overflow-auto"
+      role="list"
+      aria-label="Lista de conversas"
+    >
+      <div
+        style={{
+          height: `${rowVirtualizer.getTotalSize()}px`,
+          width: '100%',
+          position: 'relative',
+        }}
+      >
+        {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+          const conversation = conversations[virtualItem.index];
+          return (
+            <div
+              key={conversation.id}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: `${virtualItem.size}px`,
+                transform: `translateY(${virtualItem.start}px)`,
+              }}
+              className="border-b border-border"
+            >
               <MemoizedConversationItem
-                key={conversation.id}
                 conversation={conversation}
                 isSelected={selectedConversationId === conversation.id}
                 onSelect={onSelectConversation}
               />
-            ))}
-          </div>
-        )}
-      </ScrollArea>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
