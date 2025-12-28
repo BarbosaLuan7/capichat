@@ -60,16 +60,14 @@ serve(async (req) => {
 
     console.log('[refresh-avatars] Iniciando refresh de avatares...');
 
-    // Buscar configuração WAHA ativa
-    const { data: wahaConfig } = await supabase
+    // Buscar TODAS as configurações WAHA ativas
+    const { data: wahaConfigs, error: configError } = await supabase
       .from('whatsapp_config')
-      .select('base_url, api_key, instance_name')
+      .select('id, base_url, api_key, instance_name')
       .eq('is_active', true)
-      .eq('provider', 'waha')
-      .limit(1)
-      .maybeSingle();
+      .eq('provider', 'waha');
 
-    if (!wahaConfig) {
+    if (configError || !wahaConfigs || wahaConfigs.length === 0) {
       console.log('[refresh-avatars] Nenhuma config WAHA ativa encontrada');
       return new Response(
         JSON.stringify({ success: false, error: 'No active WAHA config' }),
@@ -77,22 +75,24 @@ serve(async (req) => {
       );
     }
 
-    const baseUrl = wahaConfig.base_url.replace(/\/$/, '');
-    const apiKey = wahaConfig.api_key;
-    const sessionName = wahaConfig.instance_name || 'default';
+    console.log(`[refresh-avatars] Encontradas ${wahaConfigs.length} instâncias WAHA ativas`);
 
     // Buscar leads sem avatar_url ou com avatar antigo (mais de 7 dias sem atualização)
     // Limitado a 50 leads por execução para não sobrecarregar a API
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
+    // Buscar leads COM suas conversas para identificar a instância correta
     const { data: leads, error: leadsError } = await supabase
       .from('leads')
-      .select('id, phone, name, avatar_url, updated_at')
+      .select(`
+        id, phone, name, avatar_url, updated_at,
+        conversations(whatsapp_instance_id)
+      `)
       .eq('status', 'active')
-      .eq('is_facebook_lid', false)  // Não buscar foto para LIDs
+      .eq('is_facebook_lid', false)
       .or(`avatar_url.is.null,updated_at.lt.${sevenDaysAgo.toISOString()}`)
-      .order('last_interaction_at', { ascending: false })  // Priorizar leads mais recentes
+      .order('last_interaction_at', { ascending: false })
       .limit(50);
 
     if (leadsError) {
@@ -105,13 +105,29 @@ serve(async (req) => {
 
     console.log(`[refresh-avatars] Processando ${leads?.length || 0} leads...`);
 
-    const results: { leadId: string; success: boolean; avatarUrl?: string }[] = [];
+    const results: { leadId: string; success: boolean; avatarUrl?: string; instance?: string }[] = [];
     let successCount = 0;
+
+    // Primeira instância como fallback
+    const defaultConfig = wahaConfigs[0];
 
     for (const lead of leads || []) {
       try {
         // Adicionar delay para não sobrecarregar a API (100ms entre requests)
         await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Identificar a instância correta baseada na conversa do lead
+        const conversations = lead.conversations as { whatsapp_instance_id: string | null }[] | null;
+        const instanceId = conversations?.[0]?.whatsapp_instance_id;
+        
+        // Usar a instância da conversa ou fallback para a primeira
+        const wahaConfig = instanceId 
+          ? wahaConfigs.find(c => c.id === instanceId) || defaultConfig
+          : defaultConfig;
+
+        const baseUrl = wahaConfig.base_url.replace(/\/$/, '');
+        const apiKey = wahaConfig.api_key;
+        const sessionName = wahaConfig.instance_name || 'default';
 
         // Usar número com código do país (55) para a API
         const phoneWithCountry = lead.phone.startsWith('55') ? lead.phone : `55${lead.phone}`;
@@ -129,10 +145,10 @@ serve(async (req) => {
 
           if (!updateError) {
             successCount++;
-            results.push({ leadId: lead.id, success: true, avatarUrl });
-            console.log(`[refresh-avatars] Avatar atualizado para lead ${lead.id}`);
+            results.push({ leadId: lead.id, success: true, avatarUrl, instance: sessionName });
+            console.log(`[refresh-avatars] Avatar atualizado para lead ${lead.id} via ${sessionName}`);
           } else {
-            results.push({ leadId: lead.id, success: false });
+            results.push({ leadId: lead.id, success: false, instance: sessionName });
           }
         } else {
           // Se não encontrou foto, marcar como tentativa feita atualizando updated_at
@@ -141,7 +157,7 @@ serve(async (req) => {
             .update({ updated_at: new Date().toISOString() })
             .eq('id', lead.id);
           
-          results.push({ leadId: lead.id, success: false });
+          results.push({ leadId: lead.id, success: false, instance: sessionName });
         }
       } catch (error) {
         console.error(`[refresh-avatars] Erro ao processar lead ${lead.id}:`, error);
@@ -156,6 +172,7 @@ serve(async (req) => {
         success: true,
         processed: leads?.length || 0,
         updated: successCount,
+        instances: wahaConfigs.length,
         results,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
