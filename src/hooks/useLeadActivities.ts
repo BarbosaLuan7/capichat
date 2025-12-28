@@ -21,30 +21,42 @@ export function useLeadActivities(leadId: string | undefined) {
     queryFn: async (): Promise<LeadActivity[]> => {
       if (!leadId) return [];
       
-      const { data, error } = await supabase
+      // Fetch activities first
+      const { data: activities, error } = await supabase
         .from('lead_activities')
         .select('*')
         .eq('lead_id', leadId)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
+      if (!activities || activities.length === 0) return [];
       
-      // Fetch profiles separately for activities with user_id
-      const activitiesWithProfiles = await Promise.all(
-        data.map(async (activity) => {
-          if (activity.user_id) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('id, name, avatar')
-              .eq('id', activity.user_id)
-              .single();
-            return { ...activity, profiles: profile, details: activity.details as Record<string, any> };
-          }
-          return { ...activity, profiles: null, details: activity.details as Record<string, any> };
-        })
-      );
+      // Collect unique user IDs (avoid N+1 by fetching all profiles at once)
+      const userIds = [...new Set(
+        activities
+          .map(a => a.user_id)
+          .filter((id): id is string => id !== null)
+      )];
       
-      return activitiesWithProfiles;
+      // Fetch all profiles in a single query
+      let profilesMap: Record<string, { id: string; name: string; avatar: string | null }> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, name, avatar')
+          .in('id', userIds);
+        
+        if (profiles) {
+          profilesMap = Object.fromEntries(profiles.map(p => [p.id, p]));
+        }
+      }
+      
+      // Map activities with their profiles
+      return activities.map((activity) => ({
+        ...activity,
+        details: (activity.details as Record<string, any>) || {},
+        profiles: activity.user_id ? profilesMap[activity.user_id] || null : null,
+      }));
     },
     enabled: !!leadId,
   });

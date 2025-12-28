@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   DndContext,
@@ -63,6 +63,7 @@ import { useLeads, useUpdateLeadStage, useDeleteLead } from '@/hooks/useLeads';
 import { useLabels } from '@/hooks/useLabels';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 import { LeadModal } from '@/components/leads/LeadModal';
+import { FunnelScrollIndicators } from '@/components/funnel/FunnelScrollIndicators';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -354,6 +355,9 @@ const Funnel = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [leadLabels, setLeadLabels] = useState<{ lead_id: string; label_id: string }[]>([]);
   
+  // Ref for scroll container
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
   // Modal states
   const [showLeadModal, setShowLeadModal] = useState(false);
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
@@ -533,22 +537,31 @@ const Funnel = () => {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex gap-4 overflow-x-auto pb-4">
-            {stages.map((stage) => {
-              const stageLeads = leads.filter((l) => l.stage_id === stage.id);
-              return (
-                <FunnelColumn
-                  key={stage.id}
-                  stage={stage}
-                  leads={stageLeads}
-                  labels={labelsData}
-                  leadLabels={leadLabels}
-                  onEditLead={handleEditLead}
-                  onDeleteLead={handleDeleteLead}
-                  onOpenConversation={handleOpenConversation}
-                />
-              );
-            })}
+          <div className="relative">
+            <FunnelScrollIndicators 
+              containerRef={scrollContainerRef} 
+              totalColumns={stages.length} 
+            />
+            <div 
+              ref={scrollContainerRef}
+              className="flex gap-4 overflow-x-auto pb-4 px-1"
+            >
+              {stages.map((stage) => {
+                const stageLeads = leads.filter((l) => l.stage_id === stage.id);
+                return (
+                  <FunnelColumn
+                    key={stage.id}
+                    stage={stage}
+                    leads={stageLeads}
+                    labels={labelsData}
+                    leadLabels={leadLabels}
+                    onEditLead={handleEditLead}
+                    onDeleteLead={handleDeleteLead}
+                    onOpenConversation={handleOpenConversation}
+                  />
+                );
+              })}
+            </div>
           </div>
 
           <DragOverlay>

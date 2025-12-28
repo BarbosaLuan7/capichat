@@ -93,9 +93,10 @@ const Inbox = () => {
     if (conversationFromUrl && !selectedConversationId) {
       setSelectedConversationId(conversationFromUrl);
       userClickedConversationRef.current = true;
-      // Clear query param
-      searchParams.delete('conversation');
-      setSearchParams(searchParams, { replace: true });
+      // Clear query param - create new URLSearchParams to avoid mutation
+      const newParams = new URLSearchParams(searchParams.toString());
+      newParams.delete('conversation');
+      setSearchParams(newParams, { replace: true });
     }
   }, [searchParams, selectedConversationId, setSearchParams]);
 
