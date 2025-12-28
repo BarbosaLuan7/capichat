@@ -85,6 +85,7 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete }: TaskMo
 
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
+    mode: 'onChange',
     defaultValues: {
       title: '',
       description: '',
@@ -397,6 +398,7 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete }: TaskMo
                       size="icon"
                       className="h-6 w-6 opacity-0 group-hover:opacity-100"
                       onClick={() => removeSubtask(st.id)}
+                      aria-label={`Remover subtarefa: ${st.title}`}
                     >
                       <X className="w-3 h-3" />
                     </Button>
