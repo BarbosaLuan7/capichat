@@ -103,7 +103,7 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
       tabIndex={0}
       aria-label={`Conversa com ${displayName}${conversation.unread_count > 0 ? `, ${conversation.unread_count} mensagens não lidas` : ''}`}
       className={cn(
-        'px-3 py-3 cursor-pointer transition-colors hover:bg-muted/50 border-l-4 border-l-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        'px-3 py-2 cursor-pointer transition-colors hover:bg-muted/50 border-l-4 border-l-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         isSelected && 'bg-primary/10 border-l-primary'
       )}
     >
@@ -166,7 +166,7 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
 
           {/* Row 2.5: Benefit type badge */}
           {convLead?.benefit_type && (
-            <div className="mt-1">
+            <div className="mt-0.5">
               <span className="text-2xs uppercase tracking-wider px-1.5 py-0.5 bg-success/10 text-success rounded border border-success/20">
                 {convLead.benefit_type}
               </span>
