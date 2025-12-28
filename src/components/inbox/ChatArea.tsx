@@ -27,7 +27,7 @@ import { TemplateSelector } from '@/components/inbox/TemplateSelector';
 import { SlashCommandPopover } from '@/components/inbox/SlashCommandPopover';
 import { MessageBubble } from '@/components/inbox/MessageBubble';
 import { InlineNoteMessage } from '@/components/inbox/InlineNoteMessage';
-import { AISuggestions } from '@/components/inbox/AISuggestions';
+
 import { AIReminderPrompt } from '@/components/inbox/AIReminderPrompt';
 import { ConversationStatusActions } from '@/components/inbox/ConversationStatusActions';
 import { DateSeparator } from '@/components/inbox/DateSeparator';
@@ -36,7 +36,7 @@ import { ScrollToBottomButton } from '@/components/inbox/ScrollToBottomButton';
 // Hooks
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
-import { useAISuggestions } from '@/hooks/useAISuggestions';
+
 import { useAIReminders } from '@/hooks/useAIReminders';
 import { useInternalNotes } from '@/hooks/useInternalNotes';
 import { useDraftMessages } from '@/hooks/useDraftMessages';
@@ -124,7 +124,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   // Hooks
   const { uploadFile, uploadProgress } = useFileUpload();
   const audioRecorder = useAudioRecorder();
-  const aiSuggestions = useAISuggestions();
+  
   const aiReminders = useAIReminders();
   const { data: internalNotes } = useInternalNotes(conversation?.id || undefined);
   const { draft, saveDraft, clearDraft } = useDraftMessages(conversation?.id);
@@ -187,45 +187,6 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     }
   }, [conversation?.id, isMobile]);
 
-  // Fetch AI suggestions when conversation changes (with throttling)
-  const lastSuggestionFetchRef = useRef<number>(0);
-  const suggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  useEffect(() => {
-    // Clear pending timeout on conversation change
-    if (suggestionTimeoutRef.current) {
-      clearTimeout(suggestionTimeoutRef.current);
-      suggestionTimeoutRef.current = null;
-    }
-    
-    if (!messages || messages.length === 0 || !lead || !conversation?.id) return;
-    
-    const now = Date.now();
-    const timeSinceLastFetch = now - lastSuggestionFetchRef.current;
-    const THROTTLE_MS = 3000; // 3 seconds throttle
-    
-    // Throttle: wait at least 3s between fetches
-    const delay = Math.max(0, THROTTLE_MS - timeSinceLastFetch);
-    
-    suggestionTimeoutRef.current = setTimeout(() => {
-      lastSuggestionFetchRef.current = Date.now();
-      aiSuggestions.fetchSuggestions(
-        messages.slice(-10),
-        {
-          name: lead.name,
-          stage: lead.funnel_stages?.name,
-          temperature: lead.temperature,
-          labels: lead.labels,
-        }
-      );
-    }, delay);
-    
-    return () => {
-      if (suggestionTimeoutRef.current) {
-        clearTimeout(suggestionTimeoutRef.current);
-      }
-    };
-  }, [conversation?.id, messages?.length]);
 
   const handleMessagesScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     if (ignoreScrollRef.current) return;
@@ -406,24 +367,6 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     setShowSlashCommand(value.includes('/'));
   };
   
-  const handleSelectAISuggestion = (text: string) => {
-    setMessageInput(text);
-    inputRef.current?.focus();
-  };
-  
-  const handleRefreshAISuggestions = () => {
-    if (messages && messages.length > 0 && lead) {
-      aiSuggestions.fetchSuggestions(
-        messages.slice(-10),
-        {
-          name: lead.name,
-          stage: lead.funnel_stages?.name,
-          temperature: lead.temperature,
-          labels: lead.labels,
-        }
-      );
-    }
-  };
 
   // Empty state
   if (!conversation || !lead) {
@@ -671,13 +614,6 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
         </div>
       )}
 
-      {/* AI Suggestions */}
-      <AISuggestions
-        suggestions={aiSuggestions.suggestions}
-        isLoading={aiSuggestions.isLoading}
-        onSelectSuggestion={handleSelectAISuggestion}
-        onRefresh={handleRefreshAISuggestions}
-      />
 
       {/* AI Reminder Prompt */}
       <AIReminderPrompt
