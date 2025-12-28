@@ -187,7 +187,6 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     }
   }, [conversation?.id, isMobile]);
 
-
   const handleMessagesScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     if (ignoreScrollRef.current) return;
     
@@ -366,7 +365,6 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     setMessageInput(value);
     setShowSlashCommand(value.includes('/'));
   };
-  
 
   // Empty state
   if (!conversation || !lead) {
@@ -471,6 +469,15 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
               </div>
             )}
             
+            {/* Indicator when there are no more old messages */}
+            {!isLoadingMoreMessages && !hasMoreMessages && messages && messages.length > 10 && (
+              <div className="flex justify-center py-3">
+                <span className="text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
+                  Início da conversa
+                </span>
+              </div>
+            )}
+            
             {isLoadingMessages ? (
               <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
@@ -547,7 +554,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
               </div>
             )}
             
-            <div ref={messagesEndRef} />
+            <div ref={messagesEndRef} className="h-1" />
           </div>
         </ScrollArea>
         
@@ -613,7 +620,6 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
           </div>
         </div>
       )}
-
 
       {/* AI Reminder Prompt */}
       <AIReminderPrompt
