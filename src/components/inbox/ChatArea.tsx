@@ -176,6 +176,17 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     }
   }, [conversation?.id, isLoadingMessages, messages?.length]);
 
+  // Auto-focus textarea when conversation changes (desktop only)
+  useEffect(() => {
+    if (conversation?.id && !isMobile && inputRef.current) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [conversation?.id, isMobile]);
+
   // Fetch AI suggestions when conversation changes (with throttling)
   const lastSuggestionFetchRef = useRef<number>(0);
   const suggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -603,8 +614,28 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
         />
       </div>
 
+      {/* Upload Progress Indicator */}
+      {uploadProgress.uploading && (
+        <div className="px-4 py-2 bg-muted/50 border-t border-border">
+          <div className="flex items-center gap-3 max-w-3xl mx-auto">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <div className="flex-1">
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary transition-all duration-300 ease-out"
+                  style={{ width: `${uploadProgress.progress}%` }}
+                />
+              </div>
+            </div>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              Enviando... {uploadProgress.progress}%
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Pending File Preview */}
-      {pendingFile && (
+      {pendingFile && !uploadProgress.uploading && (
         <div className="px-4 py-2 bg-muted/50 border-t border-border">
           <div className="flex items-center gap-2 max-w-3xl mx-auto">
             <span className="text-sm text-muted-foreground">Arquivo: {pendingFile.file.name}</span>

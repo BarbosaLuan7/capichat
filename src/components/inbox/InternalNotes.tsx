@@ -199,10 +199,10 @@ function InternalNotesComponent({ conversationId }: InternalNotesProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100 transition-opacity"
                         aria-label="Opções da nota"
                       >
-                        <MoreVertical className="w-3 h-3" />
+                        <MoreVertical className="w-3 h-3" aria-hidden="true" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">

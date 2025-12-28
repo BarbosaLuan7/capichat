@@ -55,6 +55,29 @@ export function SlashCommandPopover({
     setSelectedIndex(0);
   }, [searchQuery]);
 
+  // Handle template selection
+  const handleSelect = useCallback((template: { content: string; shortcut: string }) => {
+    if (!template) return;
+
+    // Build lead data from props (support both new and legacy props)
+    const leadData: LeadData = lead || {
+      name: leadName,
+      phone: leadPhone,
+      benefit_type: leadBenefitType,
+    };
+    
+    const processedContent = replaceTemplateVariables(template.content, {
+      lead: leadData,
+      agentName,
+      removeUnmatched: false,
+    });
+    
+    // Get text before the "/"
+    const textBefore = inputValue.slice(0, slashIndex);
+    onSelectTemplate(textBefore + processedContent);
+    onClose();
+  }, [inputValue, slashIndex, lead, leadName, leadPhone, leadBenefitType, agentName, onSelectTemplate, onClose]);
+
   // Handle keyboard navigation
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!isOpen || filteredTemplates.length === 0) return;
@@ -85,7 +108,7 @@ export function SlashCommandPopover({
         }
         break;
     }
-  }, [isOpen, filteredTemplates, selectedIndex]);
+  }, [isOpen, filteredTemplates, selectedIndex, handleSelect, onClose]);
 
   useEffect(() => {
     const input = inputRef.current;
@@ -102,28 +125,6 @@ export function SlashCommandPopover({
       selectedEl?.scrollIntoView({ block: 'nearest' });
     }
   }, [selectedIndex, isOpen]);
-
-  const handleSelect = (template: { content: string; shortcut: string }) => {
-    if (!template) return;
-
-    // Build lead data from props (support both new and legacy props)
-    const leadData: LeadData = lead || {
-      name: leadName,
-      phone: leadPhone,
-      benefit_type: leadBenefitType,
-    };
-    
-    const processedContent = replaceTemplateVariables(template.content, {
-      lead: leadData,
-      agentName,
-      removeUnmatched: false,
-    });
-    
-    // Get text before the "/"
-    const textBefore = inputValue.slice(0, slashIndex);
-    onSelectTemplate(textBefore + processedContent);
-    onClose();
-  };
 
   if (!isOpen || filteredTemplates.length === 0) {
     return null;
