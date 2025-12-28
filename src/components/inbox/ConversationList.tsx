@@ -88,6 +88,10 @@ interface ConversationListProps {
   isError?: boolean;
   onRetry?: () => void;
   userId?: string;
+  // Infinite scroll props
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  isLoadingMore?: boolean;
 }
 
 const categoryLabels: Record<string, string> = {
@@ -111,6 +115,9 @@ export function ConversationList({
   isError,
   onRetry,
   userId,
+  hasMore,
+  onLoadMore,
+  isLoadingMore,
 }: ConversationListProps) {
   const [filter, setFilter] = useState<InboxFilter>('meus');
   const [searchQuery, setSearchQuery] = useState('');
@@ -539,6 +546,9 @@ export function ConversationList({
             conversations={filteredConversations}
             selectedConversationId={selectedConversationId}
             onSelectConversation={onSelectConversation}
+            hasMore={hasMore}
+            onLoadMore={onLoadMore}
+            isLoadingMore={isLoadingMore}
           />
         )}
       </div>
@@ -551,10 +561,16 @@ function VirtualizedConversationList({
   conversations,
   selectedConversationId,
   onSelectConversation,
+  hasMore,
+  onLoadMore,
+  isLoadingMore,
 }: {
   conversations: ConversationData[];
   selectedConversationId: string | null;
   onSelectConversation: (id: string) => void;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  isLoadingMore?: boolean;
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
   
@@ -564,6 +580,24 @@ function VirtualizedConversationList({
     estimateSize: () => CONVERSATION_ITEM_HEIGHT,
     overscan: 5,
   });
+
+  // Load more when reaching the bottom of the list
+  const virtualItems = rowVirtualizer.getVirtualItems();
+  const lastItem = virtualItems[virtualItems.length - 1];
+  
+  React.useEffect(() => {
+    if (!lastItem) return;
+    
+    // If we're within 5 items of the end, load more
+    if (
+      lastItem.index >= conversations.length - 5 &&
+      hasMore &&
+      !isLoadingMore &&
+      onLoadMore
+    ) {
+      onLoadMore();
+    }
+  }, [lastItem?.index, conversations.length, hasMore, isLoadingMore, onLoadMore]);
 
   return (
     <div
@@ -603,6 +637,16 @@ function VirtualizedConversationList({
           );
         })}
       </div>
+      
+      {/* Loading more indicator at bottom */}
+      {isLoadingMore && (
+        <div className="flex justify-center py-4 border-t border-border">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <span>Carregando mais conversas...</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

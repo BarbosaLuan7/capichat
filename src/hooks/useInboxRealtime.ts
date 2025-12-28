@@ -9,6 +9,11 @@ type Message = Database['public']['Tables']['messages']['Row'];
 interface UseInboxRealtimeOptions {
   selectedConversationId?: string | null;
   onNewIncomingMessage?: (message: Message, leadName?: string) => void;
+  // Optimistic update functions from infinite hooks
+  addMessageOptimistically?: (message: Message) => void;
+  updateMessageOptimistically?: (messageId: string, updates: Partial<Message>) => void;
+  addConversationOptimistically?: (conversation: any) => void;
+  updateConversationOptimistically?: (conversationId: string, updates: any) => void;
 }
 
 /**
@@ -20,14 +25,26 @@ interface UseInboxRealtimeOptions {
  * - Specific invalidations instead of broad ['conversations'] invalidation
  * - Optimistic updates for messages in the selected conversation
  * - Stable refs to prevent subscription reconnection loops
+ * - Integration with infinite pagination hooks
  */
 export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
-  const { selectedConversationId, onNewIncomingMessage } = options;
+  const {
+    selectedConversationId,
+    onNewIncomingMessage,
+    addMessageOptimistically,
+    updateMessageOptimistically,
+    addConversationOptimistically,
+    updateConversationOptimistically,
+  } = options;
   const queryClient = useQueryClient();
   
   // Use refs to avoid recreating callbacks on every render
   const selectedConversationIdRef = useRef(selectedConversationId);
   const onNewIncomingMessageRef = useRef(onNewIncomingMessage);
+  const addMessageOptimisticallyRef = useRef(addMessageOptimistically);
+  const updateMessageOptimisticallyRef = useRef(updateMessageOptimistically);
+  const addConversationOptimisticallyRef = useRef(addConversationOptimistically);
+  const updateConversationOptimisticallyRef = useRef(updateConversationOptimistically);
   
   // Keep refs in sync
   useEffect(() => {
@@ -38,8 +55,23 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
     onNewIncomingMessageRef.current = onNewIncomingMessage;
   }, [onNewIncomingMessage]);
 
+  useEffect(() => {
+    addMessageOptimisticallyRef.current = addMessageOptimistically;
+  }, [addMessageOptimistically]);
+
+  useEffect(() => {
+    updateMessageOptimisticallyRef.current = updateMessageOptimistically;
+  }, [updateMessageOptimistically]);
+
+  useEffect(() => {
+    addConversationOptimisticallyRef.current = addConversationOptimistically;
+  }, [addConversationOptimistically]);
+
+  useEffect(() => {
+    updateConversationOptimisticallyRef.current = updateConversationOptimistically;
+  }, [updateConversationOptimistically]);
+
   // Handle new message in selected conversation - optimistic update
-  // Using refs to access current values without recreating callback
   const handleMessageInsert = useCallback((payload: any) => {
     const newMessage = payload.new as Message;
     const conversationId = newMessage.conversation_id;
@@ -51,11 +83,13 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
       isSelectedConversation: conversationId === currentSelectedId 
     });
 
-    // Optimistic update for messages in selected conversation
-    if (conversationId === currentSelectedId) {
+    // Use infinite hook's optimistic update if available (for selected conversation)
+    if (conversationId === currentSelectedId && addMessageOptimisticallyRef.current) {
+      addMessageOptimisticallyRef.current(newMessage);
+    } else {
+      // Fallback to old query update for non-infinite queries
       queryClient.setQueryData(['messages', conversationId], (old: Message[] | undefined) => {
         if (!old) return [newMessage];
-        // Avoid duplicates
         if (old.some(m => m.id === newMessage.id)) return old;
         return [...old, newMessage];
       });
@@ -70,49 +104,56 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
       onNewIncomingMessageRef.current(newMessage, leadName);
     }
 
-    // Update conversation list (for last_message_at, unread_count, etc.)
-    // Use setQueryData for optimistic update if we have the conversation
-    // Only update if values actually changed to avoid unnecessary re-renders
-    queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
-      if (!old) return old;
-      
-      const existingConv = old.find(conv => conv.id === conversationId);
-      if (!existingConv) return old;
-      
-      // Check if update is actually needed
-      const newUnreadCount = newMessage.sender_type === 'lead' 
-        ? (existingConv.unread_count || 0) + 1 
-        : existingConv.unread_count;
-      
-      if (
-        existingConv.last_message_at === newMessage.created_at &&
-        existingConv.last_message_content === newMessage.content &&
-        existingConv.unread_count === newUnreadCount
-      ) {
-        return old; // No change needed, return same reference
-      }
-      
-      return old.map(conv => {
-        if (conv.id === conversationId) {
-          return {
-            ...conv,
-            last_message_at: newMessage.created_at,
-            last_message_content: newMessage.content,
-            unread_count: newUnreadCount,
-          };
-        }
-        return conv;
+    // Update conversation in infinite list if function available
+    if (updateConversationOptimisticallyRef.current) {
+      const newUnreadCount = newMessage.sender_type === 'lead' && conversationId !== currentSelectedId ? 1 : 0;
+      updateConversationOptimisticallyRef.current(conversationId, {
+        last_message_at: newMessage.created_at,
+        last_message_content: newMessage.content,
+        unread_count_increment: newUnreadCount,
       });
-    });
-  }, [queryClient]); // Only queryClient as dependency - refs are stable
+    } else {
+      // Fallback to old method
+      queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
+        if (!old) return old;
+        
+        const existingConv = old.find(conv => conv.id === conversationId);
+        if (!existingConv) return old;
+        
+        const newUnreadCount = newMessage.sender_type === 'lead' 
+          ? (existingConv.unread_count || 0) + 1 
+          : existingConv.unread_count;
+        
+        if (
+          existingConv.last_message_at === newMessage.created_at &&
+          existingConv.last_message_content === newMessage.content &&
+          existingConv.unread_count === newUnreadCount
+        ) {
+          return old;
+        }
+        
+        return old.map(conv => {
+          if (conv.id === conversationId) {
+            return {
+              ...conv,
+              last_message_at: newMessage.created_at,
+              last_message_content: newMessage.content,
+              unread_count: newUnreadCount,
+            };
+          }
+          return conv;
+        });
+      });
+    }
+  }, [queryClient]);
 
   // Handle message updates (status changes, starred, etc.)
   const handleMessageUpdate = useCallback((payload: any) => {
     const updatedMessage = payload.new as Message;
     const oldMessage = payload.old as Message | undefined;
     const conversationId = updatedMessage.conversation_id;
+    const currentSelectedId = selectedConversationIdRef.current;
     
-    // Log status changes specifically
     if (oldMessage && oldMessage.status !== updatedMessage.status) {
       logger.log('[InboxRealtime] Message status changed:', {
         id: updatedMessage.id,
@@ -123,11 +164,16 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
       logger.log('[InboxRealtime] Message updated:', updatedMessage.id);
     }
 
-    // Update message in cache with optimistic update
-    queryClient.setQueryData(['messages', conversationId], (old: Message[] | undefined) => {
-      if (!old) return old;
-      return old.map(m => m.id === updatedMessage.id ? { ...m, ...updatedMessage } : m);
-    });
+    // Use infinite hook's optimistic update if available
+    if (conversationId === currentSelectedId && updateMessageOptimisticallyRef.current) {
+      updateMessageOptimisticallyRef.current(updatedMessage.id, updatedMessage);
+    } else {
+      // Fallback to old query update
+      queryClient.setQueryData(['messages', conversationId], (old: Message[] | undefined) => {
+        if (!old) return old;
+        return old.map(m => m.id === updatedMessage.id ? { ...m, ...updatedMessage } : m);
+      });
+    }
   }, [queryClient]);
 
   // Handle conversation updates
@@ -137,10 +183,16 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
     
     if (payload.eventType === 'UPDATE') {
       const updated = payload.new;
-      queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
-        if (!old) return old;
-        return old.map(conv => conv.id === updated.id ? { ...conv, ...updated } : conv);
-      });
+      
+      // Use infinite hook's optimistic update if available
+      if (updateConversationOptimisticallyRef.current) {
+        updateConversationOptimisticallyRef.current(updated.id, updated);
+      } else {
+        queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
+          if (!old) return old;
+          return old.map(conv => conv.id === updated.id ? { ...conv, ...updated } : conv);
+        });
+      }
       
       // Also update single conversation query if selected
       if (updated.id === currentSelectedId) {
@@ -151,15 +203,15 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
       }
     } else if (payload.eventType === 'INSERT') {
       // New conversation - invalidate to refetch with leads data
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations-infinite'] });
     }
-  }, [queryClient]); // Only queryClient - use ref for selectedConversationId
+  }, [queryClient]);
 
   // Handle lead labels changes (for conversation list labels display)
   const handleLeadLabelsChange = useCallback((payload: any) => {
     logger.log('[InboxRealtime] Lead labels change:', payload.eventType);
     // Invalidate conversations to update labels in list
-    queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    queryClient.invalidateQueries({ queryKey: ['conversations-infinite'] });
     // Also invalidate lead labels query for the detail panel
     queryClient.invalidateQueries({ queryKey: ['lead-labels'] });
   }, [queryClient]);
@@ -218,7 +270,6 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
       supabase.removeChannel(channel);
     };
   // Empty dependency array - callbacks use refs for dynamic values
-  // This ensures the subscription is set up once and never recreated
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }

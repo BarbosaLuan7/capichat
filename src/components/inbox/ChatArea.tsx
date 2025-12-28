@@ -81,6 +81,10 @@ interface ChatAreaProps {
   onToggleLeadPanel: () => void;
   agentName?: string;
   onBack?: () => void;
+  // Infinite scroll props
+  hasMoreMessages?: boolean;
+  onLoadMoreMessages?: () => void;
+  isLoadingMoreMessages?: boolean;
 }
 
 export function ChatArea({
@@ -97,6 +101,9 @@ export function ChatArea({
   onToggleLeadPanel,
   agentName,
   onBack,
+  hasMoreMessages,
+  onLoadMoreMessages,
+  isLoadingMoreMessages,
 }: ChatAreaProps) {
   const isMobile = useIsMobile();
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
@@ -212,12 +219,31 @@ export function ChatArea({
     if (ignoreScrollRef.current) return;
     
     const target = e.currentTarget;
-    const distanceFromBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    const { scrollTop, scrollHeight, clientHeight } = target;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
     
     // Update near bottom state (within 100px of bottom)
     isNearBottomRef.current = distanceFromBottom < 100;
     setShowScrollButton(distanceFromBottom > 200);
-  }, []);
+    
+    // Load more messages when scrolling near the TOP (older messages)
+    if (scrollTop < 100 && hasMoreMessages && !isLoadingMoreMessages && onLoadMoreMessages) {
+      // Save current scroll height to restore position after loading
+      const previousScrollHeight = scrollHeight;
+      onLoadMoreMessages();
+      
+      // Restore scroll position after new messages are loaded
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const newScrollHeight = target.scrollHeight;
+          const scrollDelta = newScrollHeight - previousScrollHeight;
+          if (scrollDelta > 0) {
+            target.scrollTop = scrollTop + scrollDelta;
+          }
+        });
+      });
+    }
+  }, [hasMoreMessages, isLoadingMoreMessages, onLoadMoreMessages]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -480,6 +506,16 @@ export function ChatArea({
           onScrollCapture={handleMessagesScroll}
         >
           <div className="space-y-2 max-w-3xl mx-auto">
+            {/* Loading more indicator at top */}
+            {isLoadingMoreMessages && (
+              <div className="flex justify-center py-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Carregando mensagens anteriores...</span>
+                </div>
+              </div>
+            )}
+            
             {isLoadingMessages ? (
               <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
