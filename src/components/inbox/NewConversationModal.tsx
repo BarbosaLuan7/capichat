@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, forwardRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, CheckCircle, AlertCircle, Zap, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
@@ -72,11 +72,12 @@ const ORIGIN_OPTIONS = [
   { value: 'manual', label: 'Manual' },
 ];
 
-export const NewConversationModal = ({
-  open,
-  onOpenChange,
-  onConversationCreated,
-}: NewConversationModalProps) => {
+export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationModalProps>(
+  function NewConversationModal({
+    open,
+    onOpenChange,
+    onConversationCreated,
+  }, ref) {
   const navigate = useNavigate();
   const { user } = useAuth();
   
@@ -309,7 +310,7 @@ export const NewConversationModal = ({
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent ref={ref} className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Nova conversa</DialogTitle>
           <DialogDescription>
@@ -501,6 +502,6 @@ export const NewConversationModal = ({
       </DialogContent>
     </Dialog>
   );
-};
+});
 
 NewConversationModal.displayName = 'NewConversationModal';

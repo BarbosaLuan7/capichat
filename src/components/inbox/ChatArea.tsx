@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo, forwardRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import {
   Send,
@@ -87,24 +87,25 @@ interface ChatAreaProps {
   isLoadingMoreMessages?: boolean;
 }
 
-export function ChatArea({
-  conversation,
-  lead,
-  messages,
-  isLoadingMessages,
-  onSendMessage,
-  onStatusChange,
-  onToggleFavorite,
-  onToggleMessageStar,
-  isUpdatingStatus,
-  showLeadPanel,
-  onToggleLeadPanel,
-  agentName,
-  onBack,
-  hasMoreMessages,
-  onLoadMoreMessages,
-  isLoadingMoreMessages,
-}: ChatAreaProps) {
+export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
+  function ChatArea({
+    conversation,
+    lead,
+    messages,
+    isLoadingMessages,
+    onSendMessage,
+    onStatusChange,
+    onToggleFavorite,
+    onToggleMessageStar,
+    isUpdatingStatus,
+    showLeadPanel,
+    onToggleLeadPanel,
+    agentName,
+    onBack,
+    hasMoreMessages,
+    onLoadMoreMessages,
+    isLoadingMoreMessages,
+  }, ref) {
   const isMobile = useIsMobile();
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [pendingFile, setPendingFile] = useState<{ file: File; type: 'image' | 'video' | 'audio' | 'document' } | null>(null);
@@ -436,7 +437,7 @@ export function ChatArea({
   const chatDisplayName = (lead as any).whatsapp_name || (!isPhoneAsName ? lead.name : null) || formatPhoneNumber(lead.phone);
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+    <div ref={ref} className="flex-1 min-w-0 flex flex-col overflow-hidden">
       {/* Chat Header */}
       <div className="h-16 px-4 flex items-center gap-3 border-b border-border bg-card">
         {/* Mobile back button */}
@@ -751,4 +752,6 @@ export function ChatArea({
       </div>
     </div>
   );
-}
+});
+
+ChatArea.displayName = 'ChatArea';

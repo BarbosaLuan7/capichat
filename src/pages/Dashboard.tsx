@@ -502,9 +502,17 @@ const Dashboard = () => {
                 ))}
               </div>
             ) : (
-              <div className="py-8 text-center text-muted-foreground">
-                <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p className="text-sm">Nenhum atendente com atividade no período</p>
+              <div className="py-8 text-center">
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h4 className="font-medium text-foreground mb-1">Nenhuma atividade registrada</h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Não há dados de atendimento no período selecionado
+                </p>
+                <Button variant="outline" size="sm" onClick={() => setPeriod('month')}>
+                  Ver período maior
+                </Button>
               </div>
             )}
           </CardContent>

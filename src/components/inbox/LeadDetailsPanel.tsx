@@ -340,6 +340,7 @@ function LeadDetailsPanelComponent({
                                 size="icon"
                                 className="h-5 w-5"
                                 onClick={() => handleCopy(lead.phone, 'Telefone')}
+                                aria-label="Copiar telefone"
                               >
                                 <Copy className="w-2.5 h-2.5" />
                               </Button>
@@ -355,6 +356,7 @@ function LeadDetailsPanelComponent({
                                 size="icon"
                                 className="h-5 w-5 text-success"
                                 onClick={openWhatsApp}
+                                aria-label="Abrir no WhatsApp"
                               >
                                 <MessageSquare className="w-2.5 h-2.5" />
                               </Button>
@@ -376,6 +378,7 @@ function LeadDetailsPanelComponent({
                                 size="icon"
                                 className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
                                 onClick={() => handleCopy(lead.email!, 'Email')}
+                                aria-label="Copiar email"
                               >
                                 <Copy className="w-2.5 h-2.5" />
                               </Button>
@@ -399,6 +402,7 @@ function LeadDetailsPanelComponent({
                                 size="icon"
                                 className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
                                 onClick={() => handleCopy(lead.cpf!, 'CPF')}
+                                aria-label="Copiar CPF"
                               >
                                 <Copy className="w-2.5 h-2.5" />
                               </Button>
