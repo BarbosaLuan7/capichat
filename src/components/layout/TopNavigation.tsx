@@ -107,8 +107,8 @@ const TopNavigation = () => {
         className={cn(
           'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
           active
-            ? 'bg-violet-600 text-white shadow-sm'
-            : 'text-slate-600 hover:text-slate-900 hover:bg-purple-100/60',
+            ? 'bg-white text-violet-700 shadow-sm'
+            : 'text-white/80 hover:text-white hover:bg-white/10',
           className
         )}
         onClick={() => setMobileMenuOpen(false)}
@@ -159,18 +159,64 @@ const TopNavigation = () => {
     <div className="flex flex-col gap-6 p-4">
       {/* Main items */}
       <div className="space-y-1">
-        {mainNavItems.map((item) => (
-          <NavItem key={item.path} item={item} className="w-full justify-start" />
-        ))}
+        {mainNavItems.map((item) => {
+          const active = isActive(item.path);
+          const badge = item.badgeKey ? badges[item.badgeKey] : undefined;
+          
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full',
+                active
+                  ? 'bg-violet-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-purple-100/60'
+              )}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <item.icon className="w-4 h-4" />
+              <span>{item.label}</span>
+              {badge !== undefined && badge > 0 && (
+                <Badge className="ml-1 h-5 min-w-5 px-1.5 text-xs bg-orange-500 text-white border-0 hover:bg-orange-500">
+                  {badge}
+                </Badge>
+              )}
+            </Link>
+          );
+        })}
       </div>
 
       {/* CRM */}
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">CRM</p>
         <div className="space-y-1">
-          {crmItems.map((item) => (
-            <NavItem key={item.path} item={item} className="w-full justify-start" />
-          ))}
+          {crmItems.map((item) => {
+            const active = isActive(item.path);
+            const badge = item.badgeKey ? badges[item.badgeKey] : undefined;
+            
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full',
+                  active
+                    ? 'bg-violet-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-purple-100/60'
+                )}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <item.icon className="w-4 h-4" />
+                <span>{item.label}</span>
+                {badge !== undefined && badge > 0 && (
+                  <Badge className="ml-1 h-5 min-w-5 px-1.5 text-xs bg-orange-500 text-white border-0 hover:bg-orange-500">
+                    {badge}
+                  </Badge>
+                )}
+              </Link>
+            );
+          })}
         </div>
       </div>
 
@@ -178,9 +224,26 @@ const TopNavigation = () => {
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">Ferramentas</p>
         <div className="space-y-1">
-          {toolsItems.map((item) => (
-            <NavItem key={item.path} item={item} className="w-full justify-start" />
-          ))}
+          {toolsItems.map((item) => {
+            const active = isActive(item.path);
+            
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full',
+                  active
+                    ? 'bg-violet-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-purple-100/60'
+                )}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <item.icon className="w-4 h-4" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
         </div>
       </div>
 
@@ -188,22 +251,39 @@ const TopNavigation = () => {
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">Configurações</p>
         <div className="space-y-1">
-          {settingsItems.map((item) => (
-            <NavItem key={item.path} item={item} className="w-full justify-start" />
-          ))}
+          {settingsItems.map((item) => {
+            const active = isActive(item.path);
+            
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full',
+                  active
+                    ? 'bg-violet-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-purple-100/60'
+                )}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <item.icon className="w-4 h-4" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </div>
   );
 
   return (
-    <header className="h-14 bg-gradient-to-r from-white via-purple-50/30 to-pink-50/30 border-b border-purple-100/50 flex items-center px-4 sticky top-0 z-50" role="banner">
+    <header className="h-14 bg-gradient-to-r from-violet-700 via-purple-700 to-violet-800 border-b border-violet-900/50 flex items-center px-4 sticky top-0 z-50" role="banner">
       {/* Logo */}
       <Link to="/dashboard" className="flex items-center gap-2.5 mr-6 shrink-0">
-        <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-          <Scale className="w-4 h-4 text-primary-foreground" />
+        <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+          <Scale className="w-4 h-4 text-white" />
         </div>
-        <span className="text-base font-bold text-foreground hidden sm:block">
+        <span className="text-base font-bold text-white hidden sm:block">
           GaranteDireito
         </span>
       </Link>
@@ -223,8 +303,8 @@ const TopNavigation = () => {
                   className={cn(
                     'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
                     active
-                      ? 'bg-violet-600 text-white shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-purple-100/60'
+                      ? 'bg-white text-violet-700 shadow-sm'
+                      : 'text-white/80 hover:text-white hover:bg-white/10'
                   )}
                 >
                   <item.icon className="w-4 h-4" />
@@ -243,8 +323,8 @@ const TopNavigation = () => {
           <NavigationMenuItem>
             <NavigationMenuTrigger 
               className={cn(
-                'px-3 py-2 text-sm font-medium bg-purple-50/50 hover:bg-purple-100/60',
-                isGroupActive(crmItems) && 'bg-violet-100 text-violet-700'
+                'px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 bg-transparent data-[state=open]:bg-white/20',
+                isGroupActive(crmItems) && 'bg-white/20 text-white'
               )}
             >
               <Users className="w-4 h-4 mr-2" />
@@ -268,8 +348,8 @@ const TopNavigation = () => {
           <NavigationMenuItem>
             <NavigationMenuTrigger 
               className={cn(
-                'px-3 py-2 text-sm font-medium bg-purple-50/50 hover:bg-purple-100/60',
-                isGroupActive(toolsItems) && 'bg-violet-100 text-violet-700'
+                'px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 bg-transparent data-[state=open]:bg-white/20',
+                isGroupActive(toolsItems) && 'bg-white/20 text-white'
               )}
             >
               <Workflow className="w-4 h-4 mr-2" />
@@ -288,8 +368,8 @@ const TopNavigation = () => {
           <NavigationMenuItem>
             <NavigationMenuTrigger 
               className={cn(
-                'px-3 py-2 text-sm font-medium bg-purple-50/50 hover:bg-purple-100/60',
-                isGroupActive(settingsItems) && 'bg-violet-100 text-violet-700'
+                'px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 bg-transparent data-[state=open]:bg-white/20',
+                isGroupActive(settingsItems) && 'bg-white/20 text-white'
               )}
             >
               <Settings className="w-4 h-4 mr-2" />
@@ -318,7 +398,7 @@ const TopNavigation = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar..."
-                className="w-64 pl-9 pr-8 h-9"
+                className="w-64 pl-9 pr-8 h-9 bg-white"
                 autoFocus
                 onBlur={() => setSearchOpen(false)}
               />
@@ -335,7 +415,7 @@ const TopNavigation = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="text-muted-foreground hover:text-foreground"
+              className="text-white/70 hover:text-white hover:bg-white/10"
               onClick={() => setSearchOpen(true)}
             >
               <Search className="w-5 h-5" />
@@ -344,15 +424,17 @@ const TopNavigation = () => {
         </div>
 
         {/* Notifications */}
-        <NotificationCenter userId={user?.id} />
+        <div className="[&_button]:text-white/70 [&_button]:hover:text-white [&_button]:hover:bg-white/10">
+          <NotificationCenter userId={user?.id} />
+        </div>
 
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-              <Avatar className="h-8 w-8">
+            <Button variant="ghost" className="relative h-9 w-9 rounded-full hover:bg-white/10">
+              <Avatar className="h-8 w-8 ring-2 ring-white/20">
                 <AvatarImage src={user?.avatar} alt={user?.name} />
-                <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                <AvatarFallback className="bg-white/20 text-white text-sm">
                   {user?.name?.charAt(0)}
                 </AvatarFallback>
               </Avatar>
@@ -388,17 +470,17 @@ const TopNavigation = () => {
         {/* Mobile Menu Button */}
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="lg:hidden">
+            <Button variant="ghost" size="icon" className="lg:hidden text-white/80 hover:text-white hover:bg-white/10">
               <Menu className="w-5 h-5" />
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-72 p-0">
             {/* Mobile Header */}
-            <div className="h-14 flex items-center gap-2.5 px-4 border-b border-border">
-              <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-                <Scale className="w-4 h-4 text-primary-foreground" />
+            <div className="h-14 flex items-center gap-2.5 px-4 border-b border-border bg-gradient-to-r from-violet-700 via-purple-700 to-violet-800">
+              <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                <Scale className="w-4 h-4 text-white" />
               </div>
-              <span className="text-base font-bold text-foreground">
+              <span className="text-base font-bold text-white">
                 GaranteDireito
               </span>
             </div>
