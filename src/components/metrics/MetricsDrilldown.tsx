@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 type DrilldownType = 
   | 'funnel_stage' 
@@ -147,7 +148,7 @@ export function MetricsDrilldown({
       if (error) throw error;
       setLeads(data || []);
     } catch (error) {
-      console.error('Erro ao carregar leads:', error);
+      logger.error('Erro ao carregar leads:', error);
     } finally {
       setIsLoading(false);
     }

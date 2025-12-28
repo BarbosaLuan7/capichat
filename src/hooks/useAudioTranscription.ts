@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 interface TranscriptionResult {
   text: string;
@@ -31,7 +32,7 @@ export function useAudioTranscription() {
       });
 
       if (error) {
-        console.error('Transcription error:', error);
+        logger.error('Transcription error:', error);
         return null;
       }
 
@@ -42,7 +43,7 @@ export function useAudioTranscription() {
 
       return null;
     } catch (err) {
-      console.error('Failed to transcribe audio:', err);
+      logger.error('Failed to transcribe audio:', err);
       return null;
     } finally {
       setIsTranscribing(prev => ({ ...prev, [messageId]: false }));

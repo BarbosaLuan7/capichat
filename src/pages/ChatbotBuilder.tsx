@@ -14,6 +14,8 @@ import {
   List,
   Loader2,
   Trash2,
+  Plus,
+  ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -35,10 +38,25 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useChatbotFlows, useCreateChatbotFlow, useUpdateChatbotFlow, type FlowNode, type FlowConnection } from '@/hooks/useChatbotFlows';
+import { 
+  useChatbotFlows, 
+  useChatbotFlow,
+  useCreateChatbotFlow, 
+  useUpdateChatbotFlow, 
+  useDeleteChatbotFlow,
+  type FlowNode, 
+  type FlowConnection 
+} from '@/hooks/useChatbotFlows';
 
 
 const nodeTypes = [
@@ -59,7 +77,9 @@ const triggerOptions = [
 ];
 
 const ChatbotBuilder = () => {
+  const [currentFlowId, setCurrentFlowId] = useState<string | null>(null);
   const [flowName, setFlowName] = useState('Novo Fluxo');
+  const [flowDescription, setFlowDescription] = useState('');
   const [nodes, setNodes] = useState<FlowNode[]>([
     {
       id: '1',
@@ -72,6 +92,28 @@ const ChatbotBuilder = () => {
   const [selectedNode, setSelectedNode] = useState<FlowNode | null>(null);
   const [showNodeEditor, setShowNodeEditor] = useState(false);
   const [draggedNodeType, setDraggedNodeType] = useState<string | null>(null);
+
+  // Hooks para persistência
+  const { data: flows = [], isLoading: isLoadingFlows } = useChatbotFlows();
+  const { data: currentFlow, isLoading: isLoadingFlow } = useChatbotFlow(currentFlowId);
+  const createFlow = useCreateChatbotFlow();
+  const updateFlow = useUpdateChatbotFlow();
+  const deleteFlow = useDeleteChatbotFlow();
+
+  // Carregar fluxo selecionado
+  useEffect(() => {
+    if (currentFlow) {
+      setFlowName(currentFlow.name);
+      setFlowDescription(currentFlow.description || '');
+      setNodes(currentFlow.nodes.length > 0 ? currentFlow.nodes : [{
+        id: '1',
+        type: 'trigger',
+        data: { trigger: 'lead_created' },
+        position: { x: 100, y: 50 },
+      }]);
+      setConnections(currentFlow.connections);
+    }
+  }, [currentFlow]);
 
   const addNode = (type: string) => {
     const newNode: FlowNode = {
@@ -122,10 +164,68 @@ const ChatbotBuilder = () => {
     setShowNodeEditor(true);
   };
 
-  const saveFlow = () => {
-    // TODO: Salvar no banco de dados
-    toast.success('Fluxo salvo com sucesso!');
+  const handleNewFlow = () => {
+    setCurrentFlowId(null);
+    setFlowName('Novo Fluxo');
+    setFlowDescription('');
+    setNodes([{
+      id: '1',
+      type: 'trigger',
+      data: { trigger: 'lead_created' },
+      position: { x: 100, y: 50 },
+    }]);
+    setConnections([]);
+    setSelectedNode(null);
+    setShowNodeEditor(false);
   };
+
+  const handleSelectFlow = (flowId: string) => {
+    setCurrentFlowId(flowId);
+    setSelectedNode(null);
+    setShowNodeEditor(false);
+  };
+
+  const handleDeleteFlow = async (flowId: string) => {
+    if (confirm('Tem certeza que deseja excluir este fluxo?')) {
+      await deleteFlow.mutateAsync(flowId);
+      if (currentFlowId === flowId) {
+        handleNewFlow();
+      }
+    }
+  };
+
+  const saveFlow = async () => {
+    if (!flowName.trim()) {
+      toast.error('O nome do fluxo é obrigatório');
+      return;
+    }
+
+    try {
+      if (currentFlowId) {
+        // Atualizar fluxo existente
+        await updateFlow.mutateAsync({
+          id: currentFlowId,
+          name: flowName,
+          description: flowDescription || null,
+          nodes,
+          connections,
+        });
+      } else {
+        // Criar novo fluxo
+        const result = await createFlow.mutateAsync({
+          name: flowName,
+          description: flowDescription || undefined,
+          nodes,
+          connections,
+        });
+        setCurrentFlowId(result.id);
+      }
+    } catch {
+      // Erro já tratado pelo hook
+    }
+  };
+
+  const isSaving = createFlow.isPending || updateFlow.isPending;
 
   const getNodeIcon = (type: string) => {
     return nodeTypes.find(n => n.type === type)?.icon || Settings;
@@ -183,9 +283,13 @@ const ChatbotBuilder = () => {
         </ScrollArea>
 
         <div className="p-4 border-t border-border space-y-2">
-          <Button onClick={saveFlow} className="w-full gap-2">
-            <Save className="w-4 h-4" />
-            Salvar Fluxo
+          <Button onClick={saveFlow} className="w-full gap-2" disabled={isSaving}>
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            {currentFlowId ? 'Salvar Alterações' : 'Salvar Fluxo'}
           </Button>
         </div>
       </div>
@@ -195,14 +299,74 @@ const ChatbotBuilder = () => {
         {/* Canvas Header */}
         <div className="h-14 px-4 flex items-center justify-between border-b border-border bg-card">
           <div className="flex items-center gap-3">
+            {/* Dropdown de fluxos salvos */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <List className="w-4 h-4" />
+                  {isLoadingFlows ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>Fluxos ({flows.length})</>
+                  )}
+                  <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64">
+                <DropdownMenuItem onClick={handleNewFlow} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Novo Fluxo
+                </DropdownMenuItem>
+                {flows.length > 0 && <DropdownMenuSeparator />}
+                {flows.map((flow) => (
+                  <DropdownMenuItem 
+                    key={flow.id} 
+                    className="flex items-center justify-between"
+                    onClick={() => handleSelectFlow(flow.id)}
+                  >
+                    <span className={cn(
+                      "truncate",
+                      currentFlowId === flow.id && "font-semibold text-primary"
+                    )}>
+                      {flow.name}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {flow.is_active && (
+                        <Badge variant="outline" className="text-xs text-success border-success">
+                          Ativo
+                        </Badge>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteFlow(flow.id);
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Input
               value={flowName}
               onChange={(e) => setFlowName(e.target.value)}
               className="w-64 font-semibold"
+              placeholder="Nome do fluxo"
             />
             <Badge variant="outline" className="text-xs">
               {nodes.length} blocos
             </Badge>
+            {currentFlowId && (
+              <Badge variant="secondary" className="text-xs">
+                Editando
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" className="gap-2">

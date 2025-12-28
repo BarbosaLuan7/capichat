@@ -3,6 +3,7 @@ import { useUpdateLead } from '@/hooks/useLeads';
 import type { BenefitType } from '@/lib/documentChecklist';
 import { getDocumentsByBenefitType } from '@/lib/documentChecklist';
 import type { Json } from '@/integrations/supabase/types';
+import { logger } from '@/lib/logger';
 
 export interface ChecklistState {
   benefitType: BenefitType | null;
@@ -84,7 +85,7 @@ export function useDocumentChecklist({ leadId, customFields, onSuccess }: UseDoc
       });
       onSuccess?.();
     } catch (error) {
-      console.error('Erro ao salvar checklist:', error);
+      logger.error('Erro ao salvar checklist:', error);
     } finally {
       setIsSaving(false);
     }

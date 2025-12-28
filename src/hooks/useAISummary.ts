@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { aiCache, generateMessagesKey } from '@/lib/aiCache';
+import { logger } from '@/lib/logger';
 
 interface StructuredSummary {
   situation?: string;
@@ -80,7 +81,7 @@ export function useAISummary() {
       // Cache the result
       aiCache.set(cacheKey, data);
     } catch (err: any) {
-      console.error('Error fetching AI summary:', err);
+      logger.error('Error fetching AI summary:', err);
       setError(err.message || 'Erro ao gerar resumo');
       setSummaryResult(null);
     } finally {
