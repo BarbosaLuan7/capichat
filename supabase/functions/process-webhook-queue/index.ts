@@ -12,7 +12,7 @@ const corsHeaders = {
 
 function gerarIdLegivel(tipo: string, uuid: string): string {
   const prefixos: Record<string, string> = {
-    lead: 'lead_', mensagem: 'msg_', conversa: 'conv_', usuario: 'user_', tarefa: 'task_'
+    lead: 'lead_', mensagem: 'msg_', conversa: 'conv_', usuario: 'user_', tarefa: 'task_', instancia: 'inst_'
   };
   return (prefixos[tipo] || '') + uuid.replace(/-/g, '').substring(0, 8);
 }
@@ -145,7 +145,27 @@ async function buscarConversa(supabase: any, conversationId: string) {
     status: traduzirStatusConversa(conv.status),
     nao_lidas: conv.unread_count || 0,
     total_mensagens: count || 0,
-    lead_id: conv.lead_id
+    lead_id: conv.lead_id,
+    whatsapp_instance_id: conv.whatsapp_instance_id
+  };
+}
+
+async function buscarInstanciaWhatsApp(supabase: any, instanceId: string) {
+  if (!instanceId) return null;
+  
+  const { data: instance } = await supabase
+    .from('whatsapp_config')
+    .select('id, name, instance_name, phone_number')
+    .eq('id', instanceId)
+    .maybeSingle();
+  
+  if (!instance) return null;
+  
+  return {
+    id: gerarIdLegivel('instancia', instance.id),
+    nome: instance.name,
+    telefone: formatarTelefone(instance.phone_number),
+    identificador: instance.instance_name
   };
 }
 
@@ -174,10 +194,12 @@ async function buildPayload(supabase: any, evento: string, dados: any): Promise<
       const msg = eventData?.message || eventData;
       const lead = msg?.lead_id ? await buscarLeadCompleto(supabase, msg.lead_id) : null;
       const conversa = msg?.conversation_id ? await buscarConversa(supabase, msg.conversation_id) : null;
+      const instancia = conversa?.whatsapp_instance_id ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id) : null;
       
       return {
         evento: 'mensagem.recebida',
         timestamp: formatTimestamp(),
+        instancia_whatsapp: instancia,
         mensagem: {
           id: msg?.id ? gerarIdLegivel('mensagem', msg.id) : null,
           tipo: traduzirTipoMensagem(msg?.type || 'text'),
@@ -199,10 +221,12 @@ async function buildPayload(supabase: any, evento: string, dados: any): Promise<
       const lead = msg?.lead_id ? await buscarLeadCompleto(supabase, msg.lead_id) : null;
       const conversa = msg?.conversation_id ? await buscarConversa(supabase, msg.conversation_id) : null;
       const enviadaPor = msg?.sender_id ? await buscarUsuario(supabase, msg.sender_id) : null;
+      const instancia = conversa?.whatsapp_instance_id ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id) : null;
       
       return {
         evento: 'mensagem.enviada',
         timestamp: formatTimestamp(),
+        instancia_whatsapp: instancia,
         mensagem: {
           id: msg?.id ? gerarIdLegivel('mensagem', msg.id) : null,
           tipo: traduzirTipoMensagem(msg?.type || 'text'),
@@ -321,10 +345,12 @@ async function buildPayload(supabase: any, evento: string, dados: any): Promise<
       const convData = eventData?.conversation || eventData;
       const conversa = convData?.id ? await buscarConversa(supabase, convData.id) : null;
       const lead = (convData?.lead_id || conversa?.lead_id) ? await buscarLeadCompleto(supabase, convData?.lead_id || conversa?.lead_id) : null;
+      const instancia = conversa?.whatsapp_instance_id ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id) : null;
       
       return {
         evento: 'conversa.criada',
         timestamp: formatTimestamp(),
+        instancia_whatsapp: instancia,
         conversa: conversa ? { id: conversa.id, status: conversa.status } : null,
         lead: lead ? { id: lead.id, nome: lead.nome, whatsapp: lead.whatsapp, temperatura: lead.temperatura, etapa_funil: lead.etapa_funil, etiquetas: lead.etiquetas } : null,
         responsavel: lead?.responsavel || null
@@ -335,6 +361,7 @@ async function buildPayload(supabase: any, evento: string, dados: any): Promise<
       const convData = eventData?.conversation || eventData;
       const conversa = convData?.id ? await buscarConversa(supabase, convData.id) : null;
       const lead = (convData?.lead_id || conversa?.lead_id) ? await buscarLeadCompleto(supabase, convData?.lead_id || conversa?.lead_id) : null;
+      const instancia = conversa?.whatsapp_instance_id ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id) : null;
       
       let duracaoMinutos = 0;
       if (conversa?.id_original) {
@@ -345,6 +372,7 @@ async function buildPayload(supabase: any, evento: string, dados: any): Promise<
       return {
         evento: 'conversa.resolvida',
         timestamp: formatTimestamp(),
+        instancia_whatsapp: instancia,
         conversa: conversa ? { id: conversa.id, total_mensagens: conversa.total_mensagens, duracao_minutos: duracaoMinutos } : null,
         lead: lead ? { id: lead.id, nome: lead.nome, whatsapp: lead.whatsapp, etapa_funil: lead.etapa_funil, etiquetas: lead.etiquetas } : null,
         resolvida_por: lead?.responsavel || null
