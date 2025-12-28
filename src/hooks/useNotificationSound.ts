@@ -1,5 +1,6 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 interface UseNotificationSoundOptions {
   enabled?: boolean;
@@ -45,7 +46,7 @@ export function useNotificationSound(options: UseNotificationSoundOptions = {}) 
       
       audioBufferRef.current = buffer;
     } catch (error) {
-      console.warn('[NotificationSound] Failed to initialize audio:', error);
+      logger.warn('[NotificationSound] Failed to initialize audio:', error);
     } finally {
       isLoadingRef.current = false;
     }

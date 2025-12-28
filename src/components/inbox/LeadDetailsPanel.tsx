@@ -310,39 +310,57 @@ function LeadDetailsPanelComponent({
                       <Phone className="w-3.5 h-3.5 text-muted-foreground" />
                       <span className="text-sm flex-1">{formatPhoneNumber(lead.phone)}</span>
                       <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5"
-                          onClick={() => handleCopy(lead.phone, 'Telefone')}
-                          title="Copiar telefone"
-                        >
-                          <Copy className="w-2.5 h-2.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5 text-success"
-                          onClick={openWhatsApp}
-                          title="Abrir no WhatsApp"
-                        >
-                          <MessageSquare className="w-2.5 h-2.5" />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5"
+                                onClick={() => handleCopy(lead.phone, 'Telefone')}
+                              >
+                                <Copy className="w-2.5 h-2.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copiar telefone</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 text-success"
+                                onClick={openWhatsApp}
+                              >
+                                <MessageSquare className="w-2.5 h-2.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Abrir no WhatsApp</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </div>
                     {lead.email && (
                       <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 group">
                         <Mail className="w-3.5 h-3.5 text-muted-foreground" />
                         <span className="text-sm truncate flex-1" title={lead.email}>{lead.email}</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => handleCopy(lead.email!, 'Email')}
-                          title="Copiar email"
-                        >
-                          <Copy className="w-2.5 h-2.5" />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => handleCopy(lead.email!, 'Email')}
+                              >
+                                <Copy className="w-2.5 h-2.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copiar email</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     )}
                     {lead.cpf && (
@@ -351,15 +369,21 @@ function LeadDetailsPanelComponent({
                           CPF
                         </span>
                         <span className="text-sm flex-1">{maskCPF(lead.cpf)}</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => handleCopy(lead.cpf!, 'CPF')}
-                          title="Copiar CPF completo"
-                        >
-                          <Copy className="w-2.5 h-2.5" />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => handleCopy(lead.cpf!, 'CPF')}
+                              >
+                                <Copy className="w-2.5 h-2.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copiar CPF completo</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     )}
                   </div>

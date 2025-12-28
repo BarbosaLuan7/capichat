@@ -461,8 +461,31 @@ const Funnel = () => {
     }
   };
 
-  const handleOpenConversation = (leadId: string) => {
-    navigate(`/inbox?leadId=${leadId}`);
+  const handleOpenConversation = async (leadId: string) => {
+    try {
+      // Buscar conversa existente do lead
+      const { data: existingConv } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('lead_id', leadId)
+        .maybeSingle();
+
+      if (existingConv) {
+        navigate(`/inbox?conversation=${existingConv.id}`);
+      } else {
+        // Se não houver conversa, criar uma nova
+        const { data: newConv, error } = await supabase
+          .from('conversations')
+          .insert({ lead_id: leadId, status: 'open' })
+          .select('id')
+          .single();
+
+        if (error) throw error;
+        navigate(`/inbox?conversation=${newConv.id}`);
+      }
+    } catch (error) {
+      toast.error('Erro ao abrir conversa');
+    }
   };
 
   const handleNewLead = () => {

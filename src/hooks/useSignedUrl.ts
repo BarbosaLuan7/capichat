@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 interface SignedUrlCache {
   url: string;
@@ -77,7 +78,7 @@ export function useSignedUrl(mediaUrl: string | null | undefined) {
           .createSignedUrl(path, SIGNED_URL_EXPIRY);
 
         if (signError) {
-          console.error('[useSignedUrl] Erro ao gerar signed URL:', signError);
+          logger.error('[useSignedUrl] Erro ao gerar signed URL:', signError);
           // Fallback: tentar usar URL pública
           const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path);
           setSignedUrl(publicUrl);
@@ -91,7 +92,7 @@ export function useSignedUrl(mediaUrl: string | null | undefined) {
           setSignedUrl(data.signedUrl);
         }
       } catch (err) {
-        console.error('[useSignedUrl] Erro:', err);
+        logger.error('[useSignedUrl] Erro:', err);
         setError(err instanceof Error ? err.message : 'Erro desconhecido');
         // Fallback: usar a URL original
         setSignedUrl(mediaUrl);
@@ -147,7 +148,7 @@ export async function getSignedUrl(mediaUrl: string): Promise<string> {
       .createSignedUrl(path, SIGNED_URL_EXPIRY);
 
     if (error || !data?.signedUrl) {
-      console.error('[getSignedUrl] Erro:', error);
+      logger.error('[getSignedUrl] Erro:', error);
       // Fallback para URL pública
       const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path);
       return publicUrl;
@@ -161,7 +162,7 @@ export async function getSignedUrl(mediaUrl: string): Promise<string> {
 
     return data.signedUrl;
   } catch (err) {
-    console.error('[getSignedUrl] Erro:', err);
+    logger.error('[getSignedUrl] Erro:', err);
     return mediaUrl;
   }
 }

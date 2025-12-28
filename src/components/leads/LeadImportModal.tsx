@@ -24,6 +24,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useFunnelStages } from '@/hooks/useFunnelStages';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 interface LeadImportModalProps {
   open: boolean;
@@ -274,7 +275,7 @@ export function LeadImportModal({ open, onOpenChange }: LeadImportModalProps) {
         .insert(leadsToInsert);
 
       if (error) {
-        console.error('Batch insert error:', error);
+        logger.error('Batch insert error:', error);
         errors += batch.length;
       } else {
         imported += batch.length;
