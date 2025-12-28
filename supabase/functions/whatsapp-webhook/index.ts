@@ -64,6 +64,14 @@ interface EvolutionWebhookPayload {
   data: EvolutionMessage;
 }
 
+// Detecta se é um chat de grupo (IDs terminam com @g.us ou começam com 120363)
+function isGroupChat(chatId: string): boolean {
+  if (!chatId) return false;
+  return chatId.includes('@g.us') || 
+         chatId.includes('g.us') ||
+         chatId.startsWith('120363');
+}
+
 // Detecta se é um LID do Facebook (formato: número@lid)
 function isLID(phone: string): boolean {
   return phone.includes('@lid') || /^\d{15,}$/.test(phone.replace(/\D/g, ''));
@@ -743,6 +751,18 @@ serve(async (req) => {
       if (event === 'message' || event === 'message.any') {
         const payload = body.payload as WAHAMessage & { _data?: any };
         
+        // Extrair chatId/from para verificar se é grupo
+        const rawFrom = payload.from || payload.chatId || '';
+        
+        // ========== FILTRO DE GRUPOS - Ignorar mensagens de grupos ==========
+        if (isGroupChat(rawFrom)) {
+          console.log('[whatsapp-webhook] Ignorando mensagem de grupo:', rawFrom);
+          return new Response(
+            JSON.stringify({ success: true, ignored: true, reason: 'group_message' }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
         // Ignorar mensagens enviadas por nós
         if (payload.fromMe) {
           console.log('[whatsapp-webhook] Ignorando mensagem enviada por nós');
@@ -755,10 +775,9 @@ serve(async (req) => {
         messageData = payload;
         externalMessageId = payload.id || '';
         
-        // ========== CORREÇÃO 3: Detectar LID e extrair número real ==========
-        const rawFrom = payload.from || payload.chatId || '';
         console.log('[whatsapp-webhook] Raw from:', rawFrom);
         
+        // ========== Detectar LID e extrair número real ==========
         if (isLID(rawFrom)) {
           console.log('[whatsapp-webhook] Detectado LID do Facebook, buscando número real...');
           isFromFacebookLid = true;
@@ -862,6 +881,16 @@ serve(async (req) => {
       
       if (event === 'messages.upsert') {
         const payload = body.data as EvolutionMessage;
+        const remoteJid = payload.key?.remoteJid || '';
+        
+        // ========== FILTRO DE GRUPOS - Ignorar mensagens de grupos ==========
+        if (isGroupChat(remoteJid)) {
+          console.log('[whatsapp-webhook] Ignorando mensagem de grupo Evolution:', remoteJid);
+          return new Response(
+            JSON.stringify({ success: true, ignored: true, reason: 'group_message' }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
         
         // Ignorar mensagens enviadas por nós
         if (payload.key?.fromMe) {
@@ -874,7 +903,7 @@ serve(async (req) => {
         
         messageData = payload;
         externalMessageId = payload.key?.id || '';
-        senderPhone = normalizePhone(payload.key?.remoteJid || '');
+        senderPhone = normalizePhone(remoteJid);
         senderName = payload.pushName || '';
         isFromMe = payload.key?.fromMe || false;
       } else {
