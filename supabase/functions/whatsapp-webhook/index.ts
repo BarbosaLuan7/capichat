@@ -194,11 +194,11 @@ async function getProfilePicture(
 }
 
 // Busca configuração do WAHA no banco
-async function getWAHAConfig(supabase: any): Promise<{ baseUrl: string; apiKey: string; sessionName: string } | null> {
+async function getWAHAConfig(supabase: any): Promise<{ baseUrl: string; apiKey: string; sessionName: string; instanceId: string } | null> {
   try {
     const { data } = await supabase
       .from('whatsapp_config')
-      .select('base_url, api_key, instance_name')
+      .select('id, base_url, api_key, instance_name')
       .eq('is_active', true)
       .eq('provider', 'waha')
       .limit(1)
@@ -209,6 +209,7 @@ async function getWAHAConfig(supabase: any): Promise<{ baseUrl: string; apiKey: 
         baseUrl: data.base_url.replace(/\/$/, ''), // Remove trailing slash
         apiKey: data.api_key,
         sessionName: data.instance_name || 'default',
+        instanceId: data.id,
       };
     }
     
@@ -1111,6 +1112,9 @@ serve(async (req) => {
         })
         .eq('id', conversation.id);
     } else {
+      // Buscar ID da instância WhatsApp ativa
+      const wahaConfig = await getWAHAConfig(supabase);
+      
       // Criar nova conversa - o trigger cuida do unread_count e last_message_at quando a mensagem for inserida
       const { data: newConversation, error: createConvError } = await supabase
         .from('conversations')
@@ -1118,6 +1122,7 @@ serve(async (req) => {
           lead_id: lead.id,
           status: 'open',
           assigned_to: lead.assigned_to,
+          whatsapp_instance_id: wahaConfig?.instanceId || null,
         })
         .select('*')
         .single();
@@ -1131,7 +1136,7 @@ serve(async (req) => {
       }
 
       conversation = newConversation;
-      console.log('[whatsapp-webhook] Conversa criada:', conversation.id);
+      console.log('[whatsapp-webhook] Conversa criada:', conversation.id, 'whatsapp_instance_id:', wahaConfig?.instanceId);
     }
 
     // Se tiver mídia, fazer upload para o storage permanente

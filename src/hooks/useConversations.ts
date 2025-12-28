@@ -27,9 +27,15 @@ export function useConversations() {
             temperature,
             avatar_url,
             whatsapp_name,
+            benefit_type,
             lead_labels (
               labels (id, name, color, category)
             )
+          ),
+          whatsapp_config (
+            id,
+            name,
+            phone_number
           )
         `)
         .order('last_message_at', { ascending: false });

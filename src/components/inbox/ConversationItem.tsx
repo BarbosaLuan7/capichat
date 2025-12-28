@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Star } from 'lucide-react';
+import { Star, Phone } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -9,6 +9,12 @@ import { format, isSameDay, isYesterday } from 'date-fns';
 import type { Database } from '@/integrations/supabase/types';
 
 type ConversationStatus = Database['public']['Enums']['conversation_status'];
+
+interface WhatsAppInstance {
+  id: string;
+  name: string;
+  phone_number?: string | null;
+}
 
 interface ConversationLead {
   id: string;
@@ -37,6 +43,8 @@ interface ConversationData {
   unread_count: number;
   is_favorite?: boolean | null;
   leads?: ConversationLead;
+  whatsapp_instance_id?: string | null;
+  whatsapp_config?: WhatsAppInstance | null;
 }
 
 interface ConversationItemProps {
@@ -71,10 +79,16 @@ const formatConversationDate = (date: Date): string => {
 function ConversationItemComponent({ conversation, isSelected, onClick }: ConversationItemProps) {
   const convLead = conversation.leads;
   const isFavorite = conversation.is_favorite;
+  const whatsappInstance = conversation.whatsapp_config;
   
   // Determinar melhor nome para exibição
   const isPhoneAsName = convLead?.name?.startsWith('Lead ') && /^Lead \d+$/.test(convLead?.name);
   const displayName = convLead?.whatsapp_name || (!isPhoneAsName ? convLead?.name : null) || formatPhoneNumber(convLead?.phone || '');
+  
+  // Nome curto da instância WhatsApp (últimos 4 dígitos do telefone ou nome)
+  const instanceLabel = whatsappInstance?.phone_number 
+    ? whatsappInstance.phone_number.slice(-4)
+    : whatsappInstance?.name?.slice(0, 8);
 
   return (
     <div
@@ -111,6 +125,22 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
               </span>
             </div>
             <div className="flex items-center gap-1 shrink-0 ml-2">
+              {/* WhatsApp Instance Badge */}
+              {instanceLabel && (
+                <TooltipProvider delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex items-center gap-0.5 text-2xs px-1 py-0.5 rounded bg-success/10 text-success border border-success/20">
+                        <Phone className="w-2.5 h-2.5" />
+                        {instanceLabel}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {whatsappInstance?.name || 'Instância WhatsApp'}: {whatsappInstance?.phone_number || 'N/A'}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               <span className="text-xs text-muted-foreground">
                 {formatConversationDate(new Date(conversation.last_message_at))}
               </span>
@@ -231,6 +261,7 @@ export const ConversationItem = memo(ConversationItemComponent, (prevProps, next
     prevProps.conversation.last_message_at === nextProps.conversation.last_message_at &&
     prevProps.conversation.last_message_content === nextProps.conversation.last_message_content &&
     prevProps.conversation.is_favorite === nextProps.conversation.is_favorite &&
+    prevProps.conversation.whatsapp_instance_id === nextProps.conversation.whatsapp_instance_id &&
     prevProps.conversation.leads?.temperature === nextProps.conversation.leads?.temperature &&
     prevProps.conversation.leads?.benefit_type === nextProps.conversation.leads?.benefit_type &&
     prevProps.conversation.leads?.lead_labels?.length === nextProps.conversation.leads?.lead_labels?.length
