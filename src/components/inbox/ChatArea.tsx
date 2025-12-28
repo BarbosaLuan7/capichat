@@ -8,6 +8,7 @@ import {
   Loader2,
   PanelRightClose,
   PanelRightOpen,
+  ArrowLeft,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,7 @@ import { useAISuggestions } from '@/hooks/useAISuggestions';
 import { useAIReminders } from '@/hooks/useAIReminders';
 import { useInternalNotes } from '@/hooks/useInternalNotes';
 import { useDraftMessages } from '@/hooks/useDraftMessages';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 import type { Database } from '@/integrations/supabase/types';
 
@@ -78,6 +80,7 @@ interface ChatAreaProps {
   showLeadPanel: boolean;
   onToggleLeadPanel: () => void;
   agentName?: string;
+  onBack?: () => void;
 }
 
 export function ChatArea({
@@ -93,7 +96,9 @@ export function ChatArea({
   showLeadPanel,
   onToggleLeadPanel,
   agentName,
+  onBack,
 }: ChatAreaProps) {
+  const isMobile = useIsMobile();
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [pendingFile, setPendingFile] = useState<{ file: File; type: 'image' | 'video' | 'audio' | 'document' } | null>(null);
   const [showSlashCommand, setShowSlashCommand] = useState(false);
@@ -408,6 +413,19 @@ export function ChatArea({
     <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
       {/* Chat Header */}
       <div className="h-16 px-4 flex items-center gap-3 border-b border-border bg-card">
+        {/* Mobile back button */}
+        {isMobile && onBack && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onBack}
+            className="shrink-0"
+            aria-label="Voltar para lista de conversas"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+        )}
+        
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <Avatar className="w-10 h-10 shrink-0">
             <AvatarImage src={lead.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.name}`} />

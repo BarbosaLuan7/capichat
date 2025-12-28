@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 interface DuplicateLead {
   id: string;
@@ -76,7 +77,7 @@ export function DuplicateLeadWarning({
       setShowMergeDialog(false);
       onMerge?.();
     } catch (error) {
-      console.error('Erro ao mesclar leads:', error);
+      logger.error('Erro ao mesclar leads:', error);
       toast.error('Erro ao mesclar leads');
     } finally {
       setIsMerging(false);
@@ -230,7 +231,7 @@ export function useDuplicateLeads(phone: string | undefined, currentLeadId?: str
 
       setDuplicates(data || []);
     } catch (error) {
-      console.error('Erro ao verificar duplicatas:', error);
+      logger.error('Erro ao verificar duplicatas:', error);
     } finally {
       setIsChecking(false);
     }

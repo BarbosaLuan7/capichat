@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { aiCache, generateMessagesKey } from '@/lib/aiCache';
+import { logger } from '@/lib/logger';
 
 interface AISuggestion {
   text: string;
@@ -76,7 +77,7 @@ export function useAISuggestions() {
       // Cache the result
       aiCache.set(cacheKey, result);
     } catch (err: any) {
-      console.error('Error fetching AI suggestions:', err);
+      logger.error('Error fetching AI suggestions:', err);
       setError(err.message || 'Erro ao buscar sugestões');
       setSuggestions([]);
     } finally {

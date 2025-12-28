@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 interface UploadedDocument {
   id: string;
@@ -92,7 +93,7 @@ export function DocumentUpload({
       toast.success('Documento enviado com sucesso!');
       onUploadComplete?.(newDoc);
     } catch (error) {
-      console.error('Erro ao fazer upload:', error);
+      logger.error('Erro ao fazer upload:', error);
       toast.error('Erro ao enviar documento');
     } finally {
       setIsUploading(false);

@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/logger';
 import {
   Search,
   Plus,
@@ -233,7 +234,7 @@ const Leads = () => {
         navigate(`/inbox?conversation=${newConv.id}`);
       }
     } catch (error) {
-      console.error('Error opening conversation:', error);
+      logger.error('Error opening conversation:', error);
       toast.error('Erro ao abrir conversa');
     }
   }, [navigate, user?.id]);

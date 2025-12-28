@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import { logger } from '@/lib/logger';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 type AppRole = Database['public']['Enums']['app_role'];
@@ -46,7 +47,7 @@ export function useAuth() {
       if (roleError) throw roleError;
       setRole(roleData?.role || 'agent');
     } catch (err) {
-      console.error('Error fetching user data:', err);
+      logger.error('Error fetching user data:', err);
       setError('Erro ao carregar dados do usuário');
     }
   }, []);

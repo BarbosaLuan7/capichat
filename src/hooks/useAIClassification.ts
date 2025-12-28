@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { aiCache, generateMessagesKey } from '@/lib/aiCache';
+import { logger } from '@/lib/logger';
 
 interface AIClassification {
   suggestedBenefit?: string;
@@ -71,7 +72,7 @@ export function useAIClassification() {
       // Cache the result
       aiCache.set(cacheKey, data);
     } catch (err: any) {
-      console.error('Error fetching AI classification:', err);
+      logger.error('Error fetching AI classification:', err);
       setError(err.message || 'Erro ao classificar lead');
       setClassification(null);
     } finally {
