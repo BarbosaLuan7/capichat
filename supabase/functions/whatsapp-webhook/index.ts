@@ -739,6 +739,75 @@ serve(async (req) => {
         );
       }
       
+      // ========== WAHA: Evento de Presença (typing indicator) ==========
+      if (event === 'presence.update') {
+        const payload = body.payload || {};
+        const chatId = payload.id || payload.chatId || '';
+        const presences = payload.presences || [];
+        
+        console.log('[whatsapp-webhook] Presence update recebido:', { chatId, presences });
+        
+        // Extrair o primeiro participante (geralmente só há um)
+        const firstPresence = presences[0] || {};
+        const participant = firstPresence.participant || '';
+        const lastKnownPresence = firstPresence.lastKnownPresence || 'paused';
+        
+        // Normalizar o telefone do participante
+        const phone = normalizePhone(participant.split('@')[0] || chatId.split('@')[0] || '');
+        
+        if (phone) {
+          // Buscar lead pelo telefone para encontrar a conversa
+          const { data: lead, error: leadError } = await supabase
+            .from('leads')
+            .select('id')
+            .eq('phone', phone)
+            .single();
+          
+          if (lead && !leadError) {
+            // Buscar conversa do lead
+            const { data: conversation, error: convError } = await supabase
+              .from('conversations')
+              .select('id')
+              .eq('lead_id', lead.id)
+              .order('last_message_at', { ascending: false })
+              .limit(1)
+              .single();
+            
+            if (conversation && !convError) {
+              console.log('[whatsapp-webhook] Broadcasting typing status:', {
+                conversationId: conversation.id,
+                phone,
+                status: lastKnownPresence,
+              });
+              
+              // Broadcast via Supabase Realtime
+              const channel = supabase.channel('typing-status');
+              await channel.send({
+                type: 'broadcast',
+                event: 'typing',
+                payload: {
+                  conversationId: conversation.id,
+                  phone,
+                  status: lastKnownPresence,
+                },
+              });
+              
+              // Remover canal após broadcast
+              supabase.removeChannel(channel);
+            } else {
+              console.log('[whatsapp-webhook] Conversa não encontrada para lead:', lead.id);
+            }
+          } else {
+            console.log('[whatsapp-webhook] Lead não encontrado para phone:', phone);
+          }
+        }
+        
+        return new Response(
+          JSON.stringify({ success: true, event: 'presence.update', chatId, status: lastKnownPresence }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       // Eventos de mensagem do WAHA
       if (event === 'message' || event === 'message.any') {
         const payload = body.payload as WAHAMessage & { _data?: any };
