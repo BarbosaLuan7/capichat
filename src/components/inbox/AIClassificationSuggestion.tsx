@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, ThermometerSun, Tag, Check, X, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,7 +32,7 @@ const confidenceLabels = {
   high: { label: 'Alta', color: 'text-success' },
 };
 
-export function AIClassificationSuggestion({
+function AIClassificationSuggestionComponent({
   messages,
   lead,
   onApplyClassification,
@@ -319,3 +319,8 @@ export function AIClassificationSuggestion({
     </motion.div>
   );
 }
+
+export const AIClassificationSuggestion = memo(AIClassificationSuggestionComponent, (prev, next) =>
+  prev.lead.id === next.lead.id &&
+  prev.messages?.length === next.messages?.length
+);
