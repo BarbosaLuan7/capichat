@@ -65,14 +65,15 @@ export function DocumentUpload({
 
     setIsUploading(true);
     try {
-      // Gerar nome único para o arquivo
+      // Gerar ID único usando crypto.randomUUID() para evitar colisões
+      const uniqueId = crypto.randomUUID();
       const fileExt = file.name.split('.').pop();
-      const fileName = `${leadId}/${documentId}_${Date.now()}.${fileExt}`;
+      const fileName = `${leadId}/${documentId}_${uniqueId}.${fileExt}`;
 
-      // Upload para o storage
+      // Upload para o storage com upsert: false para evitar sobrescrita
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('message-attachments')
-        .upload(fileName, file);
+        .upload(fileName, file, { upsert: false });
 
       if (uploadError) throw uploadError;
 
@@ -82,7 +83,7 @@ export function DocumentUpload({
         .getPublicUrl(fileName);
 
       const newDoc: UploadedDocument = {
-        id: `${documentId}_${Date.now()}`,
+        id: `${documentId}_${uniqueId}`,
         name: file.name,
         url: urlData.publicUrl,
         uploaded_by: user.id,
