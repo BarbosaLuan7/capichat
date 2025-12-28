@@ -359,7 +359,9 @@ export const NewConversationModal = ({
           
           {/* Name Field */}
           <div className="space-y-2">
-            <Label htmlFor="name">Nome do contato</Label>
+            <Label htmlFor="name">
+              Nome do contato <span className="text-muted-foreground font-normal">(opcional)</span>
+            </Label>
             <Input
               id="name"
               value={name}
@@ -381,7 +383,9 @@ export const NewConversationModal = ({
           
           {/* Benefit Type */}
           <div className="space-y-2">
-            <Label htmlFor="benefitType">Tipo de Benefício</Label>
+            <Label htmlFor="benefitType">
+              Tipo de Benefício <span className="text-muted-foreground font-normal">(opcional)</span>
+            </Label>
             <Select value={benefitType} onValueChange={setBenefitType}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione..." />
@@ -416,7 +420,9 @@ export const NewConversationModal = ({
           {/* Initial Message */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="message">Mensagem inicial</Label>
+              <Label htmlFor="message">
+                Mensagem inicial <span className="text-muted-foreground font-normal">(opcional)</span>
+              </Label>
               <Button
                 type="button"
                 variant="ghost"

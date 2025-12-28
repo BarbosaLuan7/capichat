@@ -38,6 +38,7 @@ import { DocumentChecklist } from './DocumentChecklist';
 import { formatPhoneNumber, formatCPF, toWhatsAppFormat, maskCPF } from '@/lib/masks';
 import { useLeadActivities, formatActivityMessage } from '@/hooks/useLeadActivities';
 import { useInternalNotes } from '@/hooks/useInternalNotes';
+import { getDocumentsByBenefitType, type BenefitType } from '@/lib/documentChecklist';
 import { Separator } from '@/components/ui/separator';
 import {
   Select,
@@ -265,6 +266,27 @@ function LeadDetailsPanelComponent({
             <TabsTrigger value="docs" className="text-xs gap-1 data-[state=active]:bg-muted relative">
               <ClipboardList className="w-3 h-3" />
               Docs
+              {(() => {
+                const customFields = (lead as any).custom_fields;
+                const checklistState = customFields?.documentChecklist;
+                if (!checklistState?.benefitType) return null;
+                
+                const benefit = getDocumentsByBenefitType(checklistState.benefitType as BenefitType);
+                if (!benefit) return null;
+                
+                const total = benefit.documents.length;
+                const checked = checklistState.checkedDocuments?.length || 0;
+                const pending = total - checked;
+                
+                if (pending > 0) {
+                  return (
+                    <Badge variant="destructive" className="ml-1 h-4 px-1 text-2xs">
+                      {pending}
+                    </Badge>
+                  );
+                }
+                return null;
+              })()}
             </TabsTrigger>
             <TabsTrigger value="ia" className="text-xs gap-1 data-[state=active]:bg-muted">
               <Brain className="w-3 h-3" />
