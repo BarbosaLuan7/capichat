@@ -46,7 +46,7 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(func
           </div>
           
           <div className="flex-1 flex items-center justify-center">
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1" aria-hidden="true" role="presentation">
               {barHeights.map((height, i) => (
                 <div
                   key={i}

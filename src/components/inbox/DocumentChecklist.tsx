@@ -154,28 +154,28 @@ export function DocumentChecklist({ leadId, customFields, labels = [], onUpdate 
                 <div className="space-y-1">
                 {docs.map((doc) => {
                     const isChecked = isDocumentChecked(doc.id);
+                    const checkboxId = `doc-${doc.id}`;
                     return (
-                      <div
+                      <label
                         key={doc.id}
+                        htmlFor={checkboxId}
                         className={cn(
-                          'flex items-start gap-2 p-2 rounded-md transition-colors',
+                          'flex items-start gap-2 p-2 rounded-md transition-colors cursor-pointer',
                           isChecked 
                             ? 'bg-success/10 border border-success/20' 
                             : 'bg-muted/50 hover:bg-muted border border-transparent'
                         )}
                       >
                         <Checkbox
+                          id={checkboxId}
                           checked={isChecked}
                           onCheckedChange={() => toggleDocument(doc.id)}
                           className={cn(
-                            'mt-0.5 cursor-pointer',
+                            'mt-0.5',
                             isChecked && 'border-success data-[state=checked]:bg-success'
                           )}
                         />
-                        <div 
-                          className="flex-1 min-w-0 cursor-pointer"
-                          onClick={() => toggleDocument(doc.id)}
-                        >
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className={cn(
                               'text-sm',
@@ -196,9 +196,9 @@ export function DocumentChecklist({ leadId, customFields, labels = [], onUpdate 
                           )}
                         </div>
                         {isChecked && (
-                          <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
+                          <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" aria-hidden="true" />
                         )}
-                      </div>
+                      </label>
                     );
                   })}
                 </div>
