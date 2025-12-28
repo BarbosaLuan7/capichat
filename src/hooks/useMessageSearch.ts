@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 interface MessageSearchResult {
   messageId: string;
@@ -38,7 +39,7 @@ export function useMessageSearch(searchTerm: string, enabled = true) {
         .limit(10);
 
       if (error) {
-        console.error('Error searching messages:', error);
+        logger.error('Error searching messages:', error);
         throw error;
       }
 

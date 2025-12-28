@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 interface UploadProgress {
   progress: number;
@@ -56,7 +57,7 @@ export function useFileUpload() {
       clearInterval(progressInterval);
 
       if (error) {
-        console.error('Upload error:', error);
+        logger.error('Upload error:', error);
         toast.error('Erro ao enviar arquivo');
         setUploadProgress({ progress: 0, uploading: false });
         return null;
@@ -69,7 +70,7 @@ export function useFileUpload() {
       const storageRef = `storage://message-attachments/${data.path}`;
       return storageRef;
     } catch (error) {
-      console.error('Upload error:', error);
+      logger.error('Upload error:', error);
       
       if (error instanceof Error && error.message === 'UPLOAD_TIMEOUT') {
         toast.error('Upload demorou demais. Verifique sua conexão e tente novamente.');

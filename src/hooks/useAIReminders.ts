@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 interface AIReminder {
   hasReminder: boolean;
@@ -28,7 +29,7 @@ export function useAIReminders() {
       });
 
       if (functionError) {
-        console.error('Error detecting reminder:', functionError);
+        logger.error('Error detecting reminder:', functionError);
         setReminder(null);
         return null;
       }
@@ -43,7 +44,7 @@ export function useAIReminders() {
       setReminder(null);
       return null;
     } catch (err) {
-      console.error('Error detecting reminder:', err);
+      logger.error('Error detecting reminder:', err);
       setReminder(null);
       return null;
     } finally {

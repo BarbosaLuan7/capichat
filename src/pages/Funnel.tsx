@@ -427,7 +427,7 @@ const Funnel = () => {
         toast.success(`Lead movido para "${targetStage?.name}"`);
       } catch (error) {
         toast.error('Erro ao mover lead');
-        console.error('Error updating lead stage:', error);
+        // Error already logged by the hook
       } finally {
         setIsUpdating(false);
       }
