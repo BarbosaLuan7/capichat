@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,41 @@ const intentColors: Record<string, string> = {
   action: 'bg-success/10 text-success hover:bg-success/20',
   closing: 'bg-muted text-muted-foreground hover:bg-muted/80',
 };
+
+// ForwardRef wrapper for motion.button to work with TooltipTrigger
+const SuggestionButton = forwardRef<
+  HTMLButtonElement,
+  {
+    suggestion: { text: string; intent: string };
+    index: number;
+    onClick: () => void;
+  }
+>(({ suggestion, index, onClick, ...props }, ref) => {
+  const isTruncated = suggestion.text.length > 50;
+  const displayText = isTruncated 
+    ? suggestion.text.substring(0, 50) + '...' 
+    : suggestion.text;
+
+  return (
+    <motion.button
+      ref={ref}
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: index * 0.1 }}
+      onClick={onClick}
+      aria-label={`Usar sugestão: ${suggestion.text.substring(0, 50)}`}
+      className={cn(
+        'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors shrink-0',
+        intentColors[suggestion.intent] || intentColors.info
+      )}
+      {...props}
+    >
+      {displayText}
+    </motion.button>
+  );
+});
+
+SuggestionButton.displayName = 'SuggestionButton';
 
 export function AISuggestions({
   suggestions,
@@ -52,33 +88,17 @@ export function AISuggestions({
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide flex-1">
           {suggestions.map((suggestion, index) => {
             const isTruncated = suggestion.text.length > 50;
-            const displayText = isTruncated 
-              ? suggestion.text.substring(0, 50) + '...' 
-              : suggestion.text;
-            
-            const buttonElement = (
-              <motion.button
-                key={index}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.1 }}
-                onClick={() => onSelectSuggestion(suggestion.text)}
-                aria-label={`Usar sugestão: ${suggestion.text.substring(0, 50)}`}
-                className={cn(
-                  'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors shrink-0',
-                  intentColors[suggestion.intent] || intentColors.info
-                )}
-              >
-                {displayText}
-              </motion.button>
-            );
 
             if (isTruncated) {
               return (
                 <TooltipProvider key={index} delayDuration={300}>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      {buttonElement}
+                      <SuggestionButton
+                        suggestion={suggestion}
+                        index={index}
+                        onClick={() => onSelectSuggestion(suggestion.text)}
+                      />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs text-sm">
                       {suggestion.text}
@@ -88,7 +108,14 @@ export function AISuggestions({
               );
             }
 
-            return buttonElement;
+            return (
+              <SuggestionButton
+                key={index}
+                suggestion={suggestion}
+                index={index}
+                onClick={() => onSelectSuggestion(suggestion.text)}
+              />
+            );
           })}
         </div>
 
