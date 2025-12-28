@@ -53,6 +53,3 @@ verify_jwt = false
 
 [functions.refresh-lead-avatars]
 verify_jwt = false
-
-[functions.send-typing-status]
-verify_jwt = true
