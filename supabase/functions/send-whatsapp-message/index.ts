@@ -839,7 +839,7 @@ serve(async (req) => {
   } catch (error: unknown) {
     console.error('[send-whatsapp-message] Erro não tratado:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno do servidor' }),
+      JSON.stringify({ error: 'Ocorreu um erro ao processar sua solicitação.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
