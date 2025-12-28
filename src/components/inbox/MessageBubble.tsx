@@ -1,8 +1,8 @@
 import React, { useState, useEffect, memo } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Check, CheckCheck, Star, Image, FileText, Video, Mic, Sparkles, Loader2, Copy, Clock, AlertCircle, ImageOff, VideoOff, ExternalLink } from 'lucide-react';
+import { Check, CheckCheck, Star, Image, FileText, Video, Mic, Sparkles, Loader2, Copy, Clock, AlertCircle, ImageOff, VideoOff, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,8 @@ import { AudioPlayer } from '@/components/inbox/AudioPlayer';
 import { ImageLightbox } from '@/components/inbox/ImageLightbox';
 import { DocumentPreview } from '@/components/inbox/DocumentPreview';
 import type { Database } from '@/integrations/supabase/types';
+
+const MAX_MESSAGE_LENGTH = 500;
 
 // Placeholder texts to filter out from message content display
 const MEDIA_PLACEHOLDERS = [
@@ -97,6 +99,7 @@ function MessageBubbleComponent({
   const [copied, setCopied] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [videoError, setVideoError] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   
   // Usar signed URL para mídias em buckets privados
   const { signedUrl: resolvedMediaUrl, isLoading: isLoadingUrl } = useSignedUrl(message.media_url);
@@ -352,7 +355,35 @@ function MessageBubbleComponent({
           {renderMedia()}
           
           {message.content && !MEDIA_PLACEHOLDERS.includes(message.content) && !/\.\w{2,5}$/.test(message.content) && (
-            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+            <>
+              {message.content.length > MAX_MESSAGE_LENGTH && !isExpanded ? (
+                <div>
+                  <p className="text-sm whitespace-pre-wrap">
+                    {message.content.slice(0, MAX_MESSAGE_LENGTH)}...
+                  </p>
+                  <button
+                    onClick={() => setIsExpanded(true)}
+                    className="text-xs text-primary hover:text-primary/80 mt-1 flex items-center gap-0.5 underline"
+                  >
+                    <ChevronDown className="w-3 h-3" />
+                    Ver mais
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  {message.content.length > MAX_MESSAGE_LENGTH && isExpanded && (
+                    <button
+                      onClick={() => setIsExpanded(false)}
+                      className="text-xs text-primary hover:text-primary/80 mt-1 flex items-center gap-0.5 underline"
+                    >
+                      <ChevronUp className="w-3 h-3" />
+                      Ver menos
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
           )}
           
           <div className={cn('flex items-center gap-1 mt-1', isAgent && 'justify-end')}>
