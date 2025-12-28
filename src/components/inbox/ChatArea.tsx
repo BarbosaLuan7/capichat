@@ -32,6 +32,7 @@ import { AIReminderPrompt } from '@/components/inbox/AIReminderPrompt';
 import { ConversationStatusActions } from '@/components/inbox/ConversationStatusActions';
 import { DateSeparator } from '@/components/inbox/DateSeparator';
 import { ScrollToBottomButton } from '@/components/inbox/ScrollToBottomButton';
+import { TypingIndicator } from '@/components/inbox/TypingIndicator';
 
 // Hooks
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -41,6 +42,7 @@ import { useAIReminders } from '@/hooks/useAIReminders';
 import { useInternalNotes } from '@/hooks/useInternalNotes';
 import { useDraftMessages } from '@/hooks/useDraftMessages';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useTypingIndicator } from '@/hooks/useTypingIndicator';
 
 import type { Database } from '@/integrations/supabase/types';
 
@@ -128,6 +130,10 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   const aiReminders = useAIReminders();
   const { data: internalNotes } = useInternalNotes(conversation?.id || undefined);
   const { draft, saveDraft, clearDraft } = useDraftMessages(conversation?.id);
+  const { isLeadTyping, onUserTyping, onUserStoppedTyping } = useTypingIndicator({
+    conversationId: conversation?.id,
+    leadPhone: lead?.phone,
+  });
 
   // Use draft as messageInput value
   const messageInput = draft;
@@ -332,6 +338,9 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     const sentMessage = messageInput;
     setIsSending(true);
     
+    // Notify that we stopped typing
+    onUserStoppedTyping();
+    
     try {
       let mediaUrl: string | null = null;
       let messageType: 'text' | 'image' | 'video' | 'audio' | 'document' = 'text';
@@ -404,6 +413,11 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     const value = e.target.value;
     setMessageInput(value);
     setShowSlashCommand(value.includes('/'));
+    
+    // Send typing indicator when user is typing
+    if (value.length > 0) {
+      onUserTyping();
+    }
   };
   
   const handleSelectAISuggestion = (text: string) => {
@@ -613,6 +627,11 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
           onClick={scrollToBottom}
         />
       </div>
+
+      {/* Lead Typing Indicator */}
+      {isLeadTyping && (
+        <TypingIndicator name={lead?.name?.split(' ')[0]} />
+      )}
 
       {/* Upload Progress Indicator */}
       {uploadProgress.uploading && (
