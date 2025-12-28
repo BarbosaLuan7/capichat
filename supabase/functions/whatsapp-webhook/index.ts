@@ -229,6 +229,7 @@ async function getWAHAConfig(supabase: any): Promise<{ baseUrl: string; apiKey: 
 }
 
 // Busca configuração do WAHA pela session/instance_name específica (do webhook)
+// Usa ilike para busca case-insensitive (LUAN = luan = Luan)
 async function getWAHAConfigBySession(
   supabase: any, 
   sessionName: string
@@ -238,15 +239,18 @@ async function getWAHAConfigBySession(
     
     const { data } = await supabase
       .from('whatsapp_config')
-      .select('id, base_url, api_key, instance_name')
+      .select('id, base_url, api_key, instance_name, phone_number')
       .eq('is_active', true)
       .eq('provider', 'waha')
-      .eq('instance_name', sessionName)
+      .ilike('instance_name', sessionName)  // Case-insensitive: LUAN = luan = Luan
       .limit(1)
       .maybeSingle();
     
     if (data) {
-      console.log('[whatsapp-webhook] Config encontrada para session:', sessionName, 'instanceId:', data.id);
+      console.log('[whatsapp-webhook] ✅ Config encontrada para session:', sessionName, 
+        '| instanceId:', data.id, 
+        '| instance_name:', data.instance_name,
+        '| phone:', data.phone_number);
       return {
         baseUrl: data.base_url.replace(/\/$/, ''),
         apiKey: data.api_key,
@@ -256,8 +260,13 @@ async function getWAHAConfigBySession(
     }
     
     // Fallback: se não encontrar pela session, buscar qualquer uma ativa
-    console.warn('[whatsapp-webhook] Instância não encontrada para session:', sessionName, '- usando fallback');
-    return getWAHAConfig(supabase);
+    console.warn('[whatsapp-webhook] ⚠️ Instância NÃO encontrada para session:', sessionName, '- usando fallback (primeira ativa)');
+    const fallback = await getWAHAConfig(supabase);
+    if (fallback) {
+      console.warn('[whatsapp-webhook] ⚠️ ATENÇÃO: Usando instância fallback:', fallback.sessionName, 
+        '| Cadastre a instância "' + sessionName + '" em Configurações > WhatsApp para corrigir');
+    }
+    return fallback;
   } catch (error) {
     console.error('[whatsapp-webhook] Erro ao buscar config WAHA por session:', error);
     return null;
