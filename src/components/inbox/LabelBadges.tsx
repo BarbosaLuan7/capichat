@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
@@ -19,7 +20,7 @@ interface LabelBadgesProps {
   size?: 'sm' | 'md';
 }
 
-export function LabelBadges({ labels, maxVisible = 2, size = 'sm' }: LabelBadgesProps) {
+function LabelBadgesComponent({ labels, maxVisible = 2, size = 'sm' }: LabelBadgesProps) {
   if (!labels || labels.length === 0) return null;
 
   const visibleLabels = labels.slice(0, maxVisible);
@@ -77,3 +78,10 @@ export function LabelBadges({ labels, maxVisible = 2, size = 'sm' }: LabelBadges
     </div>
   );
 }
+
+export const LabelBadges = memo(LabelBadgesComponent, (prev, next) =>
+  prev.maxVisible === next.maxVisible &&
+  prev.size === next.size &&
+  prev.labels?.length === next.labels?.length &&
+  (prev.labels || []).every((l, i) => l.id === next.labels?.[i]?.id)
+);

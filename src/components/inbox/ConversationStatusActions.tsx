@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -36,7 +37,7 @@ const statusConfig: Record<ConversationStatus, { label: string; icon: typeof Mes
   },
 };
 
-export function ConversationStatusActions({ currentStatus, onStatusChange, isLoading }: ConversationStatusActionsProps) {
+function ConversationStatusActionsComponent({ currentStatus, onStatusChange, isLoading }: ConversationStatusActionsProps) {
   const current = statusConfig[currentStatus];
   const StatusIcon = current.icon;
 
@@ -91,3 +92,8 @@ export function ConversationStatusActions({ currentStatus, onStatusChange, isLoa
     </DropdownMenu>
   );
 }
+
+export const ConversationStatusActions = memo(ConversationStatusActionsComponent, (prev, next) =>
+  prev.currentStatus === next.currentStatus &&
+  prev.isLoading === next.isLoading
+);

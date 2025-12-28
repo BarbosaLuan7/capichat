@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { cn } from '@/lib/utils';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -8,7 +8,7 @@ interface ExpandableTextProps {
   className?: string;
 }
 
-export function ExpandableText({ text, maxLength = 150, className }: ExpandableTextProps) {
+function ExpandableTextComponent({ text, maxLength = 150, className }: ExpandableTextProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   
   if (!text || text.length <= maxLength) {
@@ -37,3 +37,8 @@ export function ExpandableText({ text, maxLength = 150, className }: ExpandableT
     </div>
   );
 }
+
+export const ExpandableText = memo(ExpandableTextComponent, (prev, next) =>
+  prev.text === next.text &&
+  prev.maxLength === next.maxLength
+);

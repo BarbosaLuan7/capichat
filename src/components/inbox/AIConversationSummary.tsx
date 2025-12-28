@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Sparkles, 
@@ -36,7 +36,7 @@ interface AIConversationSummaryProps {
   className?: string;
 }
 
-export function AIConversationSummary({
+function AIConversationSummaryComponent({
   messages,
   lead,
   onSummaryGenerated,
@@ -330,3 +330,9 @@ export function AIConversationSummary({
     </Collapsible>
   );
 }
+
+export const AIConversationSummary = memo(AIConversationSummaryComponent, (prev, next) =>
+  prev.lead.id === next.lead.id &&
+  prev.messages?.length === next.messages?.length &&
+  prev.className === next.className
+);

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Lock, StickyNote } from 'lucide-react';
@@ -17,7 +18,7 @@ interface InlineNoteMessageProps {
   };
 }
 
-export function InlineNoteMessage({ note }: InlineNoteMessageProps) {
+function InlineNoteMessageComponent({ note }: InlineNoteMessageProps) {
   return (
     <div className="flex justify-center my-2">
       <div className="max-w-md w-full bg-warning/10 border border-warning/30 rounded-lg p-3">
@@ -50,3 +51,8 @@ export function InlineNoteMessage({ note }: InlineNoteMessageProps) {
     </div>
   );
 }
+
+export const InlineNoteMessage = memo(InlineNoteMessageComponent, (prev, next) =>
+  prev.note.id === next.note.id &&
+  prev.note.content === next.note.content
+);
