@@ -413,10 +413,12 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     const value = e.target.value;
     setMessageInput(value);
     setShowSlashCommand(value.includes('/'));
-    
-    // Send typing indicator when user is typing
+
+    // Typing indicator: send "typing" while there is content, "paused" when cleared
     if (value.length > 0) {
       onUserTyping();
+    } else {
+      onUserStoppedTyping();
     }
   };
   
@@ -747,6 +749,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
               ref={inputRef as React.RefObject<HTMLTextAreaElement>}
               value={messageInput}
               onChange={handleInputChange}
+              onBlur={() => onUserStoppedTyping()}
               onKeyDown={(e) => {
                 if (showSlashCommand) return;
                 if (e.key === 'Enter' && !e.shiftKey) {

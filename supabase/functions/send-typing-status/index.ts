@@ -6,6 +6,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function normalizeToWahaChatId(phone: string): { chatId: string | null; reason?: string; normalized?: string } {
+  const digits = phone.replace(/\D/g, '');
+
+  // Likely Facebook LID or invalid phone (too long). We skip to avoid WAHA 500.
+  if (digits.length > 13) {
+    return { chatId: null, reason: 'phone_too_long', normalized: digits };
+  }
+
+  let normalized = digits;
+  // Default behavior for Brazil: add country code 55 when absent
+  if (!normalized.startsWith('55') && (normalized.length === 10 || normalized.length === 11)) {
+    normalized = `55${normalized}`;
+  }
+
+  if (normalized.length < 12 || normalized.length > 13) {
+    return { chatId: null, reason: 'phone_invalid_length', normalized };
+  }
+
+  return { chatId: `${normalized}@c.us`, normalized };
+}
+
 interface TypingStatusRequest {
   conversationId: string;
   status: 'typing' | 'paused';
@@ -40,7 +61,7 @@ serve(async (req) => {
         id,
         lead_id,
         whatsapp_instance_id,
-        leads:lead_id (phone)
+        leads:lead_id (phone, is_facebook_lid, original_lid)
       `)
       .eq('id', conversationId)
       .single();
@@ -53,12 +74,23 @@ serve(async (req) => {
       );
     }
 
-    const leadPhone = (conversation.leads as any)?.phone;
+    const lead = conversation.leads as any;
+    const leadPhone = lead?.phone as string | undefined;
+    const isFacebookLid = Boolean(lead?.is_facebook_lid);
+
     if (!leadPhone) {
       console.error('[send-typing-status] Lead phone not found');
       return new Response(
         JSON.stringify({ error: 'Lead phone not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (isFacebookLid) {
+      console.log('[send-typing-status] Skipping presence for Facebook LID lead');
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, reason: 'facebook_lid' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -83,8 +115,14 @@ serve(async (req) => {
     }
 
     // Format phone for chatId (WAHA expects format like 5511999999999@c.us)
-    const cleanPhone = leadPhone.replace(/\D/g, '');
-    const chatId = `${cleanPhone}@c.us`;
+    const { chatId, reason, normalized } = normalizeToWahaChatId(leadPhone);
+    if (!chatId) {
+      console.log('[send-typing-status] Skipping presence due to invalid phone:', { reason, leadPhone, normalized });
+      return new Response(
+        JSON.stringify({ success: true, skipped: true, reason, normalized }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Build WAHA presence API URL
     const baseUrl = whatsappConfig.base_url.replace(/\/$/, '');
