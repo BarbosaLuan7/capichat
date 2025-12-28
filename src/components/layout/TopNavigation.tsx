@@ -289,7 +289,7 @@ const TopNavigation = () => {
       </Link>
 
       {/* Desktop Navigation */}
-      <NavigationMenu className="hidden lg:flex flex-1">
+      <NavigationMenu className="hidden lg:flex flex-1 justify-center">
         <NavigationMenuList className="gap-1">
           {/* Main items */}
           {mainNavItems.map((item) => {
