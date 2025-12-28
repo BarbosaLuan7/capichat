@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import AppSidebar from './AppSidebar';
-import TopBar from './TopBar';
+import TopNavigation from './TopNavigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import { GlobalLiveRegion } from '@/components/accessibility/LiveRegion';
@@ -34,14 +33,11 @@ const MainLayout = () => {
         Pular para navegação
       </a>
       
-      <div className="flex min-h-screen w-full bg-background">
-        <AppSidebar />
-        <div className="flex-1 flex flex-col min-w-0">
-          <TopBar />
-          <main id="main-content" className="flex-1 overflow-auto" role="main" aria-label="Conteúdo principal">
-            <Outlet />
-          </main>
-        </div>
+      <div className="flex flex-col min-h-screen w-full bg-background">
+        <TopNavigation />
+        <main id="main-content" className="flex-1 overflow-auto" role="main" aria-label="Conteúdo principal">
+          <Outlet />
+        </main>
       </div>
 
       {/* Keyboard shortcuts help modal */}

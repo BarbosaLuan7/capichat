@@ -1,0 +1,416 @@
+import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import {
+  LayoutDashboard,
+  MessageSquare,
+  Users,
+  Kanban,
+  CheckSquare,
+  Calendar,
+  BarChart3,
+  Settings,
+  LogOut,
+  ChevronDown,
+  Scale,
+  UsersRound,
+  UserCog,
+  Workflow,
+  Zap,
+  Tags,
+  FileText,
+  Webhook,
+  MessageCircle,
+  Key,
+  Search,
+  Menu,
+  X,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { useSidebarBadges } from '@/hooks/useSidebarBadges';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from '@/components/ui/navigation-menu';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { NotificationCenter } from '@/components/notifications/NotificationCenter';
+
+// Menu structure
+const mainNavItems = [
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+  { icon: MessageSquare, label: 'Conversas', path: '/inbox', badgeKey: 'conversations' as const },
+  { icon: Kanban, label: 'Funil', path: '/funnel' },
+];
+
+const crmItems = [
+  { icon: Users, label: 'Leads', path: '/leads' },
+  { icon: CheckSquare, label: 'Tarefas', path: '/tasks', badgeKey: 'tasks' as const },
+  { icon: Calendar, label: 'Calendário', path: '/calendar' },
+];
+
+const toolsItems = [
+  { icon: Workflow, label: 'Automações', path: '/automations' },
+  { icon: Zap, label: 'Chatbot', path: '/chatbot' },
+  { icon: BarChart3, label: 'Métricas', path: '/metrics' },
+];
+
+const settingsItems = [
+  { icon: UserCog, label: 'Usuários', path: '/settings/users' },
+  { icon: UsersRound, label: 'Equipes', path: '/settings/teams' },
+  { icon: Tags, label: 'Etiquetas', path: '/settings/labels' },
+  { icon: FileText, label: 'Templates', path: '/settings/templates' },
+  { icon: Webhook, label: 'Webhooks', path: '/settings/webhooks' },
+  { icon: MessageCircle, label: 'WhatsApp', path: '/settings/whatsapp' },
+  { icon: Key, label: 'API', path: '/settings/api' },
+];
+
+const TopNavigation = () => {
+  const location = useLocation();
+  const { authUser: user, signOut } = useAuth();
+  const badges = useSidebarBadges();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const isActive = (path: string) => location.pathname === path;
+  const isGroupActive = (items: { path: string }[]) => 
+    items.some(item => location.pathname.startsWith(item.path));
+
+  const NavItem = ({ 
+    item, 
+    className 
+  }: { 
+    item: { icon: any; label: string; path: string; badgeKey?: 'conversations' | 'tasks' }; 
+    className?: string;
+  }) => {
+    const active = isActive(item.path);
+    const badge = item.badgeKey ? badges[item.badgeKey] : undefined;
+    
+    return (
+      <Link
+        to={item.path}
+        className={cn(
+          'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+          active
+            ? 'bg-primary text-primary-foreground'
+            : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+          className
+        )}
+        onClick={() => setMobileMenuOpen(false)}
+      >
+        <item.icon className="w-4 h-4" />
+        <span>{item.label}</span>
+        {badge !== undefined && badge > 0 && (
+          <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
+            {badge}
+          </Badge>
+        )}
+      </Link>
+    );
+  };
+
+  const DropdownNavItem = ({
+    item,
+  }: {
+    item: { icon: any; label: string; path: string; badgeKey?: 'conversations' | 'tasks' };
+  }) => {
+    const active = isActive(item.path);
+    const badge = item.badgeKey ? badges[item.badgeKey] : undefined;
+    
+    return (
+      <Link
+        to={item.path}
+        className={cn(
+          'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
+          active
+            ? 'bg-primary/10 text-primary font-medium'
+            : 'text-foreground hover:bg-muted'
+        )}
+        onClick={() => setMobileMenuOpen(false)}
+      >
+        <item.icon className="w-4 h-4" />
+        <span className="flex-1">{item.label}</span>
+        {badge !== undefined && badge > 0 && (
+          <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
+            {badge}
+          </Badge>
+        )}
+      </Link>
+    );
+  };
+
+  // Mobile menu content
+  const MobileMenuContent = () => (
+    <div className="flex flex-col gap-6 p-4">
+      {/* Main items */}
+      <div className="space-y-1">
+        {mainNavItems.map((item) => (
+          <NavItem key={item.path} item={item} className="w-full justify-start" />
+        ))}
+      </div>
+
+      {/* CRM */}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">CRM</p>
+        <div className="space-y-1">
+          {crmItems.map((item) => (
+            <NavItem key={item.path} item={item} className="w-full justify-start" />
+          ))}
+        </div>
+      </div>
+
+      {/* Tools */}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">Ferramentas</p>
+        <div className="space-y-1">
+          {toolsItems.map((item) => (
+            <NavItem key={item.path} item={item} className="w-full justify-start" />
+          ))}
+        </div>
+      </div>
+
+      {/* Settings */}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">Configurações</p>
+        <div className="space-y-1">
+          {settingsItems.map((item) => (
+            <NavItem key={item.path} item={item} className="w-full justify-start" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <header className="h-14 bg-card border-b border-border flex items-center px-4 sticky top-0 z-50" role="banner">
+      {/* Logo */}
+      <Link to="/dashboard" className="flex items-center gap-2.5 mr-6 shrink-0">
+        <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
+          <Scale className="w-4 h-4 text-primary-foreground" />
+        </div>
+        <span className="text-base font-bold text-foreground hidden sm:block">
+          GaranteDireito
+        </span>
+      </Link>
+
+      {/* Desktop Navigation */}
+      <NavigationMenu className="hidden lg:flex flex-1">
+        <NavigationMenuList className="gap-1">
+          {/* Main items */}
+          {mainNavItems.map((item) => {
+            const active = isActive(item.path);
+            const badge = item.badgeKey ? badges[item.badgeKey] : undefined;
+            
+            return (
+              <NavigationMenuItem key={item.path}>
+                <Link
+                  to={item.path}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                    active
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  )}
+                >
+                  <item.icon className="w-4 h-4" />
+                  <span>{item.label}</span>
+                  {badge !== undefined && badge > 0 && (
+                    <Badge variant="destructive" className="ml-0.5 h-5 min-w-5 px-1.5 text-xs">
+                      {badge}
+                    </Badge>
+                  )}
+                </Link>
+              </NavigationMenuItem>
+            );
+          })}
+
+          {/* CRM Dropdown */}
+          <NavigationMenuItem>
+            <NavigationMenuTrigger 
+              className={cn(
+                'px-3 py-2 text-sm font-medium',
+                isGroupActive(crmItems) && 'bg-primary/10 text-primary'
+              )}
+            >
+              <Users className="w-4 h-4 mr-2" />
+              CRM
+              {badges.tasks > 0 && (
+                <Badge variant="destructive" className="ml-1.5 h-5 min-w-5 px-1.5 text-xs">
+                  {badges.tasks}
+                </Badge>
+              )}
+            </NavigationMenuTrigger>
+            <NavigationMenuContent>
+              <div className="w-56 p-2">
+                {crmItems.map((item) => (
+                  <DropdownNavItem key={item.path} item={item} />
+                ))}
+              </div>
+            </NavigationMenuContent>
+          </NavigationMenuItem>
+
+          {/* Tools Dropdown */}
+          <NavigationMenuItem>
+            <NavigationMenuTrigger 
+              className={cn(
+                'px-3 py-2 text-sm font-medium',
+                isGroupActive(toolsItems) && 'bg-primary/10 text-primary'
+              )}
+            >
+              <Workflow className="w-4 h-4 mr-2" />
+              Ferramentas
+            </NavigationMenuTrigger>
+            <NavigationMenuContent>
+              <div className="w-56 p-2">
+                {toolsItems.map((item) => (
+                  <DropdownNavItem key={item.path} item={item} />
+                ))}
+              </div>
+            </NavigationMenuContent>
+          </NavigationMenuItem>
+
+          {/* Settings Dropdown */}
+          <NavigationMenuItem>
+            <NavigationMenuTrigger 
+              className={cn(
+                'px-3 py-2 text-sm font-medium',
+                isGroupActive(settingsItems) && 'bg-primary/10 text-primary'
+              )}
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Configurações
+            </NavigationMenuTrigger>
+            <NavigationMenuContent>
+              <div className="w-56 p-2">
+                {settingsItems.map((item) => (
+                  <DropdownNavItem key={item.path} item={item} />
+                ))}
+              </div>
+            </NavigationMenuContent>
+          </NavigationMenuItem>
+        </NavigationMenuList>
+      </NavigationMenu>
+
+      {/* Spacer for mobile */}
+      <div className="flex-1 lg:hidden" />
+
+      {/* Right side */}
+      <div className="flex items-center gap-2">
+        {/* Search - Desktop */}
+        <div className="hidden md:flex items-center">
+          {searchOpen ? (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar..."
+                className="w-64 pl-9 pr-8 h-9"
+                autoFocus
+                onBlur={() => setSearchOpen(false)}
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                onClick={() => setSearchOpen(false)}
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => setSearchOpen(true)}
+            >
+              <Search className="w-5 h-5" />
+            </Button>
+          )}
+        </div>
+
+        {/* Notifications */}
+        <NotificationCenter userId={user?.id} />
+
+        {/* User Menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={user?.avatar} alt={user?.name} />
+                <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                  {user?.name?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">{user?.name}</p>
+                <p className="text-xs leading-none text-muted-foreground">
+                  {user?.email}
+                </p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link to="/settings/users" className="cursor-pointer">
+                <UserCog className="mr-2 h-4 w-4" />
+                <span>Minha conta</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={() => signOut()}
+              className="text-destructive focus:text-destructive cursor-pointer"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Sair</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Mobile Menu Button */}
+        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="lg:hidden">
+              <Menu className="w-5 h-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-72 p-0">
+            {/* Mobile Header */}
+            <div className="h-14 flex items-center gap-2.5 px-4 border-b border-border">
+              <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
+                <Scale className="w-4 h-4 text-primary-foreground" />
+              </div>
+              <span className="text-base font-bold text-foreground">
+                GaranteDireito
+              </span>
+            </div>
+            {/* Mobile Menu */}
+            <div className="overflow-y-auto h-[calc(100vh-3.5rem)]">
+              <MobileMenuContent />
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+    </header>
+  );
+};
+
+export default TopNavigation;
