@@ -107,8 +107,8 @@ const TopNavigation = () => {
         className={cn(
           'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
           active
-            ? 'bg-primary text-primary-foreground'
-            : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+            ? 'bg-violet-600 text-white shadow-sm'
+            : 'text-slate-600 hover:text-slate-900 hover:bg-purple-100/60',
           className
         )}
         onClick={() => setMobileMenuOpen(false)}
@@ -116,7 +116,7 @@ const TopNavigation = () => {
         <item.icon className="w-4 h-4" />
         <span>{item.label}</span>
         {badge !== undefined && badge > 0 && (
-          <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1.5 text-xs">
+          <Badge className="ml-1 h-5 min-w-5 px-1.5 text-xs bg-orange-500 text-white border-0 hover:bg-orange-500">
             {badge}
           </Badge>
         )}
@@ -138,15 +138,15 @@ const TopNavigation = () => {
         className={cn(
           'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
           active
-            ? 'bg-primary/10 text-primary font-medium'
-            : 'text-foreground hover:bg-muted'
+            ? 'bg-violet-100 text-violet-700 font-medium'
+            : 'text-slate-700 hover:bg-purple-50'
         )}
         onClick={() => setMobileMenuOpen(false)}
       >
         <item.icon className="w-4 h-4" />
         <span className="flex-1">{item.label}</span>
         {badge !== undefined && badge > 0 && (
-          <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
+          <Badge className="h-5 min-w-5 px-1.5 text-xs bg-orange-500 text-white border-0 hover:bg-orange-500">
             {badge}
           </Badge>
         )}
@@ -197,7 +197,7 @@ const TopNavigation = () => {
   );
 
   return (
-    <header className="h-14 bg-card border-b border-border flex items-center px-4 sticky top-0 z-50" role="banner">
+    <header className="h-14 bg-gradient-to-r from-white via-purple-50/30 to-pink-50/30 border-b border-purple-100/50 flex items-center px-4 sticky top-0 z-50" role="banner">
       {/* Logo */}
       <Link to="/dashboard" className="flex items-center gap-2.5 mr-6 shrink-0">
         <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
@@ -223,14 +223,14 @@ const TopNavigation = () => {
                   className={cn(
                     'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
                     active
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      ? 'bg-violet-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-purple-100/60'
                   )}
                 >
                   <item.icon className="w-4 h-4" />
                   <span>{item.label}</span>
                   {badge !== undefined && badge > 0 && (
-                    <Badge variant="destructive" className="ml-0.5 h-5 min-w-5 px-1.5 text-xs">
+                    <Badge className="ml-0.5 h-5 min-w-5 px-1.5 text-xs bg-orange-500 text-white border-0 hover:bg-orange-500">
                       {badge}
                     </Badge>
                   )}
@@ -243,14 +243,14 @@ const TopNavigation = () => {
           <NavigationMenuItem>
             <NavigationMenuTrigger 
               className={cn(
-                'px-3 py-2 text-sm font-medium',
-                isGroupActive(crmItems) && 'bg-primary/10 text-primary'
+                'px-3 py-2 text-sm font-medium bg-purple-50/50 hover:bg-purple-100/60',
+                isGroupActive(crmItems) && 'bg-violet-100 text-violet-700'
               )}
             >
               <Users className="w-4 h-4 mr-2" />
               CRM
               {badges.tasks > 0 && (
-                <Badge variant="destructive" className="ml-1.5 h-5 min-w-5 px-1.5 text-xs">
+                <Badge className="ml-1.5 h-5 min-w-5 px-1.5 text-xs bg-orange-500 text-white border-0 hover:bg-orange-500">
                   {badges.tasks}
                 </Badge>
               )}
@@ -268,8 +268,8 @@ const TopNavigation = () => {
           <NavigationMenuItem>
             <NavigationMenuTrigger 
               className={cn(
-                'px-3 py-2 text-sm font-medium',
-                isGroupActive(toolsItems) && 'bg-primary/10 text-primary'
+                'px-3 py-2 text-sm font-medium bg-purple-50/50 hover:bg-purple-100/60',
+                isGroupActive(toolsItems) && 'bg-violet-100 text-violet-700'
               )}
             >
               <Workflow className="w-4 h-4 mr-2" />
@@ -288,8 +288,8 @@ const TopNavigation = () => {
           <NavigationMenuItem>
             <NavigationMenuTrigger 
               className={cn(
-                'px-3 py-2 text-sm font-medium',
-                isGroupActive(settingsItems) && 'bg-primary/10 text-primary'
+                'px-3 py-2 text-sm font-medium bg-purple-50/50 hover:bg-purple-100/60',
+                isGroupActive(settingsItems) && 'bg-violet-100 text-violet-700'
               )}
             >
               <Settings className="w-4 h-4 mr-2" />
