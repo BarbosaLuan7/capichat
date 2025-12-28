@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { FileText, Download, ExternalLink, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -9,7 +9,7 @@ interface DocumentPreviewProps {
   isAgent?: boolean;
 }
 
-export function DocumentPreview({ url, fileName, isAgent = false }: DocumentPreviewProps) {
+function DocumentPreviewComponent({ url, fileName, isAgent = false }: DocumentPreviewProps) {
   const [previewError, setPreviewError] = useState(false);
   const isPdf = fileName.toLowerCase().endsWith('.pdf') || url.toLowerCase().includes('.pdf');
 
@@ -157,3 +157,7 @@ export function DocumentPreview({ url, fileName, isAgent = false }: DocumentPrev
     </div>
   );
 }
+
+export const DocumentPreview = memo(DocumentPreviewComponent, (prev, next) =>
+  prev.url === next.url && prev.fileName === next.fileName && prev.isAgent === next.isAgent
+);

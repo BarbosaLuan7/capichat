@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, memo } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -54,7 +54,7 @@ const SuggestionButton = forwardRef<
 
 SuggestionButton.displayName = 'SuggestionButton';
 
-export function AISuggestions({
+function AISuggestionsComponent({
   suggestions,
   isLoading,
   onSelectSuggestion,
@@ -132,3 +132,15 @@ export function AISuggestions({
     </motion.div>
   );
 }
+
+export const AISuggestions = memo(AISuggestionsComponent, (prev, next) => {
+  if (prev.isLoading !== next.isLoading) return false;
+  if (prev.suggestions?.length !== next.suggestions?.length) return false;
+  // Deep compare suggestions only if lengths match
+  if (prev.suggestions && next.suggestions) {
+    for (let i = 0; i < prev.suggestions.length; i++) {
+      if (prev.suggestions[i].text !== next.suggestions[i].text) return false;
+    }
+  }
+  return true;
+});

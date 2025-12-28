@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ interface ScrollToBottomButtonProps {
   unreadCount?: number;
 }
 
-export function ScrollToBottomButton({ show, onClick, unreadCount }: ScrollToBottomButtonProps) {
+function ScrollToBottomButtonComponent({ show, onClick, unreadCount }: ScrollToBottomButtonProps) {
   return (
     <AnimatePresence>
       {show && (
@@ -36,3 +37,7 @@ export function ScrollToBottomButton({ show, onClick, unreadCount }: ScrollToBot
     </AnimatePresence>
   );
 }
+
+export const ScrollToBottomButton = memo(ScrollToBottomButtonComponent, (prev, next) =>
+  prev.show === next.show && prev.unreadCount === next.unreadCount
+);

@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { memo } from 'react';
 import { MessageCircle, Search, Inbox, FileText, Tag, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -53,7 +53,7 @@ const emptyStateConfig = {
   },
 };
 
-export function EmptyState({ 
+function EmptyStateComponent({ 
   type, 
   title, 
   description, 
@@ -88,3 +88,5 @@ export function EmptyState({
     </div>
   );
 }
+
+export const EmptyState = memo(EmptyStateComponent);

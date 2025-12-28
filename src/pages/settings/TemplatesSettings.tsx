@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import { Plus, Search, MoreHorizontal, Pencil, Trash2, Copy, Zap, MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -50,14 +51,15 @@ export default function TemplatesSettings() {
   const { data: templates, isLoading } = useTemplates();
   const deleteTemplate = useDeleteTemplate();
   const createTemplate = useCreateTemplate();
+  const debouncedSearch = useDebounce(search, 300);
 
-  const filteredTemplates = templates?.filter((template) => {
+  const filteredTemplates = useMemo(() => templates?.filter((template) => {
     const matchesSearch =
-      template.name.toLowerCase().includes(search.toLowerCase()) ||
-      template.shortcut.toLowerCase().includes(search.toLowerCase()) ||
-      template.content.toLowerCase().includes(search.toLowerCase());
+      template.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      template.shortcut.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      template.content.toLowerCase().includes(debouncedSearch.toLowerCase());
     return matchesSearch;
-  });
+  }), [templates, debouncedSearch]);
 
   const handleEdit = (template: Template) => {
     setSelectedTemplate(template);

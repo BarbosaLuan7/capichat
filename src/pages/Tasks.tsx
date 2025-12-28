@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, memo } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import { motion } from 'framer-motion';
 import {
   DndContext,
@@ -302,15 +303,17 @@ const Tasks = () => {
     useSensor(KeyboardSensor)
   );
 
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
   const filteredTasks = useMemo(() => {
     if (!tasks) return [];
     return tasks.filter((task) => {
       const matchesFilter = filter === 'all' || task.status === filter;
-      const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        task.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = task.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        task.description?.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
       return matchesFilter && matchesSearch;
     });
-  }, [tasks, filter, searchQuery]);
+  }, [tasks, filter, debouncedSearchQuery]);
 
   const tasksByStatus = useMemo(() => ({
     todo: (tasks || []).filter((t) => t.status === 'todo') as TaskFromDB[],

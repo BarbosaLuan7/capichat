@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import { motion } from 'framer-motion';
 import {
   Plus,
@@ -69,11 +70,12 @@ const UsersSettings = () => {
 
   const users = profiles || [];
   const teams = teamsData || [];
+  const debouncedSearch = useDebounce(search, 300);
 
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(search.toLowerCase()) ||
-    user.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredUsers = useMemo(() => users.filter(user =>
+    user.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    user.email.toLowerCase().includes(debouncedSearch.toLowerCase())
+  ), [users, debouncedSearch]);
 
   const getTeamName = (teamId?: string | null) => {
     if (!teamId) return '-';

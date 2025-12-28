@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { format, isToday, isYesterday, isThisYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -5,7 +6,7 @@ interface DateSeparatorProps {
   date: Date;
 }
 
-export function DateSeparator({ date }: DateSeparatorProps) {
+function DateSeparatorComponent({ date }: DateSeparatorProps) {
   const formatDateLabel = (d: Date): string => {
     if (isToday(d)) return 'Hoje';
     if (isYesterday(d)) return 'Ontem';
@@ -23,3 +24,7 @@ export function DateSeparator({ date }: DateSeparatorProps) {
     </div>
   );
 }
+
+export const DateSeparator = memo(DateSeparatorComponent, (prev, next) => 
+  prev.date.getTime() === next.date.getTime()
+);
