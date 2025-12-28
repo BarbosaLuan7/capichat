@@ -222,7 +222,7 @@ const Inbox = () => {
       {/* Conversation List */}
       {showConversationList && (
         <div className={cn(
-          "w-72 md:w-80 xl:w-96 border-r border-border flex flex-col bg-card shrink-0 min-w-0",
+          "w-64 md:w-72 xl:w-80 border-r border-border flex flex-col bg-card shrink-0 min-w-0",
           isMobile && "w-full border-r-0"
         )}>
           <ConversationList

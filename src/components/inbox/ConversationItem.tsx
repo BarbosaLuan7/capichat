@@ -109,7 +109,7 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
     >
       <div className="flex gap-3">
         {/* Avatar */}
-        <Avatar className="w-12 h-12 shrink-0">
+        <Avatar className="w-10 h-10 shrink-0">
           <AvatarImage src={convLead?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${convLead?.name}`} />
           <AvatarFallback>{displayName?.charAt(0)}</AvatarFallback>
         </Avatar>
