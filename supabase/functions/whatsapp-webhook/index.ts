@@ -1051,7 +1051,7 @@ serve(async (req) => {
 
       // Buscar foto de perfil se ainda não tiver
       if (!existingLead.avatar_url) {
-        const wahaConfig = await getWAHAConfig(supabase);
+        const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
         if (wahaConfig) {
           // Usar número com código do país (55) para a API
           const phoneWithCountry = senderPhone.startsWith('55') ? senderPhone : `55${senderPhone}`;
@@ -1094,7 +1094,7 @@ serve(async (req) => {
       // Buscar foto de perfil para novo lead
       let avatarUrl: string | null = null;
       if (!isFromFacebookLid) {
-        const wahaConfig = await getWAHAConfig(supabase);
+        const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
         if (wahaConfig) {
           // Usar número com código do país (55) para a API
           const phoneWithCountry = senderPhone.startsWith('55') ? senderPhone : `55${senderPhone}`;
