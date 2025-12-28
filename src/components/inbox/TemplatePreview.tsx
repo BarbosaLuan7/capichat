@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import { Eye, Send, X, Zap, Search, MessageSquare } from 'lucide-react';
 import {
   Dialog,
@@ -54,17 +55,19 @@ export function TemplatePreview({
 
   const { data: templates, isLoading } = useTemplates();
 
+  const debouncedSearch = useDebounce(search, 200);
+
   const filteredTemplates = useMemo(() => {
     if (!templates) return [];
-    if (!search.trim()) return templates;
-    const term = search.toLowerCase();
+    if (!debouncedSearch.trim()) return templates;
+    const term = debouncedSearch.toLowerCase();
     return templates.filter(
       (t) =>
         t.name.toLowerCase().includes(term) ||
         t.shortcut.toLowerCase().includes(term) ||
         t.content.toLowerCase().includes(term)
     );
-  }, [templates, search]);
+  }, [templates, debouncedSearch]);
 
   // Build lead data from props (support both new and legacy props)
   const leadData: LeadData = lead || {
