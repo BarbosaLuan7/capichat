@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Sparkles, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 interface AISuggestionsProps {
@@ -49,24 +50,46 @@ export function AISuggestions({
         </div>
         
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide flex-1">
-          {suggestions.map((suggestion, index) => (
-            <motion.button
-              key={index}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.1 }}
-              onClick={() => onSelectSuggestion(suggestion.text)}
-              aria-label={`Usar sugestão: ${suggestion.text.substring(0, 50)}`}
-              className={cn(
-                'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors shrink-0',
-                intentColors[suggestion.intent] || intentColors.info
-              )}
-            >
-              {suggestion.text.length > 50 
-                ? suggestion.text.substring(0, 50) + '...' 
-                : suggestion.text}
-            </motion.button>
-          ))}
+          {suggestions.map((suggestion, index) => {
+            const isTruncated = suggestion.text.length > 50;
+            const displayText = isTruncated 
+              ? suggestion.text.substring(0, 50) + '...' 
+              : suggestion.text;
+            
+            const buttonElement = (
+              <motion.button
+                key={index}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.1 }}
+                onClick={() => onSelectSuggestion(suggestion.text)}
+                aria-label={`Usar sugestão: ${suggestion.text.substring(0, 50)}`}
+                className={cn(
+                  'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors shrink-0',
+                  intentColors[suggestion.intent] || intentColors.info
+                )}
+              >
+                {displayText}
+              </motion.button>
+            );
+
+            if (isTruncated) {
+              return (
+                <TooltipProvider key={index} delayDuration={300}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      {buttonElement}
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-sm">
+                      {suggestion.text}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              );
+            }
+
+            return buttonElement;
+          })}
         </div>
 
         <Button
