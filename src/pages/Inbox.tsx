@@ -12,7 +12,6 @@ import {
   useMarkConversationAsRead,
   useToggleConversationFavorite,
   useUpdateConversationAssignee,
-  useToggleMessageStar,
   useUpdateConversationStatus,
 } from '@/hooks/useConversations';
 import { useConversationsInfinite } from '@/hooks/useConversationsInfinite';
@@ -87,7 +86,6 @@ const Inbox = () => {
   const markAsRead = useMarkConversationAsRead();
   const toggleFavorite = useToggleConversationFavorite();
   const updateAssignee = useUpdateConversationAssignee();
-  const toggleMessageStar = useToggleMessageStar();
   const updateLead = useUpdateLead();
   const updateConversationStatus = useUpdateConversationStatus();
 
@@ -194,10 +192,6 @@ const Inbox = () => {
     });
   }, [selectedConversationId, selectedConversation, toggleFavorite]);
 
-  const handleToggleMessageStar = useCallback((messageId: string, isStarred: boolean) => {
-    toggleMessageStar.mutate({ messageId, isStarred });
-  }, [toggleMessageStar]);
-
   const handleTransfer = useCallback(async (userId: string) => {
     if (!selectedConversationId || !leadData) return;
 
@@ -263,7 +257,6 @@ const Inbox = () => {
             onSendMessage={handleSendMessage}
             onStatusChange={handleStatusChange}
             onToggleFavorite={handleToggleFavorite}
-            onToggleMessageStar={handleToggleMessageStar}
             isUpdatingStatus={updateConversationStatus.isPending}
             showLeadPanel={showLeadPanel}
             onToggleLeadPanel={() => setShowLeadPanel(!showLeadPanel)}

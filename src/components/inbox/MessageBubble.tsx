@@ -2,7 +2,7 @@ import React, { useState, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Check, CheckCheck, Star, Image, FileText, Video, Mic, Sparkles, Loader2, Copy, Clock, AlertCircle, ImageOff, VideoOff, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, CheckCheck, Image, FileText, Video, Mic, Sparkles, Loader2, Copy, Clock, AlertCircle, ImageOff, VideoOff, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,6 @@ interface MessageBubbleProps {
   leadName: string;
   leadAvatarUrl?: string | null;
   agentName?: string;
-  onToggleStar?: (messageId: string, isStarred: boolean) => void;
 }
 
 // Helper function for status icon configuration
@@ -91,7 +90,6 @@ function MessageBubbleComponent({
   leadName,
   leadAvatarUrl,
   agentName = 'Agente',
-  onToggleStar,
 }: MessageBubbleProps) {
   const { transcribeAudio, getTranscription, isLoading } = useAudioTranscription();
   const [transcription, setTranscription] = useState<string | null>(null);
@@ -419,29 +417,6 @@ function MessageBubbleComponent({
           </div>
         </div>
 
-        {onToggleStar && (
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={message.is_starred ? 'Remover destaque' : 'Destacar mensagem'}
-            className={cn(
-              'absolute top-0 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6',
-              isAgent ? '-left-8' : '-right-8',
-              message.is_starred && 'opacity-100'
-            )}
-            onClick={() => onToggleStar(message.id, !message.is_starred)}
-          >
-            <Star
-              className={cn(
-                'w-4 h-4',
-                message.is_starred
-                  ? 'fill-warning text-warning'
-                  : 'text-muted-foreground'
-              )}
-              aria-hidden="true"
-            />
-          </Button>
-        )}
       </div>
     </motion.div>
   );

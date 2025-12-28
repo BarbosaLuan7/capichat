@@ -75,7 +75,6 @@ interface ChatAreaProps {
   onSendMessage: (content: string, type: string, mediaUrl?: string | null) => Promise<void>;
   onStatusChange: (status: ConversationStatus) => void;
   onToggleFavorite: () => void;
-  onToggleMessageStar: (messageId: string, isStarred: boolean) => void;
   isUpdatingStatus: boolean;
   showLeadPanel: boolean;
   onToggleLeadPanel: () => void;
@@ -96,7 +95,6 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     onSendMessage,
     onStatusChange,
     onToggleFavorite,
-    onToggleMessageStar,
     isUpdatingStatus,
     showLeadPanel,
     onToggleLeadPanel,
@@ -530,7 +528,6 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
                           showAvatar={showAvatar}
                           leadName={lead.name}
                           leadAvatarUrl={lead.avatar_url}
-                          onToggleStar={onToggleMessageStar}
                         />
                       );
                     })}

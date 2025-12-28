@@ -666,12 +666,14 @@ serve(async (req) => {
 
     // Get conversation with lead info (incluindo mais campos para substituição de variáveis)
     // IMPORTANTE: Incluir whatsapp_instance_id para usar a mesma instância que recebeu
+    // IMPORTANTE: Incluir assigned_to para auto-atribuição quando responder
     const { data: conversation, error: convError } = await supabase
       .from('conversations')
       .select(`
         id,
         lead_id,
         whatsapp_instance_id,
+        assigned_to,
         leads (
           id,
           phone,
@@ -832,9 +834,25 @@ serve(async (req) => {
     }
 
     // Update conversation last_message_at
+    // AUTO-ATRIBUIÇÃO: Se a conversa não tem atendente, atribuir ao usuário que está respondendo
+    const updateData: { last_message_at: string; assigned_to?: string } = { 
+      last_message_at: new Date().toISOString() 
+    };
+    
+    if (!conversation.assigned_to) {
+      console.log('[send-whatsapp-message] Auto-atribuindo conversa ao usuário:', user.id);
+      updateData.assigned_to = user.id;
+      
+      // Atribuir lead também para manter sincronizado
+      await supabase
+        .from('leads')
+        .update({ assigned_to: user.id })
+        .eq('id', lead.id);
+    }
+    
     await supabase
       .from('conversations')
-      .update({ last_message_at: new Date().toISOString() })
+      .update(updateData)
       .eq('id', payload.conversation_id);
 
     console.log('[send-whatsapp-message] Mensagem enviada com sucesso:', result.messageId);

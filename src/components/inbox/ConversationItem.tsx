@@ -173,19 +173,8 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
             </div>
           )}
 
-          {/* Row 3: Status badge + Labels */}
+          {/* Row 3: Labels */}
           <div className="flex items-center gap-1.5 mt-0.5">
-            <Badge
-              variant="outline"
-              className={cn(
-                'text-2xs px-1.5 py-0 h-5',
-                conversation.status === 'open' && 'border-success text-success',
-                conversation.status === 'pending' && 'border-warning text-warning',
-                conversation.status === 'resolved' && 'border-muted-foreground text-muted-foreground'
-              )}
-            >
-              {conversation.status === 'open' ? 'Aberta' : conversation.status === 'pending' ? 'Pendente' : 'Resolvida'}
-            </Badge>
             {convLead?.lead_labels?.length === 1 ? (
               <TooltipProvider delayDuration={300}>
                 <Tooltip>
