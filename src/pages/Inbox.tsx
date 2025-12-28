@@ -7,9 +7,7 @@ import { logger } from '@/lib/logger';
 
 // Hooks
 import {
-  useConversations,
   useConversation,
-  useMessages,
   useSendMessage,
   useMarkConversationAsRead,
   useToggleConversationFavorite,
@@ -17,6 +15,8 @@ import {
   useToggleMessageStar,
   useUpdateConversationStatus,
 } from '@/hooks/useConversations';
+import { useConversationsInfinite } from '@/hooks/useConversationsInfinite';
+import { useMessagesInfinite } from '@/hooks/useMessagesInfinite';
 import { useLead, useUpdateLead } from '@/hooks/useLeads';
 import { useLeadLabels } from '@/hooks/useLabels';
 import { useAuth } from '@/hooks/useAuth';
@@ -53,10 +53,30 @@ const Inbox = () => {
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
   const userClickedConversationRef = useRef(false);
 
-  // Data hooks
-  const { data: conversations, isLoading: loadingConversations, isError: conversationsError, refetch: refetchConversations } = useConversations();
+  // Data hooks - usando paginação infinita
+  const {
+    conversations,
+    isLoading: loadingConversations,
+    isError: conversationsError,
+    hasNextPage: hasMoreConversations,
+    fetchNextPage: fetchMoreConversations,
+    isFetchingNextPage: loadingMoreConversations,
+    addConversationOptimistically,
+    updateConversationOptimistically,
+  } = useConversationsInfinite();
+
   const { data: selectedConversation } = useConversation(selectedConversationId || undefined);
-  const { data: messages, isLoading: loadingMessages } = useMessages(selectedConversationId || undefined);
+
+  const {
+    messages,
+    isLoading: loadingMessages,
+    hasNextPage: hasMoreMessages,
+    fetchNextPage: fetchMoreMessages,
+    isFetchingNextPage: loadingMoreMessages,
+    addMessageOptimistically,
+    updateMessageOptimistically,
+  } = useMessagesInfinite(selectedConversationId || undefined);
+
   const { data: leadData, refetch: refetchLead, isLoading: loadingLead } = useLead(selectedConversation?.lead_id || undefined);
   const { data: leadLabels } = useLeadLabels(selectedConversation?.lead_id || undefined);
 
@@ -72,7 +92,7 @@ const Inbox = () => {
   // Notification sound hook
   const { notify } = useNotificationSound();
 
-  // Unified realtime subscription
+  // Unified realtime subscription with optimistic update functions
   useInboxRealtime({
     selectedConversationId,
     onNewIncomingMessage: (message, leadName) => {
@@ -80,6 +100,10 @@ const Inbox = () => {
       notify(message.content, leadName);
       logger.log('[Inbox] New incoming message:', message.id);
     },
+    addMessageOptimistically,
+    updateMessageOptimistically,
+    addConversationOptimistically,
+    updateConversationOptimistically,
   });
 
   // Persist lead panel toggle
@@ -209,8 +233,11 @@ const Inbox = () => {
             onNewConversation={() => setShowNewConversationModal(true)}
             isLoading={loadingConversations}
             isError={conversationsError}
-            onRetry={() => refetchConversations()}
+            onRetry={() => fetchMoreConversations()}
             userId={user?.id}
+            hasMore={hasMoreConversations}
+            onLoadMore={fetchMoreConversations}
+            isLoadingMore={loadingMoreConversations}
           />
         </div>
       )}
@@ -236,6 +263,9 @@ const Inbox = () => {
           onToggleLeadPanel={() => setShowLeadPanel(!showLeadPanel)}
           agentName={authUser?.name}
           onBack={() => setSelectedConversationId(null)}
+          hasMoreMessages={hasMoreMessages}
+          onLoadMoreMessages={fetchMoreMessages}
+          isLoadingMoreMessages={loadingMoreMessages}
         />
       )}
 
