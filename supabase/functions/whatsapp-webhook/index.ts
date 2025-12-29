@@ -1411,66 +1411,33 @@ serve(async (req) => {
       );
     }
 
-    // ========== CORREÇÃO: Verificar idempotência por external_id (com suporte a shortId) ==========
+    // ========== CORREÇÃO DEFINITIVA: Verificar por waha_message_id (UNIQUE no banco) ==========
+    // Calcular waha_message_id canônico a partir do external_id
+    let wahaMessageId: string | null = null;
     if (externalMessageId) {
-      // Extrair o ID curto se vier no formato serializado WAHA
-      // Formato: "true_554599957851@c.us_3EB0725EB8EE5F6CC14B33" → shortId = "3EB0725EB8EE5F6CC14B33"
-      // Ou formato curto: "3EB0725EB8EE5F6CC14B33" → shortId = "3EB0725EB8EE5F6CC14B33"
-      let shortId: string | null = null;
+      // Extrair o ID curto (último segmento após underscore) que é único por mensagem WAHA
+      // Formato: "true_554599957851@c.us_3EB0725EB8EE5F6CC14B33" → "3EB0725EB8EE5F6CC14B33"
+      // Ou formato curto: "3EB0725EB8EE5F6CC14B33" → "3EB0725EB8EE5F6CC14B33"
       if (typeof externalMessageId === 'string' && externalMessageId.includes('_')) {
         const parts = externalMessageId.split('_');
-        shortId = parts[parts.length - 1]; // Último segmento é o ID curto
-        console.log('[whatsapp-webhook] external_id serializado detectado, shortId:', shortId);
+        wahaMessageId = parts[parts.length - 1];
       } else {
-        // Se não tem underscore, o próprio ID já é o curto
-        shortId = externalMessageId;
+        wahaMessageId = externalMessageId;
       }
       
-      // Tentar match com ID curto primeiro (mensagens salvas pelo CRM usam ID curto)
-      if (shortId) {
-        const { data: existingByShort } = await supabase
-          .from('messages')
-          .select('id')
-          .eq('external_id', shortId)
-          .maybeSingle();
-        
-        if (existingByShort) {
-          console.log('[whatsapp-webhook] Mensagem já processada (match shortId exato):', shortId);
-          return new Response(
-            JSON.stringify({ success: true, duplicate: true, existing_message_id: existingByShort.id, matched_by: 'shortId_exact' }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        
-        // ========== CORREÇÃO ADICIONAL: Buscar por shortId no final do external_id (LIKE) ==========
-        // Caso o webhook tenha recebido ID curto e no banco esteja serializado (ou vice-versa)
-        const { data: existingByLike } = await supabase
-          .from('messages')
-          .select('id')
-          .ilike('external_id', `%${shortId}`)
-          .limit(1)
-          .maybeSingle();
-        
-        if (existingByLike) {
-          console.log('[whatsapp-webhook] Mensagem já processada (match shortId LIKE):', shortId);
-          return new Response(
-            JSON.stringify({ success: true, duplicate: true, existing_message_id: existingByLike.id, matched_by: 'shortId_like' }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-      }
+      console.log('[whatsapp-webhook] 🔑 waha_message_id calculado:', wahaMessageId, '| original external_id:', externalMessageId);
       
-      // Tentar match exato com external_id completo
-      const { data: existingMessage } = await supabase
+      // Verificar duplicata pelo waha_message_id (tem índice UNIQUE no banco)
+      const { data: existingByWahaId } = await supabase
         .from('messages')
         .select('id')
-        .eq('external_id', externalMessageId)
+        .eq('waha_message_id', wahaMessageId)
         .maybeSingle();
       
-      if (existingMessage) {
-        console.log('[whatsapp-webhook] Mensagem já processada (match exato):', externalMessageId);
+      if (existingByWahaId) {
+        console.log('[whatsapp-webhook] ⏭️ Mensagem já processada (waha_message_id):', wahaMessageId);
         return new Response(
-          JSON.stringify({ success: true, duplicate: true, existing_message_id: existingMessage.id, matched_by: 'exact' }),
+          JSON.stringify({ success: true, duplicate: true, existing_message_id: existingByWahaId.id, matched_by: 'waha_message_id' }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -1662,8 +1629,12 @@ serve(async (req) => {
       }
     }
 
-    // Buscar ou criar conversa
+    // Buscar ou criar conversa via UPSERT (proteção contra race condition)
     let conversation;
+    const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
+    const whatsappInstanceId = wahaConfig?.instanceId || null;
+    
+    // Tentar buscar conversa existente primeiro
     const { data: existingConversation } = await supabase
       .from('conversations')
       .select('*')
@@ -1675,44 +1646,57 @@ serve(async (req) => {
 
     if (existingConversation) {
       conversation = existingConversation;
-      console.log('[whatsapp-webhook] Conversa encontrada:', conversation.id);
+      console.log('[whatsapp-webhook] ✅ Conversa encontrada:', conversation.id);
 
       // Apenas reabrir conversa se estava pendente e é mensagem INBOUND (do lead)
-      // Mensagens outbound (nossas) não devem reabrir conversas resolvidas
       if (!isFromMe) {
         await supabase
           .from('conversations')
-          .update({
-            status: 'open',
-          })
+          .update({ status: 'open' })
           .eq('id', conversation.id);
       }
     } else {
-      // Buscar ID da instância WhatsApp pela session do webhook (para associar corretamente)
-      const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
-      
-      // Criar nova conversa - o trigger cuida do unread_count e last_message_at quando a mensagem for inserida
-      const { data: newConversation, error: createConvError } = await supabase
+      // Usar upsert para criar conversa (UNIQUE constraint protege contra duplicatas)
+      const { data: upsertedConversation, error: createConvError } = await supabase
         .from('conversations')
-        .insert({
+        .upsert({
           lead_id: lead.id,
           status: 'open',
           assigned_to: lead.assigned_to,
-          whatsapp_instance_id: wahaConfig?.instanceId || null,
+          whatsapp_instance_id: whatsappInstanceId,
+        }, {
+          onConflict: 'lead_id',
+          ignoreDuplicates: false,
         })
         .select('*')
         .single();
 
       if (createConvError) {
-        console.error('[whatsapp-webhook] Erro ao criar conversa:', createConvError);
-        return new Response(
-          JSON.stringify({ success: false, error: 'Error creating conversation' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        // Se falhou, tentar buscar a conversa existente (pode ter sido criada por outra requisição)
+        console.log('[whatsapp-webhook] ⚠️ Erro ao criar conversa, buscando existente:', createConvError.code);
+        
+        const { data: fallbackConv } = await supabase
+          .from('conversations')
+          .select('*')
+          .eq('lead_id', lead.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (fallbackConv) {
+          conversation = fallbackConv;
+          console.log('[whatsapp-webhook] ✅ Conversa encontrada após fallback:', conversation.id);
+        } else {
+          console.error('[whatsapp-webhook] ❌ Erro ao criar conversa:', createConvError);
+          return new Response(
+            JSON.stringify({ success: false, error: 'Error creating conversation' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else {
+        conversation = upsertedConversation;
+        console.log('[whatsapp-webhook] ✅ Conversa criada/upserted:', conversation.id, 'whatsapp_instance_id:', whatsappInstanceId);
       }
-
-      conversation = newConversation;
-      console.log('[whatsapp-webhook] Conversa criada:', conversation.id, 'whatsapp_instance_id:', wahaConfig?.instanceId);
     }
 
     // Se tiver mídia, fazer upload para o storage permanente
@@ -1743,11 +1727,11 @@ serve(async (req) => {
     
     console.log('[whatsapp-webhook] Direção:', direction, 'Sender:', senderType, 'Source:', source);
     
-    // Criar mensagem com dados de quote se existirem
+    // Criar mensagem com dados de quote se existirem (usar upsert com waha_message_id)
     const messageInsertData: Record<string, unknown> = {
       conversation_id: conversation.id,
       lead_id: lead.id,
-      sender_id: isFromMe ? null : lead.id, // Outbound não tem sender_id específico (pode ser qualquer agente)
+      sender_id: isFromMe ? null : lead.id,
       sender_type: senderType,
       content: content,
       type: type as 'text' | 'image' | 'audio' | 'video' | 'document',
@@ -1756,6 +1740,7 @@ serve(async (req) => {
       source: source,
       status: isFromMe ? 'sent' : 'delivered',
       external_id: externalMessageId || null,
+      waha_message_id: wahaMessageId, // ← ID canônico para idempotência
     };
     
     // Adicionar dados de quote se existir
@@ -1765,21 +1750,62 @@ serve(async (req) => {
       console.log('[whatsapp-webhook] Salvando mensagem com quote:', quotedMessage.id);
     }
     
-    const { data: message, error: createMsgError } = await supabase
-      .from('messages')
-      .insert(messageInsertData)
-      .select('*')
-      .single();
-
-    if (createMsgError) {
-      console.error('[whatsapp-webhook] Erro ao criar mensagem:', createMsgError);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Error creating message' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Usar upsert para garantir idempotência (UNIQUE constraint no waha_message_id)
+    let message;
+    if (wahaMessageId) {
+      const { data: upsertedMessage, error: upsertMsgError } = await supabase
+        .from('messages')
+        .upsert(messageInsertData, {
+          onConflict: 'waha_message_id',
+          ignoreDuplicates: true, // Ignora se já existe (não atualiza)
+        })
+        .select('*')
+        .maybeSingle();
+      
+      if (upsertMsgError) {
+        // Se erro for de duplicata, buscar a mensagem existente
+        if (upsertMsgError.code === '23505') {
+          console.log('[whatsapp-webhook] ⏭️ Mensagem duplicada detectada no upsert, ignorando');
+          const { data: existingMsg } = await supabase
+            .from('messages')
+            .select('id')
+            .eq('waha_message_id', wahaMessageId)
+            .maybeSingle();
+          
+          return new Response(
+            JSON.stringify({ success: true, duplicate: true, existing_message_id: existingMsg?.id, matched_by: 'upsert_conflict' }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        console.error('[whatsapp-webhook] ❌ Erro ao criar mensagem:', upsertMsgError);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Error creating message' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      message = upsertedMessage;
+    } else {
+      // Sem waha_message_id, usar insert normal
+      const { data: insertedMessage, error: insertMsgError } = await supabase
+        .from('messages')
+        .insert(messageInsertData)
+        .select('*')
+        .single();
+      
+      if (insertMsgError) {
+        console.error('[whatsapp-webhook] ❌ Erro ao criar mensagem:', insertMsgError);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Error creating message' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      message = insertedMessage;
     }
 
-    console.log('[whatsapp-webhook] Mensagem criada:', message.id, 'external_id:', externalMessageId);
+    console.log('[whatsapp-webhook] ✅ Mensagem criada:', message?.id, 'waha_message_id:', wahaMessageId);
 
     // Criar notificação apenas para mensagens INBOUND (do lead)
     // Mensagens outbound (nossas) não devem gerar notificação

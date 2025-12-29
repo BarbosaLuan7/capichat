@@ -583,6 +583,7 @@ export type Database = {
           source: string | null
           status: Database["public"]["Enums"]["message_status"]
           type: Database["public"]["Enums"]["message_type"]
+          waha_message_id: string | null
         }
         Insert: {
           content: string
@@ -602,6 +603,7 @@ export type Database = {
           source?: string | null
           status?: Database["public"]["Enums"]["message_status"]
           type?: Database["public"]["Enums"]["message_type"]
+          waha_message_id?: string | null
         }
         Update: {
           content?: string
@@ -621,6 +623,7 @@ export type Database = {
           source?: string | null
           status?: Database["public"]["Enums"]["message_status"]
           type?: Database["public"]["Enums"]["message_type"]
+          waha_message_id?: string | null
         }
         Relationships: [
           {
