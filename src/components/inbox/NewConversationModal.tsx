@@ -130,7 +130,7 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
     return true;
   }, [normalizedPhone, countryCode]);
   
-  // Check for duplicate phone with debounce
+  // Check for duplicate phone with debounce - busca flexível por múltiplos formatos
   useEffect(() => {
     if (!isPhoneValid || normalizedPhone.length < 8) {
       setExistingLead(null);
@@ -140,11 +140,16 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
     const timeout = setTimeout(async () => {
       setIsCheckingDuplicity(true);
       try {
-        // Buscar pelo número completo com código do país
+        // Extrair últimos 8-9 dígitos para busca flexível
+        // Isso funciona independente se o telefone foi salvo com ou sem código do país
+        const phoneDigits = normalizedPhone.slice(-9); // Ex: 991159994
+        
+        // Buscar por múltiplos formatos possíveis
         const { data, error } = await supabase
           .from('leads')
           .select('id, name, phone')
-          .eq('phone', fullPhoneNumber)
+          .or(`phone.eq.${fullPhoneNumber},phone.ilike.%${phoneDigits}`)
+          .limit(1)
           .maybeSingle();
         
         if (error) {
@@ -160,7 +165,7 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
     }, 300);
     
     return () => clearTimeout(timeout);
-  }, [fullPhoneNumber, isPhoneValid, normalizedPhone.length]);
+  }, [fullPhoneNumber, isPhoneValid, normalizedPhone]);
   
   // Reset form when modal closes
   useEffect(() => {
