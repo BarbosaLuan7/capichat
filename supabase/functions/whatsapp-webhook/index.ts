@@ -690,7 +690,24 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
     
     // Tem mídia se hasMedia = true ou se tem URL de mídia
     const hasRealMedia = (msg.hasMedia === true || !!extractedMediaUrl) && type !== 'text';
-    let content = msg.body || '';
+    // Tentar múltiplas fontes de body (importante para mensagens de LID/Facebook)
+    let content = msg.body || 
+                  (msg as any)._data?.body || 
+                  (msg as any).text ||
+                  (msg as any).caption ||
+                  '';
+    
+    // Log de debug se body estiver vazio
+    if (!content) {
+      console.log('[whatsapp-webhook] Body vazio, detalhes:', JSON.stringify({
+        body: msg.body,
+        _data_body: (msg as any)._data?.body,
+        text: (msg as any).text,
+        caption: (msg as any).caption,
+        type: msg.type,
+        hasMedia: msg.hasMedia,
+      }));
+    }
     
     if (!content && hasRealMedia) {
       const mediaLabels: Record<string, string> = {
@@ -1063,12 +1080,19 @@ serve(async (req) => {
         // fromMe=true: enviada por nós (celular, CRM, bot)
         // fromMe=false: recebida do lead
         isFromMe = payload.fromMe || false;
-        console.log('[whatsapp-webhook] Mensagem fromMe:', isFromMe);
         
         messageData = payload;
         externalMessageId = payload.id || '';
         
-        console.log('[whatsapp-webhook] Raw from:', rawFrom);
+        // ========== LOG DE DEBUG DETALHADO ==========
+        console.log('[whatsapp-webhook] ===== MENSAGEM RECEBIDA =====');
+        console.log('[whatsapp-webhook] fromMe:', isFromMe);
+        console.log('[whatsapp-webhook] external_id:', externalMessageId);
+        console.log('[whatsapp-webhook] from:', rawFrom);
+        console.log('[whatsapp-webhook] body preview:', (payload.body || '').substring(0, 50));
+        console.log('[whatsapp-webhook] type:', payload.type);
+        console.log('[whatsapp-webhook] hasMedia:', payload.hasMedia);
+        console.log('[whatsapp-webhook] ==============================');
         
         // ========== Detectar LID e extrair número real ==========
         if (isLID(rawFrom)) {
