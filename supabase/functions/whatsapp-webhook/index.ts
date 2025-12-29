@@ -619,7 +619,22 @@ function isSystemNotification(payload: any): boolean {
   return false;
 }
 
-function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'waha' | 'evolution'): { content: string; type: string; mediaUrl?: string; isSystemMessage?: boolean } {
+interface QuotedMessageData {
+  id: string;
+  body: string;
+  from: string;
+  type: string;
+}
+
+interface MessageContentResult {
+  content: string;
+  type: string;
+  mediaUrl?: string;
+  isSystemMessage?: boolean;
+  quotedMessage?: QuotedMessageData;
+}
+
+function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'waha' | 'evolution'): MessageContentResult {
   if (provider === 'waha') {
     const msg = payload as WAHAMessage & { _data?: any };
     
@@ -690,10 +705,53 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
       return { content: '', type: 'text', isSystemMessage: true };
     }
     
+    // ========== EXTRAIR QUOTED MESSAGE (REPLY) ==========
+    let quotedMessage: QuotedMessageData | undefined;
+    
+    // WAHA pode enviar quotedMsg em diferentes lugares
+    const quotedData = (msg as any).quotedMsg || 
+                       (msg as any)._data?.quotedMsg || 
+                       (msg as any)._data?.quotedMsgObj;
+    
+    if (quotedData) {
+      // Extrair ID serializado da mensagem citada
+      let quotedId = '';
+      if (typeof quotedData.id === 'string') {
+        quotedId = quotedData.id;
+      } else if (quotedData.id?._serialized) {
+        quotedId = quotedData.id._serialized;
+      } else if (quotedData.id?.id) {
+        // Construir ID serializado manualmente
+        const fromMe = quotedData.id.fromMe ? 'true' : 'false';
+        const remote = quotedData.id.remote || quotedData.from || '';
+        quotedId = `${fromMe}_${remote}_${quotedData.id.id}`;
+      }
+      
+      // Extrair remetente do quote
+      let quotedFrom = quotedData.from || quotedData.participant || '';
+      // Limpar sufixo @c.us/@s.whatsapp.net
+      quotedFrom = quotedFrom.replace(/@c\.us$/, '').replace(/@s\.whatsapp\.net$/, '');
+      
+      // Determinar tipo da mensagem citada
+      let quotedType = quotedData.type || 'text';
+      if (quotedType === 'chat') quotedType = 'text';
+      if (quotedType === 'ptt') quotedType = 'audio';
+      
+      quotedMessage = {
+        id: quotedId,
+        body: quotedData.body || quotedData.caption || quotedData.text || `[${quotedType}]`,
+        from: quotedFrom,
+        type: quotedType,
+      };
+      
+      console.log('[whatsapp-webhook] Quote detectado:', quotedMessage);
+    }
+    
     return {
       content,
       type,
       mediaUrl: extractedMediaUrl,
+      quotedMessage,
     };
   } else {
     const msg = payload as EvolutionMessage;
@@ -703,12 +761,31 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
       return { content: '[Mensagem vazia]', type: 'text' };
     }
     
+    // Para Evolution, extrair quoted do contextInfo (usando any para flexibilidade de tipos)
+    let quotedMessage: QuotedMessageData | undefined;
+    const msgAny = message as any;
+    const contextInfo = msgAny.extendedTextMessage?.contextInfo || 
+                        msgAny.imageMessage?.contextInfo ||
+                        msgAny.audioMessage?.contextInfo ||
+                        msgAny.videoMessage?.contextInfo ||
+                        msgAny.documentMessage?.contextInfo;
+    
+    if (contextInfo?.quotedMessage) {
+      const quoted = contextInfo.quotedMessage;
+      quotedMessage = {
+        id: contextInfo.stanzaId || '',
+        body: quoted.conversation || quoted.extendedTextMessage?.text || '[Mídia]',
+        from: contextInfo.participant || '',
+        type: 'text',
+      };
+    }
+    
     if (message.conversation) {
-      return { content: message.conversation, type: 'text' };
+      return { content: message.conversation, type: 'text', quotedMessage };
     }
     
     if (message.extendedTextMessage?.text) {
-      return { content: message.extendedTextMessage.text, type: 'text' };
+      return { content: message.extendedTextMessage.text, type: 'text', quotedMessage };
     }
     
     if (message.imageMessage) {
@@ -716,6 +793,7 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
         content: message.imageMessage.caption || '[Imagem]',
         type: 'image',
         mediaUrl: message.imageMessage.url,
+        quotedMessage,
       };
     }
     
@@ -724,6 +802,7 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
         content: '[Áudio]',
         type: 'audio',
         mediaUrl: message.audioMessage.url,
+        quotedMessage,
       };
     }
     
@@ -732,6 +811,7 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
         content: message.videoMessage.caption || '[Vídeo]',
         type: 'video',
         mediaUrl: message.videoMessage.url,
+        quotedMessage,
       };
     }
     
@@ -740,6 +820,7 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
         content: message.documentMessage.fileName || '[Documento]',
         type: 'document',
         mediaUrl: message.documentMessage.url,
+        quotedMessage,
       };
     }
     
@@ -1396,21 +1477,33 @@ serve(async (req) => {
       }
     }
 
-    // Criar mensagem
+    // Extrair quote se houver (re-extrair do payload porque não está disponível aqui)
+    const { quotedMessage } = getMessageContent(messageData, provider);
+    
+    // Criar mensagem com dados de quote se existirem
+    const messageInsertData: Record<string, unknown> = {
+      conversation_id: conversation.id,
+      lead_id: lead.id,
+      sender_id: lead.id,
+      sender_type: 'lead',
+      content: content,
+      type: type as 'text' | 'image' | 'audio' | 'video' | 'document',
+      media_url: finalMediaUrl,
+      direction: 'inbound',
+      status: 'delivered',
+      external_id: externalMessageId || null,
+    };
+    
+    // Adicionar dados de quote se existir
+    if (quotedMessage) {
+      messageInsertData.reply_to_external_id = quotedMessage.id;
+      messageInsertData.quoted_message = quotedMessage;
+      console.log('[whatsapp-webhook] Salvando mensagem com quote:', quotedMessage.id);
+    }
+    
     const { data: message, error: createMsgError } = await supabase
       .from('messages')
-      .insert({
-        conversation_id: conversation.id,
-        lead_id: lead.id,
-        sender_id: lead.id,
-        sender_type: 'lead',
-        content: content,
-        type: type as 'text' | 'image' | 'audio' | 'video' | 'document',
-        media_url: finalMediaUrl,
-        direction: 'inbound',
-        status: 'delivered',
-        external_id: externalMessageId || null,
-      })
+      .insert(messageInsertData)
       .select('*')
       .single();
 

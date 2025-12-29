@@ -576,6 +576,8 @@ export type Database = {
           is_starred: boolean | null
           lead_id: string | null
           media_url: string | null
+          quoted_message: Json | null
+          reply_to_external_id: string | null
           sender_id: string
           sender_type: Database["public"]["Enums"]["sender_type"]
           status: Database["public"]["Enums"]["message_status"]
@@ -592,6 +594,8 @@ export type Database = {
           is_starred?: boolean | null
           lead_id?: string | null
           media_url?: string | null
+          quoted_message?: Json | null
+          reply_to_external_id?: string | null
           sender_id: string
           sender_type: Database["public"]["Enums"]["sender_type"]
           status?: Database["public"]["Enums"]["message_status"]
@@ -608,6 +612,8 @@ export type Database = {
           is_starred?: boolean | null
           lead_id?: string | null
           media_url?: string | null
+          quoted_message?: Json | null
+          reply_to_external_id?: string | null
           sender_id?: string
           sender_type?: Database["public"]["Enums"]["sender_type"]
           status?: Database["public"]["Enums"]["message_status"]
