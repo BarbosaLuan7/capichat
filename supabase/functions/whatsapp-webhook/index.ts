@@ -161,6 +161,49 @@ async function resolvePhoneFromLID(
   }
 }
 
+// Busca informações do contato via WAHA API (nome salvo nos contatos + pushname)
+async function getContactInfo(
+  wahaBaseUrl: string,
+  apiKey: string,
+  sessionName: string,
+  contactId: string
+): Promise<{ name: string | null; pushname: string | null }> {
+  try {
+    // Usar apenas o número SEM @c.us
+    const cleanNumber = contactId.replace('@c.us', '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
+    
+    const url = `${wahaBaseUrl}/api/contacts?contactId=${cleanNumber}&session=${sessionName}`;
+    
+    console.log('[whatsapp-webhook] Buscando info do contato:', url);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'X-Api-Key': apiKey,
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      console.log('[whatsapp-webhook] API contato retornou:', response.status);
+      return { name: null, pushname: null };
+    }
+    
+    const data = await response.json();
+    console.log('[whatsapp-webhook] Resposta info contato:', JSON.stringify(data));
+    
+    // A resposta pode ter diferentes formatos
+    const name = data?.name || data?.verifiedName || null;
+    const pushname = data?.pushname || data?.pushName || data?.notify || null;
+    
+    return { name, pushname };
+  } catch (error) {
+    console.error('[whatsapp-webhook] Erro ao buscar info do contato:', error);
+    return { name: null, pushname: null };
+  }
+}
+
 // Busca foto de perfil do WhatsApp via WAHA API
 async function getProfilePicture(
   wahaBaseUrl: string,
@@ -1382,17 +1425,43 @@ serve(async (req) => {
           senderPhone = normalizePhone(rawContact);
         }
         
-        // Extrair pushName de múltiplas fontes possíveis no payload WAHA
-        senderName = 
-          payload.pushName ||
-          (body.payload as any)?._data?.pushName ||
-          (body.payload as any)?._data?.notifyName ||
-          body.pushName ||
-          (body.payload as any)?.chat?.contact?.pushname ||
-          (body.payload as any)?.sender?.pushName ||
-          '';
+        // ========== EXTRAÇÃO DO NOME DO CONTATO ==========
+        // Para mensagens OUTBOUND (fromMe=true): pushName é o NOSSO nome, não do destinatário
+        // Precisamos buscar o nome do destinatário via API
+        if (isFromMe) {
+          // Mensagem enviada por nós - buscar nome do DESTINATÁRIO via API
+          console.log('[whatsapp-webhook] Mensagem outbound - buscando nome do destinatário via API...');
+          
+          const wahaConfigForContact = await getWAHAConfigBySession(supabase, body.session || 'default');
+          if (wahaConfigForContact) {
+            const phoneWithCountry = senderPhone.startsWith('55') ? senderPhone : `55${senderPhone}`;
+            const contactInfo = await getContactInfo(
+              wahaConfigForContact.baseUrl,
+              wahaConfigForContact.apiKey,
+              wahaConfigForContact.sessionName,
+              phoneWithCountry
+            );
+            
+            // Prioridade: nome salvo nos contatos > pushname do WhatsApp
+            senderName = contactInfo.name || contactInfo.pushname || '';
+            console.log('[whatsapp-webhook] Nome do destinatário obtido via API:', senderName);
+          } else {
+            senderName = '';
+            console.log('[whatsapp-webhook] Config WAHA não encontrada para buscar nome do destinatário');
+          }
+        } else {
+          // Mensagem recebida - usar pushName do payload normalmente
+          senderName = 
+            payload.pushName ||
+            (body.payload as any)?._data?.pushName ||
+            (body.payload as any)?._data?.notifyName ||
+            body.pushName ||
+            (body.payload as any)?.chat?.contact?.pushname ||
+            (body.payload as any)?.sender?.pushName ||
+            '';
+        }
         
-        console.log('[whatsapp-webhook] pushName extraído:', senderName, 'phone normalizado:', senderPhone, 'isLID:', isFromFacebookLid);
+        console.log('[whatsapp-webhook] Nome extraído:', senderName, 'phone normalizado:', senderPhone, 'isLID:', isFromFacebookLid, 'isFromMe:', isFromMe);
       } else {
         console.log('[whatsapp-webhook] Evento não processado:', event);
         return new Response(
