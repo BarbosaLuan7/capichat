@@ -325,12 +325,76 @@ async function wahaFetch(
   throw lastError || new Error('Todos os formatos de autenticação falharam');
 }
 
+// Verifica se um número existe no WhatsApp e obtém o chatId correto
+// Isso resolve o problema "No LID for user" para números novos
+async function getWahaContactChatId(
+  baseUrl: string, 
+  apiKey: string, 
+  session: string, 
+  phone: string
+): Promise<{ exists: boolean; chatId?: string; error?: string }> {
+  try {
+    // Remove o + se existir e garante formato limpo
+    const cleanPhone = phone.replace(/^\+/, '');
+    
+    const url = `${baseUrl}/api/contacts/check-exists?phone=${cleanPhone}&session=${session}`;
+    console.log('[WAHA] Verificando existência do número:', url);
+    
+    const response = await wahaFetch(url, apiKey, { method: 'GET' });
+    const responseText = await response.text();
+    console.log('[WAHA] check-exists resposta:', response.status, responseText);
+    
+    if (!response.ok) {
+      // Se endpoint não existe (versão antiga WAHA), usar formato padrão @c.us
+      if (response.status === 404) {
+        console.log('[WAHA] Endpoint check-exists não encontrado, usando formato @c.us padrão');
+        return { exists: true, chatId: `${cleanPhone}@c.us` };
+      }
+      return { exists: false, error: `Erro ao verificar número: ${response.status}` };
+    }
+    
+    const data = JSON.parse(responseText);
+    // Resposta esperada: { "numberExists": true, "chatId": "5545988428644@c.us" }
+    // ou para LID: { "numberExists": true, "chatId": "5545988428644@lid" }
+    
+    console.log('[WAHA] Resultado check-exists:', data);
+    
+    if (!data.numberExists) {
+      return { exists: false, error: 'Este número não está registrado no WhatsApp. Verifique se o número está correto.' };
+    }
+    
+    // Usar o chatId retornado pela API (pode ser @c.us ou @lid)
+    const chatId = data.chatId || `${cleanPhone}@c.us`;
+    console.log('[WAHA] ChatId obtido:', chatId);
+    
+    return { exists: true, chatId };
+  } catch (error) {
+    console.error('[WAHA] Erro ao verificar existência:', error);
+    // Em caso de erro, tenta com formato padrão @c.us
+    return { exists: true, chatId: `${phone}@c.us` };
+  }
+}
+
 // Provider-specific message sending functions
 // Nota: phone já vem validado e normalizado (formato: 5511999999999)
 async function sendWAHA(config: WhatsAppConfig, phone: string, message: string, type: string, mediaUrl?: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const baseUrl = normalizeUrl(config.base_url);
-  const chatId = phone + '@c.us'; // phone já está normalizado
   const session = config.instance_name || 'default';
+  
+  // NOVO: Verificar número e obter chatId correto ANTES de enviar
+  // Isso resolve o problema "No LID for user" para números novos
+  const checkResult = await getWahaContactChatId(baseUrl, config.api_key, session, phone);
+  
+  if (!checkResult.exists || !checkResult.chatId) {
+    console.log('[WAHA] Número não existe no WhatsApp:', checkResult.error);
+    return { 
+      success: false, 
+      error: checkResult.error || 'Número não existe no WhatsApp' 
+    };
+  }
+  
+  const chatId = checkResult.chatId; // Usa o chatId retornado pela API (pode ser @c.us ou @lid)
+  console.log('[WAHA] Usando chatId:', chatId);
   
   let endpoint = '/api/sendText';
   let body: Record<string, unknown> = {
@@ -395,11 +459,11 @@ async function sendWAHA(config: WhatsAppConfig, phone: string, message: string, 
           };
         }
         
-        // Detectar erro "No LID for user" - sessão não conectada ou número inválido
+        // Detectar erro "No LID for user" - agora não deveria ocorrer pois verificamos antes
         if (responseText.includes('No LID for user')) {
           return { 
             success: false, 
-            error: 'Sessão do WhatsApp desconectada ou número não existe no WhatsApp. Verifique a conexão do WhatsApp na configuração.' 
+            error: 'Falha ao resolver identificador do contato no WhatsApp. Tente novamente ou verifique a conexão.' 
           };
         }
         
