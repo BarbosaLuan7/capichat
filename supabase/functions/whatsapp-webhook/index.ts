@@ -72,6 +72,14 @@ function isGroupChat(chatId: string): boolean {
          chatId.startsWith('120363');
 }
 
+// Detecta se é um broadcast/status (stories do WhatsApp) - deve ser ignorado
+function isStatusBroadcast(chatId: string): boolean {
+  if (!chatId) return false;
+  return chatId.includes('status@broadcast') || 
+         chatId === 'status@broadcast' ||
+         chatId.includes('@broadcast');
+}
+
 // Detecta se é um LID do Facebook (formato: número@lid)
 function isLID(phone: string): boolean {
   return phone.includes('@lid') || /^\d{15,}$/.test(phone.replace(/\D/g, ''));
@@ -690,18 +698,57 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
     
     // Tem mídia se hasMedia = true ou se tem URL de mídia
     const hasRealMedia = (msg.hasMedia === true || !!extractedMediaUrl) && type !== 'text';
-    // Tentar múltiplas fontes de body (importante para mensagens de LID/Facebook)
-    let content = msg.body || 
-                  (msg as any)._data?.body || 
-                  (msg as any).text ||
-                  (msg as any).caption ||
-                  '';
+    
+    // ========== CORREÇÃO: Função para detectar base64 ==========
+    const isBase64Content = (str: string): boolean => {
+      if (!str || str.length < 100) return false;
+      // Padrões comuns de início de base64 para diferentes tipos de mídia
+      const base64Patterns = [
+        '/9j/',      // JPEG
+        'iVBOR',     // PNG
+        'R0lGOD',    // GIF
+        'UklGR',     // WEBP
+        'AAAA',      // Alguns formatos de vídeo/áudio
+        'data:image',
+        'data:audio',
+        'data:video',
+      ];
+      return base64Patterns.some(pattern => str.startsWith(pattern)) || 
+             (str.length > 500 && !str.includes(' ') && /^[A-Za-z0-9+/=]+$/.test(str.substring(0, 100)));
+    };
+    
+    // ========== CORREÇÃO: Extrair caption corretamente para mídia ==========
+    // Para mensagens de mídia, usar caption em vez de body (que pode conter base64)
+    let content = '';
+    
+    if (hasRealMedia) {
+      // Para mídia: priorizar caption, depois body APENAS se não for base64
+      const caption = (msg as any).caption || 
+                      (msg as any)._data?.caption ||
+                      '';
+      const bodyContent = msg.body || (msg as any)._data?.body || '';
+      
+      if (caption && !isBase64Content(caption)) {
+        content = caption;
+      } else if (bodyContent && !isBase64Content(bodyContent)) {
+        content = bodyContent;
+      }
+      // Se body for base64, content fica vazio (correto)
+      
+      console.log('[whatsapp-webhook] Mídia detectada - caption:', caption?.substring(0, 50), 'bodyIsBase64:', isBase64Content(bodyContent));
+    } else {
+      // Para mensagens de texto: usar body normalmente
+      content = msg.body || 
+                (msg as any)._data?.body || 
+                (msg as any).text ||
+                '';
+    }
     
     // Log de debug se body estiver vazio
     if (!content) {
       console.log('[whatsapp-webhook] Body vazio, detalhes:', JSON.stringify({
-        body: msg.body,
-        _data_body: (msg as any)._data?.body,
+        body: msg.body?.substring(0, 100),
+        _data_body: (msg as any)._data?.body?.substring(0, 100),
         text: (msg as any).text,
         caption: (msg as any).caption,
         type: msg.type,
@@ -709,14 +756,11 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
       }));
     }
     
+    // ========== CORREÇÃO: Placeholder para mídia sem caption ==========
     if (!content && hasRealMedia) {
-      const mediaLabels: Record<string, string> = {
-        'image': '[Imagem]',
-        'audio': '[Áudio]',
-        'video': '[Vídeo]',
-        'document': '[Documento]',
-      };
-      content = mediaLabels[type] || '[Mídia]';
+      // Mídia sem caption - deixar content vazio (não usar placeholder)
+      // O frontend vai mostrar a mídia sem texto
+      content = '';
     } else if (!content && !hasRealMedia) {
       // Mensagem vazia sem mídia - provavelmente notificação do sistema
       return { content: '', type: 'text', isSystemMessage: true };
@@ -1197,6 +1241,15 @@ serve(async (req) => {
           );
         }
         
+        // ========== FILTRO DE STATUS/BROADCAST - Ignorar stories ==========
+        if (isStatusBroadcast(rawContact)) {
+          console.log('[whatsapp-webhook] Ignorando mensagem de status/broadcast:', rawContact);
+          return new Response(
+            JSON.stringify({ success: true, ignored: true, reason: 'status_broadcast' }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
         messageData = payload;
         externalMessageId = payload.id || '';
         
@@ -1382,9 +1435,26 @@ serve(async (req) => {
           .maybeSingle();
         
         if (existingByShort) {
-          console.log('[whatsapp-webhook] Mensagem já processada (match shortId):', shortId);
+          console.log('[whatsapp-webhook] Mensagem já processada (match shortId exato):', shortId);
           return new Response(
-            JSON.stringify({ success: true, duplicate: true, existing_message_id: existingByShort.id, matched_by: 'shortId' }),
+            JSON.stringify({ success: true, duplicate: true, existing_message_id: existingByShort.id, matched_by: 'shortId_exact' }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        // ========== CORREÇÃO ADICIONAL: Buscar por shortId no final do external_id (LIKE) ==========
+        // Caso o webhook tenha recebido ID curto e no banco esteja serializado (ou vice-versa)
+        const { data: existingByLike } = await supabase
+          .from('messages')
+          .select('id')
+          .ilike('external_id', `%${shortId}`)
+          .limit(1)
+          .maybeSingle();
+        
+        if (existingByLike) {
+          console.log('[whatsapp-webhook] Mensagem já processada (match shortId LIKE):', shortId);
+          return new Response(
+            JSON.stringify({ success: true, duplicate: true, existing_message_id: existingByLike.id, matched_by: 'shortId_like' }),
             { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
@@ -1416,6 +1486,25 @@ serve(async (req) => {
       console.log('[whatsapp-webhook] Ignorando notificação do sistema');
       return new Response(
         JSON.stringify({ success: true, ignored: true, reason: 'system_notification' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // ========== CORREÇÃO: Validar conteúdo da mensagem ==========
+    // Ignorar mensagens com conteúdo inválido/placeholder
+    const invalidContents = ['[text]', '[Text]', '[TEXT]', '[media]', '[Media]', '[MEDIA]', '[Mídia]'];
+    if (!content && !mediaUrl) {
+      console.log('[whatsapp-webhook] Ignorando mensagem sem conteúdo e sem mídia');
+      return new Response(
+        JSON.stringify({ success: true, ignored: true, reason: 'empty_message' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    if (content && invalidContents.includes(content)) {
+      console.log('[whatsapp-webhook] Ignorando mensagem com placeholder inválido:', content);
+      return new Response(
+        JSON.stringify({ success: true, ignored: true, reason: 'placeholder_content' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
