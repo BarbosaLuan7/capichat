@@ -1,8 +1,8 @@
 import React, { useState, useEffect, memo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Check, CheckCheck, Image, FileText, Video, Mic, Sparkles, Loader2, Copy, Clock, AlertCircle, ImageOff, VideoOff, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, CheckCheck, Image, FileText, Video, Mic, Sparkles, Loader2, Copy, Clock, AlertCircle, ImageOff, VideoOff, ExternalLink, ChevronDown, ChevronUp, CornerUpLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { useSignedUrl } from '@/hooks/useSignedUrl';
 import { AudioPlayer } from '@/components/inbox/AudioPlayer';
 import { ImageLightbox } from '@/components/inbox/ImageLightbox';
 import { DocumentPreview } from '@/components/inbox/DocumentPreview';
+import { QuotedMessage } from '@/components/inbox/QuotedMessage';
 import type { Database } from '@/integrations/supabase/types';
 
 const MAX_MESSAGE_LENGTH = 500;
@@ -30,6 +31,13 @@ type MessageStatus = 'sent' | 'delivered' | 'read' | 'pending' | 'failed';
 
 type Message = Database['public']['Tables']['messages']['Row'] & {
   is_starred?: boolean;
+  quoted_message?: {
+    id: string;
+    body: string;
+    from: string;
+    type?: string;
+  } | null;
+  reply_to_external_id?: string | null;
 };
 
 interface MessageBubbleProps {
@@ -39,6 +47,7 @@ interface MessageBubbleProps {
   leadName: string;
   leadAvatarUrl?: string | null;
   agentName?: string;
+  onReply?: (message: Message) => void;
 }
 
 // Helper function for status icon configuration
@@ -90,6 +99,7 @@ function MessageBubbleComponent({
   leadName,
   leadAvatarUrl,
   agentName = 'Agente',
+  onReply,
 }: MessageBubbleProps) {
   const { transcribeAudio, getTranscription, isLoading } = useAudioTranscription();
   const [transcription, setTranscription] = useState<string | null>(null);
@@ -98,6 +108,7 @@ function MessageBubbleComponent({
   const [imageError, setImageError] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showActions, setShowActions] = useState(false);
   
   // Usar signed URL para mídias em buckets privados
   const { signedUrl: resolvedMediaUrl, isLoading: isLoadingUrl } = useSignedUrl(message.media_url);
@@ -318,11 +329,19 @@ function MessageBubbleComponent({
     }
   };
 
+  const handleReply = () => {
+    if (onReply) {
+      onReply(message);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn('flex gap-2 group', isAgent && 'flex-row-reverse')}
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
     >
       {showAvatar ? (
         <Avatar className="w-8 h-8">
@@ -342,6 +361,35 @@ function MessageBubbleComponent({
       )}
 
       <div className="relative max-w-[70%]">
+        {/* Reply button that appears on hover */}
+        {onReply && (
+          <div 
+            className={cn(
+              "absolute top-1/2 -translate-y-1/2 transition-opacity duration-200",
+              isAgent ? "-left-8" : "-right-8",
+              showActions ? "opacity-100" : "opacity-0"
+            )}
+          >
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 rounded-full bg-background/80 hover:bg-background shadow-sm border border-border/50"
+                    onClick={handleReply}
+                  >
+                    <CornerUpLeft className="w-3.5 h-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side={isAgent ? "left" : "right"} className="text-xs">
+                  Responder
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
+        
         <div
           className={cn(
             'rounded-2xl px-4 py-2.5',
@@ -350,6 +398,16 @@ function MessageBubbleComponent({
               : 'bg-card border border-border rounded-tl-sm'
           )}
         >
+          {/* Quoted message if this is a reply */}
+          {message.quoted_message && (
+            <QuotedMessage
+              quote={message.quoted_message}
+              isAgentMessage={isAgent}
+              leadName={leadName}
+              agentName={agentName}
+            />
+          )}
+          
           {renderMedia()}
           
           {message.content && !MEDIA_PLACEHOLDERS.includes(message.content) && !/\.\w{2,5}$/.test(message.content) && (
@@ -429,6 +487,7 @@ export const MessageBubble = memo(MessageBubbleComponent, (prevProps, nextProps)
     prevProps.message.status === nextProps.message.status &&
     prevProps.message.is_starred === nextProps.message.is_starred &&
     prevProps.isAgent === nextProps.isAgent &&
-    prevProps.showAvatar === nextProps.showAvatar
+    prevProps.showAvatar === nextProps.showAvatar &&
+    prevProps.onReply === nextProps.onReply
   );
 });

@@ -111,7 +111,7 @@ export function useSendMessage() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (message: MessageInsert) => {
+    mutationFn: async (message: MessageInsert & { reply_to_external_id?: string }) => {
       logger.log('[useSendMessage] Enviando via edge function:', message.conversation_id);
 
       const { data, error } = await supabase.functions.invoke('send-whatsapp-message', {
@@ -120,6 +120,7 @@ export function useSendMessage() {
           content: message.content,
           type: message.type || 'text',
           media_url: message.media_url,
+          reply_to_external_id: message.reply_to_external_id,
         },
       });
 

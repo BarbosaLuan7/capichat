@@ -27,6 +27,7 @@ import { TemplateSelector } from '@/components/inbox/TemplateSelector';
 import { SlashCommandPopover } from '@/components/inbox/SlashCommandPopover';
 import { MessageBubble } from '@/components/inbox/MessageBubble';
 import { InlineNoteMessage } from '@/components/inbox/InlineNoteMessage';
+import { ReplyPreview } from '@/components/inbox/ReplyPreview';
 
 import { AIReminderPrompt } from '@/components/inbox/AIReminderPrompt';
 import { ConversationStatusActions } from '@/components/inbox/ConversationStatusActions';
@@ -72,7 +73,7 @@ interface ChatAreaProps {
   lead: LeadWithLabels | null;
   messages: Message[] | undefined;
   isLoadingMessages: boolean;
-  onSendMessage: (content: string, type: string, mediaUrl?: string | null) => Promise<void>;
+  onSendMessage: (content: string, type: string, mediaUrl?: string | null, replyToExternalId?: string | null) => Promise<void>;
   onStatusChange: (status: ConversationStatus) => void;
   onToggleFavorite: () => void;
   isUpdatingStatus: boolean;
@@ -111,6 +112,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   const [showReminderPrompt, setShowReminderPrompt] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -288,6 +290,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     if ((!messageInput.trim() && !pendingFile) || !conversation) return;
 
     const sentMessage = messageInput;
+    const currentReplyTo = replyingTo;
     setIsSending(true);
     
     try {
@@ -300,13 +303,18 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
         setPendingFile(null);
       }
 
+      // Passar reply_to_external_id se estiver respondendo
+      const replyToExternalId = currentReplyTo?.external_id || null;
+      
       await onSendMessage(
         messageInput || (messageType !== 'text' ? `[${messageType}]` : ''),
         messageType,
-        mediaUrl
+        mediaUrl,
+        replyToExternalId
       );
 
       clearDraft();
+      setReplyingTo(null); // Limpar reply após enviar
       inputRef.current?.focus();
       
       // Check for reminders
@@ -322,6 +330,11 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     } finally {
       setIsSending(false);
     }
+  };
+
+  const handleReplyMessage = (message: Message) => {
+    setReplyingTo(message);
+    inputRef.current?.focus();
   };
 
   const handleFileSelect = (file: File, type: 'image' | 'video' | 'audio' | 'document') => {
@@ -528,6 +541,8 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
                           showAvatar={showAvatar}
                           leadName={lead.name}
                           leadAvatarUrl={lead.avatar_url}
+                          agentName={agentName}
+                          onReply={handleReplyMessage}
                         />
                       );
                     })}
@@ -629,6 +644,22 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
           aiReminders.clearReminder();
         }}
       />
+
+      {/* Reply Preview - shown when replying to a message */}
+      {replyingTo && (
+        <ReplyPreview
+          message={{
+            id: replyingTo.id,
+            external_id: replyingTo.external_id,
+            content: replyingTo.content,
+            sender_type: replyingTo.sender_type as 'lead' | 'agent',
+            type: replyingTo.type,
+          }}
+          leadName={lead.name}
+          agentName={agentName}
+          onCancel={() => setReplyingTo(null)}
+        />
+      )}
 
       {/* Message Input */}
       <div className="p-4 border-t border-border bg-card">

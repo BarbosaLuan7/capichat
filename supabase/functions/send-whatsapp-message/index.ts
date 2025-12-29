@@ -11,6 +11,7 @@ interface SendMessagePayload {
   content: string;
   type?: 'text' | 'image' | 'audio' | 'video' | 'document';
   media_url?: string;
+  reply_to_external_id?: string; // ID externo da mensagem sendo respondida
 }
 
 interface WhatsAppConfig {
@@ -386,7 +387,8 @@ async function sendWAHA(
   message: string, 
   type: string, 
   mediaUrl?: string,
-  cachedChatId?: string | null
+  cachedChatId?: string | null,
+  replyToExternalId?: string | null
 ): Promise<{ success: boolean; messageId?: string; error?: string; chatId?: string }> {
   const baseUrl = normalizeUrl(config.base_url);
   const session = config.instance_name || 'default';
@@ -420,6 +422,12 @@ async function sendWAHA(
     text: message,
     session,
   };
+  
+  // Adicionar reply_to se estiver respondendo uma mensagem
+  if (replyToExternalId) {
+    body.reply_to = replyToExternalId;
+    console.log('[WAHA] Enviando como reply para:', replyToExternalId);
+  }
 
   if (type === 'image' && mediaUrl) {
     endpoint = '/api/sendImage';
@@ -429,6 +437,7 @@ async function sendWAHA(
       caption: message,
       session,
     };
+    if (replyToExternalId) body.reply_to = replyToExternalId;
   } else if (type === 'audio' && mediaUrl) {
     // Usar endpoint específico para áudio/voz
     endpoint = '/api/sendVoice';
@@ -441,6 +450,7 @@ async function sendWAHA(
       convert: true, // Converte automaticamente para formato opus
       session,
     };
+    if (replyToExternalId) body.reply_to = replyToExternalId;
   } else if (type === 'document' && mediaUrl) {
     endpoint = '/api/sendFile';
     body = {
@@ -449,6 +459,7 @@ async function sendWAHA(
       caption: message,
       session,
     };
+    if (replyToExternalId) body.reply_to = replyToExternalId;
   }
 
   const url = `${baseUrl}${endpoint}`;
@@ -890,8 +901,8 @@ serve(async (req) => {
     
     switch (config.provider) {
       case 'waha':
-        // Passar chatId cacheado para evitar chamada à API check-exists
-        result = await sendWAHA(config, fullPhoneNumber, messageContent, messageType, resolvedMediaUrl, lead.whatsapp_chat_id);
+        // Passar chatId cacheado e reply_to_external_id para o WAHA
+        result = await sendWAHA(config, fullPhoneNumber, messageContent, messageType, resolvedMediaUrl, lead.whatsapp_chat_id, payload.reply_to_external_id);
         break;
       case 'evolution':
         result = await sendEvolution(config, fullPhoneNumber, messageContent, messageType, resolvedMediaUrl);
@@ -927,20 +938,29 @@ serve(async (req) => {
 
     // Save message to database with external_id for status tracking
     // Salva o conteúdo JÁ PROCESSADO (com variáveis substituídas)
+    // Também salva reply_to_external_id se estiver respondendo
+    const messageInsertData: Record<string, unknown> = {
+      conversation_id: payload.conversation_id,
+      lead_id: lead.id,
+      content: messageContent, // Usar conteúdo processado
+      type: messageType,
+      media_url: payload.media_url,
+      sender_type: 'agent',
+      sender_id: user.id,
+      direction: 'outbound',
+      status: 'sent',
+      external_id: result.messageId || null, // ID do WhatsApp para rastrear status
+    };
+    
+    // Adicionar reply_to_external_id se estiver respondendo
+    if (payload.reply_to_external_id) {
+      messageInsertData.reply_to_external_id = payload.reply_to_external_id;
+      console.log('[send-whatsapp-message] Salvando mensagem como reply para:', payload.reply_to_external_id);
+    }
+    
     const { data: savedMessage, error: messageError } = await supabase
       .from('messages')
-      .insert({
-        conversation_id: payload.conversation_id,
-        lead_id: lead.id,
-        content: messageContent, // Usar conteúdo processado
-        type: messageType,
-        media_url: payload.media_url,
-        sender_type: 'agent',
-        sender_id: user.id,
-        direction: 'outbound',
-        status: 'sent',
-        external_id: result.messageId || null, // ID do WhatsApp para rastrear status
-      })
+      .insert(messageInsertData)
       .select()
       .single();
 
