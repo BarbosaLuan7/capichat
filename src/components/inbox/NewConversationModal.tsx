@@ -250,10 +250,10 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
     setIsSubmitting(true);
     
     try {
-      // 1. Create lead
+      // 1. Create lead - salvar SEM código do país para padronização
       const lead = await createLead.mutateAsync({
         name: getDefaultName(),
-        phone: fullPhoneNumber,
+        phone: normalizedPhone, // Sem código do país (ex: 45988428644)
         source: 'manual',
         stage_id: firstStage?.id || null,
         assigned_to: user.id,
