@@ -1284,30 +1284,48 @@ serve(async (req) => {
                       ? new Date(payload.timestamp * 1000).toISOString()
                       : new Date().toISOString();
                     
-                    // Criar mensagem
-                    const { data: newMessage, error: insertError } = await supabase
+                    // Verificar se mensagem já existe pelo waha_message_id antes de criar
+                    const { data: existingMsgByWaha } = await supabase
                       .from('messages')
-                      .insert({
-                        conversation_id: conversation.id,
-                        lead_id: lead.id,
-                        sender_id: null, // Outbound do celular - sem sender_id
-                        sender_type: 'agent',
-                        content: finalContent,
-                        type: msgType,
-                        direction: 'outbound',
-                        source: 'mobile',
-                        external_id: rawMessageId,
-                        status: newStatus || 'sent',
-                        created_at: msgTimestamp,
-                      })
                       .select('id')
-                      .single();
+                      .eq('waha_message_id', shortId)
+                      .maybeSingle();
                     
-                    if (insertError) {
-                      console.error('[whatsapp-webhook] Erro ao criar mensagem via ACK:', insertError);
-                    } else {
-                      console.log('[whatsapp-webhook] ✅ Mensagem outbound criada via ACK:', newMessage?.id);
+                    if (existingMsgByWaha) {
+                      console.log('[whatsapp-webhook] Mensagem já existe (waha_message_id), atualizando status apenas:', existingMsgByWaha.id);
+                      // Apenas atualizar status se necessário
+                      await supabase
+                        .from('messages')
+                        .update({ status: newStatus || 'sent' })
+                        .eq('id', existingMsgByWaha.id);
                       found = true;
+                    } else {
+                      // Criar mensagem COM waha_message_id para prevenir duplicação
+                      const { data: newMessage, error: insertError } = await supabase
+                        .from('messages')
+                        .insert({
+                          conversation_id: conversation.id,
+                          lead_id: lead.id,
+                          sender_id: null, // Outbound do celular - sem sender_id
+                          sender_type: 'agent',
+                          content: finalContent,
+                          type: msgType,
+                          direction: 'outbound',
+                          source: 'mobile',
+                          external_id: rawMessageId,
+                          waha_message_id: shortId, // Prevenir duplicação
+                          status: newStatus || 'sent',
+                          created_at: msgTimestamp,
+                        })
+                        .select('id')
+                        .single();
+                      
+                      if (insertError) {
+                        console.error('[whatsapp-webhook] Erro ao criar mensagem via ACK:', insertError);
+                      } else {
+                        console.log('[whatsapp-webhook] ✅ Mensagem outbound criada via ACK:', newMessage?.id);
+                        found = true;
+                      }
                     }
                   }
                 } else {
