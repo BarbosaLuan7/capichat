@@ -19,7 +19,8 @@ export function useTemplates(enabled: boolean = true) {
       return data as Template[];
     },
     enabled,
-    staleTime: 60000, // 1 minute cache
+    staleTime: 2 * 60 * 1000, // 2 minutes - templates mudam pouco
+    gcTime: 10 * 60 * 1000, // 10 minutes cache
   });
 }
 

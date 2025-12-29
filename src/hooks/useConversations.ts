@@ -43,7 +43,8 @@ export function useConversations() {
       if (error) throw error;
       return data;
     },
-    staleTime: 30000, // 30 seconds - reduces refetches
+    staleTime: 30 * 1000, // 30 seconds - reduces refetches
+    gcTime: 5 * 60 * 1000, // 5 minutes cache
   });
 }
 
@@ -65,6 +66,7 @@ export function useConversation(id: string | undefined) {
       return data;
     },
     enabled: !!id,
+    gcTime: 5 * 60 * 1000, // 5 minutes cache
     staleTime: 30000, // 30 segundos
   });
 }
@@ -84,6 +86,7 @@ export function useMessages(conversationId: string | undefined) {
       return data as Message[];
     },
     enabled: !!conversationId,
+    gcTime: 5 * 60 * 1000, // 5 minutes cache
     staleTime: 10000, // 10 seconds
   });
 }
