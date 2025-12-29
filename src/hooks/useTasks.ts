@@ -28,6 +28,7 @@ export function useTasks(page: number = 1, pageSize: number = 50) {
       return { tasks: data || [], totalCount: count || 0 };
     },
     staleTime: 30 * 1000, // 30 segundos
+    gcTime: 5 * 60 * 1000, // 5 minutes cache
   });
 }
 
@@ -45,6 +46,7 @@ export function useAllTasks() {
       return data;
     },
     staleTime: 30 * 1000, // 30 segundos
+    gcTime: 5 * 60 * 1000, // 5 minutes cache
   });
 }
 
@@ -64,6 +66,7 @@ export function useTask(id: string | undefined) {
     },
     enabled: !!id,
     staleTime: 30 * 1000, // 30 segundos
+    gcTime: 5 * 60 * 1000, // 5 minutes cache
   });
 }
 

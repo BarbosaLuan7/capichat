@@ -115,7 +115,8 @@ export function useLeadMetrics(period: PeriodFilter) {
         rawLeads: leads || [],
       };
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 60 * 1000, // 1 minuto - dashboard pode ser menos fresh
+    gcTime: 10 * 60 * 1000, // 10 minutes cache
   });
 }
 
@@ -168,7 +169,8 @@ export function useFunnelMetrics(period: PeriodFilter) {
         totalInFunnel: leads?.length || 0,
       };
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 60 * 1000, // 1 minuto
+    gcTime: 10 * 60 * 1000, // 10 minutes cache
   });
 }
 
@@ -265,7 +267,8 @@ export function useAgentPerformance(period: PeriodFilter) {
         totalAgents: agentMetrics.length,
       };
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 60 * 1000, // 1 minuto
+    gcTime: 10 * 60 * 1000, // 10 minutes cache
   });
 }
 
@@ -299,7 +302,8 @@ export function useDailyEvolution(period: PeriodFilter) {
 
       return chartData;
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 60 * 1000, // 1 minuto
+    gcTime: 10 * 60 * 1000, // 10 minutes cache
   });
 }
 
@@ -331,6 +335,7 @@ export function useConversationMetrics(period: PeriodFilter) {
         resolutionRate: total > 0 ? parseFloat(((resolved / total) * 100).toFixed(1)) : 0,
       };
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 60 * 1000, // 1 minuto
+    gcTime: 10 * 60 * 1000, // 10 minutes cache
   });
 }
