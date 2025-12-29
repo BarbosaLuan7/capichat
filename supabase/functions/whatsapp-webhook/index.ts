@@ -253,11 +253,11 @@ async function getProfilePicture(
 }
 
 // Busca configuração do WAHA no banco (genérica - qualquer instância ativa)
-async function getWAHAConfig(supabase: any): Promise<{ baseUrl: string; apiKey: string; sessionName: string; instanceId: string } | null> {
+async function getWAHAConfig(supabase: any): Promise<{ baseUrl: string; apiKey: string; sessionName: string; instanceId: string; tenantId: string | null } | null> {
   try {
     const { data } = await supabase
       .from('whatsapp_config')
-      .select('id, base_url, api_key, instance_name')
+      .select('id, base_url, api_key, instance_name, tenant_id')
       .eq('is_active', true)
       .eq('provider', 'waha')
       .limit(1)
@@ -269,6 +269,7 @@ async function getWAHAConfig(supabase: any): Promise<{ baseUrl: string; apiKey: 
         apiKey: data.api_key,
         sessionName: data.instance_name || 'default',
         instanceId: data.id,
+        tenantId: data.tenant_id || null,
       };
     }
     
@@ -284,13 +285,13 @@ async function getWAHAConfig(supabase: any): Promise<{ baseUrl: string; apiKey: 
 async function getWAHAConfigBySession(
   supabase: any, 
   sessionName: string
-): Promise<{ baseUrl: string; apiKey: string; sessionName: string; instanceId: string } | null> {
+): Promise<{ baseUrl: string; apiKey: string; sessionName: string; instanceId: string; tenantId: string | null } | null> {
   try {
     console.log('[whatsapp-webhook] Buscando config WAHA para session:', sessionName);
     
     const { data } = await supabase
       .from('whatsapp_config')
-      .select('id, base_url, api_key, instance_name, phone_number')
+      .select('id, base_url, api_key, instance_name, phone_number, tenant_id')
       .eq('is_active', true)
       .eq('provider', 'waha')
       .ilike('instance_name', sessionName)  // Case-insensitive: LUAN = luan = Luan
@@ -301,12 +302,14 @@ async function getWAHAConfigBySession(
       console.log('[whatsapp-webhook] ✅ Config encontrada para session:', sessionName, 
         '| instanceId:', data.id, 
         '| instance_name:', data.instance_name,
-        '| phone:', data.phone_number);
+        '| phone:', data.phone_number,
+        '| tenant_id:', data.tenant_id);
       return {
         baseUrl: data.base_url.replace(/\/$/, ''),
         apiKey: data.api_key,
         sessionName: data.instance_name || 'default',
         instanceId: data.id,
+        tenantId: data.tenant_id || null,
       };
     }
     
@@ -1712,6 +1715,11 @@ serve(async (req) => {
       // Criar novo lead com upsert (proteção adicional contra race condition)
       console.log('[whatsapp-webhook] Criando novo lead para:', senderPhone);
       
+      // Buscar config do WAHA para obter tenant_id
+      const wahaConfigForLead = await getWAHAConfigBySession(supabase, body.session || 'default');
+      const tenantIdForLead = wahaConfigForLead?.tenantId || null;
+      console.log('[whatsapp-webhook] Tenant ID para novo lead:', tenantIdForLead);
+      
       const { data: firstStage } = await supabase
         .from('funnel_stages')
         .select('id')
@@ -1729,20 +1737,17 @@ serve(async (req) => {
 
       // Buscar foto de perfil para novo lead
       let avatarUrl: string | null = null;
-      if (!isFromFacebookLid) {
-        const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
-        if (wahaConfig) {
-          // Usar número com código do país (55) para a API
-          const phoneWithCountry = senderPhone.startsWith('55') ? senderPhone : `55${senderPhone}`;
-          avatarUrl = await getProfilePicture(
-            wahaConfig.baseUrl,
-            wahaConfig.apiKey,
-            wahaConfig.sessionName,
-            phoneWithCountry
-          );
-          if (avatarUrl) {
-            console.log('[whatsapp-webhook] Avatar encontrado para novo lead');
-          }
+      if (!isFromFacebookLid && wahaConfigForLead) {
+        // Usar número com código do país (55) para a API
+        const phoneWithCountry = senderPhone.startsWith('55') ? senderPhone : `55${senderPhone}`;
+        avatarUrl = await getProfilePicture(
+          wahaConfigForLead.baseUrl,
+          wahaConfigForLead.apiKey,
+          wahaConfigForLead.sessionName,
+          phoneWithCountry
+        );
+        if (avatarUrl) {
+          console.log('[whatsapp-webhook] Avatar encontrado para novo lead');
         }
       }
 
@@ -1765,6 +1770,7 @@ serve(async (req) => {
           is_facebook_lid: isFromFacebookLid,
           original_lid: originalLid,
           avatar_url: avatarUrl,
+          tenant_id: tenantIdForLead, // Propagar tenant_id do whatsapp_config
         }, {
           onConflict: 'phone',
           ignoreDuplicates: false,
