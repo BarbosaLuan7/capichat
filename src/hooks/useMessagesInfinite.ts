@@ -13,6 +13,31 @@ interface MessagesPage {
   hasMore: boolean;
 }
 
+// Extended message type for optimistic updates
+// Note: 'sending' and 'failed' are client-only statuses not in the DB enum
+export interface OptimisticMessage {
+  id: string;
+  conversation_id: string;
+  content: string;
+  sender_type: 'agent' | 'lead';
+  type: string;
+  status: string; // 'sending' | 'sent' | 'delivered' | 'read' | 'failed'
+  created_at: string;
+  isOptimistic?: boolean;
+  errorMessage?: string;
+  // Optional fields to match Message type
+  sender_id?: string | null;
+  media_url?: string | null;
+  is_starred?: boolean | null;
+  direction?: 'inbound' | 'outbound' | null;
+  is_internal_note?: boolean | null;
+  lead_id?: string | null;
+  external_id?: string | null;
+  reply_to_external_id?: string | null;
+  quoted_message?: any;
+  source?: string | null;
+}
+
 /**
  * Hook para carregar mensagens com paginação infinita (scroll para cima).
  * Carrega as últimas 50 mensagens inicialmente, e mais ao scroll.
@@ -79,7 +104,7 @@ export function useMessagesInfinite(conversationId: string | undefined) {
     ?? [];
 
   // Função para adicionar nova mensagem otimisticamente (realtime)
-  const addMessageOptimistically = useCallback((newMessage: Message) => {
+  const addMessageOptimistically = useCallback((newMessage: Message | OptimisticMessage) => {
     queryClient.setQueryData(
       ['messages-infinite', conversationId],
       (oldData: typeof query.data) => {
@@ -93,7 +118,7 @@ export function useMessagesInfinite(conversationId: string | undefined) {
           if (!firstPage.messages.some(m => m.id === newMessage.id)) {
             newPages[0] = {
               ...firstPage,
-              messages: [...firstPage.messages, newMessage],
+              messages: [...firstPage.messages, newMessage as Message],
             };
           }
         }
@@ -122,6 +147,63 @@ export function useMessagesInfinite(conversationId: string | undefined) {
     );
   }, [queryClient, conversationId]);
 
+  // Função para substituir mensagem otimista pela real (quando API retorna)
+  const replaceOptimisticMessage = useCallback((tempId: string, realMessage: Message) => {
+    queryClient.setQueryData(
+      ['messages-infinite', conversationId],
+      (oldData: typeof query.data) => {
+        if (!oldData) return oldData;
+        
+        const newPages = oldData.pages.map(page => ({
+          ...page,
+          messages: page.messages.map(msg => 
+            msg.id === tempId ? { ...realMessage, isOptimistic: false } : msg
+          ),
+        }));
+        
+        return { ...oldData, pages: newPages };
+      }
+    );
+  }, [queryClient, conversationId]);
+
+  // Função para marcar mensagem como falha
+  const markMessageFailed = useCallback((tempId: string, errorMessage?: string) => {
+    queryClient.setQueryData(
+      ['messages-infinite', conversationId],
+      (oldData: typeof query.data) => {
+        if (!oldData) return oldData;
+        
+        const newPages = oldData.pages.map(page => ({
+          ...page,
+          messages: page.messages.map(msg => 
+            msg.id === tempId 
+              ? { ...msg, status: 'failed' as const, errorMessage } 
+              : msg
+          ),
+        }));
+        
+        return { ...oldData, pages: newPages };
+      }
+    );
+  }, [queryClient, conversationId]);
+
+  // Função para remover mensagem (ex: após reenvio bem-sucedido)
+  const removeMessage = useCallback((messageId: string) => {
+    queryClient.setQueryData(
+      ['messages-infinite', conversationId],
+      (oldData: typeof query.data) => {
+        if (!oldData) return oldData;
+        
+        const newPages = oldData.pages.map(page => ({
+          ...page,
+          messages: page.messages.filter(msg => msg.id !== messageId),
+        }));
+        
+        return { ...oldData, pages: newPages };
+      }
+    );
+  }, [queryClient, conversationId]);
+
   return {
     messages: allMessages,
     isLoading: query.isLoading,
@@ -132,5 +214,8 @@ export function useMessagesInfinite(conversationId: string | undefined) {
     error: query.error,
     addMessageOptimistically,
     updateMessageOptimistically,
+    replaceOptimisticMessage,
+    markMessageFailed,
+    removeMessage,
   };
 }

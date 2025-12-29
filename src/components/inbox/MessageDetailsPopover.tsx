@@ -6,11 +6,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-type MessageStatus = 'sent' | 'delivered' | 'read' | 'pending' | 'failed';
+type MessageStatus = 'sent' | 'delivered' | 'read' | 'pending' | 'failed' | 'sending';
 
 interface MessageDetailsPopoverProps {
   source: string | null;
-  status: MessageStatus;
+  status: string; // Accept any status string for flexibility
   createdAt: string;
   isAgent: boolean;
 }
@@ -45,11 +45,12 @@ const SOURCE_CONFIG: Record<string, { label: string; icon: React.ElementType; co
 };
 
 // Status labels in Portuguese
-const STATUS_LABELS: Record<MessageStatus, string> = {
+const STATUS_LABELS: Record<string, string> = {
   sent: 'Enviada',
   delivered: 'Entregue',
   read: 'Lida',
   pending: 'Enviando',
+  sending: 'Enviando',
   failed: 'Falhou',
 };
 
@@ -93,7 +94,7 @@ export function MessageDetailsPopover({
             variant={status === 'read' ? 'success' : status === 'failed' ? 'destructive' : 'secondary'}
             className="text-xs"
           >
-            {STATUS_LABELS[status]}
+            {STATUS_LABELS[status] || status}
           </Badge>
         </div>
 
