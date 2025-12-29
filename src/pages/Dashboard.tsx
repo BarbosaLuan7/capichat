@@ -14,6 +14,7 @@ import {
   Zap,
   Timer,
   Download,
+  Building2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -62,16 +63,21 @@ import {
   type PeriodFilter,
 } from '@/hooks/useMetrics';
 import { useReportExport } from '@/hooks/useReportExport';
+import { useTenant } from '@/contexts/TenantContext';
 
 const Dashboard = () => {
   const [period, setPeriod] = useState<PeriodFilter>('month');
   const { exportReport, isExporting } = useReportExport();
+  const { tenants, currentTenant, setCurrentTenant, hasMultipleTenants } = useTenant();
 
-  const { data: leadMetrics, isLoading: loadingLeads } = useLeadMetrics(period);
-  const { data: funnelMetrics, isLoading: loadingFunnel } = useFunnelMetrics(period);
-  const { data: agentPerformance, isLoading: loadingAgents } = useAgentPerformance(period);
-  const { data: dailyEvolution, isLoading: loadingDaily } = useDailyEvolution(period);
-  const { data: conversationMetrics, isLoading: loadingConversations } = useConversationMetrics(period);
+  // Use currentTenant.id for filtering, null means "all tenants"
+  const tenantId = currentTenant?.id || null;
+
+  const { data: leadMetrics, isLoading: loadingLeads } = useLeadMetrics(period, tenantId);
+  const { data: funnelMetrics, isLoading: loadingFunnel } = useFunnelMetrics(period, tenantId);
+  const { data: agentPerformance, isLoading: loadingAgents } = useAgentPerformance(period, tenantId);
+  const { data: dailyEvolution, isLoading: loadingDaily } = useDailyEvolution(period, tenantId);
+  const { data: conversationMetrics, isLoading: loadingConversations } = useConversationMetrics(period, tenantId);
 
   const periodLabels: Record<PeriodFilter, string> = {
     today: 'Hoje',
@@ -149,9 +155,38 @@ const Dashboard = () => {
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground">
             Visão geral do seu negócio - {periodLabels[period]}
+            {currentTenant && ` • ${currentTenant.name}`}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Tenant Filter */}
+          {hasMultipleTenants && (
+            <Select 
+              value={currentTenant?.id || 'all'} 
+              onValueChange={(v) => {
+                if (v === 'all') {
+                  setCurrentTenant(null);
+                } else {
+                  const tenant = tenants.find(t => t.id === v);
+                  setCurrentTenant(tenant || null);
+                }
+              }}
+            >
+              <SelectTrigger className="w-[180px]">
+                <Building2 className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="Todas empresas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas empresas</SelectItem>
+                {tenants.map((tenant) => (
+                  <SelectItem key={tenant.id} value={tenant.id}>
+                    {tenant.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           <Select value={period} onValueChange={(v) => setPeriod(v as PeriodFilter)}>
             <SelectTrigger className="w-[180px]">
               <Calendar className="w-4 h-4 mr-2" />
