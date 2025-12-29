@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useTenant } from '@/contexts/TenantContext';
 
 const PAGE_SIZE = 50;
 
@@ -46,15 +47,19 @@ interface ConversationsPage {
  */
 export function useConversationsInfinite() {
   const queryClient = useQueryClient();
+  const { currentTenant, tenants } = useTenant();
+  
+  // Get tenant IDs to filter by
+  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map(t => t.id);
 
   const query = useInfiniteQuery({
-    queryKey: ['conversations-infinite'],
+    queryKey: ['conversations-infinite', currentTenant?.id || 'all'],
     queryFn: async ({ pageParam }): Promise<ConversationsPage> => {
       let queryBuilder = supabase
         .from('conversations')
         .select(`
           *,
-          leads (
+          leads!inner (
             id, 
             name, 
             phone, 
@@ -63,6 +68,7 @@ export function useConversationsInfinite() {
             avatar_url,
             whatsapp_name,
             benefit_type,
+            tenant_id,
             lead_labels (
               labels (id, name, color, category)
             )
@@ -70,11 +76,17 @@ export function useConversationsInfinite() {
           whatsapp_config (
             id,
             name,
-            phone_number
+            phone_number,
+            tenant_id
           )
         `)
         .order('last_message_at', { ascending: false })
         .limit(PAGE_SIZE + 1); // +1 para verificar se há mais
+
+      // Filter by tenant through leads
+      if (tenantIds.length > 0) {
+        queryBuilder = queryBuilder.in('leads.tenant_id', tenantIds);
+      }
 
       // Se temos um cursor, buscar conversas com last_message_at ANTES dele
       if (pageParam) {

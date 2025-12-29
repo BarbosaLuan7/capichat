@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useTenant } from '@/contexts/TenantContext';
 import type { Database } from '@/integrations/supabase/types';
 
 type FunnelStage = Database['public']['Tables']['funnel_stages']['Row'];
@@ -7,13 +8,23 @@ type FunnelStageInsert = Database['public']['Tables']['funnel_stages']['Insert']
 type FunnelStageUpdate = Database['public']['Tables']['funnel_stages']['Update'];
 
 export function useFunnelStages() {
+  const { currentTenant, tenants } = useTenant();
+  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map(t => t.id);
+
   return useQuery({
-    queryKey: ['funnel_stages'],
+    queryKey: ['funnel_stages', currentTenant?.id || 'all'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let queryBuilder = supabase
         .from('funnel_stages')
         .select('*')
         .order('order', { ascending: true });
+
+      // Filter by tenant (includes global stages where tenant_id is null)
+      if (tenantIds.length > 0) {
+        queryBuilder = queryBuilder.or(`tenant_id.is.null,tenant_id.in.(${tenantIds.join(',')})`);
+      }
+
+      const { data, error } = await queryBuilder;
       
       if (error) throw error;
       return data as FunnelStage[];

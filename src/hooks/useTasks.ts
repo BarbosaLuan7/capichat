@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useTenant } from '@/contexts/TenantContext';
 import type { Database } from '@/integrations/supabase/types';
 
 type Task = Database['public']['Tables']['tasks']['Row'];
@@ -12,17 +13,27 @@ interface PaginatedTasksResult {
 }
 
 export function useTasks(page: number = 1, pageSize: number = 50) {
+  const { currentTenant, tenants } = useTenant();
+  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map(t => t.id);
+
   return useQuery({
-    queryKey: ['tasks', page, pageSize],
+    queryKey: ['tasks', page, pageSize, currentTenant?.id || 'all'],
     queryFn: async (): Promise<PaginatedTasksResult> => {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
 
-      const { data, error, count } = await supabase
+      let queryBuilder = supabase
         .from('tasks')
         .select('*', { count: 'exact' })
         .order('due_date', { ascending: true })
         .range(from, to);
+
+      // Filter by tenant
+      if (tenantIds.length > 0) {
+        queryBuilder = queryBuilder.or(`tenant_id.is.null,tenant_id.in.(${tenantIds.join(',')})`);
+      }
+
+      const { data, error, count } = await queryBuilder;
       
       if (error) throw error;
       return { tasks: data || [], totalCount: count || 0 };
@@ -34,13 +45,23 @@ export function useTasks(page: number = 1, pageSize: number = 50) {
 
 // Hook to get ALL tasks (for calendar/kanban view without pagination)
 export function useAllTasks() {
+  const { currentTenant, tenants } = useTenant();
+  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map(t => t.id);
+
   return useQuery({
-    queryKey: ['tasks-all'],
+    queryKey: ['tasks-all', currentTenant?.id || 'all'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let queryBuilder = supabase
         .from('tasks')
         .select('*')
         .order('due_date', { ascending: true });
+
+      // Filter by tenant
+      if (tenantIds.length > 0) {
+        queryBuilder = queryBuilder.or(`tenant_id.is.null,tenant_id.in.(${tenantIds.join(',')})`);
+      }
+
+      const { data, error } = await queryBuilder;
       
       if (error) throw error;
       return data;
