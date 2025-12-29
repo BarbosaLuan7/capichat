@@ -1169,22 +1169,33 @@ serve(async (req) => {
       if (event === 'message' || event === 'message.any') {
         const payload = body.payload as WAHAMessage & { _data?: any };
         
-        // Extrair chatId/from para verificar se é grupo
-        const rawFrom = payload.from || payload.chatId || '';
+        // Processar TODAS as mensagens - tanto inbound quanto outbound
+        // fromMe=true: enviada por nós (celular, CRM, bot)
+        // fromMe=false: recebida do lead
+        isFromMe = payload.fromMe || false;
+        
+        // ========== CORREÇÃO: Usar telefone correto baseado em fromMe ==========
+        // Para mensagens outbound (fromMe=true): o lead é o DESTINATÁRIO (to)
+        // Para mensagens inbound (fromMe=false): o lead é o REMETENTE (from)
+        let rawContact: string;
+        if (isFromMe) {
+          // Mensagem ENVIADA por nós: o lead é o DESTINATÁRIO
+          rawContact = payload.to || payload.chatId || '';
+          console.log('[whatsapp-webhook] Mensagem OUTBOUND - destinatário:', rawContact);
+        } else {
+          // Mensagem RECEBIDA: o lead é o REMETENTE
+          rawContact = payload.from || payload.chatId || '';
+          console.log('[whatsapp-webhook] Mensagem INBOUND - remetente:', rawContact);
+        }
         
         // ========== FILTRO DE GRUPOS - Ignorar mensagens de grupos ==========
-        if (isGroupChat(rawFrom)) {
-          console.log('[whatsapp-webhook] Ignorando mensagem de grupo:', rawFrom);
+        if (isGroupChat(rawContact)) {
+          console.log('[whatsapp-webhook] Ignorando mensagem de grupo:', rawContact);
           return new Response(
             JSON.stringify({ success: true, ignored: true, reason: 'group_message' }),
             { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        
-        // Processar TODAS as mensagens - tanto inbound quanto outbound
-        // fromMe=true: enviada por nós (celular, CRM, bot)
-        // fromMe=false: recebida do lead
-        isFromMe = payload.fromMe || false;
         
         messageData = payload;
         externalMessageId = payload.id || '';
@@ -1193,17 +1204,17 @@ serve(async (req) => {
         console.log('[whatsapp-webhook] ===== MENSAGEM RECEBIDA =====');
         console.log('[whatsapp-webhook] fromMe:', isFromMe);
         console.log('[whatsapp-webhook] external_id:', externalMessageId);
-        console.log('[whatsapp-webhook] from:', rawFrom);
+        console.log('[whatsapp-webhook] rawContact (from/to):', rawContact);
         console.log('[whatsapp-webhook] body preview:', (payload.body || '').substring(0, 50));
         console.log('[whatsapp-webhook] type:', payload.type);
         console.log('[whatsapp-webhook] hasMedia:', payload.hasMedia);
         console.log('[whatsapp-webhook] ==============================');
         
         // ========== Detectar LID e extrair número real ==========
-        if (isLID(rawFrom)) {
+        if (isLID(rawContact)) {
           console.log('[whatsapp-webhook] Detectado LID do Facebook, buscando número real...');
           isFromFacebookLid = true;
-          originalLid = rawFrom.replace('@lid', '').replace(/\D/g, '');
+          originalLid = rawContact.replace('@lid', '').replace(/\D/g, '');
           
           // Primeiro tenta extrair do payload
           let realPhone = extractRealPhoneFromPayload(body.payload);
@@ -1216,7 +1227,7 @@ serve(async (req) => {
                 wahaConfig.baseUrl,
                 wahaConfig.apiKey,
                 wahaConfig.sessionName,
-                rawFrom
+                rawContact
               );
               
               if (realPhone) {
@@ -1234,10 +1245,10 @@ serve(async (req) => {
             senderPhone = normalizePhone(realPhone);
           } else {
             console.warn('[whatsapp-webhook] Não foi possível extrair número real do LID, usando como identificador temporário');
-            senderPhone = originalLid || normalizePhone(rawFrom);
+            senderPhone = originalLid || normalizePhone(rawContact);
           }
         } else {
-          senderPhone = normalizePhone(rawFrom);
+          senderPhone = normalizePhone(rawContact);
         }
         
         // Extrair pushName de múltiplas fontes possíveis no payload WAHA
@@ -1251,7 +1262,6 @@ serve(async (req) => {
           '';
         
         console.log('[whatsapp-webhook] pushName extraído:', senderName, 'phone normalizado:', senderPhone, 'isLID:', isFromFacebookLid);
-        isFromMe = payload.fromMe;
       } else {
         console.log('[whatsapp-webhook] Evento não processado:', event);
         return new Response(
@@ -1348,8 +1358,39 @@ serve(async (req) => {
       );
     }
 
-    // ========== CORREÇÃO 1: Verificar idempotência por external_id ==========
+    // ========== CORREÇÃO: Verificar idempotência por external_id (com suporte a shortId) ==========
     if (externalMessageId) {
+      // Extrair o ID curto se vier no formato serializado WAHA
+      // Formato: "true_554599957851@c.us_3EB0725EB8EE5F6CC14B33" → shortId = "3EB0725EB8EE5F6CC14B33"
+      // Ou formato curto: "3EB0725EB8EE5F6CC14B33" → shortId = "3EB0725EB8EE5F6CC14B33"
+      let shortId: string | null = null;
+      if (typeof externalMessageId === 'string' && externalMessageId.includes('_')) {
+        const parts = externalMessageId.split('_');
+        shortId = parts[parts.length - 1]; // Último segmento é o ID curto
+        console.log('[whatsapp-webhook] external_id serializado detectado, shortId:', shortId);
+      } else {
+        // Se não tem underscore, o próprio ID já é o curto
+        shortId = externalMessageId;
+      }
+      
+      // Tentar match com ID curto primeiro (mensagens salvas pelo CRM usam ID curto)
+      if (shortId) {
+        const { data: existingByShort } = await supabase
+          .from('messages')
+          .select('id')
+          .eq('external_id', shortId)
+          .maybeSingle();
+        
+        if (existingByShort) {
+          console.log('[whatsapp-webhook] Mensagem já processada (match shortId):', shortId);
+          return new Response(
+            JSON.stringify({ success: true, duplicate: true, existing_message_id: existingByShort.id, matched_by: 'shortId' }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+      
+      // Tentar match exato com external_id completo
       const { data: existingMessage } = await supabase
         .from('messages')
         .select('id')
@@ -1357,9 +1398,9 @@ serve(async (req) => {
         .maybeSingle();
       
       if (existingMessage) {
-        console.log('[whatsapp-webhook] Mensagem já processada (external_id duplicado):', externalMessageId);
+        console.log('[whatsapp-webhook] Mensagem já processada (match exato):', externalMessageId);
         return new Response(
-          JSON.stringify({ success: true, duplicate: true, existing_message_id: existingMessage.id }),
+          JSON.stringify({ success: true, duplicate: true, existing_message_id: existingMessage.id, matched_by: 'exact' }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
