@@ -17,10 +17,12 @@ interface QuotedMessageProps {
 }
 
 export function QuotedMessage({ quote, isAgentMessage, leadName, agentName }: QuotedMessageProps) {
-  // Determinar quem enviou a mensagem citada baseado no 'from'
-  // Se from começa com número, é do lead. Se não, pode ser do agente
-  const isQuoteFromLead = /^\d/.test(quote.from || '');
-  const senderName = isQuoteFromLead ? (leadName || 'Lead') : (agentName || 'Agente');
+  // Usar o nome que veio do banco (já está correto no quoted_message.from)
+  // Fallback: Se quote.from for um número de telefone, usar leadName
+  const isPhoneNumber = /^\d+@/.test(quote.from || '');
+  const senderName = isPhoneNumber 
+    ? (leadName || 'Lead') 
+    : (quote.from || 'Desconhecido');
   
   // Truncar texto longo
   const truncatedBody = quote.body.length > 80 
