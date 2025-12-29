@@ -111,7 +111,6 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   const [showSlashCommand, setShowSlashCommand] = useState(false);
   const [showReminderPrompt, setShowReminderPrompt] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const [isSending, setIsSending] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -291,44 +290,49 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
 
     const sentMessage = messageInput;
     const currentReplyTo = replyingTo;
-    setIsSending(true);
     
-    try {
-      let mediaUrl: string | null = null;
-      let messageType: 'text' | 'image' | 'video' | 'audio' | 'document' = 'text';
+    // 1. LIMPAR IMEDIATAMENTE - UX instantânea
+    const currentInput = messageInput;
+    const currentPendingFile = pendingFile;
+    clearDraft();
+    setReplyingTo(null);
+    setPendingFile(null);
+    inputRef.current?.focus();
+    
+    // 2. Preparar dados da mensagem
+    let mediaUrl: string | null = null;
+    let messageType: 'text' | 'image' | 'video' | 'audio' | 'document' = 'text';
 
-      if (pendingFile) {
-        mediaUrl = await uploadFile(pendingFile.file);
-        messageType = pendingFile.type;
-        setPendingFile(null);
+    // Se tem arquivo, fazer upload primeiro (isso ainda precisa esperar)
+    if (currentPendingFile) {
+      try {
+        mediaUrl = await uploadFile(currentPendingFile.file);
+        messageType = currentPendingFile.type;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Erro ao fazer upload';
+        toast.error(message);
+        // Restaurar input se upload falhar
+        saveDraft(currentInput);
+        return;
       }
+    }
 
-      // Passar reply_to_external_id se estiver respondendo
-      const replyToExternalId = currentReplyTo?.external_id || null;
-      
-      await onSendMessage(
-        messageInput || (messageType !== 'text' ? `[${messageType}]` : ''),
-        messageType,
-        mediaUrl,
-        replyToExternalId
-      );
-
-      clearDraft();
-      setReplyingTo(null); // Limpar reply após enviar
-      inputRef.current?.focus();
-      
-      // Check for reminders
-      if (sentMessage.trim().length > 10) {
-        const reminderResult = await aiReminders.detectReminder(sentMessage, lead?.name);
+    // 3. Enviar mensagem (agora é otimista - não bloqueia)
+    const replyToExternalId = currentReplyTo?.external_id || null;
+    onSendMessage(
+      currentInput || (messageType !== 'text' ? `[${messageType}]` : ''),
+      messageType,
+      mediaUrl,
+      replyToExternalId
+    );
+    
+    // 4. Check for reminders (em background)
+    if (sentMessage.trim().length > 10) {
+      aiReminders.detectReminder(sentMessage, lead?.name).then((reminderResult) => {
         if (reminderResult?.hasReminder) {
           setShowReminderPrompt(true);
         }
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro ao enviar mensagem';
-      toast.error(message);
-    } finally {
-      setIsSending(false);
+      });
     }
   };
 
@@ -551,16 +555,15 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
               ))
             )}
             
-            {/* Sending indicator - shows skeleton message while sending */}
-            {isSending && (
+            {/* Upload progress indicator */}
+            {uploadProgress.uploading && (
               <div className="flex gap-2 flex-row-reverse animate-pulse">
                 <div className="w-8 h-8 rounded-full bg-primary/30 shrink-0" />
                 <div className="rounded-2xl rounded-tr-sm bg-primary/40 p-4 max-w-[70%] space-y-2">
                   <div className="h-3 w-32 bg-primary/30 rounded" />
-                  <div className="h-3 w-20 bg-primary/30 rounded" />
                   <div className="flex items-center gap-1 justify-end">
                     <Loader2 className="w-3 h-3 animate-spin text-primary-foreground/50" />
-                    <span className="text-xs text-primary-foreground/50">Enviando...</span>
+                    <span className="text-xs text-primary-foreground/50">Enviando arquivo...</span>
                   </div>
                 </div>
               </div>
@@ -702,8 +705,8 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
                 if (showSlashCommand) return;
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  // Prevent double-send: check isSending and uploadProgress
-                  if (!isSending && !uploadProgress.uploading) {
+                  // Prevent double-send during upload
+                  if (!uploadProgress.uploading) {
                     handleSendMessage();
                   }
                 }
@@ -738,11 +741,11 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
           ) : (
             <Button
               onClick={handleSendMessage}
-              disabled={(!messageInput.trim() && !pendingFile) || isSending || uploadProgress.uploading}
+              disabled={(!messageInput.trim() && !pendingFile) || uploadProgress.uploading}
               className="gradient-primary text-primary-foreground min-w-[40px]"
-              aria-label={isSending || uploadProgress.uploading ? "Enviando..." : "Enviar mensagem"}
+              aria-label={uploadProgress.uploading ? "Enviando..." : "Enviar mensagem"}
             >
-              {isSending || uploadProgress.uploading ? (
+              {uploadProgress.uploading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Send className="w-4 h-4" />

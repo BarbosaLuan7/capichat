@@ -77,6 +77,9 @@ const Inbox = () => {
     isFetchingNextPage: loadingMoreMessages,
     addMessageOptimistically,
     updateMessageOptimistically,
+    replaceOptimisticMessage,
+    markMessageFailed,
+    removeMessage,
   } = useMessagesInfinite(selectedConversationId || undefined);
 
   const { data: leadData, refetch: refetchLead, isLoading: loadingLead } = useLead(selectedConversation?.lead_id || undefined);
@@ -170,7 +173,32 @@ const Inbox = () => {
   const handleSendMessage = useCallback(async (content: string, type: string, mediaUrl?: string | null, replyToExternalId?: string | null) => {
     if (!selectedConversationId || !user) return;
 
-    await sendMessage.mutateAsync({
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    
+    // 1. IMEDIATAMENTE adicionar mensagem otimista
+    addMessageOptimistically({
+      id: tempId,
+      conversation_id: selectedConversationId,
+      content,
+      type: type as any,
+      sender_type: 'agent',
+      sender_id: user.id,
+      status: 'sending', // ⏳ Enviando
+      created_at: new Date().toISOString(),
+      source: 'crm',
+      media_url: mediaUrl || null,
+      is_starred: false,
+      direction: 'outbound',
+      is_internal_note: false,
+      lead_id: null,
+      external_id: null,
+      reply_to_external_id: replyToExternalId || null,
+      quoted_message: null,
+      isOptimistic: true,
+    });
+
+    // 2. API em background (não bloqueia)
+    sendMessage.mutateAsync({
       conversation_id: selectedConversationId,
       sender_id: user.id,
       sender_type: 'agent',
@@ -178,8 +206,22 @@ const Inbox = () => {
       type: type as any,
       media_url: mediaUrl,
       reply_to_external_id: replyToExternalId || undefined,
+    })
+    .then((realMessage) => {
+      // Sucesso: substituir temp pela mensagem real
+      if (realMessage) {
+        replaceOptimisticMessage(tempId, realMessage);
+      } else {
+        // Se não retornou mensagem, apenas atualizar status
+        updateMessageOptimistically(tempId, { status: 'sent' });
+      }
+    })
+    .catch((error) => {
+      // Erro: marcar em vermelho
+      const errorMsg = error instanceof Error ? error.message : 'Erro ao enviar';
+      markMessageFailed(tempId, errorMsg);
     });
-  }, [selectedConversationId, user, sendMessage]);
+  }, [selectedConversationId, user, sendMessage, addMessageOptimistically, replaceOptimisticMessage, updateMessageOptimistically, markMessageFailed]);
 
   const handleStatusChange = useCallback((status: ConversationStatus) => {
     if (!selectedConversationId) return;

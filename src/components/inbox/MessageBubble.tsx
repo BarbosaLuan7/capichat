@@ -2,7 +2,7 @@ import React, { useState, useEffect, memo } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Check, CheckCheck, Image, FileText, Video, Mic, Sparkles, Loader2, Copy, Clock, AlertCircle, ImageOff, VideoOff, ExternalLink, ChevronDown, ChevronUp, CornerUpLeft } from 'lucide-react';
+import { Check, CheckCheck, Image, FileText, Video, Mic, Sparkles, Loader2, Copy, Clock, AlertCircle, ImageOff, VideoOff, ExternalLink, ChevronDown, ChevronUp, CornerUpLeft, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,8 @@ const MEDIA_PLACEHOLDERS = [
   '[Documento]', '[documento]', '[Document]', '[document]',
 ];
 
-type MessageStatus = 'sent' | 'delivered' | 'read' | 'pending' | 'failed';
+// Extended status type including client-only statuses
+type MessageStatus = 'sent' | 'delivered' | 'read' | 'pending' | 'failed' | 'sending';
 
 type Message = Database['public']['Tables']['messages']['Row'] & {
   is_starred?: boolean;
@@ -39,6 +40,8 @@ type Message = Database['public']['Tables']['messages']['Row'] & {
     type?: string;
   } | null;
   reply_to_external_id?: string | null;
+  isOptimistic?: boolean;
+  errorMessage?: string;
 };
 
 interface MessageBubbleProps {
@@ -49,6 +52,7 @@ interface MessageBubbleProps {
   leadAvatarUrl?: string | null;
   agentName?: string;
   onReply?: (message: Message) => void;
+  onRetry?: (message: Message) => void;
 }
 
 // Helper function for status icon configuration
@@ -73,6 +77,7 @@ function getStatusConfig(status: MessageStatus) {
         label: 'Enviada',
       };
     case 'pending':
+    case 'sending':
       return {
         icon: Clock,
         className: 'text-primary-foreground/50 animate-pulse',
@@ -101,6 +106,7 @@ function MessageBubbleComponent({
   leadAvatarUrl,
   agentName = 'Agente',
   onReply,
+  onRetry,
 }: MessageBubbleProps) {
   const { transcribeAudio, getTranscription, isLoading } = useAudioTranscription();
   const [transcription, setTranscription] = useState<string | null>(null);
@@ -396,7 +402,9 @@ function MessageBubbleComponent({
             'rounded-2xl px-4 py-2.5',
             isAgent
               ? 'bg-primary text-primary-foreground rounded-tr-sm'
-              : 'bg-card border border-border rounded-tl-sm'
+              : 'bg-card border border-border rounded-tl-sm',
+            // Failed message styling - use string comparison for extended statuses
+            (message.status as string) === 'failed' && isAgent && 'bg-destructive/80 border border-destructive'
           )}
         >
           {/* Quoted message if this is a reply */}
@@ -475,13 +483,27 @@ function MessageBubbleComponent({
             })()}
             <MessageDetailsPopover
               source={message.source}
-              status={message.status as MessageStatus}
+              status={message.status}
               createdAt={message.created_at}
               isAgent={isAgent}
             />
           </div>
+          
+          {/* Retry button for failed messages */}
+          {(message.status as string) === 'failed' && isAgent && onRetry && (
+            <div className="mt-2 pt-2 border-t border-destructive/30">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
+                onClick={() => onRetry(message)}
+              >
+                <RotateCcw className="w-3 h-3 mr-1" />
+                Reenviar
+              </Button>
+            </div>
+          )}
         </div>
-
       </div>
     </motion.div>
   );
@@ -495,6 +517,7 @@ export const MessageBubble = memo(MessageBubbleComponent, (prevProps, nextProps)
     prevProps.message.is_starred === nextProps.message.is_starred &&
     prevProps.isAgent === nextProps.isAgent &&
     prevProps.showAvatar === nextProps.showAvatar &&
-    prevProps.onReply === nextProps.onReply
+    prevProps.onReply === nextProps.onReply &&
+    prevProps.onRetry === nextProps.onRetry
   );
 });

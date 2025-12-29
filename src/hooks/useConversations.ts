@@ -143,9 +143,8 @@ export function useSendMessage() {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },
     onError: (error) => {
+      // NÃO mostrar toast aqui - o erro é tratado otimisticamente no Inbox
       logger.error('[useSendMessage] Mutation error:', error);
-      const message = error instanceof Error ? error.message : 'Erro ao enviar mensagem';
-      toast.error(message);
     },
   });
 }
