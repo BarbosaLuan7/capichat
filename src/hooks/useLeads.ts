@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useTenant } from '@/contexts/TenantContext';
 import type { Database } from '@/integrations/supabase/types';
 
 type Lead = Database['public']['Tables']['leads']['Row'];
@@ -12,13 +13,16 @@ interface PaginatedLeadsResult {
 }
 
 export function useLeads(page: number = 1, pageSize: number = 50) {
+  const { currentTenant, tenants } = useTenant();
+  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map(t => t.id);
+
   return useQuery({
-    queryKey: ['leads', page, pageSize],
+    queryKey: ['leads', page, pageSize, currentTenant?.id || 'all'],
     queryFn: async (): Promise<PaginatedLeadsResult> => {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
 
-      const { data, error, count } = await supabase
+      let queryBuilder = supabase
         .from('leads')
         .select(`
           *,
@@ -27,6 +31,13 @@ export function useLeads(page: number = 1, pageSize: number = 50) {
         `, { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(from, to);
+
+      // Filter by tenant
+      if (tenantIds.length > 0) {
+        queryBuilder = queryBuilder.in('tenant_id', tenantIds);
+      }
+
+      const { data, error, count } = await queryBuilder;
       
       if (error) throw error;
       return { leads: data || [], totalCount: count || 0 };

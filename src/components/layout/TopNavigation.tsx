@@ -50,6 +50,7 @@ import {
 } from '@/components/ui/navigation-menu';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
+import { TenantSelector } from '@/components/tenants/TenantSelector';
 
 // Menu structure
 const mainNavItems = [
@@ -78,6 +79,7 @@ const settingsItems = [
   { icon: Webhook, label: 'Webhooks', path: '/settings/webhooks' },
   { icon: MessageCircle, label: 'WhatsApp', path: '/settings/whatsapp' },
   { icon: Key, label: 'API', path: '/settings/api' },
+  { icon: Scale, label: 'Empresas', path: '/settings/tenants' },
 ];
 
 const TopNavigation = () => {
@@ -279,7 +281,7 @@ const TopNavigation = () => {
   return (
     <header className="h-14 bg-gradient-to-r from-violet-700 via-purple-700 to-violet-800 border-b border-violet-900/50 flex items-center px-4 sticky top-0 z-50" role="banner">
       {/* Logo */}
-      <Link to="/dashboard" className="flex items-center gap-2.5 mr-6 shrink-0">
+      <Link to="/dashboard" className="flex items-center gap-2.5 mr-4 shrink-0">
         <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
           <Scale className="w-4 h-4 text-white" />
         </div>
@@ -287,6 +289,11 @@ const TopNavigation = () => {
           GaranteDireito
         </span>
       </Link>
+
+      {/* Tenant Selector */}
+      <div className="hidden md:block mr-4">
+        <TenantSelector />
+      </div>
 
       {/* Desktop Navigation */}
       <NavigationMenu className="hidden lg:flex">

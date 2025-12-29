@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useTenant } from '@/contexts/TenantContext';
 import type { Database } from '@/integrations/supabase/types';
 
 type Template = Database['public']['Tables']['templates']['Row'];
@@ -7,13 +8,23 @@ type TemplateInsert = Database['public']['Tables']['templates']['Insert'];
 type TemplateUpdate = Database['public']['Tables']['templates']['Update'];
 
 export function useTemplates(enabled: boolean = true) {
+  const { currentTenant, tenants } = useTenant();
+  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map(t => t.id);
+
   return useQuery({
-    queryKey: ['templates'],
+    queryKey: ['templates', currentTenant?.id || 'all'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let queryBuilder = supabase
         .from('templates')
         .select('*')
         .order('name');
+
+      // Filter by tenant (includes global templates where tenant_id is null)
+      if (tenantIds.length > 0) {
+        queryBuilder = queryBuilder.or(`tenant_id.is.null,tenant_id.in.(${tenantIds.join(',')})`);
+      }
+
+      const { data, error } = await queryBuilder;
       
       if (error) throw error;
       return data as Template[];

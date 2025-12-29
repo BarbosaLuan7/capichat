@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useTenant } from '@/contexts/TenantContext';
 import type { Database } from '@/integrations/supabase/types';
 
 type Label = Database['public']['Tables']['labels']['Row'];
@@ -7,14 +8,24 @@ type LabelInsert = Database['public']['Tables']['labels']['Insert'];
 type LabelUpdate = Database['public']['Tables']['labels']['Update'];
 
 export function useLabels() {
+  const { currentTenant, tenants } = useTenant();
+  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map(t => t.id);
+
   return useQuery({
-    queryKey: ['labels'],
+    queryKey: ['labels', currentTenant?.id || 'all'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let queryBuilder = supabase
         .from('labels')
         .select('*')
         .order('category', { ascending: true })
         .order('name', { ascending: true });
+
+      // Filter by tenant (includes global labels where tenant_id is null)
+      if (tenantIds.length > 0) {
+        queryBuilder = queryBuilder.or(`tenant_id.is.null,tenant_id.in.(${tenantIds.join(',')})`);
+      }
+
+      const { data, error } = await queryBuilder;
       
       if (error) throw error;
       return data as Label[];

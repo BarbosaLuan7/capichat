@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { TenantProvider } from "@/contexts/TenantContext";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { CommandBar } from "@/components/command/CommandBar";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -33,6 +34,7 @@ const TemplatesSettings = lazy(() => import("./pages/settings/TemplatesSettings"
 const WebhooksSettings = lazy(() => import("./pages/settings/WebhooksSettings"));
 const WhatsAppSettings = lazy(() => import("./pages/settings/WhatsAppSettings"));
 const ApiSettings = lazy(() => import("./pages/settings/ApiSettings"));
+const TenantsSettings = lazy(() => import("./pages/settings/TenantsSettings"));
 const ApiDocs = lazy(() => import("./pages/ApiDocs"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -139,6 +141,7 @@ function AppContent() {
             <Route path="settings/webhooks" element={<WebhooksSettings />} />
             <Route path="settings/whatsapp" element={<WhatsAppSettings />} />
             <Route path="settings/api" element={<ApiSettings />} />
+            <Route path="settings/tenants" element={<TenantsSettings />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
@@ -151,11 +154,13 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <AppContent />
-        </TooltipProvider>
+        <TenantProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <AppContent />
+          </TooltipProvider>
+        </TenantProvider>
       </AuthProvider>
     </QueryClientProvider>
   </ErrorBoundary>
