@@ -371,45 +371,59 @@ function formatPhoneForDisplay(phone: string): string {
 
 // ========== BUSCA FLEXÍVEL DE LEAD POR TELEFONE ==========
 // Encontra lead mesmo que o telefone esteja salvo em formato diferente
-// Ex: recebe "45988428644" mas está salvo como "5545988428644" ou vice-versa
+// Suporta números internacionais (595, 1, 54, etc) além de brasileiros (55)
 async function findLeadByPhone(supabase: any, phone: string): Promise<any> {
   const digits = phone.replace(/\D/g, '');
+  
+  // Detectar código do país usando parseInternationalPhone
+  const parsed = parseInternationalPhone(digits);
+  
+  console.log('[whatsapp-webhook] Parsed phone:', {
+    original: digits,
+    countryCode: parsed.countryCode,
+    localNumber: parsed.localNumber,
+    fullNumber: parsed.fullNumber,
+    country: parsed.country,
+  });
   
   // Gerar todas as variações possíveis do número
   const variations: string[] = [];
   
-  // 1. Número como está
+  // 1. Número como veio (completo)
   variations.push(digits);
   
-  // 2. Com código do país (55)
-  if (!digits.startsWith('55')) {
-    variations.push(`55${digits}`);
-  }
+  // 2. Número local isolado (sem código do país)
+  variations.push(parsed.localNumber);
   
-  // 3. Sem código do país
-  if (digits.startsWith('55') && digits.length >= 12) {
-    variations.push(digits.substring(2));
-  }
+  // 3. Número completo formatado (código + local)
+  variations.push(parsed.fullNumber);
   
-  // 4. Variações com/sem 9° dígito (celulares brasileiros)
-  for (const v of [...variations]) {
-    const d = v.startsWith('55') ? v.substring(2) : v;
-    const ddd = d.substring(0, 2);
-    const rest = d.substring(2);
+  // 4. Para Brasil (55), gerar variações com/sem 9° dígito
+  if (parsed.countryCode === '55') {
+    const local = parsed.localNumber;
+    const ddd = local.substring(0, 2);
+    const rest = local.substring(2);
     
     // Se tem 11 dígitos (com 9° dígito), criar versão sem
-    if (d.length === 11 && rest.startsWith('9')) {
+    if (local.length === 11 && rest.startsWith('9')) {
       const without9 = `${ddd}${rest.substring(1)}`;
       variations.push(without9);
       variations.push(`55${without9}`);
     }
     
     // Se tem 10 dígitos (sem 9° dígito), criar versão com
-    if (d.length === 10) {
+    if (local.length === 10) {
       const with9 = `${ddd}9${rest}`;
       variations.push(with9);
       variations.push(`55${with9}`);
     }
+  }
+  
+  // 5. Também buscar com outros códigos de país comuns (caso o lead tenha sido cadastrado errado)
+  // Só para Brasil, adicionar também variação sem código
+  if (parsed.countryCode !== '55' && digits.length >= 10 && digits.length <= 11) {
+    // Número pode ter sido salvo com código 55 por engano
+    variations.push(`55${digits}`);
   }
   
   // Remover duplicatas
@@ -429,7 +443,9 @@ async function findLeadByPhone(supabase: any, phone: string): Promise<any> {
   }
   
   if (leads && leads.length > 0) {
-    console.log('[whatsapp-webhook] ✅ Lead encontrado via busca flexível:', leads[0].id, 'phone salvo:', leads[0].phone);
+    console.log('[whatsapp-webhook] ✅ Lead encontrado via busca flexível:', leads[0].id, 
+      'phone salvo:', leads[0].phone, 
+      'country_code salvo:', leads[0].country_code);
     return leads[0];
   }
   
@@ -444,11 +460,13 @@ async function findLeadByPhone(supabase: any, phone: string): Promise<any> {
     .limit(1);
   
   if (fallbackLeads && fallbackLeads.length > 0) {
-    console.log('[whatsapp-webhook] ✅ Lead encontrado via fallback (núcleo):', fallbackLeads[0].id, 'phone salvo:', fallbackLeads[0].phone);
+    console.log('[whatsapp-webhook] ✅ Lead encontrado via fallback (núcleo):', fallbackLeads[0].id, 
+      'phone salvo:', fallbackLeads[0].phone,
+      'country_code salvo:', fallbackLeads[0].country_code);
     return fallbackLeads[0];
   }
   
-  console.log('[whatsapp-webhook] Lead não encontrado para:', phone);
+  console.log('[whatsapp-webhook] Lead não encontrado para:', phone, '| country detectado:', parsed.country || parsed.countryCode);
   return null;
 }
 
