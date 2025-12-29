@@ -26,7 +26,18 @@ const MEDIA_PLACEHOLDERS = [
   '[Imagem]', '[imagem]', '[Image]', '[image]',
   '[Video]', '[video]', '[Vídeo]', '[vídeo]',
   '[Documento]', '[documento]', '[Document]', '[document]',
+  '[text]', '[Text]', '[TEXT]',
+  '[media]', '[Media]', '[MEDIA]',
+  '[Mídia]', '[mídia]',
 ];
+
+// Detect if content looks like base64 (common in media messages)
+const isBase64Content = (str: string): boolean => {
+  if (!str || str.length < 100) return false;
+  const base64Patterns = ['/9j/', 'iVBOR', 'R0lGOD', 'UklGR', 'AAAA', 'data:image', 'data:audio', 'data:video'];
+  return base64Patterns.some(pattern => str.startsWith(pattern)) || 
+         (str.length > 500 && !str.includes(' ') && /^[A-Za-z0-9+/=]+$/.test(str.substring(0, 100)));
+};
 
 // Extended status type including client-only statuses
 type MessageStatus = 'sent' | 'delivered' | 'read' | 'pending' | 'failed' | 'sending';
@@ -419,7 +430,7 @@ function MessageBubbleComponent({
           
           {renderMedia()}
           
-          {message.content && !MEDIA_PLACEHOLDERS.includes(message.content) && !/\.\w{2,5}$/.test(message.content) && (
+          {message.content && !MEDIA_PLACEHOLDERS.includes(message.content) && !isBase64Content(message.content) && !/\.\w{2,5}$/.test(message.content) && (
             <>
               {message.content.length > MAX_MESSAGE_LENGTH && !isExpanded ? (
                 <div>
