@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   Search,
@@ -33,12 +33,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ConversationStatusTabs } from '@/components/inbox/ConversationStatusTabs';
 import { ConversationItem } from '@/components/inbox/ConversationItem';
+import { InboxFilter } from '@/components/inbox/InboxFilter';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useLabels } from '@/hooks/useLabels';
 import { logger } from '@/lib/logger';
 import type { Database } from '@/integrations/supabase/types';
 
 const CONVERSATION_ITEM_HEIGHT = 88; // Approximate height of ConversationItem in px
+const INBOX_FILTER_STORAGE_KEY = 'inbox-filter-selected';
 
 // Wrapper to prevent inline onClick from breaking React.memo
 const MemoizedConversationItem = React.memo(function MemoizedConversationItem({
@@ -65,7 +67,14 @@ const MemoizedConversationItem = React.memo(function MemoizedConversationItem({
 
 type ConversationStatus = Database['public']['Enums']['conversation_status'];
 type StatusFilter = ConversationStatus | 'all';
-type InboxFilter = 'novos' | 'meus' | 'outros';
+type AssignmentFilter = 'novos' | 'meus' | 'outros';
+
+interface WhatsAppConfigData {
+  id: string;
+  name: string;
+  phone_number: string | null;
+  tenant_id: string | null;
+}
 
 interface ConversationData {
   id: string;
@@ -77,6 +86,7 @@ interface ConversationData {
   assigned_to?: string | null;
   created_at: string;
   leads?: any;
+  whatsapp_config?: WhatsAppConfigData | null;
 }
 
 interface ConversationListProps {
@@ -119,12 +129,22 @@ export function ConversationList({
   onLoadMore,
   isLoadingMore,
 }: ConversationListProps) {
-  const [filter, setFilter] = useState<InboxFilter>('meus');
+  const [filter, setFilter] = useState<AssignmentFilter>('meus');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [sortOrder, setSortOrder] = useState<'recent' | 'oldest'>('recent');
   const [labelSearchTerm, setLabelSearchTerm] = useState('');
+  
+  // State for inbox (WhatsApp number) filter - initialized from localStorage
+  const [selectedInboxIds, setSelectedInboxIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(INBOX_FILTER_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   
   // Ref for virtual list container
   const parentRef = useRef<HTMLDivElement>(null);
@@ -138,7 +158,72 @@ export function ConversationList({
   // Fetch labels
   const { data: allLabels } = useLabels();
 
-  // Filter conversations by assignment first (for accurate status counts)
+  // Extract unique inboxes from conversations with counts
+  const availableInboxes = useMemo(() => {
+    const inboxMap = new Map<string, { id: string; name: string; phone_number: string | null; conversationCount: number }>();
+    conversations?.forEach((conv) => {
+      if (conv.whatsapp_config?.id) {
+        const existing = inboxMap.get(conv.whatsapp_config.id);
+        inboxMap.set(conv.whatsapp_config.id, {
+          id: conv.whatsapp_config.id,
+          name: conv.whatsapp_config.name,
+          phone_number: conv.whatsapp_config.phone_number,
+          conversationCount: (existing?.conversationCount || 0) + 1,
+        });
+      }
+    });
+    return Array.from(inboxMap.values()).sort((a, b) => 
+      (a.phone_number || a.name).localeCompare(b.phone_number || b.name)
+    );
+  }, [conversations]);
+
+  // Initialize selectedInboxIds with all inboxes if empty
+  useEffect(() => {
+    if (selectedInboxIds.length === 0 && availableInboxes.length > 0) {
+      const allIds = availableInboxes.map((i) => i.id);
+      setSelectedInboxIds(allIds);
+    }
+  }, [availableInboxes, selectedInboxIds.length]);
+
+  // Persist inbox filter to localStorage
+  useEffect(() => {
+    if (selectedInboxIds.length > 0) {
+      localStorage.setItem(INBOX_FILTER_STORAGE_KEY, JSON.stringify(selectedInboxIds));
+    }
+  }, [selectedInboxIds]);
+
+  // Inbox filter handlers
+  const handleToggleInbox = useCallback((inboxId: string) => {
+    setSelectedInboxIds((prev) =>
+      prev.includes(inboxId)
+        ? prev.filter((id) => id !== inboxId)
+        : [...prev, inboxId]
+    );
+  }, []);
+
+  const handleSelectAllInboxes = useCallback(() => {
+    const allIds = availableInboxes.map((i) => i.id);
+    if (selectedInboxIds.length === allIds.length) {
+      // If all selected, deselect all
+      setSelectedInboxIds([]);
+    } else {
+      // Select all
+      setSelectedInboxIds(allIds);
+    }
+  }, [availableInboxes, selectedInboxIds.length]);
+
+  // Filter conversations by inbox (WhatsApp number) first
+  const inboxFilteredConversations = useMemo(() => {
+    // If no inboxes selected or all are selected, show all
+    if (selectedInboxIds.length === 0 || selectedInboxIds.length === availableInboxes.length) {
+      return conversations || [];
+    }
+    return (conversations || []).filter((conv) =>
+      conv.whatsapp_config?.id && selectedInboxIds.includes(conv.whatsapp_config.id)
+    );
+  }, [conversations, selectedInboxIds, availableInboxes.length]);
+
+  // Filter conversations by assignment (for accurate status counts)
   const assignmentFilteredConversations = useMemo(() => {
     // Handle unauthenticated user for assignment-based filters
     if (!isUserAuthenticated && (filter === 'meus' || filter === 'outros')) {
@@ -146,7 +231,7 @@ export function ConversationList({
       return [];
     }
 
-    return conversations?.filter((conv) => {
+    return inboxFilteredConversations.filter((conv) => {
       if (filter === 'novos') {
         // Novos = não atribuídos a ninguém
         return !conv.assigned_to;
@@ -156,8 +241,8 @@ export function ConversationList({
         return !!conv.assigned_to && conv.assigned_to !== userId;
       }
       return true;
-    }) || [];
-  }, [conversations, filter, userId, isUserAuthenticated]);
+    });
+  }, [inboxFilteredConversations, filter, userId, isUserAuthenticated]);
 
   // Clear search handler
   const handleClearSearch = useCallback(() => {
@@ -414,9 +499,21 @@ export function ConversationList({
           onChange={setStatusFilter}
           counts={statusCounts}
         />
+      </div>
 
-        {/* Assignment Filter Tabs */}
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as InboxFilter)}>
+      {/* Inbox Filter (WhatsApp numbers) - Collapsible section */}
+      {availableInboxes.length > 0 && (
+        <InboxFilter
+          inboxes={availableInboxes}
+          selectedInboxIds={selectedInboxIds}
+          onToggleInbox={handleToggleInbox}
+          onSelectAll={handleSelectAllInboxes}
+        />
+      )}
+
+      {/* Assignment Filter Tabs */}
+      <div className="p-2 border-b border-border bg-card">
+        <Tabs value={filter} onValueChange={(v) => setFilter(v as AssignmentFilter)}>
           <TabsList className="w-full bg-muted relative z-10 h-8">
             <TabsTrigger value="novos" className="flex-1 text-xs h-7">Novos</TabsTrigger>
             <TabsTrigger value="meus" className="flex-1 text-xs h-7">Meus</TabsTrigger>
