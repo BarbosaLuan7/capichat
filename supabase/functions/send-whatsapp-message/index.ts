@@ -203,6 +203,7 @@ interface LeadForTemplate {
   id: string;
   phone: string;
   name: string;
+  country_code?: string | null; // Código do país (55, 1, 595, etc)
   estimated_value?: number | null;
   created_at?: string | null;
   benefit_type?: string | null;
@@ -749,6 +750,7 @@ serve(async (req) => {
     // Get conversation with lead info (incluindo mais campos para substituição de variáveis)
     // IMPORTANTE: Incluir whatsapp_instance_id para usar a mesma instância que recebeu
     // IMPORTANTE: Incluir assigned_to para auto-atribuição quando responder
+    // IMPORTANTE: Incluir country_code para suporte internacional
     const { data: conversation, error: convError } = await supabase
       .from('conversations')
       .select(`
@@ -760,6 +762,7 @@ serve(async (req) => {
           id,
           phone,
           name,
+          country_code,
           estimated_value,
           created_at,
           benefit_type,
@@ -788,22 +791,42 @@ serve(async (req) => {
       );
     }
 
-    // Validar número de telefone brasileiro ANTES de tentar enviar
-    const phoneValidation = validateBrazilianPhone(lead.phone);
-    if (!phoneValidation.valid) {
-      console.error('[send-whatsapp-message] Número inválido:', lead.phone, '-', phoneValidation.error);
-      return new Response(
-        JSON.stringify({ 
-          error: `Número de telefone inválido: ${phoneValidation.error}`,
-          phone: lead.phone,
-          lead_name: lead.name
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Montar número completo com código do país
+    const countryCode = (lead as LeadForTemplate).country_code || '55';
+    const fullPhoneNumber = `${countryCode}${lead.phone.replace(/\D/g, '')}`;
+    console.log('[send-whatsapp-message] Lead:', lead.name, 'Phone local:', lead.phone, 'Country:', countryCode, 'Full:', fullPhoneNumber);
+    
+    // Validação flexível - só para Brasil fazer validação rigorosa
+    if (countryCode === '55') {
+      const phoneValidation = validateBrazilianPhone(lead.phone);
+      if (!phoneValidation.valid) {
+        console.error('[send-whatsapp-message] Número brasileiro inválido:', lead.phone, '-', phoneValidation.error);
+        return new Response(
+          JSON.stringify({ 
+            error: `Número de telefone inválido: ${phoneValidation.error}`,
+            phone: lead.phone,
+            lead_name: lead.name
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else {
+      // Para números internacionais, apenas verificar tamanho mínimo
+      const digits = lead.phone.replace(/\D/g, '');
+      if (digits.length < 8) {
+        console.error('[send-whatsapp-message] Número internacional muito curto:', lead.phone);
+        return new Response(
+          JSON.stringify({ 
+            error: `Número de telefone muito curto (${digits.length} dígitos). Mínimo: 8 dígitos.`,
+            phone: lead.phone,
+            country_code: countryCode,
+            lead_name: lead.name
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
-    const validatedPhone = phoneValidation.normalized!;
-    console.log('[send-whatsapp-message] Lead:', lead.name, 'Phone original:', lead.phone, 'Normalizado:', validatedPhone);
     console.log('[send-whatsapp-message] Conversa whatsapp_instance_id:', conversation.whatsapp_instance_id);
 
     // Get WhatsApp config - PRIORIZAR a instância específica da conversa
@@ -868,16 +891,16 @@ serve(async (req) => {
     switch (config.provider) {
       case 'waha':
         // Passar chatId cacheado para evitar chamada à API check-exists
-        result = await sendWAHA(config, validatedPhone, messageContent, messageType, resolvedMediaUrl, lead.whatsapp_chat_id);
+        result = await sendWAHA(config, fullPhoneNumber, messageContent, messageType, resolvedMediaUrl, lead.whatsapp_chat_id);
         break;
       case 'evolution':
-        result = await sendEvolution(config, validatedPhone, messageContent, messageType, resolvedMediaUrl);
+        result = await sendEvolution(config, fullPhoneNumber, messageContent, messageType, resolvedMediaUrl);
         break;
       case 'z-api':
-        result = await sendZAPI(config, validatedPhone, messageContent, messageType, resolvedMediaUrl);
+        result = await sendZAPI(config, fullPhoneNumber, messageContent, messageType, resolvedMediaUrl);
         break;
       case 'custom':
-        result = await sendCustom(config, validatedPhone, messageContent, messageType, resolvedMediaUrl);
+        result = await sendCustom(config, fullPhoneNumber, messageContent, messageType, resolvedMediaUrl);
         break;
       default:
         result = { success: false, error: 'Provider desconhecido' };

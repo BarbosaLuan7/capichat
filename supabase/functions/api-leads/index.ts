@@ -8,6 +8,7 @@ const corsHeaders = {
 interface LeadPayload {
   name: string;
   phone: string;
+  country_code?: string; // Código do país (55, 1, 595, etc)
   email?: string;
   cpf?: string;
   birth_date?: string;
@@ -23,14 +24,67 @@ interface LeadPayload {
   custom_fields?: Record<string, unknown>;
 }
 
-// Helper: Normalize phone - remove country code (55) for Brazilian numbers
-function normalizePhoneNumber(phone: string): string {
-  let numbers = phone.replace(/\D/g, '');
-  // Remove código do país (55) se presente e número tem 12+ dígitos
-  if (numbers.startsWith('55') && numbers.length >= 12) {
-    numbers = numbers.substring(2);
+// Códigos de países conhecidos (ordenados por tamanho decrescente para match correto)
+const COUNTRY_CODES = [
+  { code: '595', name: 'Paraguai' },
+  { code: '598', name: 'Uruguai' },
+  { code: '351', name: 'Portugal' },
+  { code: '55', name: 'Brasil' },
+  { code: '54', name: 'Argentina' },
+  { code: '56', name: 'Chile' },
+  { code: '57', name: 'Colômbia' },
+  { code: '58', name: 'Venezuela' },
+  { code: '51', name: 'Peru' },
+  { code: '34', name: 'Espanha' },
+  { code: '39', name: 'Itália' },
+  { code: '49', name: 'Alemanha' },
+  { code: '33', name: 'França' },
+  { code: '44', name: 'Reino Unido' },
+  { code: '1', name: 'EUA/Canadá' },
+];
+
+interface ParsedPhone {
+  countryCode: string;
+  localNumber: string;
+}
+
+// Detecta o código do país a partir de um número completo
+function parseInternationalPhone(phone: string): ParsedPhone {
+  const digits = phone.replace(/\D/g, '');
+  
+  // Tentar detectar código do país conhecido
+  for (const { code } of COUNTRY_CODES) {
+    if (digits.startsWith(code)) {
+      const localNumber = digits.substring(code.length);
+      if (localNumber.length >= 8) {
+        return { countryCode: code, localNumber };
+      }
+    }
   }
-  return numbers;
+  
+  // Fallback: assumir Brasil (55) se não detectar
+  if (digits.length >= 12) {
+    return {
+      countryCode: digits.substring(0, digits.length - 10),
+      localNumber: digits.slice(-10),
+    };
+  }
+  
+  return { countryCode: '55', localNumber: digits };
+}
+
+// Helper: Normalize phone - extrai número local e código do país
+function normalizePhoneNumber(phone: string, providedCountryCode?: string): { localNumber: string; countryCode: string } {
+  // Se country_code foi fornecido, usar diretamente
+  if (providedCountryCode) {
+    return {
+      localNumber: phone.replace(/\D/g, ''),
+      countryCode: providedCountryCode,
+    };
+  }
+  
+  // Tentar detectar automaticamente
+  return parseInternationalPhone(phone);
 }
 
 // Helper: Validate phone number format
@@ -243,13 +297,14 @@ Deno.serve(async (req) => {
         stageId = firstStage?.id;
       }
 
-      // Create lead - normalizar telefone SEM código do país
-      const phoneToSave = normalizePhoneNumber(body.phone);
-      console.log('[api-leads] Normalizando telefone:', body.phone, '->', phoneToSave);
+      // Create lead - normalizar telefone separando código do país
+      const phoneData = normalizePhoneNumber(body.phone, body.country_code);
+      console.log('[api-leads] Normalizando telefone:', body.phone, '->', phoneData);
       
       const leadData = {
         name: body.name.trim(),
-        phone: phoneToSave, // Salva SEM código do país
+        phone: phoneData.localNumber, // Número local sem código do país
+        country_code: phoneData.countryCode, // Código do país separado
         email: body.email,
         cpf: body.cpf,
         birth_date: body.birth_date,

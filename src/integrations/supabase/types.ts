@@ -465,6 +465,7 @@ export type Database = {
           benefit_type: string | null
           birth_date: string | null
           case_status: string | null
+          country_code: string | null
           cpf: string | null
           created_at: string
           custom_fields: Json | null
@@ -496,6 +497,7 @@ export type Database = {
           benefit_type?: string | null
           birth_date?: string | null
           case_status?: string | null
+          country_code?: string | null
           cpf?: string | null
           created_at?: string
           custom_fields?: Json | null
@@ -527,6 +529,7 @@ export type Database = {
           benefit_type?: string | null
           birth_date?: string | null
           case_status?: string | null
+          country_code?: string | null
           cpf?: string | null
           created_at?: string
           custom_fields?: Json | null
