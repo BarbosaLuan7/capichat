@@ -457,25 +457,103 @@ async function findLeadByPhone(supabase: any, phone: string): Promise<any> {
     return leads[0];
   }
   
-  // Fallback: buscar pelos últimos 8 dígitos (núcleo do número sem DDD/país)
-  const corePart = digits.slice(-8);
-  console.log('[whatsapp-webhook] Tentando busca por núcleo do número:', corePart);
+  // Fallback 1: buscar pelos últimos 8 dígitos (núcleo do número sem DDD/país)
+  const corePart8 = digits.slice(-8);
+  console.log('[whatsapp-webhook] Tentando busca por núcleo 8 dígitos:', corePart8);
   
-  const { data: fallbackLeads } = await supabase
+  const { data: fallbackLeads8 } = await supabase
     .from('leads')
     .select('*')
-    .ilike('phone', `%${corePart}`)
+    .ilike('phone', `%${corePart8}`)
     .limit(1);
   
-  if (fallbackLeads && fallbackLeads.length > 0) {
-    console.log('[whatsapp-webhook] ✅ Lead encontrado via fallback (núcleo):', fallbackLeads[0].id, 
-      'phone salvo:', fallbackLeads[0].phone,
-      'country_code salvo:', fallbackLeads[0].country_code);
-    return fallbackLeads[0];
+  if (fallbackLeads8 && fallbackLeads8.length > 0) {
+    console.log('[whatsapp-webhook] ✅ Lead encontrado via fallback (8 dígitos):', fallbackLeads8[0].id, 
+      'phone salvo:', fallbackLeads8[0].phone,
+      'country_code salvo:', fallbackLeads8[0].country_code);
+    return fallbackLeads8[0];
+  }
+  
+  // Fallback 2: buscar pelos últimos 7 dígitos (mais agressivo para variações com/sem 9)
+  const corePart7 = digits.slice(-7);
+  console.log('[whatsapp-webhook] Tentando busca por núcleo 7 dígitos:', corePart7);
+  
+  const { data: fallbackLeads7 } = await supabase
+    .from('leads')
+    .select('*')
+    .ilike('phone', `%${corePart7}`)
+    .limit(5); // Pegar até 5 para escolher o melhor match
+  
+  if (fallbackLeads7 && fallbackLeads7.length > 0) {
+    // Se só encontrou 1, retornar esse
+    if (fallbackLeads7.length === 1) {
+      console.log('[whatsapp-webhook] ✅ Lead encontrado via fallback (7 dígitos):', fallbackLeads7[0].id);
+      return fallbackLeads7[0];
+    }
+    
+    // Se encontrou múltiplos, preferir o que tem mais dígitos em comum
+    const bestMatch = fallbackLeads7.reduce((best: any, current: any) => {
+      const bestPhone = best.phone?.replace(/\D/g, '') || '';
+      const currentPhone = current.phone?.replace(/\D/g, '') || '';
+      
+      // Contar quantos dígitos do final batem
+      let bestMatchCount = 0;
+      let currentMatchCount = 0;
+      
+      for (let i = 1; i <= Math.min(digits.length, bestPhone.length); i++) {
+        if (digits.slice(-i) === bestPhone.slice(-i)) bestMatchCount = i;
+      }
+      for (let i = 1; i <= Math.min(digits.length, currentPhone.length); i++) {
+        if (digits.slice(-i) === currentPhone.slice(-i)) currentMatchCount = i;
+      }
+      
+      return currentMatchCount > bestMatchCount ? current : best;
+    });
+    
+    console.log('[whatsapp-webhook] ✅ Lead encontrado via fallback (7 dígitos, melhor match):', bestMatch.id,
+      'phone salvo:', bestMatch.phone);
+    return bestMatch;
   }
   
   console.log('[whatsapp-webhook] Lead não encontrado para:', phone, '| country detectado:', parsed.country || parsed.countryCode);
   return null;
+}
+
+// Busca lead por telefone + nome (fallback adicional para mensagens com pushName)
+async function findLeadByPhoneAndName(supabase: any, phone: string, name: string): Promise<any> {
+  if (!name || name.trim().length < 2) return null;
+  
+  const digits = phone.replace(/\D/g, '');
+  const corePart = digits.slice(-7);
+  const cleanName = name.trim().toLowerCase();
+  
+  console.log('[whatsapp-webhook] Buscando lead por telefone + nome:', { corePart, name: cleanName });
+  
+  const { data: leads } = await supabase
+    .from('leads')
+    .select('*')
+    .ilike('phone', `%${corePart}`)
+    .limit(10);
+  
+  if (!leads || leads.length === 0) return null;
+  
+  // Encontrar lead cujo nome seja similar
+  const matchingLead = leads.find((lead: any) => {
+    const leadName = (lead.name || '').toLowerCase();
+    const leadWhatsappName = (lead.whatsapp_name || '').toLowerCase();
+    
+    // Match exato ou parcial
+    return leadName.includes(cleanName) || 
+           cleanName.includes(leadName) ||
+           leadWhatsappName.includes(cleanName) ||
+           cleanName.includes(leadWhatsappName);
+  });
+  
+  if (matchingLead) {
+    console.log('[whatsapp-webhook] ✅ Lead encontrado por telefone + nome:', matchingLead.id);
+  }
+  
+  return matchingLead || null;
 }
 
 // Função para baixar mídia e fazer upload para o storage
@@ -1480,13 +1558,19 @@ serve(async (req) => {
 
     // ========== BUSCA FLEXÍVEL DE LEAD POR TELEFONE ==========
     // Encontra lead mesmo com formato diferente (com/sem 55, com/sem 9° dígito)
-    const existingLead = await findLeadByPhone(supabase, senderPhone);
+    let existingLead = await findLeadByPhone(supabase, senderPhone);
+    
+    // Fallback: se não encontrou por telefone, tentar por telefone + nome
+    if (!existingLead && senderName) {
+      console.log('[whatsapp-webhook] Lead não encontrado por telefone, tentando por nome + telefone...');
+      existingLead = await findLeadByPhoneAndName(supabase, senderPhone, senderName);
+    }
 
     let lead;
     
     if (existingLead) {
       lead = existingLead;
-      console.log('[whatsapp-webhook] Lead encontrado:', lead.id);
+      console.log('[whatsapp-webhook] Lead encontrado:', lead.id, '| nome:', lead.name);
 
       // Atualizar dados do lead
       const updateData: Record<string, unknown> = {
