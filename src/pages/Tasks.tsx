@@ -1,4 +1,4 @@
-import { useState, useMemo, memo } from 'react';
+import { useState, useMemo, memo, lazy, Suspense } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { motion } from 'framer-motion';
 import {
@@ -31,6 +31,7 @@ import {
   LayoutGrid,
   Calendar as CalendarIcon,
   GripVertical,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -63,13 +64,15 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { getErrorWithFallback } from '@/lib/errorMessages';
 import { format, isToday, isTomorrow, isPast, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { TaskModal } from '@/components/tasks/TaskModal';
-import { TaskCalendar } from '@/components/tasks/TaskCalendar';
 import { SubtaskList } from '@/components/tasks/SubtaskList';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 import { toast } from 'sonner';
 
 import type { Database } from '@/integrations/supabase/types';
+
+// Lazy load heavy components
+const TaskModal = lazy(() => import('@/components/tasks/TaskModal').then(m => ({ default: m.TaskModal })));
+const TaskCalendar = lazy(() => import('@/components/tasks/TaskCalendar').then(m => ({ default: m.TaskCalendar })));
 
 type TaskStatus = Database['public']['Enums']['task_status'];
 type TaskPriority = Database['public']['Enums']['task_priority'];
@@ -531,12 +534,14 @@ const Tasks = () => {
       {isLoading ? (
         <div className="text-center text-muted-foreground py-12">Carregando tarefas...</div>
       ) : view === 'calendar' ? (
-        <TaskCalendar 
-          tasks={tasks || []} 
-          onTaskClick={(t) => {
-            handleEditTask(t as TaskFromDB);
-          }} 
-        />
+        <Suspense fallback={<div className="text-center text-muted-foreground py-12"><Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />Carregando calendário...</div>}>
+          <TaskCalendar 
+            tasks={tasks || []} 
+            onTaskClick={(t) => {
+              handleEditTask(t as TaskFromDB);
+            }} 
+          />
+        </Suspense>
       ) : view === 'list' ? (
         <div className="space-y-3">
           {filteredTasks.map((task) => (
@@ -636,17 +641,21 @@ const Tasks = () => {
         </DndContext>
       )}
 
-      {/* Task Modal */}
-      <TaskModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        task={selectedTask ? convertToTaskFormat(selectedTask) : null}
-        onSave={handleSaveTask}
-        onDelete={(id) => {
-          deleteTaskMutation.mutate(id);
-          toast.success('Tarefa excluída');
-        }}
-      />
+      {/* Task Modal - Lazy loaded */}
+      <Suspense fallback={null}>
+        {modalOpen && (
+          <TaskModal
+            open={modalOpen}
+            onOpenChange={setModalOpen}
+            task={selectedTask ? convertToTaskFormat(selectedTask) : null}
+            onSave={handleSaveTask}
+            onDelete={(id) => {
+              deleteTaskMutation.mutate(id);
+              toast.success('Tarefa excluída');
+            }}
+          />
+        )}
+      </Suspense>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

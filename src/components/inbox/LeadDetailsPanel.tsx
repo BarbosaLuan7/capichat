@@ -639,5 +639,13 @@ function LeadDetailsPanelComponent({
   );
 }
 
-// Memoize para evitar re-renders desnecessários
-export const LeadDetailsPanel = memo(LeadDetailsPanelComponent);
+// Memoize com comparação custom para evitar re-renders desnecessários
+export const LeadDetailsPanel = memo(LeadDetailsPanelComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.lead.id === nextProps.lead.id &&
+    prevProps.lead.updated_at === nextProps.lead.updated_at &&
+    prevProps.isFavorite === nextProps.isFavorite &&
+    prevProps.conversationId === nextProps.conversationId &&
+    JSON.stringify(prevProps.lead.labels) === JSON.stringify(nextProps.lead.labels)
+  );
+});

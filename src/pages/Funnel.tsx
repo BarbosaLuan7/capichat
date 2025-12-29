@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   DndContext,
@@ -62,10 +62,12 @@ import { useFunnelStages } from '@/hooks/useFunnelStages';
 import { useLeads, useUpdateLeadStage, useDeleteLead } from '@/hooks/useLeads';
 import { useLabels } from '@/hooks/useLabels';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
-import { LeadModal } from '@/components/leads/LeadModal';
 import { FunnelScrollIndicators } from '@/components/funnel/FunnelScrollIndicators';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+
+// Lazy load heavy modal
+const LeadModal = lazy(() => import('@/components/leads/LeadModal').then(m => ({ default: m.LeadModal })));
 
 type Lead = Database['public']['Tables']['leads']['Row'] & {
   funnel_stages: { id: string; name: string; color: string } | null;
@@ -572,13 +574,17 @@ const Funnel = () => {
         </DndContext>
       )}
 
-      {/* Lead Modal */}
-      <LeadModal
-        open={showLeadModal}
-        onOpenChange={setShowLeadModal}
-        leadId={editingLeadId}
-        mode={leadModalMode}
-      />
+      {/* Lead Modal - Lazy loaded */}
+      <Suspense fallback={null}>
+        {showLeadModal && (
+          <LeadModal
+            open={showLeadModal}
+            onOpenChange={setShowLeadModal}
+            leadId={editingLeadId}
+            mode={leadModalMode}
+          />
+        )}
+      </Suspense>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>

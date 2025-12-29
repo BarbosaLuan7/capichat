@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, memo } from 'react';
+import { useState, useMemo, useCallback, memo, lazy, Suspense } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -54,8 +55,6 @@ import { useLeads, useDeleteLead } from '@/hooks/useLeads';
 import { useFunnelStages } from '@/hooks/useFunnelStages';
 import { useLabels } from '@/hooks/useLabels';
 import { useProfiles } from '@/hooks/useProfiles';
-import { LeadModal } from '@/components/leads/LeadModal';
-import { LeadImportModal } from '@/components/leads/LeadImportModal';
 import { BulkActionsBar } from '@/components/leads/BulkActionsBar';
 import { LeadFilters, LeadFiltersState } from '@/components/leads/LeadFilters';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
@@ -72,6 +71,10 @@ import {
   PaginationPrevious,
   PaginationEllipsis,
 } from '@/components/ui/pagination';
+
+// Lazy load heavy modals
+const LeadModal = lazy(() => import('@/components/leads/LeadModal').then(m => ({ default: m.LeadModal })));
+const LeadImportModal = lazy(() => import('@/components/leads/LeadImportModal').then(m => ({ default: m.LeadImportModal })));
 
 const PAGE_SIZE = 50;
 
@@ -505,19 +508,27 @@ const Leads = () => {
         )}
       </Card>
 
-      {/* Lead Modal */}
-      <LeadModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        leadId={selectedLeadId}
-        mode={modalMode}
-      />
+      {/* Lead Modal - Lazy loaded */}
+      <Suspense fallback={null}>
+        {modalOpen && (
+          <LeadModal
+            open={modalOpen}
+            onOpenChange={setModalOpen}
+            leadId={selectedLeadId}
+            mode={modalMode}
+          />
+        )}
+      </Suspense>
 
-      {/* Import Modal */}
-      <LeadImportModal
-        open={importModalOpen}
-        onOpenChange={setImportModalOpen}
-      />
+      {/* Import Modal - Lazy loaded */}
+      <Suspense fallback={null}>
+        {importModalOpen && (
+          <LeadImportModal
+            open={importModalOpen}
+            onOpenChange={setImportModalOpen}
+          />
+        )}
+      </Suspense>
 
       {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
