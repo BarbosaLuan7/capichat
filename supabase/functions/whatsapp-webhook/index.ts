@@ -300,6 +300,89 @@ function formatPhoneForDisplay(phone: string): string {
   return phone;
 }
 
+// ========== BUSCA FLEXÍVEL DE LEAD POR TELEFONE ==========
+// Encontra lead mesmo que o telefone esteja salvo em formato diferente
+// Ex: recebe "45988428644" mas está salvo como "5545988428644" ou vice-versa
+async function findLeadByPhone(supabase: any, phone: string): Promise<any> {
+  const digits = phone.replace(/\D/g, '');
+  
+  // Gerar todas as variações possíveis do número
+  const variations: string[] = [];
+  
+  // 1. Número como está
+  variations.push(digits);
+  
+  // 2. Com código do país (55)
+  if (!digits.startsWith('55')) {
+    variations.push(`55${digits}`);
+  }
+  
+  // 3. Sem código do país
+  if (digits.startsWith('55') && digits.length >= 12) {
+    variations.push(digits.substring(2));
+  }
+  
+  // 4. Variações com/sem 9° dígito (celulares brasileiros)
+  for (const v of [...variations]) {
+    const d = v.startsWith('55') ? v.substring(2) : v;
+    const ddd = d.substring(0, 2);
+    const rest = d.substring(2);
+    
+    // Se tem 11 dígitos (com 9° dígito), criar versão sem
+    if (d.length === 11 && rest.startsWith('9')) {
+      const without9 = `${ddd}${rest.substring(1)}`;
+      variations.push(without9);
+      variations.push(`55${without9}`);
+    }
+    
+    // Se tem 10 dígitos (sem 9° dígito), criar versão com
+    if (d.length === 10) {
+      const with9 = `${ddd}9${rest}`;
+      variations.push(with9);
+      variations.push(`55${with9}`);
+    }
+  }
+  
+  // Remover duplicatas
+  const uniqueVariations = [...new Set(variations)];
+  
+  console.log('[whatsapp-webhook] Buscando lead com variações:', uniqueVariations);
+  
+  // Tentar buscar por todas as variações de uma vez usando OR
+  const { data: leads, error } = await supabase
+    .from('leads')
+    .select('*')
+    .in('phone', uniqueVariations)
+    .limit(1);
+  
+  if (error) {
+    console.error('[whatsapp-webhook] Erro na busca flexível:', error);
+  }
+  
+  if (leads && leads.length > 0) {
+    console.log('[whatsapp-webhook] ✅ Lead encontrado via busca flexível:', leads[0].id, 'phone salvo:', leads[0].phone);
+    return leads[0];
+  }
+  
+  // Fallback: buscar pelos últimos 8 dígitos (núcleo do número sem DDD/país)
+  const corePart = digits.slice(-8);
+  console.log('[whatsapp-webhook] Tentando busca por núcleo do número:', corePart);
+  
+  const { data: fallbackLeads } = await supabase
+    .from('leads')
+    .select('*')
+    .ilike('phone', `%${corePart}`)
+    .limit(1);
+  
+  if (fallbackLeads && fallbackLeads.length > 0) {
+    console.log('[whatsapp-webhook] ✅ Lead encontrado via fallback (núcleo):', fallbackLeads[0].id, 'phone salvo:', fallbackLeads[0].phone);
+    return fallbackLeads[0];
+  }
+  
+  console.log('[whatsapp-webhook] Lead não encontrado para:', phone);
+  return null;
+}
+
 // Função para baixar mídia e fazer upload para o storage
 async function uploadMediaToStorage(
   supabase: any,
@@ -1009,13 +1092,9 @@ serve(async (req) => {
     
     console.log('[whatsapp-webhook] Conteúdo:', content.substring(0, 100), 'Tipo:', type, 'MediaUrl:', mediaUrl ? 'presente' : 'nenhum');
 
-    // ========== CORREÇÃO 2: Usar upsert para evitar leads duplicados ==========
-    // Primeiro, buscar se já existe um lead com esse telefone
-    const { data: existingLead } = await supabase
-      .from('leads')
-      .select('*')
-      .eq('phone', senderPhone)
-      .maybeSingle();
+    // ========== BUSCA FLEXÍVEL DE LEAD POR TELEFONE ==========
+    // Encontra lead mesmo com formato diferente (com/sem 55, com/sem 9° dígito)
+    const existingLead = await findLeadByPhone(supabase, senderPhone);
 
     let lead;
     
@@ -1134,13 +1213,9 @@ serve(async (req) => {
       if (upsertError) {
         console.error('[whatsapp-webhook] Erro ao criar/upsert lead:', upsertError);
         
-        // Se falhou por conflito, tentar buscar o existente
+        // Se falhou por conflito, tentar buscar o existente usando busca flexível
         if (upsertError.code === '23505') {
-          const { data: conflictLead } = await supabase
-            .from('leads')
-            .select('*')
-            .eq('phone', senderPhone)
-            .single();
+          const conflictLead = await findLeadByPhone(supabase, senderPhone);
           
           if (conflictLead) {
             lead = conflictLead;
