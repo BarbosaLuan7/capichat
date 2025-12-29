@@ -22,6 +22,7 @@ interface LeadPayload {
   assigned_to?: string;
   temperature?: 'cold' | 'warm' | 'hot';
   custom_fields?: Record<string, unknown>;
+  tenant_id?: string; // ID do tenant para multi-tenant
 }
 
 // Códigos de países conhecidos (ordenados por tamanho decrescente para match correto)
@@ -317,6 +318,7 @@ Deno.serve(async (req) => {
         temperature: body.temperature || 'cold',
         custom_fields: body.custom_fields || {},
         status: 'active',
+        tenant_id: body.tenant_id || null, // Propagar tenant_id se fornecido
       };
 
       const { data: newLead, error: createError } = await supabase
