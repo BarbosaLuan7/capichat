@@ -7,12 +7,55 @@ const corsHeaders = {
 
 interface MessagePayload {
   phone: string;
+  country_code?: string; // Código do país (55, 1, 595, etc)
   message: string;
   type?: 'text' | 'image' | 'audio' | 'video' | 'document';
   media_url?: string;
   timestamp?: string;
   external_id?: string;
   sender_name?: string;
+}
+
+// Códigos de países conhecidos (ordenados por tamanho decrescente para match correto)
+const COUNTRY_CODES = [
+  { code: '595', name: 'Paraguai' },
+  { code: '598', name: 'Uruguai' },
+  { code: '351', name: 'Portugal' },
+  { code: '55', name: 'Brasil' },
+  { code: '54', name: 'Argentina' },
+  { code: '56', name: 'Chile' },
+  { code: '57', name: 'Colômbia' },
+  { code: '58', name: 'Venezuela' },
+  { code: '51', name: 'Peru' },
+  { code: '34', name: 'Espanha' },
+  { code: '39', name: 'Itália' },
+  { code: '49', name: 'Alemanha' },
+  { code: '33', name: 'França' },
+  { code: '44', name: 'Reino Unido' },
+  { code: '1', name: 'EUA/Canadá' },
+];
+
+// Detecta o código do país a partir de um número completo
+function parseInternationalPhone(phone: string): { countryCode: string; localNumber: string } {
+  const digits = phone.replace(/\D/g, '');
+  
+  for (const { code } of COUNTRY_CODES) {
+    if (digits.startsWith(code)) {
+      const localNumber = digits.substring(code.length);
+      if (localNumber.length >= 8) {
+        return { countryCode: code, localNumber };
+      }
+    }
+  }
+  
+  if (digits.length >= 12) {
+    return {
+      countryCode: digits.substring(0, digits.length - 10),
+      localNumber: digits.slice(-10),
+    };
+  }
+  
+  return { countryCode: '55', localNumber: digits };
 }
 
 // Helper: Validate phone number format
@@ -152,7 +195,11 @@ Deno.serve(async (req) => {
           .eq('id', lead.id);
       }
     } else {
-      // Create new lead
+      // Create new lead - detectar código do país automaticamente
+      const phoneData = body.country_code 
+        ? { countryCode: body.country_code, localNumber: normalizedPhone }
+        : parseInternationalPhone(phoneValidation.normalized);
+      
       const { data: firstStage } = await supabase
         .from('funnel_stages')
         .select('id')
@@ -163,8 +210,9 @@ Deno.serve(async (req) => {
       const { data: newLead, error: createLeadError } = await supabase
         .from('leads')
         .insert({
-          name: body.sender_name || `Lead ${formatPhoneForDisplay(normalizedPhone)}`,
-          phone: normalizedPhone,
+          name: body.sender_name || `Lead ${formatPhoneForDisplay(phoneData.localNumber)}`,
+          phone: phoneData.localNumber,
+          country_code: phoneData.countryCode,
           whatsapp_name: body.sender_name,
           source: 'whatsapp',
           temperature: 'warm',

@@ -284,14 +284,78 @@ function normalizePhone(phone: string): string {
   return numbers;
 }
 
-// Normaliza telefone para salvar no banco - SEM código do país (55)
-function normalizePhoneForStorage(phone: string): string {
-  let numbers = normalizePhone(phone);
-  // Remove código do país (55) se presente e número tem 12+ dígitos
-  if (numbers.startsWith('55') && numbers.length >= 12) {
-    numbers = numbers.substring(2);
+// Códigos de países conhecidos (ordenados por tamanho decrescente para match correto)
+const COUNTRY_CODES = [
+  { code: '595', name: 'Paraguai' },
+  { code: '598', name: 'Uruguai' },
+  { code: '351', name: 'Portugal' },
+  { code: '55', name: 'Brasil' },
+  { code: '54', name: 'Argentina' },
+  { code: '56', name: 'Chile' },
+  { code: '57', name: 'Colômbia' },
+  { code: '58', name: 'Venezuela' },
+  { code: '51', name: 'Peru' },
+  { code: '34', name: 'Espanha' },
+  { code: '39', name: 'Itália' },
+  { code: '49', name: 'Alemanha' },
+  { code: '33', name: 'França' },
+  { code: '44', name: 'Reino Unido' },
+  { code: '1', name: 'EUA/Canadá' },
+];
+
+interface ParsedPhone {
+  countryCode: string;
+  localNumber: string;
+  fullNumber: string;
+  country?: string;
+}
+
+// Detecta o código do país a partir de um número completo
+function parseInternationalPhone(phone: string): ParsedPhone {
+  const digits = phone.replace(/\D/g, '');
+  
+  // Tentar detectar código do país conhecido
+  for (const { code, name } of COUNTRY_CODES) {
+    if (digits.startsWith(code)) {
+      const localNumber = digits.substring(code.length);
+      // Verificar se o número local tem tamanho razoável (mínimo 8 dígitos)
+      if (localNumber.length >= 8) {
+        return {
+          countryCode: code,
+          localNumber,
+          fullNumber: digits,
+          country: name,
+        };
+      }
+    }
   }
-  return numbers;
+  
+  // Fallback: assumir Brasil (55) se não detectar
+  // Ou retornar como está se já for um número curto (sem código do país)
+  if (digits.length >= 12) {
+    // Provavelmente tem código do país desconhecido
+    return {
+      countryCode: digits.substring(0, digits.length - 10),
+      localNumber: digits.slice(-10),
+      fullNumber: digits,
+    };
+  }
+  
+  // Número local sem código do país (assumir Brasil)
+  return {
+    countryCode: '55',
+    localNumber: digits,
+    fullNumber: `55${digits}`,
+  };
+}
+
+// Normaliza telefone para salvar no banco - retorna número local SEM código do país
+function normalizePhoneForStorage(phone: string): { localNumber: string; countryCode: string } {
+  const parsed = parseInternationalPhone(normalizePhone(phone));
+  return {
+    localNumber: parsed.localNumber,
+    countryCode: parsed.countryCode,
+  };
 }
 
 // Formata telefone para exibição em fallback do nome
@@ -1194,15 +1258,16 @@ serve(async (req) => {
         }
       }
 
-      // Normalizar telefone SEM código do país para salvar no banco
-      const phoneToSave = normalizePhoneForStorage(senderPhone);
-      console.log('[whatsapp-webhook] Normalizando telefone para salvar:', senderPhone, '->', phoneToSave);
+      // Normalizar telefone separando código do país
+      const phoneData = normalizePhoneForStorage(senderPhone);
+      console.log('[whatsapp-webhook] Normalizando telefone para salvar:', senderPhone, '->', phoneData);
       
       const { data: upsertedLead, error: upsertError } = await supabase
         .from('leads')
         .upsert({
           name: leadName,
-          phone: phoneToSave, // Salva SEM código do país (ex: 45988428644)
+          phone: phoneData.localNumber, // Número local sem código do país (ex: 45988428644)
+          country_code: phoneData.countryCode, // Código do país (ex: 55, 1, 595)
           whatsapp_name: senderName || null,
           source: isFromFacebookLid ? 'facebook_ads' : 'whatsapp',
           temperature: 'warm',
