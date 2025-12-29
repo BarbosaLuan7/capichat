@@ -190,18 +190,60 @@ serve(async (req) => {
     const session = wahaConfig.instance_name || 'default';
     const messagesUrl = `${baseUrl}/api/messages?chatId=${encodeURIComponent(chatId)}&limit=${limit}&session=${session}`;
     
-    const response = await wahaFetch(messagesUrl, wahaConfig.api_key, { method: 'GET' });
+    let wahaMessages: WAHAMessage[] = [];
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[sync-chat-history] Erro ao buscar mensagens do WAHA:', response.status, errorText);
+    try {
+      const response = await wahaFetch(messagesUrl, wahaConfig.api_key, { method: 'GET' });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[sync-chat-history] Erro ao buscar mensagens do WAHA:', response.status, errorText);
+        
+        // Erros conhecidos do WAHA que não são falhas reais:
+        // - "No LID for user" = chat não existe no WhatsApp (nunca houve conversa)
+        // - 404 = chat não encontrado
+        const isKnownNonError = 
+          errorText.includes('No LID for user') || 
+          errorText.includes('Chat not found') ||
+          response.status === 404;
+        
+        if (isKnownNonError) {
+          console.log('[sync-chat-history] Chat não existe no WhatsApp - retornando vazio');
+          return new Response(
+            JSON.stringify({
+              success: true,
+              synced: 0,
+              skipped: 0,
+              total: 0,
+              message: 'Chat não encontrado no WhatsApp - nenhuma mensagem para sincronizar',
+            }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        // Outros erros são reais
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch messages from WhatsApp', details: errorText }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      wahaMessages = await response.json();
+    } catch (fetchError) {
+      console.error('[sync-chat-history] Erro de rede ao buscar mensagens:', fetchError);
+      // Erro de rede/timeout - retornar graciosamente
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch messages from WhatsApp', details: errorText }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          success: true,
+          synced: 0,
+          skipped: 0,
+          total: 0,
+          message: 'Não foi possível conectar ao WhatsApp - tente novamente',
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const wahaMessages: WAHAMessage[] = await response.json();
     console.log('[sync-chat-history] Mensagens recebidas do WAHA:', wahaMessages.length);
 
     let synced = 0;
