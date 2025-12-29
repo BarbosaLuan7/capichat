@@ -952,10 +952,49 @@ serve(async (req) => {
       external_id: result.messageId || null, // ID do WhatsApp para rastrear status
     };
     
-    // Adicionar reply_to_external_id se estiver respondendo
+    // Adicionar reply_to_external_id e buscar mensagem original para quoted_message
     if (payload.reply_to_external_id) {
       messageInsertData.reply_to_external_id = payload.reply_to_external_id;
       console.log('[send-whatsapp-message] Salvando mensagem como reply para:', payload.reply_to_external_id);
+      
+      // Buscar mensagem original pelo external_id para popular quoted_message
+      const { data: originalMessage, error: originalError } = await supabase
+        .from('messages')
+        .select('id, content, type, sender_type, sender_id, lead_id')
+        .eq('external_id', payload.reply_to_external_id)
+        .single();
+      
+      if (originalMessage && !originalError) {
+        // Determinar quem enviou a mensagem original
+        let fromName = 'Lead';
+        if (originalMessage.sender_type === 'agent') {
+          const { data: agent } = await supabase
+            .from('profiles')
+            .select('name')
+            .eq('id', originalMessage.sender_id)
+            .single();
+          fromName = agent?.name || 'Agente';
+        } else if (originalMessage.lead_id) {
+          const { data: leadData } = await supabase
+            .from('leads')
+            .select('name')
+            .eq('id', originalMessage.lead_id)
+            .single();
+          fromName = leadData?.name || 'Lead';
+        }
+        
+        // Preencher quoted_message com os dados
+        messageInsertData.quoted_message = {
+          id: payload.reply_to_external_id,
+          body: originalMessage.content || '',
+          from: fromName,
+          type: originalMessage.type || 'text'
+        };
+        
+        console.log('[send-whatsapp-message] Quote populado:', messageInsertData.quoted_message);
+      } else {
+        console.warn('[send-whatsapp-message] Mensagem original não encontrada para quote:', payload.reply_to_external_id, originalError);
+      }
     }
     
     const { data: savedMessage, error: messageError } = await supabase
