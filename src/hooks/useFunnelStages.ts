@@ -19,6 +19,7 @@ export function useFunnelStages() {
       return data as FunnelStage[];
     },
     staleTime: 5 * 60 * 1000, // 5 minutos - etapas do funil mudam raramente
+    gcTime: 30 * 60 * 1000, // 30 minutes cache
   });
 }
 

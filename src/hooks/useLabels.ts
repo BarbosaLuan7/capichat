@@ -19,7 +19,8 @@ export function useLabels() {
       if (error) throw error;
       return data as Label[];
     },
-    staleTime: 60 * 1000, // 1 minuto - labels mudam pouco
+    staleTime: 2 * 60 * 1000, // 2 minutos - labels mudam pouco
+    gcTime: 10 * 60 * 1000, // 10 minutes cache
   });
 }
 
@@ -99,6 +100,7 @@ export function useLeadLabels(leadId: string | undefined) {
       return data;
     },
     enabled: !!leadId,
+    gcTime: 5 * 60 * 1000, // 5 minutes cache
     staleTime: 30 * 1000, // 30 segundos
   });
 }
