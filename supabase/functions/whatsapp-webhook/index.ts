@@ -1629,51 +1629,74 @@ serve(async (req) => {
       }
     }
 
-    // Buscar ou criar conversa via UPSERT (proteção contra race condition)
+    // Buscar ou criar conversa (sem upsert - evita erro 42P10)
     let conversation;
     const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
     const whatsappInstanceId = wahaConfig?.instanceId || null;
     
-    // Tentar buscar conversa existente primeiro
-    const { data: existingConversation } = await supabase
+    console.log('[whatsapp-webhook] Buscando conversa para lead:', lead.id, 'instância:', whatsappInstanceId);
+    
+    // 1. Buscar conversa existente com match exato (lead_id + whatsapp_instance_id)
+    let { data: existingConversation } = await supabase
       .from('conversations')
       .select('*')
       .eq('lead_id', lead.id)
-      .in('status', ['open', 'pending'])
+      .eq('whatsapp_instance_id', whatsappInstanceId)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
+    
+    // 2. Se não encontrou, buscar qualquer conversa do lead (fallback)
+    if (!existingConversation) {
+      const { data: anyConversation } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('lead_id', lead.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      existingConversation = anyConversation;
+    }
 
     if (existingConversation) {
       conversation = existingConversation;
-      console.log('[whatsapp-webhook] ✅ Conversa encontrada:', conversation.id);
+      console.log('[whatsapp-webhook] ✅ Conversa encontrada:', conversation.id, 'status:', conversation.status);
 
-      // Apenas reabrir conversa se estava pendente e é mensagem INBOUND (do lead)
-      if (!isFromMe) {
+      // Reabrir conversa se estava 'resolved' ou 'pending' e é mensagem INBOUND
+      if (!isFromMe && (conversation.status === 'resolved' || conversation.status === 'pending')) {
+        console.log('[whatsapp-webhook] Reabrindo conversa:', conversation.id);
         await supabase
           .from('conversations')
           .update({ status: 'open' })
           .eq('id', conversation.id);
       }
+      
+      // Atualizar whatsapp_instance_id se ainda não estava definido
+      if (!conversation.whatsapp_instance_id && whatsappInstanceId) {
+        await supabase
+          .from('conversations')
+          .update({ whatsapp_instance_id: whatsappInstanceId })
+          .eq('id', conversation.id);
+      }
     } else {
-      // Usar upsert para criar conversa (UNIQUE constraint protege contra duplicatas)
-      const { data: upsertedConversation, error: createConvError } = await supabase
+      // 3. Criar nova conversa (insert simples, sem upsert)
+      console.log('[whatsapp-webhook] Criando nova conversa para lead:', lead.id);
+      
+      const { data: newConversation, error: createConvError } = await supabase
         .from('conversations')
-        .upsert({
+        .insert({
           lead_id: lead.id,
           status: 'open',
           assigned_to: lead.assigned_to,
           whatsapp_instance_id: whatsappInstanceId,
-        }, {
-          onConflict: 'lead_id',
-          ignoreDuplicates: false,
         })
         .select('*')
         .single();
 
       if (createConvError) {
-        // Se falhou, tentar buscar a conversa existente (pode ter sido criada por outra requisição)
-        console.log('[whatsapp-webhook] ⚠️ Erro ao criar conversa, buscando existente:', createConvError.code);
+        // Race condition: outra requisição pode ter criado a conversa
+        console.log('[whatsapp-webhook] ⚠️ Erro ao criar conversa, buscando existente:', createConvError.code, createConvError.message);
         
         const { data: fallbackConv } = await supabase
           .from('conversations')
@@ -1694,8 +1717,8 @@ serve(async (req) => {
           );
         }
       } else {
-        conversation = upsertedConversation;
-        console.log('[whatsapp-webhook] ✅ Conversa criada/upserted:', conversation.id, 'whatsapp_instance_id:', whatsappInstanceId);
+        conversation = newConversation;
+        console.log('[whatsapp-webhook] ✅ Conversa criada:', conversation.id, 'whatsapp_instance_id:', whatsappInstanceId);
       }
     }
 
