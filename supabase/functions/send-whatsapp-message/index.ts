@@ -208,6 +208,7 @@ interface LeadForTemplate {
   benefit_type?: string | null;
   cpf?: string | null;
   birth_date?: string | null;
+  whatsapp_chat_id?: string | null;
 }
 
 // Substitui variáveis de template no conteúdo da mensagem
@@ -377,24 +378,40 @@ async function getWahaContactChatId(
 
 // Provider-specific message sending functions
 // Nota: phone já vem validado e normalizado (formato: 5511999999999)
-async function sendWAHA(config: WhatsAppConfig, phone: string, message: string, type: string, mediaUrl?: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
+// cachedChatId: chatId cacheado do banco de dados (evita chamada à API check-exists)
+async function sendWAHA(
+  config: WhatsAppConfig, 
+  phone: string, 
+  message: string, 
+  type: string, 
+  mediaUrl?: string,
+  cachedChatId?: string | null
+): Promise<{ success: boolean; messageId?: string; error?: string; chatId?: string }> {
   const baseUrl = normalizeUrl(config.base_url);
   const session = config.instance_name || 'default';
   
-  // NOVO: Verificar número e obter chatId correto ANTES de enviar
-  // Isso resolve o problema "No LID for user" para números novos
-  const checkResult = await getWahaContactChatId(baseUrl, config.api_key, session, phone);
+  let chatId: string;
   
-  if (!checkResult.exists || !checkResult.chatId) {
-    console.log('[WAHA] Número não existe no WhatsApp:', checkResult.error);
-    return { 
-      success: false, 
-      error: checkResult.error || 'Número não existe no WhatsApp' 
-    };
+  // Se temos chatId cacheado, usar direto (evita chamada à API)
+  if (cachedChatId) {
+    chatId = cachedChatId;
+    console.log('[WAHA] Usando chatId cacheado:', chatId);
+  } else {
+    // Verificar número e obter chatId correto ANTES de enviar
+    // Isso resolve o problema "No LID for user" para números novos
+    const checkResult = await getWahaContactChatId(baseUrl, config.api_key, session, phone);
+    
+    if (!checkResult.exists || !checkResult.chatId) {
+      console.log('[WAHA] Número não existe no WhatsApp:', checkResult.error);
+      return { 
+        success: false, 
+        error: checkResult.error || 'Número não existe no WhatsApp' 
+      };
+    }
+    
+    chatId = checkResult.chatId;
+    console.log('[WAHA] ChatId obtido da API:', chatId);
   }
-  
-  const chatId = checkResult.chatId; // Usa o chatId retornado pela API (pode ser @c.us ou @lid)
-  console.log('[WAHA] Usando chatId:', chatId);
   
   let endpoint = '/api/sendText';
   let body: Record<string, unknown> = {
@@ -505,9 +522,10 @@ async function sendWAHA(config: WhatsAppConfig, phone: string, message: string, 
       }
       
       console.log('[WAHA] MessageId extraído:', messageId, 'de data.id:', typeof data.id, data.id?.id || data.id);
-      return { success: true, messageId };
+      // Retorna também o chatId para atualização do cache
+      return { success: true, messageId, chatId };
     } catch {
-      return { success: true, messageId: undefined };
+      return { success: true, messageId: undefined, chatId };
     }
   } catch (error: unknown) {
     console.error('[WAHA] Erro de request:', error);
@@ -746,7 +764,8 @@ serve(async (req) => {
           created_at,
           benefit_type,
           cpf,
-          birth_date
+          birth_date,
+          whatsapp_chat_id
         )
       `)
       .eq('id', payload.conversation_id)
@@ -829,7 +848,7 @@ serve(async (req) => {
 
     // Send message based on provider (usando número já validado)
     const messageType = payload.type || 'text';
-    let result: { success: boolean; messageId?: string; error?: string };
+    let result: { success: boolean; messageId?: string; error?: string; chatId?: string };
     
     // Converter storage:// URL para signed URL pública antes de enviar
     let resolvedMediaUrl: string | undefined;
@@ -848,7 +867,8 @@ serve(async (req) => {
     
     switch (config.provider) {
       case 'waha':
-        result = await sendWAHA(config, validatedPhone, messageContent, messageType, resolvedMediaUrl);
+        // Passar chatId cacheado para evitar chamada à API check-exists
+        result = await sendWAHA(config, validatedPhone, messageContent, messageType, resolvedMediaUrl, lead.whatsapp_chat_id);
         break;
       case 'evolution':
         result = await sendEvolution(config, validatedPhone, messageContent, messageType, resolvedMediaUrl);
@@ -871,6 +891,15 @@ serve(async (req) => {
         JSON.stringify({ success: false, error: result.error, provider: config.provider }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+    
+    // CACHE: Se obtivemos um chatId novo (não estava cacheado), salvar no banco
+    if (config.provider === 'waha' && result.chatId && result.chatId !== lead.whatsapp_chat_id) {
+      console.log('[send-whatsapp-message] Atualizando cache de whatsapp_chat_id:', result.chatId);
+      await supabase
+        .from('leads')
+        .update({ whatsapp_chat_id: result.chatId })
+        .eq('id', lead.id);
     }
 
     // Save message to database with external_id for status tracking
