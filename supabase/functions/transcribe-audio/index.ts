@@ -29,7 +29,16 @@ serve(async (req) => {
     
     const audioBlob = await audioResponse.blob();
     const audioBuffer = await audioBlob.arrayBuffer();
-    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
+    
+    // Converter para base64 de forma segura (sem spread operator que causa stack overflow)
+    const uint8Array = new Uint8Array(audioBuffer);
+    let binaryString = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+      binaryString += String.fromCharCode.apply(null, Array.from(chunk));
+    }
+    const base64Audio = btoa(binaryString);
 
     // Use Lovable AI (Gemini) for transcription
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
