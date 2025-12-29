@@ -23,6 +23,16 @@ interface LeadPayload {
   custom_fields?: Record<string, unknown>;
 }
 
+// Helper: Normalize phone - remove country code (55) for Brazilian numbers
+function normalizePhoneNumber(phone: string): string {
+  let numbers = phone.replace(/\D/g, '');
+  // Remove código do país (55) se presente e número tem 12+ dígitos
+  if (numbers.startsWith('55') && numbers.length >= 12) {
+    numbers = numbers.substring(2);
+  }
+  return numbers;
+}
+
 // Helper: Validate phone number format
 function validatePhone(phone: string): { valid: boolean; normalized: string; error?: string } {
   const normalized = phone.replace(/\D/g, '');
@@ -233,10 +243,13 @@ Deno.serve(async (req) => {
         stageId = firstStage?.id;
       }
 
-      // Create lead
+      // Create lead - normalizar telefone SEM código do país
+      const phoneToSave = normalizePhoneNumber(body.phone);
+      console.log('[api-leads] Normalizando telefone:', body.phone, '->', phoneToSave);
+      
       const leadData = {
         name: body.name.trim(),
-        phone: body.phone,
+        phone: phoneToSave, // Salva SEM código do país
         email: body.email,
         cpf: body.cpf,
         birth_date: body.birth_date,

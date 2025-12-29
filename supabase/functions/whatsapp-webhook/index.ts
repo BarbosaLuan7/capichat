@@ -281,11 +281,16 @@ function normalizePhone(phone: string): string {
     .replace('@lid', '')
     .replace(/\D/g, '');
   
+  return numbers;
+}
+
+// Normaliza telefone para salvar no banco - SEM código do país (55)
+function normalizePhoneForStorage(phone: string): string {
+  let numbers = normalizePhone(phone);
   // Remove código do país (55) se presente e número tem 12+ dígitos
   if (numbers.startsWith('55') && numbers.length >= 12) {
     numbers = numbers.substring(2);
   }
-  
   return numbers;
 }
 
@@ -1189,11 +1194,15 @@ serve(async (req) => {
         }
       }
 
+      // Normalizar telefone SEM código do país para salvar no banco
+      const phoneToSave = normalizePhoneForStorage(senderPhone);
+      console.log('[whatsapp-webhook] Normalizando telefone para salvar:', senderPhone, '->', phoneToSave);
+      
       const { data: upsertedLead, error: upsertError } = await supabase
         .from('leads')
         .upsert({
           name: leadName,
-          phone: senderPhone,
+          phone: phoneToSave, // Salva SEM código do país (ex: 45988428644)
           whatsapp_name: senderName || null,
           source: isFromFacebookLid ? 'facebook_ads' : 'whatsapp',
           temperature: 'warm',
