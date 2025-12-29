@@ -1049,7 +1049,112 @@ serve(async (req) => {
             }
           }
           
-          if (!found) {
+          // ========== CRIAR MENSAGEM OUTBOUND VIA ACK SE NÃO EXISTIR ==========
+          if (!found && payload?.fromMe === true) {
+            console.log('[whatsapp-webhook] Mensagem outbound não existe no banco, tentando criar via ACK...');
+            
+            try {
+              // Extrair phone do destinatário (to)
+              const toField = payload.to || payload.chatId || '';
+              const toPhone = normalizePhone(toField);
+              
+              if (toPhone) {
+                console.log('[whatsapp-webhook] Buscando lead pelo phone:', toPhone);
+                
+                // Buscar lead pelo phone
+                const lead = await findLeadByPhone(supabase, toPhone);
+                
+                if (lead) {
+                  console.log('[whatsapp-webhook] Lead encontrado:', lead.id, lead.name);
+                  
+                  // Buscar ou criar conversa
+                  let { data: conversation } = await supabase
+                    .from('conversations')
+                    .select('id')
+                    .eq('lead_id', lead.id)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                  
+                  if (!conversation) {
+                    const { data: newConv } = await supabase
+                      .from('conversations')
+                      .insert({
+                        lead_id: lead.id,
+                        status: 'open',
+                        channel: 'whatsapp',
+                      })
+                      .select('id')
+                      .single();
+                    conversation = newConv;
+                    console.log('[whatsapp-webhook] Nova conversa criada:', conversation?.id);
+                  }
+                  
+                  if (conversation) {
+                    // Extrair conteúdo da mensagem
+                    const messageBody = payload.body || 
+                                        (payload as any)._data?.body || 
+                                        (payload as any).text ||
+                                        (payload as any).caption || '';
+                    
+                    // Detectar tipo de mensagem
+                    let msgType: 'text' | 'image' | 'audio' | 'video' | 'document' | 'sticker' | 'location' | 'contact' = 'text';
+                    const rawType = (payload as any).type || (payload as any)._data?.type || '';
+                    if (rawType === 'image' || payload.hasMedia && (payload as any).media?.mimetype?.startsWith('image')) {
+                      msgType = 'image';
+                    } else if (rawType === 'ptt' || rawType === 'audio') {
+                      msgType = 'audio';
+                    } else if (rawType === 'video') {
+                      msgType = 'video';
+                    } else if (rawType === 'document') {
+                      msgType = 'document';
+                    } else if (rawType === 'sticker') {
+                      msgType = 'sticker';
+                    }
+                    
+                    const finalContent = messageBody || (msgType !== 'text' ? `[${msgType}]` : '');
+                    
+                    // Criar timestamp a partir do payload
+                    const msgTimestamp = payload.timestamp 
+                      ? new Date(payload.timestamp * 1000).toISOString()
+                      : new Date().toISOString();
+                    
+                    // Criar mensagem
+                    const { data: newMessage, error: insertError } = await supabase
+                      .from('messages')
+                      .insert({
+                        conversation_id: conversation.id,
+                        lead_id: lead.id,
+                        sender_id: null, // Outbound do celular - sem sender_id
+                        sender_type: 'agent',
+                        content: finalContent,
+                        type: msgType,
+                        direction: 'outbound',
+                        source: 'mobile',
+                        external_id: rawMessageId,
+                        status: newStatus || 'sent',
+                        created_at: msgTimestamp,
+                      })
+                      .select('id')
+                      .single();
+                    
+                    if (insertError) {
+                      console.error('[whatsapp-webhook] Erro ao criar mensagem via ACK:', insertError);
+                    } else {
+                      console.log('[whatsapp-webhook] ✅ Mensagem outbound criada via ACK:', newMessage?.id);
+                      found = true;
+                    }
+                  }
+                } else {
+                  console.log('[whatsapp-webhook] Lead não encontrado para phone:', toPhone);
+                }
+              } else {
+                console.log('[whatsapp-webhook] Phone do destinatário não encontrado no ACK payload');
+              }
+            } catch (createError) {
+              console.error('[whatsapp-webhook] Erro ao tentar criar mensagem via ACK:', createError);
+            }
+          } else if (!found) {
             console.warn('[whatsapp-webhook] Nenhuma mensagem encontrada para messageId:', rawMessageId, 'shortId:', shortId);
           }
         }
