@@ -64,11 +64,17 @@ import {
 } from '@/hooks/useMetrics';
 import { useReportExport } from '@/hooks/useReportExport';
 import { useTenant } from '@/contexts/TenantContext';
+import { useTenantStats } from '@/hooks/useTenantStats';
+import { TenantIndicatorCard } from '@/components/dashboard/TenantIndicatorCard';
 
 const Dashboard = () => {
   const [period, setPeriod] = useState<PeriodFilter>('month');
   const { exportReport, isExporting } = useReportExport();
   const { tenants, currentTenant, setCurrentTenant, hasMultipleTenants } = useTenant();
+
+  // Tenant stats for visual indicator
+  const tenantIds = tenants.map(t => t.id);
+  const { data: tenantStats, isLoading: loadingTenantStats } = useTenantStats(tenantIds);
 
   // Use currentTenant.id for filtering, null means "all tenants"
   const tenantId = currentTenant?.id || null;
@@ -230,6 +236,17 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Tenant Indicator Card */}
+      {hasMultipleTenants && (
+        <TenantIndicatorCard
+          tenant={currentTenant}
+          tenants={tenants}
+          stats={tenantStats || {}}
+          isLoading={loadingTenantStats}
+          onSelectTenant={setCurrentTenant}
+        />
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
