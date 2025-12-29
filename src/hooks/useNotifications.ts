@@ -29,6 +29,7 @@ export function useNotifications(userId?: string) {
     },
     enabled: !!userId,
     staleTime: 15 * 1000, // 15 segundos - notificações precisam ser responsivas
+    gcTime: 5 * 60 * 1000, // 5 minutes cache
   });
 }
 
@@ -47,6 +48,7 @@ export function useUnreadNotificationsCount(userId?: string) {
     },
     enabled: !!userId,
     staleTime: 15 * 1000, // 15 segundos
+    gcTime: 5 * 60 * 1000, // 5 minutes cache
   });
 }
 

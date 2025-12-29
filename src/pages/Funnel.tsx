@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   DndContext,
@@ -85,7 +85,7 @@ interface LeadCardProps {
   onOpenConversation?: (leadId: string) => void;
 }
 
-const LeadCard = ({ lead, labels, leadLabels, isDragging, onEdit, onDelete, onOpenConversation }: LeadCardProps) => {
+const LeadCardComponent = ({ lead, labels, leadLabels, isDragging, onEdit, onDelete, onOpenConversation }: LeadCardProps) => {
   // Get labels for this lead
   const leadLabelIds = leadLabels
     .filter((ll) => ll.lead_id === lead.id)
@@ -215,6 +215,15 @@ const LeadCard = ({ lead, labels, leadLabels, isDragging, onEdit, onDelete, onOp
     </Card>
   );
 };
+
+// Memoize LeadCard to prevent re-renders during drag-and-drop
+const LeadCard = memo(LeadCardComponent, (prev, next) =>
+  prev.lead.id === next.lead.id &&
+  prev.lead.updated_at === next.lead.updated_at &&
+  prev.lead.stage_id === next.lead.stage_id &&
+  prev.isDragging === next.isDragging &&
+  prev.leadLabels === next.leadLabels
+);
 
 interface SortableLeadCardProps {
   lead: Lead;
