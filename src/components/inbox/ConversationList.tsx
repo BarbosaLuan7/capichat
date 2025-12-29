@@ -36,6 +36,7 @@ import { ConversationItem } from '@/components/inbox/ConversationItem';
 import { InboxFilter } from '@/components/inbox/InboxFilter';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useLabels } from '@/hooks/useLabels';
+import { useWhatsAppConfigs } from '@/hooks/useWhatsAppConfig';
 import { logger } from '@/lib/logger';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -158,24 +159,32 @@ export function ConversationList({
   // Fetch labels
   const { data: allLabels } = useLabels();
 
-  // Extract unique inboxes from conversations with counts
+  // Fetch all WhatsApp configs (inboxes)
+  const { data: whatsAppConfigs } = useWhatsAppConfigs();
+
+  // Build available inboxes from whatsapp_config table with conversation counts
   const availableInboxes = useMemo(() => {
-    const inboxMap = new Map<string, { id: string; name: string; phone_number: string | null; conversationCount: number }>();
+    if (!whatsAppConfigs) return [];
+    
+    // Count conversations per inbox
+    const countMap = new Map<string, number>();
     conversations?.forEach((conv) => {
       if (conv.whatsapp_config?.id) {
-        const existing = inboxMap.get(conv.whatsapp_config.id);
-        inboxMap.set(conv.whatsapp_config.id, {
-          id: conv.whatsapp_config.id,
-          name: conv.whatsapp_config.name,
-          phone_number: conv.whatsapp_config.phone_number,
-          conversationCount: (existing?.conversationCount || 0) + 1,
-        });
+        countMap.set(conv.whatsapp_config.id, (countMap.get(conv.whatsapp_config.id) || 0) + 1);
       }
     });
-    return Array.from(inboxMap.values()).sort((a, b) => 
-      (a.phone_number || a.name).localeCompare(b.phone_number || b.name)
-    );
-  }, [conversations]);
+    
+    // Return all active configs with their counts
+    return whatsAppConfigs
+      .filter((config) => config.is_active)
+      .map((config) => ({
+        id: config.id,
+        name: config.name,
+        phone_number: config.phone_number,
+        conversationCount: countMap.get(config.id) || 0,
+      }))
+      .sort((a, b) => (a.phone_number || a.name).localeCompare(b.phone_number || b.name));
+  }, [whatsAppConfigs, conversations]);
 
   // Initialize selectedInboxIds with all inboxes if empty
   useEffect(() => {
