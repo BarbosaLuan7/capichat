@@ -22,6 +22,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useInboxRealtime } from '@/hooks/useInboxRealtime';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
+import { useSyncChatHistory } from '@/hooks/useSyncChatHistory';
 
 
 // Components - Lazy loaded for better performance
@@ -88,6 +89,7 @@ const Inbox = () => {
   const updateAssignee = useUpdateConversationAssignee();
   const updateLead = useUpdateLead();
   const updateConversationStatus = useUpdateConversationStatus();
+  const syncChatHistory = useSyncChatHistory();
 
   // Notification sound hook
   const { notify } = useNotificationSound();
@@ -137,6 +139,18 @@ const Inbox = () => {
     }
     userClickedConversationRef.current = false;
   }, [selectedConversationId, selectedConversation?.unread_count, markAsRead]);
+
+  // Sync chat history quando uma conversa é selecionada pela primeira vez
+  // Isso garante que mensagens enviadas pelo celular sejam sincronizadas
+  useEffect(() => {
+    if (selectedConversationId && !syncChatHistory.isPending) {
+      // Pequeno delay para não sobrecarregar ao trocar rápido de conversa
+      const timeoutId = setTimeout(() => {
+        syncChatHistory.mutate(selectedConversationId);
+      }, 1000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [selectedConversationId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Prepare lead with labels - memoized to prevent re-renders
   const leadWithLabels = useMemo(() => {

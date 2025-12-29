@@ -580,6 +580,7 @@ export type Database = {
           reply_to_external_id: string | null
           sender_id: string
           sender_type: Database["public"]["Enums"]["sender_type"]
+          source: string | null
           status: Database["public"]["Enums"]["message_status"]
           type: Database["public"]["Enums"]["message_type"]
         }
@@ -598,6 +599,7 @@ export type Database = {
           reply_to_external_id?: string | null
           sender_id: string
           sender_type: Database["public"]["Enums"]["sender_type"]
+          source?: string | null
           status?: Database["public"]["Enums"]["message_status"]
           type?: Database["public"]["Enums"]["message_type"]
         }
@@ -616,6 +618,7 @@ export type Database = {
           reply_to_external_id?: string | null
           sender_id?: string
           sender_type?: Database["public"]["Enums"]["sender_type"]
+          source?: string | null
           status?: Database["public"]["Enums"]["message_status"]
           type?: Database["public"]["Enums"]["message_type"]
         }

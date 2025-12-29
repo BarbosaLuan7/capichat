@@ -53,3 +53,6 @@ verify_jwt = false
 
 [functions.refresh-lead-avatars]
 verify_jwt = false
+
+[functions.sync-chat-history]
+verify_jwt = true

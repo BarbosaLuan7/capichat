@@ -950,6 +950,7 @@ serve(async (req) => {
       direction: 'outbound',
       status: 'sent',
       external_id: result.messageId || null, // ID do WhatsApp para rastrear status
+      source: 'crm', // Marca que foi enviada pelo CRM
     };
     
     // Adicionar reply_to_external_id e buscar mensagem original para quoted_message
