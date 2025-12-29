@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, lazy, Suspense } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { motion } from 'framer-motion';
 import {
@@ -47,7 +47,9 @@ import { useAutomations, useCreateAutomation, useUpdateAutomation, useDeleteAuto
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { AutomationModal } from '@/components/automations/AutomationModal';
+
+// Lazy load heavy modal
+const AutomationModal = lazy(() => import('@/components/automations/AutomationModal').then(m => ({ default: m.AutomationModal })));
 import { AutomationExecutionLogs } from '@/components/automations/AutomationExecutionLogs';
 import { toast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
@@ -529,30 +531,34 @@ const Automations = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Automation Modal */}
-      <AutomationModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        automation={selectedAutomation}
-        onSave={handleSaveAutomation}
-        onDelete={async (id) => {
-          try {
-            await deleteAutomation.mutateAsync(id);
-            toast({
-              title: 'Automação excluída',
-              description: 'A automação foi removida com sucesso.',
-            });
-            setModalOpen(false);
-          } catch {
-            toast({
-              title: 'Erro ao excluir',
-              description: 'Não foi possível excluir a automação.',
-              variant: 'destructive',
-            });
-          }
-        }}
-        isSaving={createAutomation.isPending || updateAutomation.isPending}
-      />
+      {/* Automation Modal - Lazy loaded */}
+      <Suspense fallback={null}>
+        {modalOpen && (
+          <AutomationModal
+            open={modalOpen}
+            onOpenChange={setModalOpen}
+            automation={selectedAutomation}
+            onSave={handleSaveAutomation}
+            onDelete={async (id) => {
+              try {
+                await deleteAutomation.mutateAsync(id);
+                toast({
+                  title: 'Automação excluída',
+                  description: 'A automação foi removida com sucesso.',
+                });
+                setModalOpen(false);
+              } catch {
+                toast({
+                  title: 'Erro ao excluir',
+                  description: 'Não foi possível excluir a automação.',
+                  variant: 'destructive',
+                });
+              }
+            }}
+            isSaving={createAutomation.isPending || updateAutomation.isPending}
+          />
+        )}
+      </Suspense>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

@@ -336,10 +336,10 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     }
   };
 
-  const handleReplyMessage = (message: Message) => {
+  const handleReplyMessage = useCallback((message: Message) => {
     setReplyingTo(message);
     inputRef.current?.focus();
-  };
+  }, []);
 
   const handleFileSelect = (file: File, type: 'image' | 'video' | 'audio' | 'document') => {
     setPendingFile({ file, type });

@@ -65,6 +65,7 @@ export function useConversation(id: string | undefined) {
       return data;
     },
     enabled: !!id,
+    staleTime: 30000, // 30 segundos
   });
 }
 
