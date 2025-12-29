@@ -15,6 +15,7 @@ import { AudioPlayer } from '@/components/inbox/AudioPlayer';
 import { ImageLightbox } from '@/components/inbox/ImageLightbox';
 import { DocumentPreview } from '@/components/inbox/DocumentPreview';
 import { QuotedMessage } from '@/components/inbox/QuotedMessage';
+import { MessageDetailsPopover } from '@/components/inbox/MessageDetailsPopover';
 import type { Database } from '@/integrations/supabase/types';
 
 const MAX_MESSAGE_LENGTH = 500;
@@ -472,6 +473,12 @@ function MessageBubbleComponent({
                 </TooltipProvider>
               );
             })()}
+            <MessageDetailsPopover
+              source={message.source}
+              status={message.status as MessageStatus}
+              createdAt={message.created_at}
+              isAgent={isAgent}
+            />
           </div>
         </div>
 
