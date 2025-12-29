@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, forwardRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Loader2, CheckCircle, AlertCircle, Zap, ExternalLink } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, ExternalLink, Clock, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 
 import {
@@ -14,7 +13,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -23,17 +21,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { MaskedInput } from '@/components/ui/masked-input';
 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger';
 import { useCreateLead } from '@/hooks/useLeads';
-import { useCreateConversation, useSendMessage } from '@/hooks/useConversations';
+import { useCreateConversation } from '@/hooks/useConversations';
 import { useFunnelStages } from '@/hooks/useFunnelStages';
-import { useTemplates } from '@/hooks/useTemplates';
-import { normalizePhoneNumber, isValidPhone } from '@/lib/masks';
-import { replaceTemplateVariables } from '@/lib/templateVariables';
+import { useWhatsAppConfigs } from '@/hooks/useWhatsAppConfig';
+import { formatPhoneNumber } from '@/lib/masks';
 
 interface NewConversationModalProps {
   open: boolean;
@@ -47,29 +43,23 @@ interface ExistingLead {
   phone: string;
 }
 
-const BENEFIT_TYPES = [
-  { value: 'bpc_idoso', label: 'BPC/LOAS Idoso (65+)' },
-  { value: 'bpc_deficiente', label: 'BPC/LOAS Deficiente' },
-  { value: 'bpc_autista', label: 'BPC/LOAS Autista' },
-  { value: 'aposentadoria_idade', label: 'Aposentadoria por Idade' },
-  { value: 'aposentadoria_tempo', label: 'Aposentadoria por Tempo' },
-  { value: 'aposentadoria_especial', label: 'Aposentadoria Especial' },
-  { value: 'aposentadoria_rural', label: 'Aposentadoria Rural' },
-  { value: 'auxilio_doenca', label: 'Auxílio-Doença' },
-  { value: 'auxilio_acidente', label: 'Auxílio-Acidente' },
-  { value: 'pensao_morte', label: 'Pensão por Morte' },
-  { value: 'salario_maternidade', label: 'Salário-Maternidade' },
-  { value: 'auxilio_reclusao', label: 'Auxílio-Reclusão' },
-  { value: 'outro', label: 'Outro' },
-];
-
-const ORIGIN_OPTIONS = [
-  { value: 'facebook', label: 'Facebook Ads' },
-  { value: 'google', label: 'Google Ads' },
-  { value: 'instagram', label: 'Instagram' },
-  { value: 'indicacao', label: 'Indicação' },
-  { value: 'organico', label: 'Orgânico' },
-  { value: 'manual', label: 'Manual' },
+// Códigos de país com Brasil no topo
+const COUNTRY_CODES = [
+  { code: '55', country: 'Brasil', flag: '🇧🇷' },
+  { code: '1', country: 'EUA/Canadá', flag: '🇺🇸' },
+  { code: '54', country: 'Argentina', flag: '🇦🇷' },
+  { code: '595', country: 'Paraguai', flag: '🇵🇾' },
+  { code: '598', country: 'Uruguai', flag: '🇺🇾' },
+  { code: '56', country: 'Chile', flag: '🇨🇱' },
+  { code: '57', country: 'Colômbia', flag: '🇨🇴' },
+  { code: '51', country: 'Peru', flag: '🇵🇪' },
+  { code: '58', country: 'Venezuela', flag: '🇻🇪' },
+  { code: '351', country: 'Portugal', flag: '🇵🇹' },
+  { code: '34', country: 'Espanha', flag: '🇪🇸' },
+  { code: '39', country: 'Itália', flag: '🇮🇹' },
+  { code: '49', country: 'Alemanha', flag: '🇩🇪' },
+  { code: '33', country: 'França', flag: '🇫🇷' },
+  { code: '44', country: 'Reino Unido', flag: '🇬🇧' },
 ];
 
 export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationModalProps>(
@@ -78,28 +68,36 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
     onOpenChange,
     onConversationCreated,
   }, ref) {
-  const navigate = useNavigate();
   const { user } = useAuth();
   
   // Form state
+  const [selectedInstanceId, setSelectedInstanceId] = useState<string>('');
+  const [countryCode, setCountryCode] = useState('55'); // Brasil padrão
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
-  const [benefitType, setBenefitType] = useState('');
-  const [source, setSource] = useState('manual');
-  const [message, setMessage] = useState('');
   
   // Validation state
   const [isCheckingDuplicity, setIsCheckingDuplicity] = useState(false);
   const [existingLead, setExistingLead] = useState<ExistingLead | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(false);
   
   // Hooks
   const createLead = useCreateLead();
   const createConversation = useCreateConversation();
-  const sendMessage = useSendMessage();
   const { data: funnelStages } = useFunnelStages();
-  const { data: templates } = useTemplates();
+  const { data: whatsappConfigs, isLoading: isLoadingConfigs } = useWhatsAppConfigs();
+  
+  // Filter active WhatsApp instances
+  const activeInstances = useMemo(() => {
+    return whatsappConfigs?.filter(c => c.is_active) || [];
+  }, [whatsappConfigs]);
+  
+  // Auto-select if only one instance
+  useEffect(() => {
+    if (activeInstances.length === 1 && !selectedInstanceId) {
+      setSelectedInstanceId(activeInstances[0].id);
+    }
+  }, [activeInstances, selectedInstanceId]);
   
   // Get first funnel stage
   const firstStage = useMemo(() => {
@@ -107,13 +105,34 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
     return funnelStages.sort((a, b) => a.order - b.order)[0];
   }, [funnelStages]);
   
-  // Phone validation
-  const normalizedPhone = useMemo(() => normalizePhoneNumber(phone), [phone]);
-  const isPhoneValid = useMemo(() => isValidPhone(phone), [phone]);
+  // Phone normalization - remove non-digits
+  const normalizedPhone = useMemo(() => {
+    return phone.replace(/\D/g, '');
+  }, [phone]);
+  
+  // Full phone with country code
+  const fullPhoneNumber = useMemo(() => {
+    return `${countryCode}${normalizedPhone}`;
+  }, [countryCode, normalizedPhone]);
+  
+  // Phone validation - basic length check
+  const isPhoneValid = useMemo(() => {
+    // Mínimo de 8 dígitos para números internacionais
+    if (normalizedPhone.length < 8) return false;
+    
+    // Para Brasil, validar DDD e 9º dígito para celular
+    if (countryCode === '55') {
+      if (normalizedPhone.length < 10 || normalizedPhone.length > 11) return false;
+      // Se tem 11 dígitos, deve começar com 9 (celular)
+      if (normalizedPhone.length === 11 && normalizedPhone[2] !== '9') return false;
+    }
+    
+    return true;
+  }, [normalizedPhone, countryCode]);
   
   // Check for duplicate phone with debounce
   useEffect(() => {
-    if (!isPhoneValid || normalizedPhone.length < 10) {
+    if (!isPhoneValid || normalizedPhone.length < 8) {
       setExistingLead(null);
       return;
     }
@@ -121,10 +140,11 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
     const timeout = setTimeout(async () => {
       setIsCheckingDuplicity(true);
       try {
+        // Buscar pelo número completo com código do país
         const { data, error } = await supabase
           .from('leads')
           .select('id, name, phone')
-          .eq('phone', normalizedPhone)
+          .eq('phone', fullPhoneNumber)
           .maybeSingle();
         
         if (error) {
@@ -140,45 +160,27 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
     }, 300);
     
     return () => clearTimeout(timeout);
-  }, [normalizedPhone, isPhoneValid]);
+  }, [fullPhoneNumber, isPhoneValid, normalizedPhone.length]);
   
   // Reset form when modal closes
   useEffect(() => {
     if (!open) {
       setPhone('');
       setName('');
-      setBenefitType('');
-      setSource('manual');
-      setMessage('');
+      setCountryCode('55');
       setExistingLead(null);
-      setShowTemplates(false);
+      // Manter instância selecionada se só tiver uma
+      if (activeInstances.length !== 1) {
+        setSelectedInstanceId('');
+      }
     }
-  }, [open]);
+  }, [open, activeInstances.length]);
   
   // Generate default name from phone
   const getDefaultName = () => {
     if (name.trim()) return name.trim();
     const lastDigits = normalizedPhone.slice(-4);
-    return `Lead ${lastDigits}`;
-  };
-  
-  // Replace template variables using centralized function
-  const processMessage = (content: string) => {
-    return replaceTemplateVariables(content, {
-      lead: {
-        name: name.trim() || getDefaultName(),
-        phone: normalizedPhone,
-        benefit_type: benefitType || null,
-      },
-      removeUnmatched: true,
-    });
-  };
-  
-  // Handle template selection
-  const handleSelectTemplate = (content: string) => {
-    const processed = processMessage(content);
-    setMessage(processed);
-    setShowTemplates(false);
+    return `Lead +${countryCode} ...${lastDigits}`;
   };
   
   // Open existing conversation
@@ -209,6 +211,7 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
         lead_id: leadId,
         assigned_to: user?.id,
         status: 'open',
+        whatsapp_instance_id: selectedInstanceId || null,
       });
       
       toast.success('Conversa criada com sucesso!');
@@ -223,9 +226,14 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
   };
   
   // Main creation flow
-  const handleCreate = async (shouldSendMessage: boolean) => {
+  const handleCreate = async () => {
     if (!isPhoneValid || !user) {
       toast.error('Número de telefone inválido');
+      return;
+    }
+    
+    if (!selectedInstanceId) {
+      toast.error('Selecione uma instância WhatsApp');
       return;
     }
     
@@ -240,9 +248,8 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
       // 1. Create lead
       const lead = await createLead.mutateAsync({
         name: getDefaultName(),
-        phone: normalizedPhone,
-        source: source,
-        benefit_type: benefitType || null,
+        phone: fullPhoneNumber,
+        source: 'manual',
         stage_id: firstStage?.id || null,
         assigned_to: user.id,
         temperature: 'warm',
@@ -250,34 +257,19 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
       
       logger.log('[NewConversation] Lead created:', lead.id);
       
-      // 2. Create conversation
+      // 2. Create conversation with whatsapp_instance_id
       const conversation = await createConversation.mutateAsync({
         lead_id: lead.id,
         assigned_to: user.id,
         status: 'open',
+        whatsapp_instance_id: selectedInstanceId,
       });
       
       logger.log('[NewConversation] Conversation created:', conversation.id);
       
-      // 3. Send message if requested
-      if (shouldSendMessage && message.trim()) {
-        const processedMessage = processMessage(message);
-        
-        await sendMessage.mutateAsync({
-          conversation_id: conversation.id,
-          sender_id: user.id,
-          sender_type: 'agent',
-          content: processedMessage,
-          type: 'text',
-        });
-        
-        logger.log('[NewConversation] Message sent');
-        toast.success('Conversa criada e mensagem enviada!');
-      } else {
-        toast.success('Conversa criada com sucesso!');
-      }
+      toast.success('Conversa criada com sucesso!');
       
-      // 4. Close modal and select conversation
+      // 3. Close modal and select conversation
       onOpenChange(false);
       onConversationCreated?.(conversation.id);
       
@@ -290,12 +282,17 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
     }
   };
   
+  // Handle schedule (placeholder for future functionality)
+  const handleSchedule = () => {
+    toast.info('Funcionalidade de agendamento em breve!');
+  };
+  
   // Validation state indicator
   const PhoneValidationIndicator = () => {
     if (isCheckingDuplicity) {
       return <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />;
     }
-    if (normalizedPhone.length >= 10) {
+    if (normalizedPhone.length >= 8) {
       if (existingLead) {
         return <AlertCircle className="w-4 h-4 text-destructive" />;
       }
@@ -306,33 +303,105 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
     return null;
   };
   
-  const canSubmit = isPhoneValid && !existingLead && !isSubmitting && !isCheckingDuplicity;
+  const canSubmit = isPhoneValid && !existingLead && !isSubmitting && !isCheckingDuplicity && !!selectedInstanceId;
+  
+  // Format display for selected instance
+  const getInstanceDisplay = (config: typeof activeInstances[0]) => {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+        <span className="truncate">{config.name}</span>
+        {config.phone_number && (
+          <span className="text-muted-foreground text-xs">
+            ({formatPhoneNumber(config.phone_number)})
+          </span>
+        )}
+      </div>
+    );
+  };
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent ref={ref} className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Nova conversa</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5" />
+            Nova conversa
+          </DialogTitle>
           <DialogDescription>
-            Inicie uma nova conversa no WhatsApp
+            Inicie um novo atendimento no WhatsApp
           </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
-          {/* Phone Field */}
+          {/* WhatsApp Instance Selector */}
+          <div className="space-y-2">
+            <Label htmlFor="instance">Instância WhatsApp *</Label>
+            {isLoadingConfigs ? (
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Carregando instâncias...
+              </div>
+            ) : activeInstances.length === 0 ? (
+              <Alert>
+                <AlertDescription className="text-sm">
+                  Nenhuma instância WhatsApp configurada.{' '}
+                  <a href="/settings/whatsapp" className="text-primary hover:underline">
+                    Configurar agora →
+                  </a>
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Select value={selectedInstanceId} onValueChange={setSelectedInstanceId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a instância..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeInstances.map((config) => (
+                    <SelectItem key={config.id} value={config.id}>
+                      {getInstanceDisplay(config)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          
+          {/* Phone Field with Country Selector */}
           <div className="space-y-2">
             <Label htmlFor="phone">Número do WhatsApp *</Label>
-            <div className="relative">
-              <MaskedInput
-                id="phone"
-                mask="phone"
-                value={phone}
-                onChange={setPhone}
-                placeholder="(55) 45999-5785"
-                className="pr-10"
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                <PhoneValidationIndicator />
+            <div className="flex gap-2">
+              {/* Country Code Selector */}
+              <Select value={countryCode} onValueChange={setCountryCode}>
+                <SelectTrigger className="w-[110px] shrink-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {COUNTRY_CODES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      <span className="flex items-center gap-1.5">
+                        <span>{c.flag}</span>
+                        <span>+{c.code}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {/* Phone Input */}
+              <div className="relative flex-1">
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder={countryCode === '55' ? '45 99999-5785' : 'Número'}
+                  className="pr-10"
+                  autoFocus
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <PhoneValidationIndicator />
+                </div>
               </div>
             </div>
             
@@ -358,7 +427,7 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
             )}
           </div>
           
-          {/* Name Field */}
+          {/* Name Field (Secondary) */}
           <div className="space-y-2">
             <Label htmlFor="name">
               Nome do contato <span className="text-muted-foreground font-normal">(opcional)</span>
@@ -367,141 +436,49 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Maria Silva"
-              className={name.length > 0 && name.trim() === '' ? 'border-destructive focus-visible:ring-destructive' : ''}
-              aria-invalid={name.length > 0 && name.trim() === ''}
-            />
-            {name.length > 0 && name.trim() === '' ? (
-              <p className="text-xs text-destructive">
-                Nome não pode conter apenas espaços
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Se vazio, será usado "Lead + últimos 4 dígitos"
-              </p>
-            )}
-          </div>
-          
-          {/* Benefit Type */}
-          <div className="space-y-2">
-            <Label htmlFor="benefitType">
-              Tipo de Benefício <span className="text-muted-foreground font-normal">(opcional)</span>
-            </Label>
-            <Select value={benefitType} onValueChange={setBenefitType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent>
-                {BENEFIT_TYPES.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          {/* Origin/Source */}
-          <div className="space-y-2">
-            <Label htmlFor="source">Origem</Label>
-            <Select value={source} onValueChange={setSource}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent>
-                {ORIGIN_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          {/* Initial Message */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="message">
-                Mensagem inicial <span className="text-muted-foreground font-normal">(opcional)</span>
-              </Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowTemplates(!showTemplates)}
-                className="h-6 gap-1 text-xs"
-              >
-                <Zap className="w-3 h-3" />
-                Templates
-              </Button>
-            </div>
-            
-            {/* Templates Dropdown */}
-            {showTemplates && templates && templates.length > 0 && (
-              <div className="border rounded-md max-h-40 overflow-y-auto bg-background">
-                {templates.map((template) => (
-                  <button
-                    key={template.id}
-                    type="button"
-                    onClick={() => handleSelectTemplate(template.content)}
-                    className="w-full px-3 py-2 text-left hover:bg-muted text-sm border-b last:border-b-0"
-                  >
-                    <span className="font-medium">{template.name}</span>
-                    <span className="text-muted-foreground ml-2 text-xs">
-                      /{template.shortcut}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-            
-            <Textarea
-              id="message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Escreva a primeira mensagem..."
-              rows={4}
+              placeholder="Deixe em branco se desconhecido"
             />
             <p className="text-xs text-muted-foreground">
-              Use {'{{nome}}'} ou {'{{primeiro_nome}}'} para personalizar
+              Se vazio, será criado como "Lead +{countryCode} ...{normalizedPhone.slice(-4) || 'XXXX'}"
             </p>
           </div>
         </div>
         
-        <DialogFooter className="flex-col sm:flex-row gap-2">
+        <DialogFooter className="flex items-center justify-between sm:justify-between">
+          {/* Schedule Option */}
           <Button
             type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            Cancelar
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => handleCreate(false)}
+            variant="ghost"
+            size="sm"
+            className="gap-1.5 text-muted-foreground"
+            onClick={handleSchedule}
             disabled={!canSubmit}
           >
-            {isSubmitting ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            ) : null}
-            Criar sem enviar
+            <Clock className="w-4 h-4" />
+            Agendar
           </Button>
-          <Button
-            type="button"
-            onClick={() => handleCreate(true)}
-            disabled={!canSubmit || !message.trim()}
-          >
-            {isSubmitting ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            ) : null}
-            Criar e enviar
-          </Button>
+          
+          {/* Main Actions */}
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCreate}
+              disabled={!canSubmit}
+            >
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Iniciar Atendimento
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 });
-
-NewConversationModal.displayName = 'NewConversationModal';
