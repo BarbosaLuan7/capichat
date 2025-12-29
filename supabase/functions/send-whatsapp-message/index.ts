@@ -951,6 +951,7 @@ serve(async (req) => {
       status: 'sent',
       external_id: result.messageId || null, // ID do WhatsApp para rastrear status
       source: 'crm', // Marca que foi enviada pelo CRM
+      waha_message_id: result.messageId || null, // Prevenir duplicação quando webhook receber echo
     };
     
     // Adicionar reply_to_external_id e buscar mensagem original para quoted_message
