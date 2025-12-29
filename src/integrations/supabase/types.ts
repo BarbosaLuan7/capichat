@@ -578,7 +578,7 @@ export type Database = {
           media_url: string | null
           quoted_message: Json | null
           reply_to_external_id: string | null
-          sender_id: string
+          sender_id: string | null
           sender_type: Database["public"]["Enums"]["sender_type"]
           source: string | null
           status: Database["public"]["Enums"]["message_status"]
@@ -597,7 +597,7 @@ export type Database = {
           media_url?: string | null
           quoted_message?: Json | null
           reply_to_external_id?: string | null
-          sender_id: string
+          sender_id?: string | null
           sender_type: Database["public"]["Enums"]["sender_type"]
           source?: string | null
           status?: Database["public"]["Enums"]["message_status"]
@@ -616,7 +616,7 @@ export type Database = {
           media_url?: string | null
           quoted_message?: Json | null
           reply_to_external_id?: string | null
-          sender_id?: string
+          sender_id?: string | null
           sender_type?: Database["public"]["Enums"]["sender_type"]
           source?: string | null
           status?: Database["public"]["Enums"]["message_status"]
