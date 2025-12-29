@@ -140,6 +140,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          tenant_id: string | null
           trigger: Database["public"]["Enums"]["automation_trigger"]
           updated_at: string
         }
@@ -152,6 +153,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          tenant_id?: string | null
           trigger: Database["public"]["Enums"]["automation_trigger"]
           updated_at?: string
         }
@@ -164,10 +166,19 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          tenant_id?: string | null
           trigger?: Database["public"]["Enums"]["automation_trigger"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "automations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       chatbot_flows: {
         Row: {
@@ -267,6 +278,7 @@ export type Database = {
           id: string
           name: string
           order: number
+          tenant_id: string | null
         }
         Insert: {
           color?: string
@@ -275,6 +287,7 @@ export type Database = {
           id?: string
           name: string
           order?: number
+          tenant_id?: string | null
         }
         Update: {
           color?: string
@@ -283,8 +296,17 @@ export type Database = {
           id?: string
           name?: string
           order?: number
+          tenant_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "funnel_stages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       internal_notes: {
         Row: {
@@ -325,6 +347,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          tenant_id: string | null
         }
         Insert: {
           category?: Database["public"]["Enums"]["label_category"]
@@ -332,6 +355,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          tenant_id?: string | null
         }
         Update: {
           category?: Database["public"]["Enums"]["label_category"]
@@ -339,8 +363,17 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          tenant_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "labels_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lead_activities: {
         Row: {
@@ -485,6 +518,7 @@ export type Database = {
           stage_id: string | null
           status: Database["public"]["Enums"]["lead_status"]
           temperature: Database["public"]["Enums"]["lead_temperature"]
+          tenant_id: string | null
           updated_at: string
           utm_medium: string | null
           whatsapp_chat_id: string | null
@@ -517,6 +551,7 @@ export type Database = {
           stage_id?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           temperature?: Database["public"]["Enums"]["lead_temperature"]
+          tenant_id?: string | null
           updated_at?: string
           utm_medium?: string | null
           whatsapp_chat_id?: string | null
@@ -549,6 +584,7 @@ export type Database = {
           stage_id?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           temperature?: Database["public"]["Enums"]["lead_temperature"]
+          tenant_id?: string | null
           updated_at?: string
           utm_medium?: string | null
           whatsapp_chat_id?: string | null
@@ -560,6 +596,13 @@ export type Database = {
             columns: ["stage_id"]
             isOneToOne: false
             referencedRelation: "funnel_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -867,6 +910,7 @@ export type Database = {
           priority: Database["public"]["Enums"]["task_priority"]
           status: Database["public"]["Enums"]["task_status"]
           subtasks: Json | null
+          tenant_id: string | null
           title: string
           updated_at: string
         }
@@ -880,6 +924,7 @@ export type Database = {
           priority?: Database["public"]["Enums"]["task_priority"]
           status?: Database["public"]["Enums"]["task_status"]
           subtasks?: Json | null
+          tenant_id?: string | null
           title: string
           updated_at?: string
         }
@@ -893,6 +938,7 @@ export type Database = {
           priority?: Database["public"]["Enums"]["task_priority"]
           status?: Database["public"]["Enums"]["task_status"]
           subtasks?: Json | null
+          tenant_id?: string | null
           title?: string
           updated_at?: string
         }
@@ -904,6 +950,13 @@ export type Database = {
             referencedRelation: "leads"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
         ]
       }
       teams: {
@@ -912,6 +965,7 @@ export type Database = {
           id: string
           name: string
           supervisor_id: string | null
+          tenant_id: string | null
           updated_at: string
         }
         Insert: {
@@ -919,6 +973,7 @@ export type Database = {
           id?: string
           name: string
           supervisor_id?: string | null
+          tenant_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -926,9 +981,18 @@ export type Database = {
           id?: string
           name?: string
           supervisor_id?: string | null
+          tenant_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "teams_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       templates: {
         Row: {
@@ -938,6 +1002,7 @@ export type Database = {
           id: string
           name: string
           shortcut: string
+          tenant_id: string | null
         }
         Insert: {
           content: string
@@ -946,6 +1011,7 @@ export type Database = {
           id?: string
           name: string
           shortcut: string
+          tenant_id?: string | null
         }
         Update: {
           content?: string
@@ -954,6 +1020,48 @@ export type Database = {
           id?: string
           name?: string
           shortcut?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenants: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          settings: Json | null
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name: string
+          settings?: Json | null
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          settings?: Json | null
+          slug?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -977,6 +1085,41 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_tenants: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          role?: Database["public"]["Enums"]["app_role"] | null
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          role?: Database["public"]["Enums"]["app_role"] | null
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_tenants_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       webhook_logs: {
         Row: {
@@ -1106,6 +1249,7 @@ export type Database = {
           name: string
           phone_number: string | null
           provider: string
+          tenant_id: string | null
           updated_at: string
           webhook_secret: string | null
         }
@@ -1120,6 +1264,7 @@ export type Database = {
           name: string
           phone_number?: string | null
           provider: string
+          tenant_id?: string | null
           updated_at?: string
           webhook_secret?: string | null
         }
@@ -1134,10 +1279,19 @@ export type Database = {
           name?: string
           phone_number?: string | null
           provider?: string
+          tenant_id?: string | null
           updated_at?: string
           webhook_secret?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -1159,11 +1313,20 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_user_tenant_role: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      get_user_tenants: { Args: { _user_id: string }; Returns: string[] }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      user_has_tenant_access: {
+        Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
       validate_api_key: { Args: { key_value: string }; Returns: string }
