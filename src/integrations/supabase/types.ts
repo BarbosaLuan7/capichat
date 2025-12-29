@@ -486,6 +486,7 @@ export type Database = {
           temperature: Database["public"]["Enums"]["lead_temperature"]
           updated_at: string
           utm_medium: string | null
+          whatsapp_chat_id: string | null
           whatsapp_name: string | null
         }
         Insert: {
@@ -516,6 +517,7 @@ export type Database = {
           temperature?: Database["public"]["Enums"]["lead_temperature"]
           updated_at?: string
           utm_medium?: string | null
+          whatsapp_chat_id?: string | null
           whatsapp_name?: string | null
         }
         Update: {
@@ -546,6 +548,7 @@ export type Database = {
           temperature?: Database["public"]["Enums"]["lead_temperature"]
           updated_at?: string
           utm_medium?: string | null
+          whatsapp_chat_id?: string | null
           whatsapp_name?: string | null
         }
         Relationships: [
