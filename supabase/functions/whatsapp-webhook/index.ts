@@ -1059,14 +1059,11 @@ serve(async (req) => {
           );
         }
         
-        // Ignorar mensagens enviadas por nós
-        if (payload.fromMe) {
-          console.log('[whatsapp-webhook] Ignorando mensagem enviada por nós');
-          return new Response(
-            JSON.stringify({ success: true, ignored: true, reason: 'fromMe' }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+        // Processar TODAS as mensagens - tanto inbound quanto outbound
+        // fromMe=true: enviada por nós (celular, CRM, bot)
+        // fromMe=false: recebida do lead
+        isFromMe = payload.fromMe || false;
+        console.log('[whatsapp-webhook] Mensagem fromMe:', isFromMe);
         
         messageData = payload;
         externalMessageId = payload.id || '';
@@ -1188,14 +1185,9 @@ serve(async (req) => {
           );
         }
         
-        // Ignorar mensagens enviadas por nós
-        if (payload.key?.fromMe) {
-          console.log('[whatsapp-webhook] Ignorando mensagem enviada por nós');
-          return new Response(
-            JSON.stringify({ success: true, ignored: true, reason: 'fromMe' }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+        // Processar TODAS as mensagens - tanto inbound quanto outbound (Evolution)
+        isFromMe = payload.key?.fromMe || false;
+        console.log('[whatsapp-webhook] Evolution Mensagem fromMe:', isFromMe);
         
         messageData = payload;
         externalMessageId = payload.key?.id || '';
@@ -1426,13 +1418,16 @@ serve(async (req) => {
       conversation = existingConversation;
       console.log('[whatsapp-webhook] Conversa encontrada:', conversation.id);
 
-      // Apenas reabrir conversa se estava pendente - o trigger cuida do unread_count e last_message_at
-      await supabase
-        .from('conversations')
-        .update({
-          status: 'open',
-        })
-        .eq('id', conversation.id);
+      // Apenas reabrir conversa se estava pendente e é mensagem INBOUND (do lead)
+      // Mensagens outbound (nossas) não devem reabrir conversas resolvidas
+      if (!isFromMe) {
+        await supabase
+          .from('conversations')
+          .update({
+            status: 'open',
+          })
+          .eq('id', conversation.id);
+      }
     } else {
       // Buscar ID da instância WhatsApp pela session do webhook (para associar corretamente)
       const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
@@ -1480,17 +1475,27 @@ serve(async (req) => {
     // Extrair quote se houver (re-extrair do payload porque não está disponível aqui)
     const { quotedMessage } = getMessageContent(messageData, provider);
     
+    // ========== DETERMINAR DIREÇÃO E TIPO DE REMETENTE ==========
+    // isFromMe=true: mensagem enviada por nós (celular, CRM, bot)
+    // isFromMe=false: mensagem recebida do lead
+    const direction = isFromMe ? 'outbound' : 'inbound';
+    const senderType = isFromMe ? 'agent' : 'lead';
+    const source = isFromMe ? 'mobile' : 'lead'; // 'mobile' porque veio pelo celular (não pelo CRM)
+    
+    console.log('[whatsapp-webhook] Direção:', direction, 'Sender:', senderType, 'Source:', source);
+    
     // Criar mensagem com dados de quote se existirem
     const messageInsertData: Record<string, unknown> = {
       conversation_id: conversation.id,
       lead_id: lead.id,
-      sender_id: lead.id,
-      sender_type: 'lead',
+      sender_id: isFromMe ? null : lead.id, // Outbound não tem sender_id específico (pode ser qualquer agente)
+      sender_type: senderType,
       content: content,
       type: type as 'text' | 'image' | 'audio' | 'video' | 'document',
       media_url: finalMediaUrl,
-      direction: 'inbound',
-      status: 'delivered',
+      direction: direction,
+      source: source,
+      status: isFromMe ? 'sent' : 'delivered',
       external_id: externalMessageId || null,
     };
     
@@ -1517,8 +1522,9 @@ serve(async (req) => {
 
     console.log('[whatsapp-webhook] Mensagem criada:', message.id, 'external_id:', externalMessageId);
 
-    // Criar notificação para o usuário atribuído
-    if (conversation.assigned_to) {
+    // Criar notificação apenas para mensagens INBOUND (do lead)
+    // Mensagens outbound (nossas) não devem gerar notificação
+    if (!isFromMe && conversation.assigned_to) {
       try {
         await supabase.rpc('create_notification', {
           p_user_id: conversation.assigned_to,
