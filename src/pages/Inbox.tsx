@@ -153,7 +153,7 @@ const Inbox = () => {
     setSelectedConversationId(id);
   }, []);
 
-  const handleSendMessage = useCallback(async (content: string, type: string, mediaUrl?: string | null) => {
+  const handleSendMessage = useCallback(async (content: string, type: string, mediaUrl?: string | null, replyToExternalId?: string | null) => {
     if (!selectedConversationId || !user) return;
 
     await sendMessage.mutateAsync({
@@ -163,6 +163,7 @@ const Inbox = () => {
       content,
       type: type as any,
       media_url: mediaUrl,
+      reply_to_external_id: replyToExternalId || undefined,
     });
   }, [selectedConversationId, user, sendMessage]);
 
