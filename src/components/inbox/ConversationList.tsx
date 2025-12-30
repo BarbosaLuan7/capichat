@@ -2,8 +2,6 @@ import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   Search,
-  Filter,
-  Tag,
   X,
   Plus,
   ArrowUp,
@@ -13,35 +11,27 @@ import {
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { ConversationStatusTabs } from '@/components/inbox/ConversationStatusTabs';
 import { ConversationItem } from '@/components/inbox/ConversationItem';
-import { InboxFilter } from '@/components/inbox/InboxFilter';
+import { ConversationFiltersPopover } from '@/components/inbox/ConversationFiltersPopover';
+import { ActiveFilterChips } from '@/components/inbox/ActiveFilterChips';
+import { useConversationFilters } from '@/hooks/useConversationFilters';
 import { useDebounce } from '@/hooks/useDebounce';
-import { useLabels } from '@/hooks/useLabels';
 import { useWhatsAppConfigs } from '@/hooks/useWhatsAppConfig';
 import { logger } from '@/lib/logger';
 import type { Database } from '@/integrations/supabase/types';
 
 const CONVERSATION_ITEM_HEIGHT = 88; // Approximate height of ConversationItem in px
-const INBOX_FILTER_STORAGE_KEY = 'inbox-filter-selected';
 
 // Wrapper to prevent inline onClick from breaking React.memo
 const MemoizedConversationItem = React.memo(function MemoizedConversationItem({
@@ -105,18 +95,6 @@ interface ConversationListProps {
   isLoadingMore?: boolean;
 }
 
-const categoryLabels: Record<string, string> = {
-  origem: 'Origem',
-  interesse: 'Benefício/Condição',
-  prioridade: 'Prioridade',
-  status: 'Status',
-  beneficio: 'Benefício',
-  condicao_saude: 'Condição de Saúde',
-  desqualificacao: 'Desqualificação',
-  situacao: 'Situação',
-  perda: 'Motivo de Perda',
-};
-
 export function ConversationList({
   conversations,
   selectedConversationId,
@@ -132,20 +110,11 @@ export function ConversationList({
 }: ConversationListProps) {
   const [filter, setFilter] = useState<AssignmentFilter>('meus');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [sortOrder, setSortOrder] = useState<'recent' | 'oldest'>('recent');
-  const [labelSearchTerm, setLabelSearchTerm] = useState('');
   
-  // State for inbox (WhatsApp number) filter - initialized from localStorage
-  const [selectedInboxIds, setSelectedInboxIds] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem(INBOX_FILTER_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  // Get filters from global store
+  const { filters, setAllInboxes } = useConversationFilters();
   
   // Ref for virtual list container
   const parentRef = useRef<HTMLDivElement>(null);
@@ -155,9 +124,6 @@ export function ConversationList({
 
   // Debounce search query
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
-
-  // Fetch labels
-  const { data: allLabels } = useLabels();
 
   // Fetch all WhatsApp configs (inboxes)
   const { data: whatsAppConfigs } = useWhatsAppConfigs();
@@ -186,51 +152,62 @@ export function ConversationList({
       .sort((a, b) => (a.phone_number || a.name).localeCompare(b.phone_number || b.name));
   }, [whatsAppConfigs, conversations]);
 
-  // Initialize selectedInboxIds with all inboxes if empty
+  // Initialize filters with all inboxes if none selected (first load)
   useEffect(() => {
-    if (selectedInboxIds.length === 0 && availableInboxes.length > 0) {
-      const allIds = availableInboxes.map((i) => i.id);
-      setSelectedInboxIds(allIds);
+    if (filters.inboxIds.length === 0 && availableInboxes.length > 0) {
+      setAllInboxes(availableInboxes.map((i) => i.id));
     }
-  }, [availableInboxes, selectedInboxIds.length]);
-
-  // Persist inbox filter to localStorage
-  useEffect(() => {
-    if (selectedInboxIds.length > 0) {
-      localStorage.setItem(INBOX_FILTER_STORAGE_KEY, JSON.stringify(selectedInboxIds));
-    }
-  }, [selectedInboxIds]);
-
-  // Inbox filter handlers
-  const handleToggleInbox = useCallback((inboxId: string) => {
-    setSelectedInboxIds((prev) =>
-      prev.includes(inboxId)
-        ? prev.filter((id) => id !== inboxId)
-        : [...prev, inboxId]
-    );
-  }, []);
-
-  const handleSelectAllInboxes = useCallback(() => {
-    const allIds = availableInboxes.map((i) => i.id);
-    if (selectedInboxIds.length === allIds.length) {
-      // If all selected, deselect all
-      setSelectedInboxIds([]);
-    } else {
-      // Select all
-      setSelectedInboxIds(allIds);
-    }
-  }, [availableInboxes, selectedInboxIds.length]);
+  }, [availableInboxes, filters.inboxIds.length, setAllInboxes]);
 
   // Filter conversations by inbox (WhatsApp number) first
   const inboxFilteredConversations = useMemo(() => {
-    // If no inboxes selected or all are selected, show all
-    if (selectedInboxIds.length === 0 || selectedInboxIds.length === availableInboxes.length) {
+    // If no inboxes selected, show all (backwards compat)
+    if (filters.inboxIds.length === 0) {
       return conversations || [];
     }
     return (conversations || []).filter((conv) =>
-      conv.whatsapp_config?.id && selectedInboxIds.includes(conv.whatsapp_config.id)
+      conv.whatsapp_config?.id && filters.inboxIds.includes(conv.whatsapp_config.id)
     );
-  }, [conversations, selectedInboxIds, availableInboxes.length]);
+  }, [conversations, filters.inboxIds]);
+
+  // Filter by labels from global store
+  const labelFilteredConversations = useMemo(() => {
+    if (filters.labelIds.length === 0) {
+      return inboxFilteredConversations;
+    }
+    return inboxFilteredConversations.filter((conv) =>
+      filters.labelIds.some((labelId) =>
+        conv.leads?.lead_labels?.some((ll: any) => ll.labels?.id === labelId)
+      )
+    );
+  }, [inboxFilteredConversations, filters.labelIds]);
+
+  // Filter by user assignment from global store
+  const userFilteredConversations = useMemo(() => {
+    if (filters.userIds.length === 0) {
+      return labelFilteredConversations;
+    }
+    
+    const includeUnassigned = filters.userIds.includes('unassigned');
+    const specificUserIds = filters.userIds.filter(id => id !== 'unassigned');
+    
+    return labelFilteredConversations.filter((conv) => {
+      if (!conv.assigned_to) {
+        return includeUnassigned;
+      }
+      return specificUserIds.includes(conv.assigned_to);
+    });
+  }, [labelFilteredConversations, filters.userIds]);
+
+  // Filter by tenant from global store
+  const tenantFilteredConversations = useMemo(() => {
+    if (filters.tenantIds.length === 0) {
+      return userFilteredConversations;
+    }
+    return userFilteredConversations.filter((conv) =>
+      conv.whatsapp_config?.tenant_id && filters.tenantIds.includes(conv.whatsapp_config.tenant_id)
+    );
+  }, [userFilteredConversations, filters.tenantIds]);
 
   // Filter conversations by assignment (for accurate status counts)
   const assignmentFilteredConversations = useMemo(() => {
@@ -240,7 +217,7 @@ export function ConversationList({
       return [];
     }
 
-    return inboxFilteredConversations.filter((conv) => {
+    return tenantFilteredConversations.filter((conv) => {
       if (filter === 'novos') {
         // Novos = não atribuídos a ninguém
         return !conv.assigned_to;
@@ -251,7 +228,7 @@ export function ConversationList({
       }
       return true;
     });
-  }, [inboxFilteredConversations, filter, userId, isUserAuthenticated]);
+  }, [tenantFilteredConversations, filter, userId, isUserAuthenticated]);
 
   // Clear search handler
   const handleClearSearch = useCallback(() => {
@@ -270,35 +247,6 @@ export function ConversationList({
     return counts;
   }, [assignmentFilteredConversations]);
 
-  // Group labels by category (memoized)
-  const labelsByCategory = useMemo(() => {
-    return allLabels?.reduce((acc, label) => {
-      const category = label.category || 'outros';
-      if (!acc[category]) acc[category] = [];
-      acc[category].push(label);
-      return acc;
-    }, {} as Record<string, typeof allLabels>) || {};
-  }, [allLabels]);
-
-  // Filter labels by search term
-  const filteredLabelsByCategory = useMemo(() => {
-    if (!labelSearchTerm.trim()) return labelsByCategory;
-    
-    const term = labelSearchTerm.toLowerCase();
-    const filtered: Record<string, typeof allLabels> = {};
-    
-    Object.entries(labelsByCategory).forEach(([category, labels]) => {
-      const matchingLabels = labels?.filter(
-        (label) => label.name.toLowerCase().includes(term)
-      );
-      if (matchingLabels?.length) {
-        filtered[category] = matchingLabels;
-      }
-    });
-    
-    return filtered;
-  }, [labelsByCategory, labelSearchTerm]);
-
   // Filter and sort conversations (uses pre-filtered by assignment)
   const filteredConversations = useMemo(() => {
     let filtered = assignmentFilteredConversations.filter((conv) => {
@@ -313,13 +261,7 @@ export function ConversationList({
         conv.leads?.phone?.includes(debouncedSearchQuery) ||
         conv.leads?.whatsapp_name?.toLowerCase().includes(searchLower);
 
-      // Filter by labels
-      const matchesLabels = selectedLabelIds.length === 0 || 
-        selectedLabelIds.some((labelId) => 
-          conv.leads?.lead_labels?.some((ll: any) => ll.labels?.id === labelId)
-        );
-
-      return matchesSearch && matchesLabels;
+      return matchesSearch;
     });
 
     // Sort by date
@@ -330,19 +272,7 @@ export function ConversationList({
     });
 
     return filtered;
-  }, [assignmentFilteredConversations, statusFilter, debouncedSearchQuery, selectedLabelIds, sortOrder]);
-
-  const toggleLabelFilter = useCallback((labelId: string) => {
-    setSelectedLabelIds((prev) =>
-      prev.includes(labelId)
-        ? prev.filter((id) => id !== labelId)
-        : [...prev, labelId]
-    );
-  }, []);
-
-  const clearLabelFilters = useCallback(() => {
-    setSelectedLabelIds([]);
-  }, []);
+  }, [assignmentFilteredConversations, statusFilter, debouncedSearchQuery, sortOrder]);
 
   return (
     <div className="flex flex-col h-full">
@@ -361,7 +291,7 @@ export function ConversationList({
       
       {/* Search, Filters and Tabs - Compact Layout */}
       <div className="p-2 space-y-2 border-b border-border bg-card sticky top-0 z-30 shadow-sm isolate">
-        {/* Search + Labels + Sort in one row */}
+        {/* Search + Filters + Sort in one row */}
         <div className="flex items-center gap-1.5">
           <div className="relative flex-1 min-w-0">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
@@ -385,85 +315,8 @@ export function ConversationList({
             )}
           </div>
 
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8 gap-1 px-2 shrink-0" aria-label="Filtrar por etiquetas">
-                      <Tag className="w-3.5 h-3.5" aria-hidden="true" />
-                      {selectedLabelIds.length > 0 && (
-                        <Badge variant="secondary" className="px-1 py-0 text-2xs h-4 min-w-4 flex items-center justify-center">
-                          {selectedLabelIds.length}
-                        </Badge>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-72 p-0" align="end">
-                    <div className="p-3 border-b border-border bg-popover shrink-0">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Filtrar por etiquetas</span>
-                        {selectedLabelIds.length > 0 && (
-                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={clearLabelFilters}>
-                            Limpar
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                    <div className="p-2 border-b border-border">
-                      <div className="relative">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
-                        <Input
-                          placeholder="Buscar etiqueta..."
-                          value={labelSearchTerm}
-                          onChange={(e) => setLabelSearchTerm(e.target.value)}
-                          className="pl-8 h-8 text-sm"
-                          aria-label="Buscar etiqueta"
-                        />
-                      </div>
-                    </div>
-                    <ScrollArea className="h-[280px]">
-                      <div className="p-2 space-y-3">
-                        {Object.entries(filteredLabelsByCategory).map(([category, labels]) => (
-                          <div key={category}>
-                            <p className="text-xs font-medium text-muted-foreground mb-1.5 px-1">
-                              {categoryLabels[category] || category}
-                            </p>
-                            <div className="space-y-0.5">
-                              {labels?.map((label) => (
-                                <label
-                                  key={label.id}
-                                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 cursor-pointer"
-                                >
-                                  <Checkbox
-                                    checked={selectedLabelIds.includes(label.id)}
-                                    onCheckedChange={() => toggleLabelFilter(label.id)}
-                                    aria-label={`Filtrar por ${label.name}`}
-                                  />
-                                  <span
-                                    className="w-2.5 h-2.5 rounded-full"
-                                    style={{ backgroundColor: label.color }}
-                                    aria-hidden="true"
-                                  />
-                                  <span className="text-sm">{label.name}</span>
-                                </label>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                        {Object.keys(filteredLabelsByCategory).length === 0 && (
-                          <p className="text-sm text-muted-foreground text-center py-4">
-                            Nenhuma etiqueta encontrada
-                          </p>
-                        )}
-                      </div>
-                    </ScrollArea>
-                  </PopoverContent>
-                </Popover>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">Filtrar por etiquetas</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          {/* Filters Popover - NEW */}
+          <ConversationFiltersPopover availableInboxes={availableInboxes} />
 
           {/* Sort Dropdown */}
           <TooltipProvider>
@@ -502,6 +355,9 @@ export function ConversationList({
           </TooltipProvider>
         </div>
 
+        {/* Active Filter Chips - NEW */}
+        <ActiveFilterChips availableInboxes={availableInboxes} />
+
         {/* Status Tabs */}
         <ConversationStatusTabs
           value={statusFilter}
@@ -509,16 +365,6 @@ export function ConversationList({
           counts={statusCounts}
         />
       </div>
-
-      {/* Inbox Filter (WhatsApp numbers) - Collapsible section */}
-      {availableInboxes.length > 0 && (
-        <InboxFilter
-          inboxes={availableInboxes}
-          selectedInboxIds={selectedInboxIds}
-          onToggleInbox={handleToggleInbox}
-          onSelectAll={handleSelectAllInboxes}
-        />
-      )}
 
       {/* Assignment Filter Tabs */}
       <div className="p-2 border-b border-border bg-card">
@@ -529,42 +375,6 @@ export function ConversationList({
             <TabsTrigger value="outros" className="flex-1 text-xs h-7">Outros</TabsTrigger>
           </TabsList>
         </Tabs>
-
-        {/* Selected Labels Pills */}
-        {selectedLabelIds.length > 0 && (
-          <div className="flex items-center gap-1 flex-wrap" role="group" aria-label="Filtros de etiquetas ativos">
-            {selectedLabelIds.slice(0, 3).map((labelId) => {
-              const label = allLabels?.find((l) => l.id === labelId);
-              if (!label) return null;
-              return (
-                <button
-                  key={labelId}
-                  className="inline-flex items-center text-2xs px-1.5 py-0 gap-0.5 cursor-pointer border-0 h-5 rounded-full focusable"
-                  style={{
-                    backgroundColor: label.color,
-                    color: 'white',
-                  }}
-                  onClick={() => toggleLabelFilter(labelId)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      toggleLabelFilter(labelId);
-                    }
-                  }}
-                  aria-label={`Remover filtro ${label.name}`}
-                >
-                  {label.name}
-                  <X className="w-2.5 h-2.5" aria-hidden="true" />
-                </button>
-              );
-            })}
-            {selectedLabelIds.length > 3 && (
-              <Badge variant="secondary" className="text-2xs px-1.5 py-0 h-5">
-                +{selectedLabelIds.length - 3}
-              </Badge>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Conversations List */}
