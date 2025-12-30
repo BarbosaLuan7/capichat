@@ -30,6 +30,7 @@ import { useCreateConversation } from '@/hooks/useConversations';
 import { useFunnelStages } from '@/hooks/useFunnelStages';
 import { useWhatsAppConfigs } from '@/hooks/useWhatsAppConfig';
 import { formatPhoneNumber } from '@/lib/masks';
+import { useTenant } from '@/contexts/TenantContext';
 
 interface NewConversationModalProps {
   open: boolean;
@@ -69,6 +70,7 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
     onConversationCreated,
   }, ref) {
   const { user } = useAuth();
+  const { currentTenant } = useTenant();
   
   // Form state
   const [selectedInstanceId, setSelectedInstanceId] = useState<string>('');
@@ -259,6 +261,7 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
         stage_id: firstStage?.id || null,
         assigned_to: user.id,
         temperature: 'warm',
+        tenant_id: currentTenant?.id || null, // Vincular ao tenant atual
       });
       
       logger.log('[NewConversation] Lead created:', lead.id);

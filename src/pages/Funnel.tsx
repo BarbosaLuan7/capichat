@@ -61,9 +61,11 @@ import { toast } from 'sonner';
 import { useFunnelStages } from '@/hooks/useFunnelStages';
 import { useLeads, useUpdateLeadStage, useDeleteLead } from '@/hooks/useLeads';
 import { useLabels } from '@/hooks/useLabels';
+import { useAuth } from '@/hooks/useAuth';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 import { FunnelScrollIndicators } from '@/components/funnel/FunnelScrollIndicators';
 import { supabase } from '@/integrations/supabase/client';
+import { getContrastTextColor } from '@/lib/utils';
 import type { Database } from '@/integrations/supabase/types';
 
 // Lazy load heavy modal
@@ -174,7 +176,10 @@ const LeadCardComponent = ({ lead, labels, leadLabels, isDragging, onEdit, onDel
               <Badge
                 key={label.id}
                 className="text-xs border-0"
-                style={{ backgroundColor: label.color, color: 'white' }}
+                style={{ 
+                  backgroundColor: label.color, 
+                  color: getContrastTextColor(label.color) === 'text-white' ? 'white' : '#111827'
+                }}
               >
                 {label.name}
               </Badge>
@@ -357,6 +362,7 @@ const FunnelSkeleton = () => (
 
 const Funnel = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { data: stages = [], isLoading: stagesLoading } = useFunnelStages();
   const { data: leadsResult, isLoading: leadsLoading } = useLeads();
   const { data: labelsData = [] } = useLabels();
@@ -489,10 +495,14 @@ const Funnel = () => {
       if (existingConv) {
         navigate(`/inbox?conversation=${existingConv.id}`);
       } else {
-        // Se não houver conversa, criar uma nova
+        // Se não houver conversa, criar uma nova com assigned_to
         const { data: newConv, error } = await supabase
           .from('conversations')
-          .insert({ lead_id: leadId, status: 'open' })
+          .insert({ 
+            lead_id: leadId, 
+            status: 'open',
+            assigned_to: user?.id || null, // Atribuir ao usuário atual
+          })
           .select('id')
           .single();
 
