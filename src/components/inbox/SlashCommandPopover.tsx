@@ -4,7 +4,6 @@ import {
   PopoverContent,
   PopoverAnchor,
 } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTemplates } from '@/hooks/useTemplates';
 import { cn } from '@/lib/utils';
 import { replaceTemplateVariables, type LeadData } from '@/lib/templateVariables';
@@ -147,7 +146,7 @@ export function SlashCommandPopover({
             Digite para filtrar templates · <kbd className="px-1 py-0.5 text-xs bg-muted rounded">↑↓</kbd> navegar · <kbd className="px-1 py-0.5 text-xs bg-muted rounded">Enter</kbd> selecionar
           </p>
         </div>
-        <ScrollArea className="max-h-64">
+        <div className="max-h-64 overflow-y-auto">
           <div ref={listRef} className="p-2 space-y-1">
             {filteredTemplates.map((template, index) => (
               <button
@@ -176,7 +175,7 @@ export function SlashCommandPopover({
               </button>
             ))}
           </div>
-        </ScrollArea>
+        </div>
       </PopoverContent>
     </Popover>
   );
