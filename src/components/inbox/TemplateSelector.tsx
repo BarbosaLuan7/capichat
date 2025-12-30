@@ -6,7 +6,6 @@ import {
 } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Zap, Search } from 'lucide-react';
 import { useTemplates } from '@/hooks/useTemplates';
@@ -94,7 +93,7 @@ export function TemplateSelector({
           </div>
         </div>
         
-        <ScrollArea className="max-h-64">
+        <div className="max-h-64 overflow-y-auto">
           {isLoading ? (
             <div className="p-4 text-center text-muted-foreground" role="status" aria-live="polite">
               Carregando...
@@ -128,7 +127,7 @@ export function TemplateSelector({
               ))}
             </div>
           )}
-        </ScrollArea>
+        </div>
         </PopoverContent>
         </Popover>
       </Tooltip>
