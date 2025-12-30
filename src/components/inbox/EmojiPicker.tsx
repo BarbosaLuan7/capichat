@@ -57,4 +57,6 @@ function EmojiPickerComponent({ onEmojiSelect }: EmojiPickerProps) {
   );
 }
 
+EmojiPickerComponent.displayName = 'EmojiPicker';
+
 export const EmojiPicker = memo(EmojiPickerComponent);

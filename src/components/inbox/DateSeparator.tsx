@@ -25,6 +25,8 @@ function DateSeparatorComponent({ date }: DateSeparatorProps) {
   );
 }
 
+DateSeparatorComponent.displayName = 'DateSeparator';
+
 export const DateSeparator = memo(DateSeparatorComponent, (prev, next) => 
   prev.date.getTime() === next.date.getTime()
 );

@@ -68,6 +68,7 @@ export function useTenantStats(tenantIds: string[]) {
       }, {} as Record<string, TenantStats>);
     },
     enabled: tenantIds.length > 0,
-    staleTime: 30000, // 30 seconds
+    staleTime: 60 * 1000, // 60 seconds - stats don't need to be realtime
+    gcTime: 5 * 60 * 1000, // 5 minutes cache
   });
 }

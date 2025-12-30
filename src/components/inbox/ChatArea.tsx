@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo, forwardRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo, forwardRef, Suspense } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import {
   Send,
@@ -20,20 +20,21 @@ import { formatPhoneNumber } from '@/lib/masks';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
-// Components
+// Components - Static imports for critical components
 import { AttachmentMenu } from '@/components/inbox/AttachmentMenu';
-import { AudioRecorder } from '@/components/inbox/AudioRecorder';
-import { EmojiPicker } from '@/components/inbox/EmojiPicker';
 import { TemplateSelector } from '@/components/inbox/TemplateSelector';
 import { SlashCommandPopover } from '@/components/inbox/SlashCommandPopover';
 import { MessageBubble } from '@/components/inbox/MessageBubble';
 import { InlineNoteMessage } from '@/components/inbox/InlineNoteMessage';
 import { ReplyPreview } from '@/components/inbox/ReplyPreview';
-
-import { AIReminderPrompt } from '@/components/inbox/AIReminderPrompt';
 import { ConversationStatusActions } from '@/components/inbox/ConversationStatusActions';
 import { DateSeparator } from '@/components/inbox/DateSeparator';
 import { ScrollToBottomButton } from '@/components/inbox/ScrollToBottomButton';
+
+// Lazy loaded components - loaded on demand
+const EmojiPicker = React.lazy(() => import('@/components/inbox/EmojiPicker').then(m => ({ default: m.EmojiPicker })));
+const AudioRecorder = React.lazy(() => import('@/components/inbox/AudioRecorder').then(m => ({ default: m.AudioRecorder })));
+const AIReminderPrompt = React.lazy(() => import('@/components/inbox/AIReminderPrompt').then(m => ({ default: m.AIReminderPrompt })));
 
 // Hooks
 import { useFileUpload } from '@/hooks/useFileUpload';
@@ -646,34 +647,38 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
       {showAudioRecorder && (
         <div className="px-4 py-2 border-t border-border">
           <div className="max-w-3xl mx-auto">
-            <AudioRecorder
-              isRecording={audioRecorder.isRecording}
-              duration={audioRecorder.duration}
-              audioUrl={audioRecorder.audioUrl}
-              formatDuration={audioRecorder.formatDuration}
-              onStart={audioRecorder.startRecording}
-              onStop={audioRecorder.stopRecording}
-              onCancel={() => {
-                audioRecorder.cancelRecording();
-                setShowAudioRecorder(false);
-              }}
-              onSend={handleAudioSend}
-            />
+            <Suspense fallback={<div className="py-4"><Loader2 className="w-4 h-4 animate-spin mx-auto" /></div>}>
+              <AudioRecorder
+                isRecording={audioRecorder.isRecording}
+                duration={audioRecorder.duration}
+                audioUrl={audioRecorder.audioUrl}
+                formatDuration={audioRecorder.formatDuration}
+                onStart={audioRecorder.startRecording}
+                onStop={audioRecorder.stopRecording}
+                onCancel={() => {
+                  audioRecorder.cancelRecording();
+                  setShowAudioRecorder(false);
+                }}
+                onSend={handleAudioSend}
+              />
+            </Suspense>
           </div>
         </div>
       )}
 
       {/* AI Reminder Prompt */}
-      <AIReminderPrompt
-        show={showReminderPrompt}
-        reminder={aiReminders.reminder}
-        isLoading={aiReminders.isLoading}
-        leadId={lead?.id}
-        onClose={() => {
-          setShowReminderPrompt(false);
-          aiReminders.clearReminder();
-        }}
-      />
+      <Suspense fallback={null}>
+        <AIReminderPrompt
+          show={showReminderPrompt}
+          reminder={aiReminders.reminder}
+          isLoading={aiReminders.isLoading}
+          leadId={lead?.id}
+          onClose={() => {
+            setShowReminderPrompt(false);
+            aiReminders.clearReminder();
+          }}
+        />
+      </Suspense>
 
       {/* Reply Preview - shown when replying to a message */}
       {replyingTo && (
@@ -748,7 +753,9 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
               }}
             />
             <div className="absolute right-1 bottom-2">
-              <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+              <Suspense fallback={null}>
+                <EmojiPicker onEmojiSelect={handleEmojiSelect} />
+              </Suspense>
             </div>
           </div>
 
