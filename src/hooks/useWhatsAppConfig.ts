@@ -2,19 +2,21 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+// Safe version from whatsapp_config_safe VIEW (masks sensitive data)
 export interface WhatsAppConfig {
   id: string;
   name: string;
   provider: 'waha' | 'evolution' | 'z-api' | 'custom';
   base_url: string;
-  api_key: string;
+  api_key_masked: string | null; // Shows only last 4 chars
   instance_name: string | null;
   phone_number: string | null;
   is_active: boolean;
-  webhook_secret: string | null;
+  has_webhook_secret: boolean;
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  tenant_id: string | null;
 }
 
 export interface WhatsAppConfigInsert {
@@ -31,10 +33,28 @@ export function useWhatsAppConfigs() {
   return useQuery({
     queryKey: ['whatsapp-configs'],
     queryFn: async () => {
+      // Use the secure view that masks sensitive data
+      // Using rpc call since the view is not in generated types
       const { data, error } = await supabase
-        .from('whatsapp_config')
-        .select('*')
+        .rpc('get_whatsapp_configs_safe' as any)
         .order('created_at', { ascending: false });
+
+      // Fallback to original table if RPC doesn't exist yet
+      if (error && error.code === '42883') {
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('whatsapp_config')
+          .select('id, name, provider, base_url, instance_name, phone_number, is_active, created_by, created_at, updated_at, tenant_id')
+          .order('created_at', { ascending: false });
+        
+        if (fallbackError) throw fallbackError;
+        
+        // Mask the api_key in the response
+        return (fallbackData || []).map(config => ({
+          ...config,
+          api_key_masked: null,
+          has_webhook_secret: false,
+        })) as WhatsAppConfig[];
+      }
 
       if (error) throw error;
       return data as WhatsAppConfig[];
@@ -42,6 +62,7 @@ export function useWhatsAppConfigs() {
   });
 }
 
+// For creating configs, we still use the real table (admin only)
 export function useCreateWhatsAppConfig() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -51,11 +72,11 @@ export function useCreateWhatsAppConfig() {
       const { data, error } = await supabase
         .from('whatsapp_config')
         .insert(config)
-        .select()
+        .select('id, name, provider, is_active')
         .single();
 
       if (error) throw error;
-      return data as WhatsAppConfig;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['whatsapp-configs'] });
@@ -71,21 +92,30 @@ export function useCreateWhatsAppConfig() {
   });
 }
 
+// For updating configs - only update fields that are provided
 export function useUpdateWhatsAppConfig() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ id, ...config }: Partial<WhatsAppConfig> & { id: string }) => {
+    mutationFn: async ({ id, ...config }: Partial<WhatsAppConfigInsert> & { id: string }) => {
+      // Filter out undefined/empty values to avoid overwriting with nulls
+      const updateData: Record<string, unknown> = {};
+      Object.entries(config).forEach(([key, value]) => {
+        if (value !== undefined && value !== '') {
+          updateData[key] = value;
+        }
+      });
+
       const { data, error } = await supabase
         .from('whatsapp_config')
-        .update(config)
+        .update(updateData)
         .eq('id', id)
-        .select()
+        .select('id, name, provider, is_active')
         .single();
 
       if (error) throw error;
-      return data as WhatsAppConfig;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['whatsapp-configs'] });
