@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, Plus, X, Trash2 } from 'lucide-react';
+import { CalendarIcon, Plus, X, Trash2, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -72,9 +72,10 @@ interface TaskModalProps {
   task?: Task | null;
   onSave: (task: Omit<Task, 'id' | 'createdAt'> & { id?: string }) => void;
   onDelete?: (taskId: string) => void;
+  isLoading?: boolean;
 }
 
-export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete }: TaskModalProps) => {
+export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete, isLoading = false }: TaskModalProps) => {
   const [subtasks, setSubtasks] = useState<Subtask[]>(task?.subtasks || []);
   const [newSubtask, setNewSubtask] = useState('');
 
@@ -458,7 +459,8 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete }: TaskMo
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" className="gradient-primary text-primary-foreground">
+                <Button type="submit" className="gradient-primary text-primary-foreground" disabled={isLoading}>
+                  {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   {task ? 'Salvar' : 'Criar Tarefa'}
                 </Button>
               </div>

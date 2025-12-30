@@ -1,4 +1,5 @@
 import { useState, useEffect, forwardRef } from 'react';
+import { Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,7 @@ interface LabelModalProps {
   onOpenChange: (open: boolean) => void;
   label?: LabelRow | null;
   onSave: (data: { name: string; color: string; category: LabelCategory }) => void;
+  isLoading?: boolean;
 }
 
 const COLORS = [
@@ -53,7 +55,7 @@ const CATEGORIES: { value: LabelCategory; label: string }[] = [
 ];
 
 export const LabelModal = forwardRef<HTMLDivElement, LabelModalProps>(
-  function LabelModal({ open, onOpenChange, label, onSave }, ref) {
+  function LabelModal({ open, onOpenChange, label, onSave, isLoading = false }, ref) {
     const [name, setName] = useState('');
     const [color, setColor] = useState('#3B82F6');
     const [category, setCategory] = useState<LabelCategory>('status');
@@ -149,7 +151,8 @@ export const LabelModal = forwardRef<HTMLDivElement, LabelModalProps>(
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" className="gradient-primary text-primary-foreground">
+              <Button type="submit" className="gradient-primary text-primary-foreground" disabled={isLoading}>
+                {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 {label ? 'Salvar' : 'Criar Etiqueta'}
               </Button>
             </DialogFooter>
