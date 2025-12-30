@@ -118,7 +118,7 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
         <div className="flex-1 min-w-0 flex flex-col gap-0.5">
           {/* Row 1: Name + Timestamp */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 min-w-0 max-w-[65%]">
+            <div className="flex items-center gap-2 min-w-0 max-w-[65%]">
               {isFavorite && <Star className="w-3 h-3 fill-warning text-warning shrink-0" />}
               <span className="font-semibold text-foreground truncate text-sm">
                 {displayName}
@@ -152,7 +152,7 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
             <p className="text-sm text-muted-foreground truncate flex-1">
               {sanitizePreviewContent(conversation.last_message_content) || formatPhoneNumber(convLead?.phone || '')}
             </p>
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               {convLead?.temperature === 'hot' && (
                 <span className="text-sm">🔥</span>
               )}
@@ -175,14 +175,14 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
 
           {/* Row 3: Labels - só renderiza se houver labels */}
           {convLead?.lead_labels && convLead.lead_labels.length > 0 && (
-            <div className="flex items-center gap-1.5 mt-0.5">
+            <div className="flex items-center gap-2 mt-1">
               {convLead.lead_labels.length === 1 ? (
                 <TooltipProvider delayDuration={300}>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Badge
                         className={cn(
-                          "text-2xs px-1.5 py-0 h-5 border-0 max-w-[140px] truncate cursor-default",
+                          "text-2xs px-2 py-0 h-5 border-0 max-w-[140px] truncate cursor-default",
                           getContrastTextColor(convLead.lead_labels[0]?.labels?.color || '')
                         )}
                         style={{
@@ -203,7 +203,7 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
                         <TooltipTrigger asChild>
                           <Badge
                             className={cn(
-                              "text-2xs px-1.5 py-0 h-5 border-0 max-w-[80px] truncate cursor-default",
+                              "text-2xs px-2 py-0 h-5 border-0 max-w-[80px] truncate cursor-default",
                               getContrastTextColor(ll.labels?.color || '')
                             )}
                             style={{

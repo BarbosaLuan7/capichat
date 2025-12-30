@@ -183,7 +183,7 @@ export function ConversationFiltersPopover({ availableInboxes }: ConversationFil
                       <MessageSquare className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm">Caixas de Entrada</span>
                       {filters.inboxIds.length > 0 && (
-                        <Badge variant="secondary" className="h-5 px-1.5 text-2xs">
+                        <Badge variant="secondary" className="h-5 px-1 text-2xs">
                           {filters.inboxIds.length}
                         </Badge>
                       )}
@@ -245,7 +245,7 @@ export function ConversationFiltersPopover({ availableInboxes }: ConversationFil
                       <Tag className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm">Etiquetas</span>
                       {filters.labelIds.length > 0 && (
-                        <Badge variant="secondary" className="h-5 px-1.5 text-2xs">
+                        <Badge variant="secondary" className="h-5 px-1 text-2xs">
                           {filters.labelIds.length}
                         </Badge>
                       )}
@@ -318,7 +318,7 @@ export function ConversationFiltersPopover({ availableInboxes }: ConversationFil
                       <Users className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm">Atribuído a</span>
                       {filters.userIds.length > 0 && (
-                        <Badge variant="secondary" className="h-5 px-1.5 text-2xs">
+                        <Badge variant="secondary" className="h-5 px-1 text-2xs">
                           {filters.userIds.length}
                         </Badge>
                       )}
@@ -370,7 +370,7 @@ export function ConversationFiltersPopover({ availableInboxes }: ConversationFil
                         <Building className="w-4 h-4 text-muted-foreground" />
                         <span className="text-sm">Empresa</span>
                         {filters.tenantIds.length > 0 && (
-                          <Badge variant="secondary" className="h-5 px-1.5 text-2xs">
+                          <Badge variant="secondary" className="h-5 px-1 text-2xs">
                             {filters.tenantIds.length}
                           </Badge>
                         )}

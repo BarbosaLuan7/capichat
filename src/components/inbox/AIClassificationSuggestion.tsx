@@ -21,9 +21,9 @@ interface AIClassificationSuggestionProps {
 }
 
 const temperatureLabels = {
-  cold: { label: '❄️ Frio', color: 'bg-blue-500/10 text-blue-600 border-blue-500/30' },
-  warm: { label: '🌡️ Morno', color: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/30' },
-  hot: { label: '🔥 Quente', color: 'bg-red-500/10 text-red-600 border-red-500/30' },
+  cold: { label: '❄️ Frio', color: 'bg-temp-cold/10 text-temp-cold border-temp-cold/30' },
+  warm: { label: '🌡️ Morno', color: 'bg-temp-warm/10 text-temp-warm border-temp-warm/30' },
+  hot: { label: '🔥 Quente', color: 'bg-temp-hot/10 text-temp-hot border-temp-hot/30' },
 };
 
 const confidenceLabels = {
@@ -189,7 +189,7 @@ function AIClassificationSuggestionComponent({
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-primary" />
           <span className="text-xs font-medium text-primary">Classificação IA</span>
-          <Badge variant="outline" className={cn('text-xs px-1.5', confidenceLabels[classification.confidence].color)}>
+          <Badge variant="outline" className={cn('text-xs px-2', confidenceLabels[classification.confidence].color)}>
             Confiança: {confidenceLabels[classification.confidence].label}
           </Badge>
         </div>
@@ -265,12 +265,12 @@ function AIClassificationSuggestionComponent({
 
           {/* Labels suggestion */}
           {newLabels.length > 0 && (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Tag className="w-3.5 h-3.5 text-muted-foreground" />
                 <span className="text-sm">Etiquetas sugeridas:</span>
               </div>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-2">
                 {newLabels.map((labelName) => {
                   const label = availableLabels?.find((l) => l.name === labelName);
                   if (!label) return null;

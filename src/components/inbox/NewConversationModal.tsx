@@ -303,7 +303,7 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
         return <AlertCircle className="w-4 h-4 text-destructive" />;
       }
       if (isPhoneValid) {
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
+        return <CheckCircle className="w-4 h-4 text-success" />;
       }
     }
     return null;
@@ -315,7 +315,7 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
   const getInstanceDisplay = (config: typeof activeInstances[0]) => {
     return (
       <div className="flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+        <span className="w-2 h-2 rounded-full bg-success shrink-0" />
         <span className="truncate">{config.name}</span>
         {config.phone_number && (
           <span className="text-muted-foreground text-xs">

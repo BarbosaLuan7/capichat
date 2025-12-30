@@ -118,7 +118,7 @@ const TopNavigation = () => {
         <item.icon className="w-4 h-4" />
         <span>{item.label}</span>
         {badge !== undefined && badge > 0 && (
-          <Badge className="ml-1 h-5 min-w-5 px-1.5 text-xs bg-orange-500 text-white border-0 hover:bg-orange-500">
+          <Badge className="ml-1 h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0 hover:bg-warning">
             {badge}
           </Badge>
         )}
@@ -148,7 +148,7 @@ const TopNavigation = () => {
         <item.icon className="w-4 h-4" />
         <span className="flex-1">{item.label}</span>
         {badge !== undefined && badge > 0 && (
-          <Badge className="h-5 min-w-5 px-1.5 text-xs bg-orange-500 text-white border-0 hover:bg-orange-500">
+          <Badge className="h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0 hover:bg-warning">
             {badge}
           </Badge>
         )}
@@ -180,7 +180,7 @@ const TopNavigation = () => {
               <item.icon className="w-4 h-4" />
               <span>{item.label}</span>
               {badge !== undefined && badge > 0 && (
-                <Badge className="ml-1 h-5 min-w-5 px-1.5 text-xs bg-orange-500 text-white border-0 hover:bg-orange-500">
+                <Badge className="ml-1 h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0 hover:bg-warning">
                   {badge}
                 </Badge>
               )}
@@ -212,7 +212,7 @@ const TopNavigation = () => {
                 <item.icon className="w-4 h-4" />
                 <span>{item.label}</span>
                 {badge !== undefined && badge > 0 && (
-                  <Badge className="ml-1 h-5 min-w-5 px-1.5 text-xs bg-orange-500 text-white border-0 hover:bg-orange-500">
+                  <Badge className="ml-1 h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0 hover:bg-warning">
                     {badge}
                   </Badge>
                 )}
@@ -317,7 +317,7 @@ const TopNavigation = () => {
                   <item.icon className="w-4 h-4" />
                   <span>{item.label}</span>
                   {badge !== undefined && badge > 0 && (
-                    <Badge className="ml-0.5 h-5 min-w-5 px-1.5 text-xs bg-orange-500 text-white border-0 hover:bg-orange-500">
+                    <Badge className="ml-1 h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0 hover:bg-warning">
                       {badge}
                     </Badge>
                   )}
@@ -337,7 +337,7 @@ const TopNavigation = () => {
               <Users className="w-4 h-4 mr-2" />
               CRM
               {badges.tasks > 0 && (
-                <Badge className="ml-1.5 h-5 min-w-5 px-1.5 text-xs bg-orange-500 text-white border-0 hover:bg-orange-500">
+                <Badge className="ml-1 h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0 hover:bg-warning">
                   {badges.tasks}
                 </Badge>
               )}

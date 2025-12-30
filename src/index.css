@@ -89,6 +89,15 @@
     --stage-negotiation: 280 84% 60%;
     --stage-won: 142 71% 45%;
     --stage-lost: 0 84% 60%;
+
+    /* Activity colors */
+    --activity-create: 142 71% 45%;
+    --activity-update: 234 89% 59%;
+    --activity-assign: 280 84% 60%;
+    --activity-label: 330 81% 60%;
+    --activity-stage: 199 89% 48%;
+    --activity-temp: 38 92% 50%;
+    --activity-default: 220 9% 46%;
   }
 
   .dark {
@@ -134,6 +143,29 @@
     --sidebar-foreground: 220 14% 96%;
     --sidebar-accent: 234 30% 15%;
     --sidebar-border: 234 30% 15%;
+
+    /* Lead temperatures - dark mode */
+    --temp-cold: 199 89% 55%;
+    --temp-warm: 38 92% 60%;
+    --temp-hot: 0 84% 70%;
+
+    /* Funnel stages - dark mode */
+    --stage-new: 234 89% 70%;
+    --stage-contact: 258 90% 75%;
+    --stage-qualify: 174 72% 55%;
+    --stage-proposal: 38 92% 60%;
+    --stage-negotiation: 280 84% 70%;
+    --stage-won: 142 71% 55%;
+    --stage-lost: 0 84% 70%;
+
+    /* Activity colors - dark mode */
+    --activity-create: 142 71% 55%;
+    --activity-update: 234 89% 70%;
+    --activity-assign: 280 84% 70%;
+    --activity-label: 330 81% 70%;
+    --activity-stage: 199 89% 60%;
+    --activity-temp: 38 92% 60%;
+    --activity-default: 220 9% 60%;
   }
 }
 
