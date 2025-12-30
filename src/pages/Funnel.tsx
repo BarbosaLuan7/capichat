@@ -224,6 +224,7 @@ const LeadCard = memo(LeadCardComponent, (prev, next) =>
   prev.isDragging === next.isDragging &&
   prev.leadLabels === next.leadLabels
 );
+LeadCard.displayName = 'LeadCard';
 
 interface SortableLeadCardProps {
   lead: Lead;
