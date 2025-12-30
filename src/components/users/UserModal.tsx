@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -57,9 +57,10 @@ interface UserModalProps {
   user?: User | null;
   onSave: (user: Omit<User, 'id' | 'createdAt' | 'avatar'> & { id?: string }) => void;
   onDelete?: (userId: string) => void;
+  isLoading?: boolean;
 }
 
-export const UserModal = ({ open, onOpenChange, user, onSave, onDelete }: UserModalProps) => {
+export const UserModal = ({ open, onOpenChange, user, onSave, onDelete, isLoading = false }: UserModalProps) => {
   const { data: teamsData } = useTeams();
   const teams = teamsData || [];
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -244,7 +245,8 @@ export const UserModal = ({ open, onOpenChange, user, onSave, onDelete }: UserMo
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" className="gradient-primary text-primary-foreground">
+                <Button type="submit" className="gradient-primary text-primary-foreground" disabled={isLoading}>
+                  {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   {user ? 'Salvar' : 'Criar Usuário'}
                 </Button>
               </div>

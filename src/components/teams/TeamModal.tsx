@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -54,9 +54,10 @@ interface TeamModalProps {
   team?: Team | null;
   onSave: (team: Omit<Team, 'id' | 'createdAt'> & { id?: string }) => void;
   onDelete?: (teamId: string) => void;
+  isLoading?: boolean;
 }
 
-export const TeamModal = ({ open, onOpenChange, team, onSave, onDelete }: TeamModalProps) => {
+export const TeamModal = ({ open, onOpenChange, team, onSave, onDelete, isLoading = false }: TeamModalProps) => {
   const { data: profilesData } = useProfiles();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
@@ -226,7 +227,8 @@ export const TeamModal = ({ open, onOpenChange, team, onSave, onDelete }: TeamMo
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" className="gradient-primary text-primary-foreground">
+                <Button type="submit" className="gradient-primary text-primary-foreground" disabled={isLoading}>
+                  {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   {team ? 'Salvar' : 'Criar Equipe'}
                 </Button>
               </div>
