@@ -9,6 +9,7 @@ import {
   PanelRightClose,
   PanelRightOpen,
   ArrowLeft,
+  Zap,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -86,6 +87,8 @@ interface ChatAreaProps {
   onLoadMoreMessages?: () => void;
   isLoadingMoreMessages?: boolean;
 }
+
+type ExtendedMessage = Message & { isOptimistic?: boolean; errorMessage?: string };
 
 export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   function ChatArea({
@@ -341,6 +344,16 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     inputRef.current?.focus();
   }, []);
 
+  const handleRetryMessage = useCallback((message: ExtendedMessage) => {
+    // Re-enviar a mensagem falha
+    onSendMessage(
+      message.content || '',
+      message.type || 'text',
+      message.media_url || null,
+      message.reply_to_external_id || null
+    );
+  }, [onSendMessage]);
+
   const handleFileSelect = (file: File, type: 'image' | 'video' | 'audio' | 'document') => {
     setPendingFile({ file, type });
     toast.info(`Arquivo selecionado: ${file.name}`);
@@ -517,9 +530,22 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
                 <h3 className="text-base font-medium text-foreground mb-1">
                   Nenhuma mensagem ainda
                 </h3>
-                <p className="text-sm text-muted-foreground max-w-xs">
+                <p className="text-sm text-muted-foreground max-w-xs mb-4">
                   Envie a primeira mensagem para iniciar a conversa
                 </p>
+                <TemplateSelector
+                  onSelectTemplate={handleTemplateSelect}
+                  leadName={lead.name}
+                  leadPhone={lead.phone}
+                  leadBenefitType={lead.benefit_type || undefined}
+                  agentName={agentName}
+                  triggerElement={
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Zap className="w-4 h-4" />
+                      Usar template de boas-vindas
+                    </Button>
+                  }
+                />
               </div>
             ) : (
               groupedMessages.map((group) => (
@@ -547,6 +573,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
                           leadAvatarUrl={lead.avatar_url}
                           agentName={agentName}
                           onReply={handleReplyMessage}
+                          onRetry={handleRetryMessage}
                         />
                       );
                     })}
