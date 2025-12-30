@@ -292,7 +292,7 @@ export function ConversationList({
       {/* Search, Filters and Tabs - Compact Layout */}
       <div className="p-2 space-y-2 border-b border-border bg-card sticky top-0 z-30 shadow-sm isolate">
         {/* Search + Filters + Sort in one row */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           <div className="relative flex-1 min-w-0">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
             <Input 
@@ -407,7 +407,7 @@ export function ConversationList({
                     <div className="h-3 w-12 bg-muted rounded" />
                   </div>
                   <div className="h-3 w-full bg-muted rounded" />
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-2">
                     <div className="h-5 w-16 bg-muted rounded-full" />
                     <div className="h-5 w-14 bg-muted rounded-full" />
                   </div>
