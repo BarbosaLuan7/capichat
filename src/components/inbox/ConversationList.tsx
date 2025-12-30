@@ -55,6 +55,7 @@ const MemoizedConversationItem = React.memo(function MemoizedConversationItem({
     />
   );
 });
+MemoizedConversationItem.displayName = 'MemoizedConversationItem';
 
 type ConversationStatus = Database['public']['Enums']['conversation_status'];
 type StatusFilter = ConversationStatus | 'all';

@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
@@ -37,6 +37,7 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
     updateConversationOptimistically,
   } = options;
   const queryClient = useQueryClient();
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   
   // Use refs to avoid recreating callbacks on every render
   const selectedConversationIdRef = useRef(selectedConversationId);
@@ -263,13 +264,23 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
       )
       .subscribe((status) => {
         logger.log('[InboxRealtime] Subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          setConnectionStatus('connected');
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          setConnectionStatus('disconnected');
+        } else {
+          setConnectionStatus('connecting');
+        }
       });
 
     return () => {
       logger.log('[InboxRealtime] Cleaning up subscription');
+      setConnectionStatus('disconnected');
       supabase.removeChannel(channel);
     };
   // Empty dependency array - callbacks use refs for dynamic values
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  return { connectionStatus };
 }

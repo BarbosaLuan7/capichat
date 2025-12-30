@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
@@ -97,7 +98,7 @@ const Inbox = () => {
   const { notify } = useNotificationSound();
 
   // Unified realtime subscription with optimistic update functions
-  useInboxRealtime({
+  const { connectionStatus } = useInboxRealtime({
     selectedConversationId,
     onNewIncomingMessage: (message, leadName) => {
       // Play sound and show toast for messages from non-selected conversations
@@ -259,9 +260,18 @@ const Inbox = () => {
 
   return (
     <div className={cn(
-      "h-[calc(100vh-4rem)] flex min-w-0 overflow-hidden relative",
+      "h-[calc(100vh-4rem)] flex flex-col min-w-0 overflow-hidden relative",
       isMobile && "h-[calc(100vh-4rem-3.5rem)]"
     )}>
+      {/* Disconnection Banner */}
+      {connectionStatus === 'disconnected' && (
+        <div className="bg-destructive/10 border-b border-destructive/20 px-4 py-2 flex items-center gap-2 text-sm text-destructive shrink-0">
+          <WifiOff className="w-4 h-4" />
+          <span>Conexão perdida. Tentando reconectar...</span>
+        </div>
+      )}
+
+      <div className="flex-1 flex min-w-0 overflow-hidden">
       {/* Conversation List */}
       {showConversationList && (
         <div className={cn(
@@ -393,6 +403,7 @@ const Inbox = () => {
           }}
         />
       </Suspense>
+      </div>
     </div>
   );
 };

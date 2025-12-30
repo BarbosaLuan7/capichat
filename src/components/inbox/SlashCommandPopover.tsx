@@ -125,12 +125,10 @@ export function SlashCommandPopover({
     }
   }, [selectedIndex, isOpen]);
 
-  if (!isOpen || filteredTemplates.length === 0) {
-    return null;
-  }
+  const shouldShow = isOpen && filteredTemplates.length > 0;
 
   return (
-    <Popover open={isOpen}>
+    <Popover open={shouldShow}>
       <PopoverAnchor asChild>
         <div className="absolute bottom-full left-0 right-0 mb-2" />
       </PopoverAnchor>
@@ -180,3 +178,5 @@ export function SlashCommandPopover({
     </Popover>
   );
 }
+
+SlashCommandPopover.displayName = 'SlashCommandPopover';
