@@ -24,7 +24,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useTeams, useCreateTeam, useUpdateTeam, useDeleteTeam } from '@/hooks/useTeams';
+import { useTeams, useCreateTeam, useUpdateTeam, useDeleteTeam, useUpdateTeamMembers } from '@/hooks/useTeams';
+import { useTenant } from '@/contexts/TenantContext';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useLeads } from '@/hooks/useLeads';
 import { TeamModal } from '@/components/teams/TeamModal';
@@ -42,6 +43,8 @@ const TeamsSettings = () => {
   const createTeam = useCreateTeam();
   const updateTeam = useUpdateTeam();
   const deleteTeamMutation = useDeleteTeam();
+  const updateTeamMembers = useUpdateTeamMembers();
+  const { currentTenant } = useTenant();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<DbTeam | null>(null);
@@ -73,22 +76,36 @@ const TeamsSettings = () => {
     memberIds: string[];
   }) => {
     try {
+      let teamId: string;
+      
       if (teamData.id) {
+        // Atualizar equipe existente
         await updateTeam.mutateAsync({
           id: teamData.id,
           name: teamData.name,
           supervisor_id: teamData.supervisorId || null,
         });
-        toast({ title: 'Equipe atualizada com sucesso!' });
+        teamId = teamData.id;
       } else {
-        await createTeam.mutateAsync({
+        // Criar nova equipe com tenant_id
+        const newTeam = await createTeam.mutateAsync({
           name: teamData.name,
           supervisor_id: teamData.supervisorId || null,
+          tenant_id: currentTenant?.id || null,
         });
-        toast({ title: 'Equipe criada com sucesso!' });
+        teamId = newTeam.id;
       }
+      
+      // Atualizar membros da equipe (profiles.team_id)
+      await updateTeamMembers.mutateAsync({
+        teamId,
+        memberIds: teamData.memberIds,
+      });
+      
+      toast({ title: teamData.id ? 'Equipe atualizada com sucesso!' : 'Equipe criada com sucesso!' });
       setModalOpen(false);
     } catch (error) {
+      console.error('Erro ao salvar equipe:', error);
       toast({ title: 'Erro ao salvar equipe', variant: 'destructive' });
     }
   };
