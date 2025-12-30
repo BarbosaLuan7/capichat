@@ -1309,6 +1309,7 @@ export type Database = {
         }
         Returns: string
       }
+      get_current_user_team_id: { Args: never; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
