@@ -133,6 +133,7 @@ const TopNavigation = () => {
   }) => {
     const active = isActive(item.path);
     const badge = item.badgeKey ? badges[item.badgeKey] : undefined;
+    const Icon = item.icon;
     
     return (
       <Link
@@ -145,7 +146,7 @@ const TopNavigation = () => {
         )}
         onClick={() => setMobileMenuOpen(false)}
       >
-        <item.icon className="w-4 h-4" />
+        <Icon className="w-4 h-4" aria-hidden="true" />
         <span className="flex-1">{item.label}</span>
         {badge !== undefined && badge > 0 && (
           <Badge className="h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0 hover:bg-warning">
