@@ -386,7 +386,7 @@ const Dashboard = () => {
                 </div>
                 <div className="flex flex-wrap gap-2 mt-2 justify-center">
                   {leadMetrics.leadsBySource.map((source) => (
-                    <div key={source.name} className="flex items-center gap-1.5 text-xs">
+                    <div key={source.name} className="flex items-center gap-2 text-xs">
                       <div
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: source.color }}

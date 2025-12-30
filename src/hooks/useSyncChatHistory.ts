@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 interface SyncResult {
   success: boolean;
@@ -13,7 +14,7 @@ interface SyncResult {
 export function useSyncChatHistory() {
   return useMutation({
     mutationFn: async (conversationId: string): Promise<SyncResult> => {
-      console.log('[useSyncChatHistory] Sincronizando histórico para:', conversationId);
+      logger.log('[useSyncChatHistory] Sincronizando histórico para:', conversationId);
       
       const { data, error } = await supabase.functions.invoke('sync-chat-history', {
         body: { conversation_id: conversationId, limit: 100 },
@@ -33,7 +34,7 @@ export function useSyncChatHistory() {
     onSuccess: (data) => {
       if (data.synced > 0) {
         toast.success(`${data.synced} mensagens sincronizadas do WhatsApp`);
-        console.log('[useSyncChatHistory] Sync concluído:', data);
+        logger.log('[useSyncChatHistory] Sync concluído:', data);
       }
     },
     onError: (error) => {

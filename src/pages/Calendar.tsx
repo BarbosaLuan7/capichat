@@ -243,6 +243,7 @@ const Calendar = () => {
                   variant="outline"
                   size="icon"
                   onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+                  aria-label="Mês anterior"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
@@ -260,6 +261,7 @@ const Calendar = () => {
                   variant="outline"
                   size="icon"
                   onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                  aria-label="Próximo mês"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>

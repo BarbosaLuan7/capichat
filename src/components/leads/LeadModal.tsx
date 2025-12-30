@@ -290,7 +290,7 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
                   <Pencil className="w-4 h-4 mr-1" />
                   Editar
                 </Button>
-                <Button variant="outline" size="sm" onClick={openWhatsApp}>
+                <Button variant="outline" size="sm" onClick={openWhatsApp} aria-label="Abrir conversa no WhatsApp">
                   <ExternalLink className="w-4 h-4" />
                 </Button>
               </div>

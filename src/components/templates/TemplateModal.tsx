@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCreateTemplate, useUpdateTemplate } from '@/hooks/useTemplates';
 import { toast } from 'sonner';
 import { Zap, Copy, Eye } from 'lucide-react';
@@ -134,15 +135,22 @@ export function TemplateModal({ open, onOpenChange, template }: TemplateModalPro
                   />
                 </div>
                 {shortcut && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={handleCopyShortcut}
-                    title="Copiar atalho"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={handleCopyShortcut}
+                          aria-label="Copiar atalho"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copiar atalho</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
