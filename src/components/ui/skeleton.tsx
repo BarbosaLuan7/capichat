@@ -23,7 +23,7 @@ function ConversationSkeleton() {
           <div className="h-3 w-12 bg-muted rounded" />
         </div>
         <div className="h-3 w-full bg-muted rounded" />
-        <div className="flex gap-1.5">
+        <div className="flex gap-2">
           <div className="h-5 w-16 bg-muted rounded-full" />
           <div className="h-5 w-14 bg-muted rounded-full" />
         </div>
@@ -92,7 +92,7 @@ function LeadDetailsPanelSkeleton() {
         {/* Contact Section */}
         <div className="space-y-2">
           <div className="h-3 w-16 bg-muted rounded" />
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <div className="h-10 w-full bg-muted rounded-md" />
             <div className="h-10 w-full bg-muted rounded-md" />
           </div>
@@ -101,7 +101,7 @@ function LeadDetailsPanelSkeleton() {
         {/* Labels Section */}
         <div className="space-y-2">
           <div className="h-3 w-20 bg-muted rounded" />
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             <div className="h-5 w-16 bg-muted rounded-full" />
             <div className="h-5 w-20 bg-muted rounded-full" />
             <div className="h-5 w-14 bg-muted rounded-full" />
