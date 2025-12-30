@@ -60,9 +60,9 @@ const typeIcons: Record<DrilldownType, React.ElementType> = {
 };
 
 const temperatureColors: Record<string, string> = {
-  cold: 'bg-blue-500',
-  warm: 'bg-yellow-500',
-  hot: 'bg-red-500',
+  cold: 'bg-temp-cold',
+  warm: 'bg-temp-warm',
+  hot: 'bg-temp-hot',
 };
 
 export function MetricsDrilldown({

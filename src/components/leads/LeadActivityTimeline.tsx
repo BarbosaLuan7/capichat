@@ -44,18 +44,18 @@ const getActivityIcon = (action: string) => {
 const getActivityColor = (action: string) => {
   switch (action) {
     case 'lead_created':
-      return 'bg-green-500';
+      return 'bg-activity-create';
     case 'stage_changed':
-      return 'bg-blue-500';
+      return 'bg-activity-stage';
     case 'temperature_changed':
-      return 'bg-orange-500';
+      return 'bg-activity-temp';
     case 'assigned':
-      return 'bg-purple-500';
+      return 'bg-activity-assign';
     case 'label_added':
     case 'label_removed':
-      return 'bg-pink-500';
+      return 'bg-activity-label';
     default:
-      return 'bg-gray-500';
+      return 'bg-activity';
   }
 };
 

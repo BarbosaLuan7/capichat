@@ -109,7 +109,7 @@ export function ActiveFilterChips({ availableInboxes }: ActiveFilterChipsProps) 
       {visibleChips.map((chip) => (
         <button
           key={chip.key}
-          className="inline-flex items-center text-2xs px-1.5 py-0 gap-0.5 cursor-pointer h-5 rounded-full transition-colors hover:opacity-80"
+          className="inline-flex items-center text-2xs px-2 py-0 gap-1 cursor-pointer h-5 rounded-full transition-colors hover:opacity-80"
           style={{
             backgroundColor: chip.color || 'hsl(var(--muted))',
             color: chip.color ? 'white' : 'hsl(var(--muted-foreground))',
@@ -118,11 +118,11 @@ export function ActiveFilterChips({ availableInboxes }: ActiveFilterChipsProps) 
           aria-label={`Remover filtro ${chip.label}`}
         >
           {chip.label}
-          <X className="w-2.5 h-2.5" aria-hidden="true" />
+          <X className="w-3 h-3" aria-hidden="true" />
         </button>
       ))}
       {hiddenCount > 0 && (
-        <Badge variant="secondary" className="text-2xs px-1.5 py-0 h-5">
+        <Badge variant="secondary" className="text-2xs px-2 py-0 h-5">
           +{hiddenCount}
         </Badge>
       )}

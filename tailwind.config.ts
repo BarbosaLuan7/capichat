@@ -82,6 +82,15 @@ export default {
           won: "hsl(var(--stage-won))",
           lost: "hsl(var(--stage-lost))",
         },
+        activity: {
+          create: "hsl(var(--activity-create))",
+          update: "hsl(var(--activity-update))",
+          assign: "hsl(var(--activity-assign))",
+          label: "hsl(var(--activity-label))",
+          stage: "hsl(var(--activity-stage))",
+          temp: "hsl(var(--activity-temp))",
+          DEFAULT: "hsl(var(--activity-default))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
