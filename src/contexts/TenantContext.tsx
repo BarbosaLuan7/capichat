@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/logger';
 
 export interface Tenant {
   id: string;
@@ -101,7 +102,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         setCurrentTenantState(null);
       }
     } catch (err) {
-      console.error('Error fetching tenants:', err);
+      logger.error('Error fetching tenants:', err);
       setError(err as Error);
     } finally {
       setIsLoading(false);

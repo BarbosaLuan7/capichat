@@ -55,7 +55,7 @@ const CATEGORIES: { value: LabelCategory; label: string }[] = [
 ];
 
 export const LabelModal = forwardRef<HTMLDivElement, LabelModalProps>(
-  function LabelModal({ open, onOpenChange, label, onSave, isLoading = false }, ref) {
+  function LabelModal({ open, onOpenChange, label, onSave, isLoading = false }, _ref) {
     const [name, setName] = useState('');
     const [color, setColor] = useState('#3B82F6');
     const [category, setCategory] = useState<LabelCategory>('status');
@@ -81,7 +81,7 @@ export const LabelModal = forwardRef<HTMLDivElement, LabelModalProps>(
 
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent ref={ref} className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
               {label ? 'Editar Etiqueta' : 'Nova Etiqueta'}
