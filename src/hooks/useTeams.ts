@@ -110,6 +110,13 @@ export function useDeleteTeam() {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      // Primeiro, limpar team_id dos profiles dessa equipe
+      await supabase
+        .from('profiles')
+        .update({ team_id: null })
+        .eq('team_id', id);
+      
+      // Depois, deletar a equipe
       const { error } = await supabase
         .from('teams')
         .delete()
@@ -119,6 +126,41 @@ export function useDeleteTeam() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+    },
+  });
+}
+
+// Hook para atualizar membros da equipe (profiles.team_id)
+export function useUpdateTeamMembers() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ teamId, memberIds }: { teamId: string; memberIds: string[] }) => {
+      // 1. Remover team_id de todos os profiles que estavam nessa equipe
+      const { error: removeError } = await supabase
+        .from('profiles')
+        .update({ team_id: null })
+        .eq('team_id', teamId);
+      
+      if (removeError) throw removeError;
+
+      // 2. Atribuir team_id aos novos membros
+      if (memberIds.length > 0) {
+        const { error: addError } = await supabase
+          .from('profiles')
+          .update({ team_id: teamId })
+          .in('id', memberIds);
+        
+        if (addError) throw addError;
+      }
+
+      return { teamId, memberIds };
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['team_members', variables.teamId] });
     },
   });
 }
