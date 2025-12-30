@@ -1,4 +1,4 @@
-import { useState, ReactNode } from 'react';
+import { useState, ReactNode, forwardRef } from 'react';
 import { X, Download, ZoomIn, ZoomOut } from 'lucide-react';
 import { Dialog, DialogContent, DialogClose, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -11,9 +11,10 @@ interface ImageLightboxProps {
   children: ReactNode;
 }
 
-export function ImageLightbox({ src, alt = 'Imagem', children }: ImageLightboxProps) {
-  const [open, setOpen] = useState(false);
-  const [zoom, setZoom] = useState(1);
+export const ImageLightbox = forwardRef<HTMLDivElement, ImageLightboxProps>(
+  function ImageLightbox({ src, alt = 'Imagem', children }, ref) {
+    const [open, setOpen] = useState(false);
+    const [zoom, setZoom] = useState(1);
 
   const handleDownload = async () => {
     try {
@@ -43,18 +44,19 @@ export function ImageLightbox({ src, alt = 'Imagem', children }: ImageLightboxPr
     }
   };
 
-  return (
-    <>
-      <div 
-        className="cursor-pointer hover:opacity-90 transition-opacity focusable rounded-lg"
-        onClick={() => setOpen(true)}
-        onKeyDown={handleKeyDown}
-        role="button"
-        tabIndex={0}
-        aria-label={`Ampliar imagem: ${alt}`}
-      >
-        {children}
-      </div>
+    return (
+      <>
+        <div 
+          ref={ref}
+          className="cursor-pointer hover:opacity-90 transition-opacity focusable rounded-lg"
+          onClick={() => setOpen(true)}
+          onKeyDown={handleKeyDown}
+          role="button"
+          tabIndex={0}
+          aria-label={`Ampliar imagem: ${alt}`}
+        >
+          {children}
+        </div>
 
       <Dialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if (!isOpen) setZoom(1); }}>
         <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-none overflow-hidden">
@@ -129,7 +131,10 @@ export function ImageLightbox({ src, alt = 'Imagem', children }: ImageLightboxPr
             />
           </div>
         </DialogContent>
-      </Dialog>
-    </>
-  );
-}
+        </Dialog>
+      </>
+    );
+  }
+);
+
+ImageLightbox.displayName = 'ImageLightbox';
