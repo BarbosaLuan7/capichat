@@ -268,6 +268,13 @@ export type Database = {
             referencedRelation: "whatsapp_config"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "conversations_whatsapp_instance_id_fkey"
+            columns: ["whatsapp_instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_config_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       funnel_stages: {
@@ -1295,7 +1302,62 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      whatsapp_config_safe: {
+        Row: {
+          api_key_masked: string | null
+          base_url: string | null
+          created_at: string | null
+          created_by: string | null
+          has_webhook_secret: boolean | null
+          id: string | null
+          instance_name: string | null
+          is_active: boolean | null
+          name: string | null
+          phone_number: string | null
+          provider: string | null
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          api_key_masked?: never
+          base_url?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          has_webhook_secret?: never
+          id?: string | null
+          instance_name?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          phone_number?: string | null
+          provider?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          api_key_masked?: never
+          base_url?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          has_webhook_secret?: never
+          id?: string | null
+          instance_name?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          phone_number?: string | null
+          provider?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_config_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       create_notification: {
@@ -1319,6 +1381,20 @@ export type Database = {
         Returns: Database["public"]["Enums"]["app_role"]
       }
       get_user_tenants: { Args: { _user_id: string }; Returns: string[] }
+      get_whatsapp_config_full: {
+        Args: { config_id: string }
+        Returns: {
+          api_key: string
+          base_url: string
+          id: string
+          instance_name: string
+          is_active: boolean
+          name: string
+          provider: string
+          tenant_id: string
+          webhook_secret: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

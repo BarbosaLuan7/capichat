@@ -129,7 +129,7 @@ const WhatsAppSettings = () => {
       name: config.name,
       provider: config.provider,
       base_url: config.base_url,
-      api_key: config.api_key,
+      api_key: '', // API key is masked, user must re-enter if they want to change it
       instance_name: config.instance_name || '',
       phone_number: config.phone_number || '',
       is_active: config.is_active,
@@ -138,7 +138,9 @@ const WhatsAppSettings = () => {
   };
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.base_url || !formData.api_key) {
+    // For new configs, api_key is required. For edits, it's optional (only update if provided)
+    const isNewConfig = !editingConfig;
+    if (!formData.name || !formData.base_url || (isNewConfig && !formData.api_key)) {
       toast({ title: 'Preencha todos os campos obrigatórios', variant: 'destructive' });
       return;
     }
@@ -264,23 +266,7 @@ const WhatsAppSettings = () => {
                       checked={config.is_active}
                       onCheckedChange={() => handleToggleActive(config)}
                     />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => testMutation.mutate({
-                        provider: config.provider,
-                        base_url: config.base_url,
-                        api_key: config.api_key,
-                        instance_name: config.instance_name || undefined,
-                      })}
-                      disabled={testMutation.isPending}
-                    >
-                      {testMutation.isPending ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Play className="w-4 h-4" />
-                      )}
-                    </Button>
+                    {/* Test button removed - API key is masked for security */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm">
