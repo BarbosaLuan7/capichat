@@ -22,7 +22,8 @@ export function useInternalNotes(conversationId: string | undefined) {
       return data;
     },
     enabled: !!conversationId,
-    staleTime: 30 * 1000, // 30 seconds - optimized for performance
+    staleTime: 60 * 1000, // 60 seconds - notes rarely change during session
+    gcTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
   // Realtime subscription

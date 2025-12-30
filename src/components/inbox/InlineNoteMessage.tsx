@@ -52,7 +52,10 @@ function InlineNoteMessageComponent({ note }: InlineNoteMessageProps) {
   );
 }
 
+InlineNoteMessageComponent.displayName = 'InlineNoteMessage';
+
 export const InlineNoteMessage = memo(InlineNoteMessageComponent, (prev, next) =>
   prev.note.id === next.note.id &&
-  prev.note.content === next.note.content
+  prev.note.content === next.note.content &&
+  prev.note.created_at === next.note.created_at
 );

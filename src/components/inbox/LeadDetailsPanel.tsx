@@ -1,4 +1,4 @@
-import { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo, memo, Suspense } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -32,9 +32,11 @@ import { TransferLeadModal } from './TransferLeadModal';
 import { LeadLabelsModal } from './LeadLabelsModal';
 import { InternalNotes } from './InternalNotes';
 import { LeadTimeline } from '@/components/leads/LeadTimeline';
-import { AIClassificationSuggestion } from './AIClassificationSuggestion';
-import { AIConversationSummary } from './AIConversationSummary';
 import { DocumentChecklist } from './DocumentChecklist';
+
+// Lazy loaded AI components - loaded only when IA tab is active
+const AIClassificationSuggestion = React.lazy(() => import('./AIClassificationSuggestion').then(m => ({ default: m.AIClassificationSuggestion })));
+const AIConversationSummary = React.lazy(() => import('./AIConversationSummary').then(m => ({ default: m.AIConversationSummary })));
 import { formatPhoneNumber, formatCPF, toWhatsAppFormat, maskCPF } from '@/lib/masks';
 import { useLeadActivities, formatActivityMessage } from '@/hooks/useLeadActivities';
 import { useInternalNotes } from '@/hooks/useInternalNotes';
@@ -544,19 +546,21 @@ function LeadDetailsPanelComponent({
           <TabsContent value="ia" className="flex-1 m-0 min-h-0 overflow-hidden data-[state=inactive]:hidden">
             <ScrollArea className="h-full">
               <div className="p-4 space-y-4">
-                {/* AI Summary */}
-                <AIConversationSummary
-                  messages={messages || []}
-                  lead={lead}
-                  onSummaryGenerated={onLabelsUpdate}
-                />
+                <Suspense fallback={<div className="flex items-center justify-center p-4"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>}>
+                  {/* AI Summary */}
+                  <AIConversationSummary
+                    messages={messages || []}
+                    lead={lead}
+                    onSummaryGenerated={onLabelsUpdate}
+                  />
 
-                {/* AI Classification */}
-                <AIClassificationSuggestion
-                  messages={messages || []}
-                  lead={lead}
+                  {/* AI Classification */}
+                  <AIClassificationSuggestion
+                    messages={messages || []}
+                    lead={lead}
                   onApplyClassification={onLabelsUpdate}
                 />
+                </Suspense>
               </div>
             </ScrollArea>
           </TabsContent>

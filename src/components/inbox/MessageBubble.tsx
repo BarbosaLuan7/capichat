@@ -520,15 +520,16 @@ function MessageBubbleComponent({
   );
 }
 
+MessageBubbleComponent.displayName = 'MessageBubble';
+
 // Memoize to prevent unnecessary re-renders
 export const MessageBubble = memo(MessageBubbleComponent, (prevProps, nextProps) => {
   return (
     prevProps.message.id === nextProps.message.id &&
     prevProps.message.status === nextProps.message.status &&
-    prevProps.message.is_starred === nextProps.message.is_starred &&
+    prevProps.message.content === nextProps.message.content &&
+    prevProps.message.media_url === nextProps.message.media_url &&
     prevProps.isAgent === nextProps.isAgent &&
-    prevProps.showAvatar === nextProps.showAvatar &&
-    prevProps.onReply === nextProps.onReply &&
-    prevProps.onRetry === nextProps.onRetry
+    prevProps.showAvatar === nextProps.showAvatar
   );
 });
