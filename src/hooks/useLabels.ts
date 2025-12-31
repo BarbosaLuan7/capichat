@@ -30,8 +30,8 @@ export function useLabels() {
       if (error) throw error;
       return data as Label[];
     },
-    staleTime: 2 * 60 * 1000, // 2 minutos - labels mudam pouco
-    gcTime: 10 * 60 * 1000, // 10 minutes cache
+    staleTime: 5 * 60 * 1000, // 5 minutos - labels mudam raramente
+    gcTime: 30 * 60 * 1000, // 30 minutes cache
   });
 }
 
