@@ -8,6 +8,53 @@ interface UploadProgress {
   uploading: boolean;
 }
 
+// BUG-04 FIX: File validation constants
+const ALLOWED_EXTENSIONS: Record<string, string[]> = {
+  image: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'],
+  video: ['mp4', 'mov', 'avi', 'webm'],
+  audio: ['mp3', 'wav', 'ogg', 'm4a', 'opus', 'mpeg'],
+  document: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'csv'],
+};
+
+const BLOCKED_EXTENSIONS = ['exe', 'sh', 'bat', 'cmd', 'msi', 'js', 'jsx', 'ts', 'tsx', 'php', 'py', 'rb', 'pl', 'ps1', 'vbs', 'dll', 'so', 'dylib'];
+
+const MAX_FILE_SIZE_MB = 25;
+
+// Get all allowed extensions flat
+const ALL_ALLOWED_EXTENSIONS = Object.values(ALLOWED_EXTENSIONS).flat();
+
+interface FileValidationResult {
+  valid: boolean;
+  error?: string;
+}
+
+function validateFile(file: File): FileValidationResult {
+  // Check file size
+  const fileSizeMB = file.size / (1024 * 1024);
+  if (fileSizeMB > MAX_FILE_SIZE_MB) {
+    return { valid: false, error: `Arquivo muito grande. Máximo ${MAX_FILE_SIZE_MB}MB` };
+  }
+
+  // Get extension
+  const ext = file.name.split('.').pop()?.toLowerCase();
+  
+  if (!ext) {
+    return { valid: false, error: 'Arquivo sem extensão' };
+  }
+
+  // Check blocked extensions
+  if (BLOCKED_EXTENSIONS.includes(ext)) {
+    return { valid: false, error: `Tipo de arquivo não permitido: .${ext}` };
+  }
+
+  // Check allowed extensions
+  if (!ALL_ALLOWED_EXTENSIONS.includes(ext)) {
+    return { valid: false, error: `Extensão não suportada: .${ext}` };
+  }
+
+  return { valid: true };
+}
+
 export function useFileUpload() {
   const [uploadProgress, setUploadProgress] = useState<UploadProgress>({
     progress: 0,
@@ -18,6 +65,13 @@ export function useFileUpload() {
     const UPLOAD_TIMEOUT_MS = 60000; // 60 seconds timeout
 
     try {
+      // BUG-04 FIX: Validate file before uploading
+      const validation = validateFile(file);
+      if (!validation.valid) {
+        toast.error(validation.error || 'Arquivo inválido');
+        return null;
+      }
+
       setUploadProgress({ progress: 0, uploading: true });
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -27,7 +81,7 @@ export function useFileUpload() {
         return null;
       }
 
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
       const fileName = `${user.id}/${folder}/${Date.now()}.${fileExt}`;
 
       // Simulate progress for better UX
@@ -94,5 +148,6 @@ export function useFileUpload() {
     uploadFile,
     uploadProgress,
     getFileType,
+    validateFile, // Export for external use
   };
 }
