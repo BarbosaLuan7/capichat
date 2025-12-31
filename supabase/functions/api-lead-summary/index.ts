@@ -58,14 +58,64 @@ Deno.serve(async (req) => {
 
     const url = new URL(req.url);
     const method = req.method;
-    const leadId = url.searchParams.get('lead_id');
+    const leadIdParam = url.searchParams.get('lead_id');
+    const phoneParam = url.searchParams.get('phone');
 
-    // Validate lead_id is required for all methods
-    if (!leadId) {
+    // Validate lead_id OR phone is required for all methods
+    if (!leadIdParam && !phoneParam) {
       return new Response(
-        JSON.stringify({ success: false, error: 'lead_id parameter is required' }),
+        JSON.stringify({ success: false, error: 'lead_id or phone parameter is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Resolve lead_id from phone if needed
+    let leadId = leadIdParam;
+    if (phoneParam && !leadIdParam) {
+      // Normalize phone - remove all non-digits
+      const normalizedPhone = phoneParam.replace(/\D/g, '');
+      
+      console.log('[api-lead-summary] Searching lead by phone:', normalizedPhone);
+      
+      // Try exact match first
+      let { data: leadByPhone, error: phoneError } = await supabase
+        .from('leads')
+        .select('id')
+        .eq('phone', normalizedPhone)
+        .maybeSingle();
+
+      // If not found, try with common variations (with/without country code)
+      if (!leadByPhone && normalizedPhone.length >= 10) {
+        // Try without country code (last 10-11 digits)
+        const phoneWithoutCountry = normalizedPhone.slice(-11);
+        const phoneShort = normalizedPhone.slice(-10);
+        
+        const { data: altLead } = await supabase
+          .from('leads')
+          .select('id')
+          .or(`phone.eq.${phoneWithoutCountry},phone.eq.${phoneShort},phone.ilike.%${phoneShort}`)
+          .limit(1)
+          .maybeSingle();
+        
+        if (altLead) {
+          leadByPhone = altLead;
+        }
+      }
+
+      if (phoneError) {
+        console.error('[api-lead-summary] Error searching by phone:', phoneError);
+        return safeErrorResponse(phoneError, 'Error searching lead by phone');
+      }
+
+      if (!leadByPhone) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Lead not found with this phone number' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      leadId = leadByPhone.id;
+      console.log('[api-lead-summary] Found lead by phone:', leadId);
     }
 
     // GET /api-lead-summary?lead_id=xxx - Get case summary

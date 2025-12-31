@@ -457,6 +457,118 @@ function LeadDetailsPanelComponent({
                   </div>
                 )}
 
+                {/* Resumo do Caso - IA (Custom Field) - ACIMA de Informações */}
+                {(() => {
+                  const caseSummary = (lead as any).custom_fields?.case_summary;
+                  
+                  // Função para renderizar texto formatado (markdown-like)
+                  const renderFormattedText = (text: string) => {
+                    const lines = text.split('\n');
+                    
+                    return lines.map((line, lineIndex) => {
+                      // Processar a linha
+                      let processedLine = line;
+                      const elements: React.ReactNode[] = [];
+                      let lastIndex = 0;
+                      
+                      // Regex para encontrar padrões
+                      const patterns = [
+                        { regex: /\*\*(.+?)\*\*/g, render: (match: string, p1: string) => <strong key={`bold-${lineIndex}-${lastIndex}`} className="font-semibold">{p1}</strong> },
+                        { regex: /\*([^*\n]+)\*/g, render: (match: string, p1: string) => <strong key={`bold2-${lineIndex}-${lastIndex}`} className="font-semibold">{p1}</strong> },
+                        { regex: /_([^_\n]+)_/g, render: (match: string, p1: string) => <em key={`italic-${lineIndex}-${lastIndex}`}>{p1}</em> },
+                        { regex: /\(?(https?:\/\/[^\s\)]+)\)?/g, render: (match: string, p1: string) => (
+                          <a 
+                            key={`link-${lineIndex}-${lastIndex}`} 
+                            href={p1} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-primary hover:underline"
+                          >
+                            {p1.length > 40 ? p1.substring(0, 40) + '...' : p1}
+                          </a>
+                        )},
+                      ];
+                      
+                      // Processar bold **text** e *text*
+                      let result = processedLine;
+                      result = result.replace(/\*\*(.+?)\*\*/g, '⟨⟨BOLD⟩⟩$1⟨⟨/BOLD⟩⟩');
+                      result = result.replace(/\*([^*\n]+)\*/g, '⟨⟨BOLD⟩⟩$1⟨⟨/BOLD⟩⟩');
+                      result = result.replace(/_([^_\n]+)_/g, '⟨⟨ITALIC⟩⟩$1⟨⟨/ITALIC⟩⟩');
+                      
+                      // Converter marcadores para JSX
+                      const parts = result.split(/(⟨⟨BOLD⟩⟩|⟨⟨\/BOLD⟩⟩|⟨⟨ITALIC⟩⟩|⟨⟨\/ITALIC⟩⟩)/);
+                      let inBold = false;
+                      let inItalic = false;
+                      
+                      const renderedParts = parts.map((part, partIndex) => {
+                        if (part === '⟨⟨BOLD⟩⟩') { inBold = true; return null; }
+                        if (part === '⟨⟨/BOLD⟩⟩') { inBold = false; return null; }
+                        if (part === '⟨⟨ITALIC⟩⟩') { inItalic = true; return null; }
+                        if (part === '⟨⟨/ITALIC⟩⟩') { inItalic = false; return null; }
+                        
+                        if (!part) return null;
+                        
+                        // Processar links dentro do texto
+                        const linkRegex = /\(?(https?:\/\/[^\s\)]+)\)?/g;
+                        const linkParts = part.split(linkRegex);
+                        
+                        const content = linkParts.map((lp, lpIndex) => {
+                          if (lp?.match(/^https?:\/\//)) {
+                            return (
+                              <a 
+                                key={`link-${lineIndex}-${partIndex}-${lpIndex}`}
+                                href={lp}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline"
+                              >
+                                Link
+                              </a>
+                            );
+                          }
+                          return lp;
+                        });
+                        
+                        if (inBold) {
+                          return <strong key={`b-${lineIndex}-${partIndex}`} className="font-semibold">{content}</strong>;
+                        }
+                        if (inItalic) {
+                          return <em key={`i-${lineIndex}-${partIndex}`}>{content}</em>;
+                        }
+                        return <span key={`s-${lineIndex}-${partIndex}`}>{content}</span>;
+                      }).filter(Boolean);
+                      
+                      return (
+                        <span key={lineIndex} className="block">
+                          {renderedParts.length > 0 ? renderedParts : line}
+                        </span>
+                      );
+                    });
+                  };
+                  
+                  return (
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-xs text-muted-foreground uppercase flex items-center gap-2">
+                        <Sparkles className="w-3 h-3 text-primary" />
+                        Resumo do Caso - IA
+                      </h4>
+                      <div className="relative rounded-lg border-l-4 border-primary bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-3 overflow-hidden">
+                        {caseSummary ? (
+                          <div className="overflow-y-auto max-h-[300px]">
+                            <div className="text-sm text-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                              {renderFormattedText(caseSummary)}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground italic">
+                            Nenhum resumo disponível
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Stage & Source */}
                 <div className="space-y-2">
                   <h4 className="font-medium text-xs text-muted-foreground uppercase">
@@ -506,27 +618,6 @@ function LeadDetailsPanelComponent({
                           R$ {lead.estimated_value.toLocaleString('pt-BR')}
                         </span>
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Resumo do Caso - IA (Custom Field) */}
-                <div className="space-y-2">
-                  <h4 className="font-medium text-xs text-muted-foreground uppercase flex items-center gap-2">
-                    <Brain className="w-3 h-3" />
-                    Resumo do Caso - IA
-                  </h4>
-                  <div className="p-3 rounded-lg bg-muted/50 border border-border overflow-hidden">
-                    {(lead as any).custom_fields?.case_summary ? (
-                      <div className="overflow-y-auto max-h-[200px]">
-                        <p className="text-sm text-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
-                          {(lead as any).custom_fields.case_summary}
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic">
-                        Nenhum resumo disponível
-                      </p>
                     )}
                   </div>
                 </div>
