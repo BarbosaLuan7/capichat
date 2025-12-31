@@ -309,21 +309,6 @@ function LeadDetailsPanelComponent({
           <TabsContent value="dados" className="flex-1 m-0 min-h-0 overflow-hidden data-[state=inactive]:hidden flex flex-col">
             <ScrollArea className="flex-1 min-h-0 w-full max-w-full [&_[data-radix-scroll-area-viewport]]:!overflow-x-hidden [&_[data-radix-scroll-area-viewport]]:max-w-full">
               <div className="p-4 space-y-4 pb-8 max-w-full min-w-0 overflow-hidden box-border">
-                {/* AI Summary */}
-                {(lead as any).ai_summary && (
-                  <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 overflow-hidden">
-                    <div className="flex items-center gap-2 text-primary text-xs font-medium mb-2">
-                      <Sparkles className="w-3 h-3" />
-                      Resumo IA
-                    </div>
-                    <div className="overflow-y-auto max-h-[200px]">
-                      <p className="text-sm text-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
-                        {(lead as any).ai_summary}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
                 {/* Contact Info */}
                 <div className="space-y-2">
                   <h4 className="font-medium text-xs text-muted-foreground uppercase">
@@ -521,6 +506,27 @@ function LeadDetailsPanelComponent({
                           R$ {lead.estimated_value.toLocaleString('pt-BR')}
                         </span>
                       </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Resumo do Caso - IA (Custom Field) */}
+                <div className="space-y-2">
+                  <h4 className="font-medium text-xs text-muted-foreground uppercase flex items-center gap-2">
+                    <Brain className="w-3 h-3" />
+                    Resumo do Caso - IA
+                  </h4>
+                  <div className="p-3 rounded-lg bg-muted/50 border border-border overflow-hidden">
+                    {(lead as any).custom_fields?.case_summary ? (
+                      <div className="overflow-y-auto max-h-[200px]">
+                        <p className="text-sm text-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                          {(lead as any).custom_fields.case_summary}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">
+                        Nenhum resumo disponível
+                      </p>
                     )}
                   </div>
                 </div>
