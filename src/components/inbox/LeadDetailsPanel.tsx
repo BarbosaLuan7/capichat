@@ -553,8 +553,26 @@ function LeadDetailsPanelComponent({
                         Resumo do Caso - IA
                       </h4>
                       <div className="relative rounded-lg border-l-4 border-primary bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-3 overflow-hidden">
+                        {caseSummary && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute top-1 right-1 h-6 w-6 opacity-50 hover:opacity-100 transition-opacity"
+                                  onClick={() => handleCopy(caseSummary, 'Resumo')}
+                                  aria-label="Copiar resumo"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Copiar resumo</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                         {caseSummary ? (
-                          <div className="overflow-y-auto max-h-[300px]">
+                          <div className="overflow-y-auto max-h-[300px] pr-6">
                             <div className="text-sm text-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
                               {renderFormattedText(caseSummary)}
                             </div>
