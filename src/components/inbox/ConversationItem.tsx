@@ -241,6 +241,23 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
   );
 }
 
+// Helper function to compare labels by their IDs, not just length
+const areLabelsEqual = (
+  prevLabels: ConversationLead['lead_labels'],
+  nextLabels: ConversationLead['lead_labels']
+): boolean => {
+  const prev = prevLabels || [];
+  const next = nextLabels || [];
+  
+  if (prev.length !== next.length) return false;
+  
+  // Compare sorted label IDs to detect changes even when count is same
+  const prevIds = prev.map(ll => ll.labels?.id).filter(Boolean).sort().join(',');
+  const nextIds = next.map(ll => ll.labels?.id).filter(Boolean).sort().join(',');
+  
+  return prevIds === nextIds;
+};
+
 // Memoize with custom comparison function
 export const ConversationItem = memo(ConversationItemComponent, (prevProps, nextProps) => {
   // Only re-render if these specific props change
@@ -255,6 +272,7 @@ export const ConversationItem = memo(ConversationItemComponent, (prevProps, next
     prevProps.conversation.whatsapp_instance_id === nextProps.conversation.whatsapp_instance_id &&
     prevProps.conversation.leads?.temperature === nextProps.conversation.leads?.temperature &&
     prevProps.conversation.leads?.benefit_type === nextProps.conversation.leads?.benefit_type &&
-    prevProps.conversation.leads?.lead_labels?.length === nextProps.conversation.leads?.lead_labels?.length
+    prevProps.conversation.leads?.whatsapp_name === nextProps.conversation.leads?.whatsapp_name &&
+    areLabelsEqual(prevProps.conversation.leads?.lead_labels, nextProps.conversation.leads?.lead_labels)
   );
 });

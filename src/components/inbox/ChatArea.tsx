@@ -145,20 +145,24 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   const setMessageInput = saveDraft;
 
   // Auto-scroll to bottom when NEW messages arrive
-  // Force scroll if message is from lead (response) to ensure user sees it
+  // Force scroll if: near bottom, lead message, OR agent just sent a message
   useEffect(() => {
     if (!messages?.length) return;
     
-    const lastMessage = messages[messages.length - 1];
+    const lastMessage = messages[messages.length - 1] as ExtendedMessage;
     const isNewMessage = lastMessage.id !== lastMessageIdRef.current;
     
     if (isNewMessage) {
       lastMessageIdRef.current = lastMessage.id;
       
+      // Check if this is an optimistic message (just sent by agent)
+      const isOptimisticAgentMessage = lastMessage.isOptimistic && lastMessage.sender_type === 'agent';
+      
       // Force scroll if:
       // 1. User is near the bottom, OR
-      // 2. It's a new message from the lead (response)
-      if (isNearBottomRef.current || lastMessage.sender_type === 'lead') {
+      // 2. It's a new message from the lead (response), OR
+      // 3. Agent just sent this message (optimistic)
+      if (isNearBottomRef.current || lastMessage.sender_type === 'lead' || isOptimisticAgentMessage) {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
     }
