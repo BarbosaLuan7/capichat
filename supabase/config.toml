@@ -18,6 +18,9 @@ verify_jwt = false
 [functions.api-leads]
 verify_jwt = false
 
+[functions.api-lead-summary]
+verify_jwt = false
+
 [functions.api-messages-receive]
 verify_jwt = false
 
