@@ -154,6 +154,16 @@ Deno.serve(async (req) => {
         return safeErrorResponse(updateError, 'Error updating lead summary');
       }
 
+      // Dispatch webhook event for summary updated
+      await supabase.from('webhook_queue').insert({
+        event: 'lead.summary_updated',
+        payload: {
+          lead_id: leadId,
+          case_summary: summary,
+          action: 'updated'
+        }
+      });
+
       console.log('[api-lead-summary] PUT summary updated for lead:', leadId);
       return new Response(
         JSON.stringify({ 
@@ -205,6 +215,16 @@ Deno.serve(async (req) => {
       if (updateError) {
         return safeErrorResponse(updateError, 'Error removing lead summary');
       }
+
+      // Dispatch webhook event for summary removed
+      await supabase.from('webhook_queue').insert({
+        event: 'lead.summary_updated',
+        payload: {
+          lead_id: leadId,
+          case_summary: null,
+          action: 'removed'
+        }
+      });
 
       console.log('[api-lead-summary] DELETE summary removed for lead:', leadId);
       return new Response(

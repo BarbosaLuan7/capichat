@@ -1470,6 +1470,7 @@ export type Database = {
         | "conversation.resolved"
         | "task.created"
         | "task.completed"
+        | "lead.summary_updated"
       webhook_log_status: "pending" | "success" | "failed" | "retrying"
     }
     CompositeTypes: {
@@ -1663,6 +1664,7 @@ export const Constants = {
         "conversation.resolved",
         "task.created",
         "task.completed",
+        "lead.summary_updated",
       ],
       webhook_log_status: ["pending", "success", "failed", "retrying"],
     },
