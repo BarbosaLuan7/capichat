@@ -21,6 +21,8 @@ export function useTeams() {
       if (error) throw error;
       return data;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutos - equipes mudam raramente
+    gcTime: 30 * 60 * 1000, // 30 minutes cache
   });
 }
 
@@ -42,6 +44,8 @@ export function useTeam(id: string | undefined) {
       return data;
     },
     enabled: !!id,
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    gcTime: 30 * 60 * 1000, // 30 minutes cache
   });
 }
 
@@ -60,6 +64,8 @@ export function useTeamMembers(teamId: string | undefined) {
       return data;
     },
     enabled: !!teamId,
+    staleTime: 5 * 60 * 1000, // 5 minutos
+    gcTime: 30 * 60 * 1000, // 30 minutes cache
   });
 }
 

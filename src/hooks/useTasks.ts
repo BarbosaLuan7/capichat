@@ -38,7 +38,7 @@ export function useTasks(page: number = 1, pageSize: number = 50) {
       if (error) throw error;
       return { tasks: data || [], totalCount: count || 0 };
     },
-    staleTime: 30 * 1000, // 30 segundos
+    staleTime: 60 * 1000, // 60 segundos
     gcTime: 5 * 60 * 1000, // 5 minutes cache
   });
 }
@@ -66,7 +66,7 @@ export function useAllTasks() {
       if (error) throw error;
       return data;
     },
-    staleTime: 30 * 1000, // 30 segundos
+    staleTime: 60 * 1000, // 60 segundos
     gcTime: 5 * 60 * 1000, // 5 minutes cache
   });
 }
@@ -86,7 +86,7 @@ export function useTask(id: string | undefined) {
       return data;
     },
     enabled: !!id,
-    staleTime: 30 * 1000, // 30 segundos
+    staleTime: 60 * 1000, // 60 segundos
     gcTime: 5 * 60 * 1000, // 5 minutes cache
   });
 }
@@ -166,8 +166,43 @@ export function useUpdateTaskStatus() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onMutate: async ({ taskId, status }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['tasks'] });
+      await queryClient.cancelQueries({ queryKey: ['tasks-all'] });
+      
+      // Snapshot previous values
+      const previousTasks = queryClient.getQueryData(['tasks']);
+      const previousAllTasks = queryClient.getQueryData(['tasks-all']);
+      
+      // Optimistically update paginated query
+      queryClient.setQueryData(['tasks'], (old: PaginatedTasksResult | undefined) => {
+        if (!old) return old;
+        return {
+          ...old,
+          tasks: old.tasks.map(t => t.id === taskId ? { ...t, status } : t)
+        };
+      });
+      
+      // Optimistically update all tasks query
+      queryClient.setQueryData(['tasks-all'], (old: Task[] | undefined) => 
+        old?.map(t => t.id === taskId ? { ...t, status } : t)
+      );
+      
+      return { previousTasks, previousAllTasks };
+    },
+    onError: (_, __, context) => {
+      // Rollback on error
+      if (context?.previousTasks) {
+        queryClient.setQueryData(['tasks'], context.previousTasks);
+      }
+      if (context?.previousAllTasks) {
+        queryClient.setQueryData(['tasks-all'], context.previousAllTasks);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks-all'] });
     },
   });
 }

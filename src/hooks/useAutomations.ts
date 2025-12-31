@@ -118,7 +118,27 @@ export function useToggleAutomation() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onMutate: async ({ id, isActive }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['automations'] });
+      
+      // Snapshot previous value
+      const previousAutomations = queryClient.getQueryData<Automation[]>(['automations']);
+      
+      // Optimistically update
+      queryClient.setQueryData<Automation[]>(['automations'], (old) => 
+        old?.map(a => a.id === id ? { ...a, is_active: isActive } : a)
+      );
+      
+      return { previousAutomations };
+    },
+    onError: (_, __, context) => {
+      // Rollback on error
+      if (context?.previousAutomations) {
+        queryClient.setQueryData(['automations'], context.previousAutomations);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['automations'] });
     },
   });
