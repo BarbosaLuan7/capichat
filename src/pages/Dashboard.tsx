@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users,
@@ -67,6 +67,32 @@ import { useTenant } from '@/contexts/TenantContext';
 import { useTenantStats } from '@/hooks/useTenantStats';
 import { TenantIndicatorCard } from '@/components/dashboard/TenantIndicatorCard';
 
+// Memoized tooltip component extracted outside Dashboard to prevent recreation on every render
+const CustomTooltip = memo(({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+        <p className="font-medium text-foreground">{label}</p>
+        {payload.map((entry: any, index: number) => (
+          <p key={index} className="text-sm text-muted-foreground">
+            {entry.name}: {entry.value}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+});
+CustomTooltip.displayName = 'CustomTooltip';
+
+// Period labels constant - never changes
+const PERIOD_LABELS: Record<PeriodFilter, string> = {
+  today: 'Hoje',
+  week: 'Esta Semana',
+  month: 'Este Mês',
+  quarter: 'Este Trimestre',
+};
+
 const Dashboard = () => {
   const [period, setPeriod] = useState<PeriodFilter>('month');
   const { exportReport, isExporting } = useReportExport();
@@ -85,14 +111,8 @@ const Dashboard = () => {
   const { data: dailyEvolution, isLoading: loadingDaily } = useDailyEvolution(period, tenantId);
   const { data: conversationMetrics, isLoading: loadingConversations } = useConversationMetrics(period, tenantId);
 
-  const periodLabels: Record<PeriodFilter, string> = {
-    today: 'Hoje',
-    week: 'Esta Semana',
-    month: 'Este Mês',
-    quarter: 'Este Trimestre',
-  };
-
-  const stats = [
+  // Memoize stats array to prevent recreation on every render
+  const stats = useMemo(() => [
     {
       title: 'Total de Leads',
       value: leadMetrics?.totalLeads || 0,
@@ -131,23 +151,7 @@ const Dashboard = () => {
       color: 'text-warning',
       bgColor: 'bg-warning/10',
     },
-  ];
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-          <p className="font-medium text-foreground">{label}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-sm text-muted-foreground">
-              {entry.name}: {entry.value}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
+  ], [leadMetrics, conversationMetrics]);
 
   const isLoading = loadingLeads || loadingFunnel || loadingAgents || loadingDaily || loadingConversations;
 
@@ -160,7 +164,7 @@ const Dashboard = () => {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground">
-            Visão geral do seu negócio - {periodLabels[period]}
+            Visão geral do seu negócio - {PERIOD_LABELS[period]}
             {currentTenant && ` • ${currentTenant.name}`}
           </p>
         </div>

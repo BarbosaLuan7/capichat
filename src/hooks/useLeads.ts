@@ -43,7 +43,7 @@ export function useLeads(page: number = 1, pageSize: number = 50) {
       return { leads: data || [], totalCount: count || 0 };
     },
     gcTime: 5 * 60 * 1000, // 5 minutes cache
-    staleTime: 30 * 1000, // 30 segundos
+    staleTime: 60 * 1000, // 60 segundos - leads mudam com frequência média
   });
 }
 
@@ -70,7 +70,7 @@ export function useLead(id: string | undefined) {
     },
     enabled: !!id,
     gcTime: 5 * 60 * 1000, // 5 minutes cache
-    staleTime: 30 * 1000, // 30 segundos
+    staleTime: 60 * 1000, // 60 segundos
   });
 }
 

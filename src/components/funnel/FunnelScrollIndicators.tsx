@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { useThrottledCallback } from '@/hooks/useThrottle';
 
 interface FunnelScrollIndicatorsProps {
   containerRef: React.RefObject<HTMLDivElement>;
@@ -43,19 +43,25 @@ export function FunnelScrollIndicators({
     });
   }, [containerRef, totalColumns, columnWidth]);
 
+  // Throttled version of updateScrollState (100ms)
+  const throttledUpdateScrollState = useThrottledCallback(updateScrollState, 100);
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
+    // Initial update (immediate)
     updateScrollState();
-    container.addEventListener('scroll', updateScrollState, { passive: true });
-    window.addEventListener('resize', updateScrollState);
+    
+    // Throttled scroll handler for better performance
+    container.addEventListener('scroll', throttledUpdateScrollState, { passive: true });
+    window.addEventListener('resize', throttledUpdateScrollState);
 
     return () => {
-      container.removeEventListener('scroll', updateScrollState);
-      window.removeEventListener('resize', updateScrollState);
+      container.removeEventListener('scroll', throttledUpdateScrollState);
+      window.removeEventListener('resize', throttledUpdateScrollState);
     };
-  }, [containerRef, updateScrollState]);
+  }, [containerRef, updateScrollState, throttledUpdateScrollState]);
 
   const scrollTo = (direction: 'left' | 'right') => {
     const container = containerRef.current;

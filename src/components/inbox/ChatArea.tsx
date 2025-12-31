@@ -40,6 +40,7 @@ const AIReminderPrompt = React.lazy(() => import('@/components/inbox/AIReminderP
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { useSignedUrlBatch } from '@/hooks/useSignedUrl';
+import { useThrottledCallback } from '@/hooks/useThrottle';
 
 import { useAIReminders } from '@/hooks/useAIReminders';
 import { useInternalNotes } from '@/hooks/useInternalNotes';
@@ -202,7 +203,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     }
   }, [conversation?.id, isMobile]);
 
-  const handleMessagesScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+  const handleMessagesScrollCore = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     if (ignoreScrollRef.current) return;
     
     const target = e.currentTarget;
@@ -231,6 +232,9 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
       });
     }
   }, [hasMoreMessages, isLoadingMoreMessages, onLoadMoreMessages]);
+
+  // Throttled scroll handler for better performance (100ms)
+  const handleMessagesScroll = useThrottledCallback(handleMessagesScrollCore, 100);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
