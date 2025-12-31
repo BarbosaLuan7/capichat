@@ -44,6 +44,7 @@ export function useLeads(page: number = 1, pageSize: number = 50) {
     },
     gcTime: 5 * 60 * 1000, // 5 minutes cache
     staleTime: 60 * 1000, // 60 segundos - leads mudam com frequência média
+    placeholderData: { leads: [], totalCount: 0 },
   });
 }
 

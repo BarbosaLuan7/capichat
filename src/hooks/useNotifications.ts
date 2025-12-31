@@ -64,7 +64,37 @@ export function useMarkNotificationRead() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async (notificationId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['notifications'] });
+      await queryClient.cancelQueries({ queryKey: ['notifications', 'unread'] });
+      
+      // Snapshot previous values
+      const previousNotifications = queryClient.getQueryData<Notification[]>(['notifications']);
+      const previousUnreadCount = queryClient.getQueryData<number>(['notifications', 'unread']);
+      
+      // Optimistically update notifications list
+      queryClient.setQueryData<Notification[]>(['notifications'], (old) => 
+        old?.map(n => n.id === notificationId ? { ...n, read: true } : n)
+      );
+      
+      // Optimistically decrement unread count
+      queryClient.setQueryData<number>(['notifications', 'unread'], (old) => 
+        Math.max(0, (old || 1) - 1)
+      );
+      
+      return { previousNotifications, previousUnreadCount };
+    },
+    onError: (_, __, context) => {
+      // Rollback on error
+      if (context?.previousNotifications) {
+        queryClient.setQueryData(['notifications'], context.previousNotifications);
+      }
+      if (context?.previousUnreadCount !== undefined) {
+        queryClient.setQueryData(['notifications', 'unread'], context.previousUnreadCount);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
