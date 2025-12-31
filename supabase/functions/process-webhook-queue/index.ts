@@ -435,6 +435,28 @@ async function buildPayload(supabase: any, evento: string, dados: any): Promise<
       };
     }
     
+    case 'lead.summary_updated': {
+      const leadId = eventData?.lead_id;
+      const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
+      const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
+      
+      return {
+        evento: 'lead.resumo_atualizado',
+        timestamp: formatTimestamp(),
+        instancia_whatsapp: instancia,
+        lead: lead ? {
+          id: lead.id,
+          nome: lead.nome,
+          whatsapp: lead.whatsapp,
+          temperatura: lead.temperatura,
+          etapa_funil: lead.etapa_funil,
+          etiquetas: lead.etiquetas
+        } : null,
+        resumo_caso: eventData?.case_summary || null,
+        acao: eventData?.action === 'removed' ? 'removido' : 'atualizado'
+      };
+    }
+    
     default:
       return { evento: evento.replace('.', '_'), timestamp: formatTimestamp(), dados: eventData };
   }

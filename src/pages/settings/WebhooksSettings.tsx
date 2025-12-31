@@ -62,6 +62,7 @@ const WEBHOOK_EVENTS = [
   { value: 'lead.temperature_changed', label: 'Temperatura alterada', labelPt: 'lead.temperatura_alterada', category: 'Lead' },
   { value: 'lead.label_added', label: 'Etiqueta adicionada', labelPt: 'lead.etiqueta_adicionada', category: 'Lead' },
   { value: 'lead.label_removed', label: 'Etiqueta removida', labelPt: 'lead.etiqueta_removida', category: 'Lead' },
+  { value: 'lead.summary_updated', label: 'Resumo do caso atualizado', labelPt: 'lead.resumo_atualizado', category: 'Lead' },
   { value: 'message.received', label: 'Mensagem recebida', labelPt: 'mensagem.recebida', category: 'Mensagem' },
   { value: 'message.sent', label: 'Mensagem enviada', labelPt: 'mensagem.enviada', category: 'Mensagem' },
   { value: 'conversation.created', label: 'Conversa criada', labelPt: 'conversa.criada', category: 'Conversa' },
