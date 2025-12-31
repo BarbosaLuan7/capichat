@@ -105,47 +105,53 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
       onNewIncomingMessageRef.current(newMessage, leadName);
     }
 
+    // Calculate unread increment
+    const isFromLead = newMessage.sender_type === 'lead';
+    const isOtherConversation = conversationId !== currentSelectedId;
+    const unreadIncrement = isFromLead && isOtherConversation ? 1 : 0;
+
     // Update conversation in infinite list if function available
     if (updateConversationOptimisticallyRef.current) {
-      const newUnreadCount = newMessage.sender_type === 'lead' && conversationId !== currentSelectedId ? 1 : 0;
       updateConversationOptimisticallyRef.current(conversationId, {
         last_message_at: newMessage.created_at,
         last_message_content: newMessage.content,
-        unread_count_increment: newUnreadCount,
-      });
-    } else {
-      // Fallback to old method
-      queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
-        if (!old) return old;
-        
-        const existingConv = old.find(conv => conv.id === conversationId);
-        if (!existingConv) return old;
-        
-        const newUnreadCount = newMessage.sender_type === 'lead' 
-          ? (existingConv.unread_count || 0) + 1 
-          : existingConv.unread_count;
-        
-        if (
-          existingConv.last_message_at === newMessage.created_at &&
-          existingConv.last_message_content === newMessage.content &&
-          existingConv.unread_count === newUnreadCount
-        ) {
-          return old;
-        }
-        
-        return old.map(conv => {
-          if (conv.id === conversationId) {
-            return {
-              ...conv,
-              last_message_at: newMessage.created_at,
-              last_message_content: newMessage.content,
-              unread_count: newUnreadCount,
-            };
-          }
-          return conv;
-        });
+        unread_count_increment: unreadIncrement,
       });
     }
+    
+    // BUG-01 FIX: ALWAYS sync the ['conversations'] cache for sidebar badges
+    // This cache is used by useSidebarBadges which doesn't use infinite queries
+    queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
+      if (!old) return old;
+      
+      const existingConv = old.find(conv => conv.id === conversationId);
+      if (!existingConv) return old;
+      
+      const newUnreadCount = isFromLead 
+        ? (existingConv.unread_count || 0) + 1 
+        : existingConv.unread_count;
+      
+      // Skip update if nothing changed
+      if (
+        existingConv.last_message_at === newMessage.created_at &&
+        existingConv.last_message_content === newMessage.content &&
+        existingConv.unread_count === newUnreadCount
+      ) {
+        return old;
+      }
+      
+      return old.map(conv => {
+        if (conv.id === conversationId) {
+          return {
+            ...conv,
+            last_message_at: newMessage.created_at,
+            last_message_content: newMessage.content,
+            unread_count: newUnreadCount,
+          };
+        }
+        return conv;
+      });
+    });
   }, [queryClient]);
 
   // Handle message updates (status changes, starred, etc.)
@@ -188,12 +194,13 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
       // Use infinite hook's optimistic update if available
       if (updateConversationOptimisticallyRef.current) {
         updateConversationOptimisticallyRef.current(updated.id, updated);
-      } else {
-        queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
-          if (!old) return old;
-          return old.map(conv => conv.id === updated.id ? { ...conv, ...updated } : conv);
-        });
       }
+      
+      // BUG-01 FIX: Also sync ['conversations'] cache for sidebar badges
+      queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
+        if (!old) return old;
+        return old.map(conv => conv.id === updated.id ? { ...conv, ...updated } : conv);
+      });
       
       // Also update single conversation query if selected
       if (updated.id === currentSelectedId) {
@@ -205,16 +212,25 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
     } else if (payload.eventType === 'INSERT') {
       // New conversation - invalidate to refetch with leads data
       queryClient.invalidateQueries({ queryKey: ['conversations-infinite'] });
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
     }
   }, [queryClient]);
 
   // Handle lead labels changes (for conversation list labels display)
+  // BUG-03 FIX: Only invalidate the specific lead's labels, not all conversations
   const handleLeadLabelsChange = useCallback((payload: any) => {
-    logger.log('[InboxRealtime] Lead labels change:', payload.eventType);
-    // Invalidate conversations to update labels in list
-    queryClient.invalidateQueries({ queryKey: ['conversations-infinite'] });
-    // Also invalidate lead labels query for the detail panel
-    queryClient.invalidateQueries({ queryKey: ['lead-labels'] });
+    const leadId = payload.new?.lead_id || payload.old?.lead_id;
+    logger.log('[InboxRealtime] Lead labels change:', payload.eventType, { leadId });
+    
+    if (leadId) {
+      // Only invalidate the labels query for this specific lead
+      queryClient.invalidateQueries({ queryKey: ['lead-labels', leadId] });
+      // Also invalidate single lead query if loaded
+      queryClient.invalidateQueries({ queryKey: ['lead', leadId] });
+    }
+    
+    // DO NOT invalidate ['conversations-infinite'] - causes excessive re-renders
+    // Labels will be updated on next natural refetch or when user opens the conversation
   }, [queryClient]);
 
   useEffect(() => {
