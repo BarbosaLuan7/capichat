@@ -39,6 +39,7 @@ const AIReminderPrompt = React.lazy(() => import('@/components/inbox/AIReminderP
 // Hooks
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
+import { useSignedUrlBatch } from '@/hooks/useSignedUrl';
 
 import { useAIReminders } from '@/hooks/useAIReminders';
 import { useInternalNotes } from '@/hooks/useInternalNotes';
@@ -127,6 +128,13 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   // Hooks
   const { uploadFile, uploadProgress } = useFileUpload();
   const audioRecorder = useAudioRecorder();
+  
+  // Batch resolve signed URLs para todas as mensagens com mídia
+  const mediaUrls = useMemo(() => {
+    if (!messages) return [];
+    return messages.filter(m => m.media_url).map(m => m.media_url);
+  }, [messages]);
+  const { getSignedUrl } = useSignedUrlBatch(mediaUrls);
   
   const aiReminders = useAIReminders();
   const { data: internalNotes } = useInternalNotes(conversation?.id || undefined);
@@ -575,6 +583,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
                           agentName={agentName}
                           onReply={handleReplyMessage}
                           onRetry={handleRetryMessage}
+                          resolvedMediaUrl={message.media_url ? getSignedUrl(message.media_url) : undefined}
                         />
                       );
                     })}

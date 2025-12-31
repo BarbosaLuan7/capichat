@@ -1,4 +1,4 @@
-import { useState, ReactNode, forwardRef } from 'react';
+import { useState, ReactNode } from 'react';
 import { X, Download, ZoomIn, ZoomOut } from 'lucide-react';
 import { Dialog, DialogContent, DialogClose, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -11,10 +11,9 @@ interface ImageLightboxProps {
   children: ReactNode;
 }
 
-export const ImageLightbox = forwardRef<HTMLDivElement, ImageLightboxProps>(
-  function ImageLightbox({ src, alt = 'Imagem', children }, ref) {
-    const [open, setOpen] = useState(false);
-    const [zoom, setZoom] = useState(1);
+export function ImageLightbox({ src, alt = 'Imagem', children }: ImageLightboxProps) {
+  const [open, setOpen] = useState(false);
+  const [zoom, setZoom] = useState(1);
 
   const handleDownload = async () => {
     try {
@@ -29,7 +28,6 @@ export const ImageLightbox = forwardRef<HTMLDivElement, ImageLightboxProps>(
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      // Fallback: open in new tab
       window.open(src, '_blank');
     }
   };
@@ -44,19 +42,18 @@ export const ImageLightbox = forwardRef<HTMLDivElement, ImageLightboxProps>(
     }
   };
 
-    return (
-      <>
-        <div 
-          ref={ref}
-          className="cursor-pointer hover:opacity-90 transition-opacity focusable rounded-lg"
-          onClick={() => setOpen(true)}
-          onKeyDown={handleKeyDown}
-          role="button"
-          tabIndex={0}
-          aria-label={`Ampliar imagem: ${alt}`}
-        >
-          {children}
-        </div>
+  return (
+    <>
+      <div 
+        className="cursor-pointer hover:opacity-90 transition-opacity focusable rounded-lg"
+        onClick={() => setOpen(true)}
+        onKeyDown={handleKeyDown}
+        role="button"
+        tabIndex={0}
+        aria-label={`Ampliar imagem: ${alt}`}
+      >
+        {children}
+      </div>
 
       <Dialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if (!isOpen) setZoom(1); }}>
         <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-none overflow-hidden">
@@ -64,7 +61,6 @@ export const ImageLightbox = forwardRef<HTMLDivElement, ImageLightboxProps>(
             <DialogTitle>Visualização de imagem</DialogTitle>
           </VisuallyHidden>
           
-          {/* Controls bar */}
           <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-3 bg-gradient-to-b from-black/60 to-transparent" role="toolbar" aria-label="Controles da imagem">
             <div className="flex items-center gap-2" role="group" aria-label="Controles de zoom">
               <Button
@@ -113,7 +109,6 @@ export const ImageLightbox = forwardRef<HTMLDivElement, ImageLightboxProps>(
             </div>
           </div>
 
-          {/* Image container */}
           <div 
             className="flex items-center justify-center w-full h-[90vh] overflow-auto"
             onClick={() => setOpen(false)}
@@ -131,10 +126,7 @@ export const ImageLightbox = forwardRef<HTMLDivElement, ImageLightboxProps>(
             />
           </div>
         </DialogContent>
-        </Dialog>
-      </>
-    );
-  }
-);
-
-ImageLightbox.displayName = 'ImageLightbox';
+      </Dialog>
+    </>
+  );
+}

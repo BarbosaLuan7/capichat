@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 
@@ -13,12 +13,39 @@ const urlCache = new Map<string, SignedUrlCache>();
 // Tempo de expiração da signed URL (50 minutos, para ter margem antes dos 60 min do Supabase)
 const SIGNED_URL_EXPIRY = 50 * 60; // em segundos
 
+// Limite de requisições paralelas
+const MAX_PARALLEL_REQUESTS = 5;
+
+/**
+ * Parseia uma URL de mídia para extrair bucket e path
+ */
+function parseMediaUrl(mediaUrl: string): { bucket: string; path: string } | null {
+  if (mediaUrl.startsWith('storage://')) {
+    const withoutPrefix = mediaUrl.replace('storage://', '');
+    const slashIndex = withoutPrefix.indexOf('/');
+    return {
+      bucket: withoutPrefix.substring(0, slashIndex),
+      path: withoutPrefix.substring(slashIndex + 1),
+    };
+  }
+
+  const match = mediaUrl.match(/\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/(.+)/);
+  if (match) {
+    return { bucket: match[1], path: match[2] };
+  }
+
+  return null;
+}
+
+/**
+ * Verifica se uma URL precisa de signed URL
+ */
+function needsSignedUrl(url: string): boolean {
+  return url.startsWith('storage://') || url.includes('supabase.co/storage');
+}
+
 /**
  * Hook para gerar signed URLs para arquivos em buckets privados do Supabase Storage.
- * Suporta URLs no formato:
- * - storage://bucket-name/path/to/file
- * - URLs diretas de storage do Supabase
- * - URLs públicas (retorna a própria URL)
  */
 export function useSignedUrl(mediaUrl: string | null | undefined) {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
@@ -31,70 +58,48 @@ export function useSignedUrl(mediaUrl: string | null | undefined) {
       return;
     }
 
-    // Se for uma URL pública normal (não do storage), usar diretamente
-    if (!mediaUrl.startsWith('storage://') && !mediaUrl.includes('supabase.co/storage')) {
+    if (!needsSignedUrl(mediaUrl)) {
       setSignedUrl(mediaUrl);
       return;
     }
 
-    const generateSignedUrl = async () => {
-      // Checar cache primeiro
-      const cached = urlCache.get(mediaUrl);
-      if (cached && cached.expiresAt > Date.now()) {
-        setSignedUrl(cached.url);
-        return;
-      }
+    const cached = urlCache.get(mediaUrl);
+    if (cached && cached.expiresAt > Date.now()) {
+      setSignedUrl(cached.url);
+      return;
+    }
 
+    const generateSignedUrl = async () => {
       setIsLoading(true);
       setError(null);
 
       try {
-        let bucket: string;
-        let path: string;
-
-        if (mediaUrl.startsWith('storage://')) {
-          // Formato: storage://bucket-name/path/to/file
-          const withoutPrefix = mediaUrl.replace('storage://', '');
-          const slashIndex = withoutPrefix.indexOf('/');
-          bucket = withoutPrefix.substring(0, slashIndex);
-          path = withoutPrefix.substring(slashIndex + 1);
-        } else {
-          // URL direta do Supabase Storage
-          // Exemplo: https://xxx.supabase.co/storage/v1/object/public/bucket-name/path
-          const match = mediaUrl.match(/\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/(.+)/);
-          if (!match) {
-            // Se não conseguir parsear, usar a URL diretamente
-            setSignedUrl(mediaUrl);
-            setIsLoading(false);
-            return;
-          }
-          bucket = match[1];
-          path = match[2];
+        const parsed = parseMediaUrl(mediaUrl);
+        if (!parsed) {
+          setSignedUrl(mediaUrl);
+          setIsLoading(false);
+          return;
         }
 
-        // Gerar signed URL
         const { data, error: signError } = await supabase.storage
-          .from(bucket)
-          .createSignedUrl(path, SIGNED_URL_EXPIRY);
+          .from(parsed.bucket)
+          .createSignedUrl(parsed.path, SIGNED_URL_EXPIRY);
 
         if (signError) {
           logger.error('[useSignedUrl] Erro ao gerar signed URL:', signError);
-          // Fallback: tentar usar URL pública
-          const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path);
+          const { data: { publicUrl } } = supabase.storage.from(parsed.bucket).getPublicUrl(parsed.path);
           setSignedUrl(publicUrl);
           setError(signError.message);
         } else if (data?.signedUrl) {
-          // Cachear a URL
           urlCache.set(mediaUrl, {
             url: data.signedUrl,
-            expiresAt: Date.now() + (SIGNED_URL_EXPIRY * 1000) - 60000, // 1 min antes de expirar
+            expiresAt: Date.now() + (SIGNED_URL_EXPIRY * 1000) - 60000,
           });
           setSignedUrl(data.signedUrl);
         }
       } catch (err) {
         logger.error('[useSignedUrl] Erro:', err);
         setError(err instanceof Error ? err.message : 'Erro desconhecido');
-        // Fallback: usar a URL original
         setSignedUrl(mediaUrl);
       } finally {
         setIsLoading(false);
@@ -108,53 +113,150 @@ export function useSignedUrl(mediaUrl: string | null | undefined) {
 }
 
 /**
- * Função utilitária para gerar signed URL de forma imperativa (não hook).
- * Útil para casos onde não se pode usar hooks.
+ * Hook para gerar signed URLs em batch para múltiplas mídias.
+ * Muito mais eficiente que chamar useSignedUrl para cada mensagem.
+ */
+export function useSignedUrlBatch(mediaUrls: (string | null | undefined)[]) {
+  const [urlMap, setUrlMap] = useState<Map<string, string>>(new Map());
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Filtrar URLs únicas que precisam de signed URL
+  const urlsToResolve = useMemo(() => {
+    const unique = new Set<string>();
+    mediaUrls.forEach(url => {
+      if (url && needsSignedUrl(url)) {
+        const cached = urlCache.get(url);
+        if (!cached || cached.expiresAt <= Date.now()) {
+          unique.add(url);
+        }
+      }
+    });
+    return Array.from(unique);
+  }, [mediaUrls]);
+
+  useEffect(() => {
+    if (urlsToResolve.length === 0) {
+      // Usar cache existente para todas as URLs
+      const cached = new Map<string, string>();
+      mediaUrls.forEach(url => {
+        if (url) {
+          if (!needsSignedUrl(url)) {
+            cached.set(url, url);
+          } else {
+            const c = urlCache.get(url);
+            if (c && c.expiresAt > Date.now()) {
+              cached.set(url, c.url);
+            }
+          }
+        }
+      });
+      setUrlMap(cached);
+      return;
+    }
+
+    const resolveBatch = async () => {
+      setIsLoading(true);
+
+      // Processar em chunks para não sobrecarregar
+      const chunks: string[][] = [];
+      for (let i = 0; i < urlsToResolve.length; i += MAX_PARALLEL_REQUESTS) {
+        chunks.push(urlsToResolve.slice(i, i + MAX_PARALLEL_REQUESTS));
+      }
+
+      const newMap = new Map<string, string>();
+      
+      // Adicionar URLs que não precisam de signed URL e cache existente
+      mediaUrls.forEach(url => {
+        if (url) {
+          if (!needsSignedUrl(url)) {
+            newMap.set(url, url);
+          } else {
+            const c = urlCache.get(url);
+            if (c && c.expiresAt > Date.now()) {
+              newMap.set(url, c.url);
+            }
+          }
+        }
+      });
+
+      for (const chunk of chunks) {
+        const results = await Promise.all(
+          chunk.map(async (url) => {
+            try {
+              const parsed = parseMediaUrl(url);
+              if (!parsed) return { original: url, signed: url };
+
+              const { data, error } = await supabase.storage
+                .from(parsed.bucket)
+                .createSignedUrl(parsed.path, SIGNED_URL_EXPIRY);
+
+              if (error || !data?.signedUrl) {
+                const { data: { publicUrl } } = supabase.storage.from(parsed.bucket).getPublicUrl(parsed.path);
+                return { original: url, signed: publicUrl };
+              }
+
+              // Cachear
+              urlCache.set(url, {
+                url: data.signedUrl,
+                expiresAt: Date.now() + (SIGNED_URL_EXPIRY * 1000) - 60000,
+              });
+
+              return { original: url, signed: data.signedUrl };
+            } catch (err) {
+              logger.error('[useSignedUrlBatch] Erro:', err);
+              return { original: url, signed: url };
+            }
+          })
+        );
+
+        results.forEach(({ original, signed }) => {
+          newMap.set(original, signed);
+        });
+      }
+
+      setUrlMap(newMap);
+      setIsLoading(false);
+    };
+
+    resolveBatch();
+  }, [urlsToResolve.join(','), mediaUrls.length]);
+
+  const getSignedUrl = useCallback((originalUrl: string | null | undefined): string | null => {
+    if (!originalUrl) return null;
+    return urlMap.get(originalUrl) || originalUrl;
+  }, [urlMap]);
+
+  return { getSignedUrl, isLoading, urlMap };
+}
+
+/**
+ * Função utilitária para gerar signed URL de forma imperativa.
  */
 export async function getSignedUrl(mediaUrl: string): Promise<string> {
   if (!mediaUrl) return '';
   
-  // Se for URL pública normal, retornar diretamente
-  if (!mediaUrl.startsWith('storage://') && !mediaUrl.includes('supabase.co/storage')) {
+  if (!needsSignedUrl(mediaUrl)) {
     return mediaUrl;
   }
 
-  // Checar cache primeiro
   const cached = urlCache.get(mediaUrl);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.url;
   }
 
   try {
-    let bucket: string;
-    let path: string;
-
-    if (mediaUrl.startsWith('storage://')) {
-      const withoutPrefix = mediaUrl.replace('storage://', '');
-      const slashIndex = withoutPrefix.indexOf('/');
-      bucket = withoutPrefix.substring(0, slashIndex);
-      path = withoutPrefix.substring(slashIndex + 1);
-    } else {
-      const match = mediaUrl.match(/\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/(.+)/);
-      if (!match) {
-        return mediaUrl;
-      }
-      bucket = match[1];
-      path = match[2];
-    }
+    const parsed = parseMediaUrl(mediaUrl);
+    if (!parsed) return mediaUrl;
 
     const { data, error } = await supabase.storage
-      .from(bucket)
-      .createSignedUrl(path, SIGNED_URL_EXPIRY);
+      .from(parsed.bucket)
+      .createSignedUrl(parsed.path, SIGNED_URL_EXPIRY);
 
     if (error || !data?.signedUrl) {
-      logger.error('[getSignedUrl] Erro:', error);
-      // Fallback para URL pública
-      const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path);
+      const { data: { publicUrl } } = supabase.storage.from(parsed.bucket).getPublicUrl(parsed.path);
       return publicUrl;
     }
 
-    // Cachear
     urlCache.set(mediaUrl, {
       url: data.signedUrl,
       expiresAt: Date.now() + (SIGNED_URL_EXPIRY * 1000) - 60000,
@@ -168,7 +270,7 @@ export async function getSignedUrl(mediaUrl: string): Promise<string> {
 }
 
 /**
- * Limpa o cache de URLs (útil para logout ou refresh)
+ * Limpa o cache de URLs
  */
 export function clearSignedUrlCache() {
   urlCache.clear();

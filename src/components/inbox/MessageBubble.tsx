@@ -64,6 +64,8 @@ interface MessageBubbleProps {
   agentName?: string;
   onReply?: (message: Message) => void;
   onRetry?: (message: Message) => void;
+  /** URL já resolvida via batch - evita chamada individual ao useSignedUrl */
+  resolvedMediaUrl?: string | null;
 }
 
 // Helper function for status icon configuration
@@ -118,6 +120,7 @@ function MessageBubbleComponent({
   agentName = 'Agente',
   onReply,
   onRetry,
+  resolvedMediaUrl: propResolvedUrl,
 }: MessageBubbleProps) {
   const { transcribeAudio, getTranscription, isLoading } = useAudioTranscription();
   const [transcription, setTranscription] = useState<string | null>(null);
@@ -128,8 +131,11 @@ function MessageBubbleComponent({
   const [isExpanded, setIsExpanded] = useState(false);
   const [showActions, setShowActions] = useState(false);
   
-  // Usar signed URL para mídias em buckets privados
-  const { signedUrl: resolvedMediaUrl, isLoading: isLoadingUrl } = useSignedUrl(message.media_url);
+  // Usar URL resolvida da prop se disponível, senão fallback para hook individual
+  const { signedUrl: hookSignedUrl, isLoading: isLoadingUrl } = useSignedUrl(
+    propResolvedUrl ? null : message.media_url
+  );
+  const resolvedMediaUrl = propResolvedUrl || hookSignedUrl;
   
   // Reset error states when media_url changes
   useEffect(() => {
@@ -161,8 +167,8 @@ function MessageBubbleComponent({
   const renderMedia = () => {
     if (!message.media_url) return null;
     
-    // Mostrar loading enquanto resolve a URL
-    if (isLoadingUrl) {
+    // Mostrar loading apenas se não temos URL resolvida e está carregando
+    if (!resolvedMediaUrl && isLoadingUrl) {
       return (
         <div className="mb-2 flex items-center gap-2 text-muted-foreground">
           <Loader2 className="w-4 h-4 animate-spin" />
@@ -171,6 +177,7 @@ function MessageBubbleComponent({
       );
     }
     
+    // Se ainda não tem URL, aguardar
     if (!resolvedMediaUrl) return null;
 
     // Helper to extract filename from content or URL
