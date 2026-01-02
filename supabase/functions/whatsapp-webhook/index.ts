@@ -446,15 +446,49 @@ function normalizePhoneForStorage(phone: string): { localNumber: string; country
   };
 }
 
-// Formata telefone para exibição em fallback do nome
+// Formata telefone para exibição em fallback do nome (suporta internacionais)
 function formatPhoneForDisplay(phone: string): string {
-  if (phone.length === 11) {
-    return `(${phone.slice(0, 2)}) ${phone.slice(2, 7)}-${phone.slice(7)}`;
+  const digits = phone.replace(/\D/g, '');
+  const parsed = parseInternationalPhone(digits);
+  
+  // Formatação brasileira (55)
+  if (parsed.countryCode === '55') {
+    const local = parsed.localNumber;
+    if (local.length === 11) {
+      return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
+    }
+    if (local.length === 10) {
+      return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
+    }
   }
-  if (phone.length === 10) {
-    return `(${phone.slice(0, 2)}) ${phone.slice(2, 6)}-${phone.slice(6)}`;
+  
+  // Formatação internacional: +{código} {número}
+  return `+${parsed.countryCode} ${parsed.localNumber}`;
+}
+
+// Monta número com código do país correto para chamadas de API
+function getPhoneWithCountryCode(phone: string, existingCountryCode?: string | null): string {
+  const digits = phone.replace(/\D/g, '');
+  const parsed = parseInternationalPhone(digits);
+  
+  // Se detectou um código de país diferente de 55 (Brasil), usar o número completo
+  if (parsed.countryCode !== '55') {
+    console.log('[whatsapp-webhook] 📞 Número internacional detectado:', {
+      countryCode: parsed.countryCode,
+      country: parsed.country,
+      fullNumber: parsed.fullNumber,
+    });
+    return parsed.fullNumber;
   }
-  return phone;
+  
+  // Se temos country_code do lead existente e NÃO é 55, usar ele
+  if (existingCountryCode && existingCountryCode !== '55') {
+    console.log('[whatsapp-webhook] 📞 Usando country_code do lead:', existingCountryCode);
+    return existingCountryCode + parsed.localNumber;
+  }
+  
+  // Fallback: usar número completo parseado (Brasil)
+  return parsed.fullNumber;
 }
 
 // ========== BUSCA FLEXÍVEL DE LEAD POR TELEFONE ==========
@@ -1779,13 +1813,8 @@ serve(async (req) => {
         console.log('[whatsapp-webhook] 📷 Lead existente sem avatar, tentando buscar...');
         const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
         if (wahaConfig) {
-          // Usar número com código do país para a API
-          let phoneWithCountry = senderPhone;
-          // Se não tem código do país, adicionar baseado no country_code do lead ou default 55
-          if (!senderPhone.match(/^(55|1|595|54|56|57|58|51|52|53)/)) {
-            const countryCode = existingLead.country_code || '55';
-            phoneWithCountry = countryCode + senderPhone;
-          }
+          // Usar função correta para montar número com código do país
+          const phoneWithCountry = getPhoneWithCountryCode(senderPhone, existingLead.country_code);
           console.log('[whatsapp-webhook] 📷 Buscando avatar para:', phoneWithCountry);
           
           const avatarUrl = await getProfilePicture(
@@ -1806,7 +1835,7 @@ serve(async (req) => {
         console.log('[whatsapp-webhook] 📇 Lead com nome genérico, tentando buscar nome real...');
         const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
         if (wahaConfig) {
-          const phoneWithCountry = senderPhone.startsWith('55') ? senderPhone : `55${senderPhone}`;
+          const phoneWithCountry = getPhoneWithCountryCode(senderPhone, existingLead.country_code);
           const contactInfo = await getContactInfo(
             wahaConfig.baseUrl,
             wahaConfig.apiKey,
@@ -1853,8 +1882,9 @@ serve(async (req) => {
       // Buscar foto de perfil para novo lead
       let avatarUrl: string | null = null;
       if (!isFromFacebookLid && wahaConfigForLead) {
-        // Usar número com código do país (55) para a API
-        const phoneWithCountry = senderPhone.startsWith('55') ? senderPhone : `55${senderPhone}`;
+        // Usar função correta para montar número com código do país (detecta automaticamente)
+        const phoneWithCountry = getPhoneWithCountryCode(senderPhone);
+        console.log('[whatsapp-webhook] 📷 Buscando avatar para novo lead:', phoneWithCountry);
         avatarUrl = await getProfilePicture(
           wahaConfigForLead.baseUrl,
           wahaConfigForLead.apiKey,
@@ -2017,16 +2047,27 @@ serve(async (req) => {
     // Se tiver mídia, fazer upload para o storage permanente
     let finalMediaUrl = mediaUrl;
     if (mediaUrl && type !== 'text') {
-      console.log('[whatsapp-webhook] Processando mídia para storage...', 'type:', type, 'mediaUrl:', mediaUrl);
+      console.log('[whatsapp-webhook] 📁 Processando mídia para storage:', {
+        type,
+        mediaUrl: mediaUrl?.substring(0, 100),
+        mediaUrlLength: mediaUrl?.length,
+        isLocalhost: mediaUrl?.includes('localhost'),
+        hasProtocol: mediaUrl?.startsWith('http'),
+      });
       
       // Buscar config do WAHA para corrigir URL localhost e autenticar download
       const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
+      console.log('[whatsapp-webhook] 📁 WAHA config para mídia:', {
+        hasConfig: !!wahaConfig,
+        baseUrl: wahaConfig?.baseUrl?.substring(0, 50),
+      });
+      
       const storageUrl = await uploadMediaToStorage(supabase, mediaUrl, type, lead.id, wahaConfig);
       if (storageUrl) {
         finalMediaUrl = storageUrl;
-        console.log('[whatsapp-webhook] Mídia salva no storage:', storageUrl);
+        console.log('[whatsapp-webhook] 📁 Mídia salva no storage:', storageUrl);
       } else {
-        console.log('[whatsapp-webhook] Falha no upload, usando URL original como fallback');
+        console.log('[whatsapp-webhook] ⚠️ Falha no upload, usando URL original como fallback');
       }
     }
 
