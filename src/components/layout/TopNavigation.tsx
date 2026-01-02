@@ -25,7 +25,7 @@ import {
   Menu,
   X,
 } from 'lucide-react';
-import lbAdvLogo from '@/assets/lb-adv-logo.png';
+import lbAdvLogo from '@/assets/lb-adv-logo.svg';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useSidebarBadges } from '@/hooks/useSidebarBadges';
