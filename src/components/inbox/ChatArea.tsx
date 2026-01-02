@@ -501,9 +501,10 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
       <div className="flex-1 relative overflow-hidden">
         <ScrollArea 
           className="h-full p-4 bg-muted/30"
+          style={{ willChange: 'scroll-position' }}
           onScrollCapture={handleMessagesScroll}
         >
-          <div className="space-y-2 max-w-3xl mx-auto">
+          <div className="space-y-2 max-w-3xl mx-auto" style={{ willChange: 'contents' }}>
             {/* Loading more indicator at top */}
             {isLoadingMoreMessages && (
               <div className="flex justify-center py-4">

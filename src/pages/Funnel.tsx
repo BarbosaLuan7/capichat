@@ -252,6 +252,7 @@ const SortableLeadCard = ({ lead, labels, leadLabels, onEdit, onDelete, onOpenCo
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    willChange: 'transform',
   };
 
   return (
@@ -316,9 +317,9 @@ const FunnelColumn = ({ stage, leads, labels, leadLabels, onEditLead, onDeleteLe
           isOver && "bg-primary/10 ring-2 ring-primary/30 ring-offset-2"
         )}
       >
-        <ScrollArea className="h-[calc(100vh-16rem)]">
+        <ScrollArea className="h-[calc(100vh-16rem)]" style={{ willChange: 'scroll-position' }}>
           <SortableContext items={leads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
-            <div className="space-y-3 pr-2">
+            <div className="space-y-3 pr-2" style={{ willChange: 'contents' }}>
               {leads.map((lead) => (
                 <SortableLeadCard 
                   key={lead.id} 
