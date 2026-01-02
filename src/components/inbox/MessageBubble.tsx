@@ -147,8 +147,11 @@ function MessageBubbleComponent({
     }
   };
 
+  // Verificar se a mensagem pode ser selecionada (não permitir mensagens otimistas)
+  const canSelect = !message.isOptimistic && !message.id.startsWith('temp_');
+  
   const handleToggleSelect = () => {
-    if (onToggleSelect) {
+    if (onToggleSelect && canSelect) {
       onToggleSelect(message.id);
     }
   };
