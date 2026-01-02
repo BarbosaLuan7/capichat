@@ -158,16 +158,22 @@ function MessageBubbleComponent({
   };
   
   // Usar URL resolvida da prop se disponível, senão fallback para hook individual
+  // Importante: só desativar o hook se propResolvedUrl é uma URL válida (não storage://)
+  const shouldUseHook = !propResolvedUrl || propResolvedUrl.startsWith('storage://');
   const { signedUrl: hookSignedUrl, isLoading: isLoadingUrl } = useSignedUrl(
-    propResolvedUrl ? null : message.media_url
+    shouldUseHook ? message.media_url : null
   );
-  const resolvedMediaUrl = propResolvedUrl || hookSignedUrl;
   
-  // Reset error states when media_url changes
+  // URL final resolvida - priorizar prop se for URL válida
+  const resolvedMediaUrl = (propResolvedUrl && !propResolvedUrl.startsWith('storage://')) 
+    ? propResolvedUrl 
+    : hookSignedUrl;
+  
+  // Reset error states when media_url OR resolvedMediaUrl changes
   useEffect(() => {
     setImageError(false);
     setVideoError(false);
-  }, [message.media_url]);
+  }, [message.media_url, resolvedMediaUrl]);
 
   const handleCopyTranscription = () => {
     if (transcription) {

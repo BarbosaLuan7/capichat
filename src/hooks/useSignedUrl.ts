@@ -223,7 +223,20 @@ export function useSignedUrlBatch(mediaUrls: (string | null | undefined)[]) {
 
   const getSignedUrl = useCallback((originalUrl: string | null | undefined): string | null => {
     if (!originalUrl) return null;
-    return urlMap.get(originalUrl) || originalUrl;
+    
+    // Se não precisa de signed URL, retorna a original
+    if (!needsSignedUrl(originalUrl)) {
+      return originalUrl;
+    }
+    
+    // Se precisa de signed URL, só retorna se já tiver resolvida
+    // Retorna null enquanto não resolve para evitar carregar storage:// no <img>
+    const resolved = urlMap.get(originalUrl);
+    if (resolved && !resolved.startsWith('storage://')) {
+      return resolved;
+    }
+    
+    return null;
   }, [urlMap]);
 
   return { getSignedUrl, isLoading, urlMap };
