@@ -190,7 +190,7 @@ export function TemplateModal({ open, onOpenChange, template }: TemplateModalPro
             </div>
             <Textarea
               id="content"
-              placeholder="Olá {{nome}}! Seja bem-vindo(a) à GaranteDireito..."
+              placeholder="Olá {{nome}}! Seja bem-vindo(a) ao LB ADV..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={6}

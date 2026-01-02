@@ -109,7 +109,7 @@ const TopNavigation = () => {
         className={cn(
           'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
           active
-            ? 'bg-white text-violet-700 shadow-sm'
+            ? 'bg-white text-primary shadow-sm'
             : 'text-white/80 hover:text-white hover:bg-white/10',
           className
         )}
@@ -141,8 +141,8 @@ const TopNavigation = () => {
         className={cn(
           'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
           active
-            ? 'bg-violet-100 text-violet-700 font-medium'
-            : 'text-slate-700 hover:bg-purple-50'
+            ? 'bg-primary/10 text-primary font-medium'
+            : 'text-slate-700 hover:bg-primary/5'
         )}
         onClick={() => setMobileMenuOpen(false)}
       >
@@ -166,15 +166,15 @@ const TopNavigation = () => {
           const active = isActive(item.path);
           const badge = item.badgeKey ? badges[item.badgeKey] : undefined;
           
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={cn(
-                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full',
-                active
-                  ? 'bg-violet-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-purple-100/60'
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full',
+                  active
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-primary/10'
               )}
               onClick={() => setMobileMenuOpen(false)}
             >
@@ -205,8 +205,8 @@ const TopNavigation = () => {
                 className={cn(
                   'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full',
                   active
-                    ? 'bg-violet-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-purple-100/60'
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-primary/10'
                 )}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -237,8 +237,8 @@ const TopNavigation = () => {
                 className={cn(
                   'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full',
                   active
-                    ? 'bg-violet-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-purple-100/60'
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-primary/10'
                 )}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -264,8 +264,8 @@ const TopNavigation = () => {
                 className={cn(
                   'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full',
                   active
-                    ? 'bg-violet-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-purple-100/60'
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-primary/10'
                 )}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -280,14 +280,14 @@ const TopNavigation = () => {
   );
 
   return (
-    <header className="h-14 bg-gradient-to-r from-violet-700 via-purple-700 to-violet-800 border-b border-violet-900/50 flex items-center px-4 sticky top-0 z-50" role="banner">
+    <header className="h-14 bg-[#0b305b] border-b border-[#0a2847] flex items-center px-4 sticky top-0 z-50" role="banner">
       {/* Logo */}
       <Link to="/dashboard" className="flex items-center gap-2.5 mr-4 shrink-0">
         <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
           <Scale className="w-4 h-4 text-white" />
         </div>
         <span className="text-base font-bold text-white hidden sm:block">
-          GaranteDireito
+          LB ADV
         </span>
       </Link>
 
@@ -311,7 +311,7 @@ const TopNavigation = () => {
                   className={cn(
                     'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
                     active
-                      ? 'bg-white text-violet-700 shadow-sm'
+                      ? 'bg-white text-primary shadow-sm'
                       : 'text-white/80 hover:text-white hover:bg-white/10'
                   )}
                 >

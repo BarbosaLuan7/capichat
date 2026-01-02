@@ -28,7 +28,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 234 89% 59%;
+    --primary: 212 84% 20%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 220 14% 96%;
@@ -37,7 +37,7 @@
     --muted: 220 14% 96%;
     --muted-foreground: 220 9% 46%;
 
-    --accent: 174 72% 43%;
+    --accent: 205 68% 51%;
     --accent-foreground: 0 0% 100%;
 
     --success: 142 71% 45%;
@@ -51,30 +51,30 @@
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 234 89% 59%;
+    --ring: 212 84% 20%;
 
     --radius: 0.75rem;
 
     /* Custom tokens */
-    --gradient-primary: linear-gradient(135deg, hsl(234 89% 59%) 0%, hsl(258 90% 66%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(174 72% 43%) 0%, hsl(190 74% 49%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(234 89% 59%) 0%, hsl(258 90% 66%) 50%, hsl(174 72% 43%) 100%);
-    --gradient-sidebar: linear-gradient(180deg, hsl(234 40% 16%) 0%, hsl(234 45% 12%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(212 84% 20%) 0%, hsl(212 75% 28%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(205 68% 51%) 0%, hsl(200 74% 55%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(212 84% 20%) 0%, hsl(212 70% 28%) 50%, hsl(205 68% 51%) 100%);
+    --gradient-sidebar: linear-gradient(180deg, hsl(212 70% 12%) 0%, hsl(212 84% 10%) 100%);
     
     --shadow-sm: 0 1px 2px 0 hsl(220 13% 91% / 0.5);
     --shadow-md: 0 4px 6px -1px hsl(220 13% 91% / 0.5), 0 2px 4px -2px hsl(220 13% 91% / 0.5);
     --shadow-lg: 0 10px 15px -3px hsl(220 13% 91% / 0.5), 0 4px 6px -4px hsl(220 13% 91% / 0.5);
-    --shadow-glow: 0 0 20px hsl(234 89% 59% / 0.3);
+    --shadow-glow: 0 0 20px hsl(212 84% 20% / 0.3);
 
     /* Sidebar */
-    --sidebar-background: 234 40% 16%;
+    --sidebar-background: 212 70% 12%;
     --sidebar-foreground: 220 14% 96%;
-    --sidebar-primary: 234 89% 59%;
+    --sidebar-primary: 212 84% 20%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 234 30% 22%;
+    --sidebar-accent: 212 60% 18%;
     --sidebar-accent-foreground: 220 14% 96%;
-    --sidebar-border: 234 30% 22%;
-    --sidebar-ring: 234 89% 59%;
+    --sidebar-border: 212 50% 18%;
+    --sidebar-ring: 212 84% 20%;
 
     /* Lead temperatures */
     --temp-cold: 199 89% 48%;
@@ -82,9 +82,9 @@
     --temp-hot: 0 84% 60%;
 
     /* Funnel stages */
-    --stage-new: 234 89% 59%;
-    --stage-contact: 258 90% 66%;
-    --stage-qualify: 174 72% 43%;
+    --stage-new: 212 84% 20%;
+    --stage-contact: 212 70% 35%;
+    --stage-qualify: 205 68% 51%;
     --stage-proposal: 38 92% 50%;
     --stage-negotiation: 280 84% 60%;
     --stage-won: 142 71% 45%;
@@ -92,7 +92,7 @@
 
     /* Activity colors */
     --activity-create: 142 71% 45%;
-    --activity-update: 234 89% 59%;
+    --activity-update: 212 84% 20%;
     --activity-assign: 280 84% 60%;
     --activity-label: 330 81% 60%;
     --activity-stage: 199 89% 48%;
@@ -101,25 +101,25 @@
   }
 
   .dark {
-    --background: 234 45% 8%;
+    --background: 212 45% 8%;
     --foreground: 220 14% 96%;
 
-    --card: 234 40% 12%;
+    --card: 212 40% 12%;
     --card-foreground: 220 14% 96%;
 
-    --popover: 234 40% 12%;
+    --popover: 212 40% 12%;
     --popover-foreground: 220 14% 96%;
 
-    --primary: 234 89% 65%;
+    --primary: 212 84% 35%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 234 30% 18%;
+    --secondary: 212 30% 18%;
     --secondary-foreground: 220 14% 96%;
 
-    --muted: 234 30% 18%;
+    --muted: 212 30% 18%;
     --muted-foreground: 220 9% 60%;
 
-    --accent: 174 72% 50%;
+    --accent: 205 68% 55%;
     --accent-foreground: 0 0% 100%;
 
     --success: 142 71% 50%;
@@ -131,18 +131,18 @@
     --destructive: 0 84% 65%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 234 30% 22%;
-    --input: 234 30% 22%;
-    --ring: 234 89% 65%;
+    --border: 212 30% 22%;
+    --input: 212 30% 22%;
+    --ring: 212 84% 35%;
 
     --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
     --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.3), 0 2px 4px -2px hsl(0 0% 0% / 0.3);
     --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.3), 0 4px 6px -4px hsl(0 0% 0% / 0.3);
 
-    --sidebar-background: 234 45% 6%;
+    --sidebar-background: 212 45% 6%;
     --sidebar-foreground: 220 14% 96%;
-    --sidebar-accent: 234 30% 15%;
-    --sidebar-border: 234 30% 15%;
+    --sidebar-accent: 212 30% 15%;
+    --sidebar-border: 212 30% 15%;
 
     /* Lead temperatures - dark mode */
     --temp-cold: 199 89% 55%;
@@ -150,9 +150,9 @@
     --temp-hot: 0 84% 70%;
 
     /* Funnel stages - dark mode */
-    --stage-new: 234 89% 70%;
-    --stage-contact: 258 90% 75%;
-    --stage-qualify: 174 72% 55%;
+    --stage-new: 212 84% 40%;
+    --stage-contact: 212 70% 50%;
+    --stage-qualify: 205 68% 55%;
     --stage-proposal: 38 92% 60%;
     --stage-negotiation: 280 84% 70%;
     --stage-won: 142 71% 55%;
@@ -160,7 +160,7 @@
 
     /* Activity colors - dark mode */
     --activity-create: 142 71% 55%;
-    --activity-update: 234 89% 70%;
+    --activity-update: 212 84% 45%;
     --activity-assign: 280 84% 70%;
     --activity-label: 330 81% 70%;
     --activity-stage: 199 89% 60%;
