@@ -1439,6 +1439,23 @@ serve(async (req) => {
           if (realPhone) {
             senderPhone = normalizePhone(realPhone);
           } else {
+            // ========== CORREÇÃO: Ignorar mensagens OUTBOUND para LIDs não resolvidos ==========
+            // Se é mensagem outbound (fromMe) e não conseguimos resolver o LID, ignorar
+            // Isso evita criar leads incorretos (usando nosso próprio número ou LID bruto)
+            if (isFromMe) {
+              console.log('[whatsapp-webhook] ⏭️ Ignorando mensagem outbound para LID não resolvido:', rawContact);
+              return new Response(
+                JSON.stringify({ 
+                  success: true, 
+                  ignored: true, 
+                  reason: 'outbound_to_unresolved_lid',
+                  lid: rawContact 
+                }),
+                { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+            
+            // Para mensagens inbound de LID não resolvido, continuar normalmente
             console.warn('[whatsapp-webhook] Não foi possível extrair número real do LID, usando como identificador temporário');
             senderPhone = originalLid || normalizePhone(rawContact);
           }
@@ -1595,17 +1612,20 @@ serve(async (req) => {
       
       console.log('[whatsapp-webhook] 🔑 waha_message_id calculado:', wahaMessageId, '| original external_id:', externalMessageId);
       
-      // Verificar duplicata pelo waha_message_id (tem índice UNIQUE no banco)
+      // ========== CORREÇÃO: Verificar duplicata usando AMBOS os formatos (curto e completo) ==========
+      // O CRM salva no formato completo (true_554591570202@c.us_3EB...) mas o webhook extrai só o ID curto (3EB...)
+      // Precisamos verificar ambos para evitar duplicação
       const { data: existingByWahaId } = await supabase
         .from('messages')
-        .select('id')
-        .eq('waha_message_id', wahaMessageId)
+        .select('id, waha_message_id')
+        .or(`waha_message_id.eq.${wahaMessageId},waha_message_id.eq.${externalMessageId}`)
+        .limit(1)
         .maybeSingle();
       
       if (existingByWahaId) {
-        console.log('[whatsapp-webhook] ⏭️ Mensagem já processada (waha_message_id):', wahaMessageId);
+        console.log('[whatsapp-webhook] ⏭️ Mensagem já processada (waha_message_id):', wahaMessageId, 'ou', externalMessageId, '| matched:', existingByWahaId.waha_message_id);
         return new Response(
-          JSON.stringify({ success: true, duplicate: true, existing_message_id: existingByWahaId.id, matched_by: 'waha_message_id' }),
+          JSON.stringify({ success: true, duplicate: true, existing_message_id: existingByWahaId.id, matched_by: 'waha_message_id', matched_value: existingByWahaId.waha_message_id }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
