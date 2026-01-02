@@ -519,6 +519,7 @@ function VirtualizedConversationList({
     <div
       ref={parentRef}
       className="h-full overflow-auto"
+      style={{ willChange: 'scroll-position' }}
       role="list"
       aria-label="Lista de conversas"
     >
@@ -541,6 +542,7 @@ function VirtualizedConversationList({
                 width: '100%',
                 height: `${virtualItem.size}px`,
                 transform: `translateY(${virtualItem.start}px)`,
+                willChange: 'transform',
               }}
               className="border-b border-border"
             >
