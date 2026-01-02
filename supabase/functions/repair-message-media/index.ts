@@ -7,21 +7,16 @@ const corsHeaders = {
 };
 
 /**
- * Edge function para recuperar mídia de mensagens antigas que foram salvas sem media_url
+ * Edge function para recuperar mídia de mensagens que falharam no webhook
  * 
  * Uso: POST /repair-message-media
  * Body: { messageId: string }
  * 
- * A função:
- * 1. Busca a mensagem no banco
- * 2. Se já tem media_url, retorna OK
- * 3. Se não tem, busca a mídia via WAHA API
- * 4. Faz upload para o storage
- * 5. Atualiza a mensagem com a nova URL
+ * Fluxo simplificado:
+ * 1. Busca mensagem → 2. Valida se precisa reparar → 3. Chama WAHA API → 4. Upload → 5. Atualiza
  */
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -34,12 +29,12 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
 
     const { messageId } = await req.json();
-
     if (!messageId) {
       return new Response(
         JSON.stringify({ error: 'messageId is required' }),
@@ -47,94 +42,44 @@ serve(async (req) => {
       );
     }
 
-    console.log('[repair-message-media] Reparando mensagem:', messageId);
+    console.log('[repair-media] Iniciando reparo:', messageId);
 
     // 1. Buscar mensagem com dados relacionados
     const { data: message, error: msgError } = await supabase
       .from('messages')
       .select(`
-        id,
-        conversation_id,
-        lead_id,
-        type,
-        media_url,
-        content,
-        external_id,
-        waha_message_id,
-        direction,
-        created_at,
-        conversations!inner (
-          id,
-          lead_id,
-          whatsapp_instance_id
-        )
+        id, conversation_id, lead_id, type, media_url, content,
+        external_id, waha_message_id,
+        conversations!inner (id, lead_id, whatsapp_instance_id)
       `)
       .eq('id', messageId)
       .single();
 
     if (msgError || !message) {
-      console.error('[repair-message-media] Mensagem não encontrada:', msgError);
-      return new Response(
-        JSON.stringify({ error: 'Message not found', details: msgError }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error('[repair-media] Mensagem não encontrada:', msgError);
+      return jsonResponse({ error: 'Message not found' }, 404);
     }
 
-    // 2. Se já tem media_url válida, não precisa reparar
-    if (message.media_url && message.media_url.startsWith('storage://')) {
-      console.log('[repair-message-media] Mensagem já tem media_url válida:', message.media_url);
-      return new Response(
-        JSON.stringify({ success: true, already_repaired: true, media_url: message.media_url }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // 2. Validar se precisa reparar
+    if (message.media_url && (message.media_url.startsWith('storage://') || message.media_url.startsWith('https://'))) {
+      console.log('[repair-media] Já tem media_url válida');
+      return jsonResponse({ success: true, already_repaired: true, media_url: message.media_url });
     }
 
-    // 3. Se é texto, não faz sentido reparar
     if (message.type === 'text') {
-      console.log('[repair-message-media] Mensagem é texto, não precisa de mídia');
-      return new Response(
-        JSON.stringify({ success: false, error: 'Message is text type, no media to repair' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return jsonResponse({ error: 'Message is text type' }, 400);
     }
 
-    // 4. Buscar config do WhatsApp
+    // 3. Buscar config WhatsApp
     const conversation = message.conversations as any;
-    let whatsappConfig = null;
-
-    if (conversation?.whatsapp_instance_id) {
-      const { data: config } = await supabase
-        .from('whatsapp_config')
-        .select('id, base_url, api_key, instance_name, tenant_id')
-        .eq('id', conversation.whatsapp_instance_id)
-        .eq('is_active', true)
-        .maybeSingle();
-      whatsappConfig = config;
-    }
-
-    // Fallback: buscar qualquer config WAHA ativa
+    const whatsappConfig = await getWhatsAppConfig(supabase, conversation?.whatsapp_instance_id);
+    
     if (!whatsappConfig) {
-      const { data: fallbackConfig } = await supabase
-        .from('whatsapp_config')
-        .select('id, base_url, api_key, instance_name, tenant_id')
-        .eq('is_active', true)
-        .eq('provider', 'waha')
-        .limit(1)
-        .maybeSingle();
-      whatsappConfig = fallbackConfig;
+      console.error('[repair-media] Config WhatsApp não encontrada');
+      return jsonResponse({ error: 'WhatsApp config not found' }, 400);
     }
 
-    if (!whatsappConfig) {
-      console.error('[repair-message-media] Config WhatsApp não encontrada');
-      return new Response(
-        JSON.stringify({ error: 'WhatsApp config not found' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('[repair-message-media] Usando config WAHA:', whatsappConfig.instance_name);
-
-    // 5. Buscar lead para obter o chatId
+    // 4. Buscar lead para chatId
     const { data: lead } = await supabase
       .from('leads')
       .select('id, phone, country_code, whatsapp_chat_id')
@@ -142,145 +87,58 @@ serve(async (req) => {
       .single();
 
     if (!lead) {
-      console.error('[repair-message-media] Lead não encontrado');
-      return new Response(
-        JSON.stringify({ error: 'Lead not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return jsonResponse({ error: 'Lead not found' }, 404);
     }
 
-    // 6. Montar chatId para a chamada WAHA
-    let chatId = lead.whatsapp_chat_id;
-    if (!chatId) {
-      // Tentar montar a partir do phone
-      const countryCode = lead.country_code || '55';
-      const phone = lead.phone.replace(/\D/g, '');
-      chatId = `${countryCode}${phone}@c.us`;
-    }
-    if (!chatId.includes('@')) {
-      chatId = `${chatId}@c.us`;
-    }
-
-    console.log('[repair-message-media] ChatId:', chatId);
-
-    // 7. Chamar WAHA API para obter a mídia
-    // IMPORTANTE: Usar external_id (completo, ex: true_554599889851@c.us_3EB0...)
-    // O waha_message_id (curto, ex: 3EB0...) pode não funcionar para buscar mensagem
+    const chatId = buildChatId(lead);
     const messageIdForApi = message.external_id || message.waha_message_id;
-    console.log('[repair-message-media] IDs disponíveis - external_id:', message.external_id, '| waha_message_id:', message.waha_message_id, '| usando:', messageIdForApi);
+    
     if (!messageIdForApi) {
-      console.error('[repair-message-media] Sem external_id/waha_message_id para buscar mídia');
-      return new Response(
-        JSON.stringify({ error: 'No external message ID available' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return jsonResponse({ error: 'No external message ID available' }, 400);
     }
 
-    const baseUrl = whatsappConfig.base_url.replace(/\/$/, '');
-    const url = `${baseUrl}/api/${whatsappConfig.instance_name}/chats/${chatId}/messages/${messageIdForApi}?downloadMedia=true`;
+    console.log('[repair-media] Chamando WAHA - chatId:', chatId, 'msgId:', messageIdForApi);
 
-    console.log('[repair-message-media] Chamando WAHA API:', url);
+    // 5. Chamar WAHA API
+    const baseUrl = whatsappConfig.base_url.replace(/\/$/, '');
+    const wahaUrl = `${baseUrl}/api/${whatsappConfig.instance_name}/chats/${chatId}/messages/${messageIdForApi}?downloadMedia=true`;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
-      const response = await fetch(url, {
+      const wahaResponse = await fetch(wahaUrl, {
         method: 'GET',
         headers: {
           'X-Api-Key': whatsappConfig.api_key,
           'Authorization': `Bearer ${whatsappConfig.api_key}`,
-          'Content-Type': 'application/json',
         },
         signal: controller.signal,
       });
-
       clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => '');
-        console.error('[repair-message-media] WAHA API erro:', response.status, errorText);
-        return new Response(
-          JSON.stringify({ error: 'WAHA API error', status: response.status, details: errorText }),
-          { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      if (!wahaResponse.ok) {
+        const errorText = await wahaResponse.text().catch(() => '');
+        console.error('[repair-media] WAHA erro:', wahaResponse.status, errorText);
+        return jsonResponse({ error: 'WAHA API error', status: wahaResponse.status }, 502);
       }
 
-      const mediaData = await response.json();
-      console.log('[repair-message-media] Resposta WAHA:', JSON.stringify(mediaData).substring(0, 500));
+      const mediaData = await wahaResponse.json();
+      console.log('[repair-media] Resposta WAHA recebida');
 
-      // 8. Extrair URL de mídia OU base64
-      const mediaUrl = mediaData?.media?.url || 
-                       mediaData?.mediaUrl || 
-                       mediaData?._data?.media?.url ||
-                       mediaData?._data?.deprecatedMms3Url;
-      
-      const base64Data = mediaData?.media?.data || mediaData?._data?.media?.data;
-      const base64Mimetype = mediaData?.media?.mimetype || mediaData?._data?.media?.mimetype || '';
-      
-      let storageUrl: string | null = null;
-      
-      if (mediaUrl) {
-        console.log('[repair-message-media] URL de mídia obtida:', mediaUrl.substring(0, 100));
-        
-        // 9a. Fazer upload via URL para o storage
-        storageUrl = await uploadMediaToStorage(supabase, mediaUrl, message.type, lead.id, {
-          baseUrl: baseUrl,
-          apiKey: whatsappConfig.api_key,
-          sessionName: whatsappConfig.instance_name,
-        });
-      } else if (base64Data && base64Data.length > 100) {
-        console.log('[repair-message-media] Base64 encontrado na resposta, fazendo upload direto...');
-        
-        // 9b. Fazer upload direto do base64
-        try {
-          const binaryString = atob(base64Data);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          
-          // Determinar extensão
-          const extMap: Record<string, string> = { image: 'jpg', audio: 'ogg', video: 'mp4', document: 'bin' };
-          const ext = extMap[message.type] || 'bin';
-          const fileName = `leads/${lead.id}/${Date.now()}.${ext}`;
-          
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('message-attachments')
-            .upload(fileName, bytes.buffer, {
-              contentType: base64Mimetype || 'application/octet-stream',
-              cacheControl: '31536000',
-              upsert: false,
-            });
-          
-          if (!uploadError && uploadData) {
-            storageUrl = `storage://message-attachments/${uploadData.path}`;
-            console.log('[repair-message-media] ✅ Base64 convertido e salvo:', storageUrl);
-          } else {
-            console.error('[repair-message-media] Erro upload base64:', uploadError);
-          }
-        } catch (b64Error) {
-          console.error('[repair-message-media] Erro ao processar base64:', b64Error);
-        }
-      }
+      // 6. Extrair e fazer upload da mídia
+      const storageUrl = await extractAndUploadMedia(supabase, mediaData, message.type, lead.id, {
+        baseUrl, apiKey: whatsappConfig.api_key
+      });
 
       if (!storageUrl) {
-        console.error('[repair-message-media] Mídia não encontrada na resposta WAHA (nem URL nem base64)');
-        return new Response(
-          JSON.stringify({ error: 'Media not found in WAHA response', data: { hasUrl: !!mediaUrl, hasBase64: !!(base64Data && base64Data.length > 100) } }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return jsonResponse({ error: 'Media not found in WAHA response' }, 404);
       }
 
-      console.log('[repair-message-media] Mídia salva no storage:', storageUrl);
-
-      // 10. Atualizar mensagem no banco
+      // 7. Atualizar mensagem
       const updateData: Record<string, unknown> = { media_url: storageUrl };
-
-      // Limpar content se for base64
       if (message.content && isBase64Content(message.content)) {
         updateData.content = '';
-        console.log('[repair-message-media] Limpando content base64');
       }
 
       const { error: updateError } = await supabase
@@ -289,155 +147,194 @@ serve(async (req) => {
         .eq('id', messageId);
 
       if (updateError) {
-        console.error('[repair-message-media] Erro ao atualizar mensagem:', updateError);
-        return new Response(
-          JSON.stringify({ error: 'Failed to update message', details: updateError }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        console.error('[repair-media] Erro ao atualizar:', updateError);
+        return jsonResponse({ error: 'Failed to update message' }, 500);
       }
 
-      console.log('[repair-message-media] ✅ Mensagem reparada com sucesso');
-
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          media_url: storageUrl,
-          message_id: messageId,
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.log('[repair-media] ✅ Sucesso:', storageUrl);
+      return jsonResponse({ success: true, media_url: storageUrl, message_id: messageId });
 
     } catch (fetchError) {
       clearTimeout(timeoutId);
-      
       if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-        console.error('[repair-message-media] Timeout ao chamar WAHA API');
-        return new Response(
-          JSON.stringify({ error: 'WAHA API timeout' }),
-          { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return jsonResponse({ error: 'WAHA API timeout' }, 504);
       }
-      
       throw fetchError;
     }
 
   } catch (error) {
-    console.error('[repair-message-media] Erro não tratado:', error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    console.error('[repair-media] Erro:', error);
+    return jsonResponse({ error: error instanceof Error ? error.message : 'Internal error' }, 500);
   }
 });
 
-// ========== Funções auxiliares (copiadas do whatsapp-webhook) ==========
+// ========== Funções auxiliares ==========
+
+function jsonResponse(data: object, status = 200) {
+  return new Response(JSON.stringify(data), { 
+    status, 
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+  });
+}
+
+async function getWhatsAppConfig(supabase: any, instanceId?: string) {
+  if (instanceId) {
+    const { data } = await supabase
+      .from('whatsapp_config')
+      .select('id, base_url, api_key, instance_name')
+      .eq('id', instanceId)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (data) return data;
+  }
+  
+  // Fallback: qualquer config WAHA ativa
+  const { data } = await supabase
+    .from('whatsapp_config')
+    .select('id, base_url, api_key, instance_name')
+    .eq('is_active', true)
+    .eq('provider', 'waha')
+    .limit(1)
+    .maybeSingle();
+  return data;
+}
+
+function buildChatId(lead: { phone: string; country_code?: string | null; whatsapp_chat_id?: string | null }) {
+  if (lead.whatsapp_chat_id?.includes('@')) return lead.whatsapp_chat_id;
+  const countryCode = lead.country_code || '55';
+  const phone = lead.phone.replace(/\D/g, '');
+  return `${countryCode}${phone}@c.us`;
+}
 
 function isBase64Content(str: string): boolean {
   if (!str || str.length < 100) return false;
-  const base64Patterns = ['/9j/', 'iVBOR', 'R0lGOD', 'UklGR', 'AAAA', 'data:image', 'data:audio', 'data:video'];
-  return base64Patterns.some(pattern => str.startsWith(pattern)) || 
+  const patterns = ['/9j/', 'iVBOR', 'R0lGOD', 'UklGR', 'AAAA', 'data:image', 'data:audio'];
+  return patterns.some(p => str.startsWith(p)) || 
          (str.length > 500 && !str.includes(' ') && /^[A-Za-z0-9+/=]+$/.test(str.substring(0, 100)));
 }
 
-async function uploadMediaToStorage(
+async function extractAndUploadMedia(
+  supabase: any,
+  wahaData: any,
+  type: string,
+  leadId: string,
+  wahaConfig: { baseUrl: string; apiKey: string }
+): Promise<string | null> {
+  // Tentar URL primeiro
+  const mediaUrl = wahaData?.media?.url || wahaData?.mediaUrl || wahaData?._data?.deprecatedMms3Url;
+  
+  if (mediaUrl) {
+    return await uploadFromUrl(supabase, mediaUrl, type, leadId, wahaConfig);
+  }
+  
+  // Fallback: base64
+  const base64Data = wahaData?.media?.data || wahaData?._data?.media?.data;
+  const mimetype = wahaData?.media?.mimetype || wahaData?._data?.media?.mimetype || '';
+  
+  if (base64Data && base64Data.length > 100) {
+    return await uploadFromBase64(supabase, base64Data, mimetype, type, leadId);
+  }
+  
+  return null;
+}
+
+async function uploadFromUrl(
   supabase: any,
   mediaUrl: string,
   type: string,
   leadId: string,
-  wahaConfig?: { baseUrl: string; apiKey: string; sessionName: string } | null
+  wahaConfig: { baseUrl: string; apiKey: string }
 ): Promise<string | null> {
   try {
-    // Normalizar URL
-    let normalizedUrl = mediaUrl;
-    if (!mediaUrl.startsWith('http://') && !mediaUrl.startsWith('https://')) {
-      normalizedUrl = `https://${mediaUrl}`;
+    let url = mediaUrl.startsWith('http') ? mediaUrl : `https://${mediaUrl}`;
+    
+    // Corrigir localhost para URL pública
+    const urlObj = new URL(url);
+    if (urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1') {
+      const wahaHost = new URL(wahaConfig.baseUrl).host;
+      url = `https://${wahaHost}${urlObj.pathname}${urlObj.search}`;
     }
     
-    // Corrigir URL localhost
-    let correctedUrl = normalizedUrl;
-    const urlObj = new URL(normalizedUrl);
-    const isLocalhost = urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1';
-    
-    if (isLocalhost && wahaConfig?.baseUrl) {
-      const wahaUrlObj = new URL(wahaConfig.baseUrl);
-      correctedUrl = `${wahaUrlObj.protocol}//${wahaUrlObj.host}${urlObj.pathname}${urlObj.search}`;
-      console.log('[repair-message-media] URL localhost corrigida:', correctedUrl);
-    }
-    
-    // Preparar headers de autenticação
     const headers: Record<string, string> = {};
-    const isWahaUrl = wahaConfig?.baseUrl && correctedUrl.includes(new URL(wahaConfig.baseUrl).host);
-    
-    if (isWahaUrl && wahaConfig?.apiKey) {
+    if (url.includes(new URL(wahaConfig.baseUrl).host)) {
       headers['X-Api-Key'] = wahaConfig.apiKey;
-      headers['Authorization'] = `Bearer ${wahaConfig.apiKey}`;
     }
     
-    // Baixar o arquivo
-    const response = await fetch(correctedUrl, { headers });
+    const response = await fetch(url, { headers });
     if (!response.ok) {
-      console.error('[repair-message-media] Erro ao baixar mídia:', response.status);
+      console.error('[repair-media] Download falhou:', response.status);
       return null;
     }
     
     const contentType = response.headers.get('content-type') || 'application/octet-stream';
     const arrayBuffer = await response.arrayBuffer();
+    const ext = getExtension(contentType, type);
+    const fileName = `leads/${leadId}/${Date.now()}.${ext}`;
     
-    // Determinar extensão
-    const extensionMap: Record<string, string> = {
-      'image/jpeg': 'jpg',
-      'image/png': 'png',
-      'image/webp': 'webp',
-      'image/gif': 'gif',
-      'audio/ogg': 'ogg',
-      'audio/ogg; codecs=opus': 'ogg',
-      'audio/mpeg': 'mp3',
-      'audio/mp4': 'm4a',
-      'audio/aac': 'aac',
-      'video/mp4': 'mp4',
-      'video/3gpp': '3gp',
-      'application/pdf': 'pdf',
-    };
-    
-    let extension = extensionMap[contentType];
-    if (!extension) {
-      for (const [ct, ext] of Object.entries(extensionMap)) {
-        if (contentType.includes(ct.split('/')[1])) {
-          extension = ext;
-          break;
-        }
-      }
-    }
-    
-    if (!extension) {
-      const typeExtMap: Record<string, string> = {
-        'image': 'jpg',
-        'audio': 'ogg',
-        'video': 'mp4',
-        'document': 'bin',
-      };
-      extension = typeExtMap[type] || 'bin';
-    }
-    
-    const fileName = `leads/${leadId}/${Date.now()}.${extension}`;
-    
-    // Upload
     const { data, error } = await supabase.storage
       .from('message-attachments')
-      .upload(fileName, arrayBuffer, {
-        contentType,
-        cacheControl: '31536000',
-        upsert: false,
-      });
+      .upload(fileName, arrayBuffer, { contentType, cacheControl: '31536000' });
     
     if (error) {
-      console.error('[repair-message-media] Erro no upload:', error);
+      console.error('[repair-media] Upload erro:', error);
       return null;
     }
     
     return `storage://message-attachments/${data.path}`;
-  } catch (error) {
-    console.error('[repair-message-media] Erro ao processar mídia:', error);
+  } catch (e) {
+    console.error('[repair-media] Erro uploadFromUrl:', e);
     return null;
   }
+}
+
+async function uploadFromBase64(
+  supabase: any,
+  base64Data: string,
+  mimetype: string,
+  type: string,
+  leadId: string
+): Promise<string | null> {
+  try {
+    const binaryString = atob(base64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    const ext = getExtension(mimetype, type);
+    const fileName = `leads/${leadId}/${Date.now()}.${ext}`;
+    
+    const { data, error } = await supabase.storage
+      .from('message-attachments')
+      .upload(fileName, bytes.buffer, { 
+        contentType: mimetype || 'application/octet-stream', 
+        cacheControl: '31536000' 
+      });
+    
+    if (error) {
+      console.error('[repair-media] Upload base64 erro:', error);
+      return null;
+    }
+    
+    return `storage://message-attachments/${data.path}`;
+  } catch (e) {
+    console.error('[repair-media] Erro uploadFromBase64:', e);
+    return null;
+  }
+}
+
+function getExtension(contentType: string, messageType: string): string {
+  const map: Record<string, string> = {
+    'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif',
+    'audio/ogg': 'ogg', 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a',
+    'video/mp4': 'mp4', 'video/3gpp': '3gp',
+    'application/pdf': 'pdf',
+  };
+  
+  for (const [ct, ext] of Object.entries(map)) {
+    if (contentType.includes(ct.split('/')[1])) return ext;
+  }
+  
+  const fallback: Record<string, string> = { image: 'jpg', audio: 'ogg', video: 'mp4', document: 'bin' };
+  return fallback[messageType] || 'bin';
 }
