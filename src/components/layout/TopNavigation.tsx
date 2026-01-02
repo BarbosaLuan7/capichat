@@ -25,6 +25,7 @@ import {
   Menu,
   X,
 } from 'lucide-react';
+import lbAdvLogo from '@/assets/lb-adv-logo.png';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useSidebarBadges } from '@/hooks/useSidebarBadges';
@@ -282,10 +283,12 @@ const TopNavigation = () => {
   return (
     <header className="h-14 bg-[#0b305b] border-b border-[#0a2847] flex items-center px-4 sticky top-0 z-50" role="banner">
       {/* Logo */}
-      <Link to="/dashboard" className="flex items-center gap-2.5 mr-4 shrink-0">
-        <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
-          <Scale className="w-4 h-4 text-white" />
-        </div>
+      <Link to="/dashboard" className="flex items-center gap-2 mr-4 shrink-0">
+        <img 
+          src={lbAdvLogo} 
+          alt="LB ADV" 
+          className="h-8 w-auto object-contain"
+        />
         <span className="text-base font-bold text-white hidden sm:block">
           LB ADV
         </span>
