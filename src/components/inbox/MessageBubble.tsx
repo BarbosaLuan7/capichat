@@ -2,7 +2,7 @@ import React, { useState, useEffect, memo } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Check, CheckCheck, Image, FileText, Video, Mic, Sparkles, Loader2, Copy, Clock, AlertCircle, ImageOff, VideoOff, ExternalLink, ChevronDown, ChevronUp, CornerUpLeft, RotateCcw } from 'lucide-react';
+import { Check, CheckCheck, Image, FileText, Video, Mic, Sparkles, Loader2, Copy, Clock, AlertCircle, ImageOff, VideoOff, ExternalLink, ChevronDown, ChevronUp, RotateCcw, Square, CheckSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import { ImageLightbox } from '@/components/inbox/ImageLightbox';
 import { DocumentPreview } from '@/components/inbox/DocumentPreview';
 import { QuotedMessage } from '@/components/inbox/QuotedMessage';
 import { MessageDetailsPopover } from '@/components/inbox/MessageDetailsPopover';
+import { MessageActions } from '@/components/inbox/MessageActions';
 import type { Database } from '@/integrations/supabase/types';
 
 const MAX_MESSAGE_LENGTH = 500;
@@ -44,6 +45,7 @@ type MessageStatus = 'sent' | 'delivered' | 'read' | 'pending' | 'failed' | 'sen
 
 type Message = Database['public']['Tables']['messages']['Row'] & {
   is_starred?: boolean;
+  is_deleted_locally?: boolean;
   quoted_message?: {
     id: string;
     body: string;
@@ -66,6 +68,10 @@ interface MessageBubbleProps {
   onRetry?: (message: Message) => void;
   /** URL já resolvida via batch - evita chamada individual ao useSignedUrl */
   resolvedMediaUrl?: string | null;
+  // Selection mode props
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (messageId: string) => void;
 }
 
 // Helper function for status icon configuration
@@ -121,6 +127,9 @@ function MessageBubbleComponent({
   onReply,
   onRetry,
   resolvedMediaUrl: propResolvedUrl,
+  selectionMode = false,
+  isSelected = false,
+  onToggleSelect,
 }: MessageBubbleProps) {
   const { transcribeAudio, getTranscription, isLoading } = useAudioTranscription();
   const [transcription, setTranscription] = useState<string | null>(null);
@@ -130,6 +139,19 @@ function MessageBubbleComponent({
   const [videoError, setVideoError] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showActions, setShowActions] = useState(false);
+
+  // Import MessageActions
+  const handleReply = () => {
+    if (onReply) {
+      onReply(message);
+    }
+  };
+
+  const handleToggleSelect = () => {
+    if (onToggleSelect) {
+      onToggleSelect(message.id);
+    }
+  };
   
   // Usar URL resolvida da prop se disponível, senão fallback para hook individual
   const { signedUrl: hookSignedUrl, isLoading: isLoadingUrl } = useSignedUrl(
@@ -354,11 +376,6 @@ function MessageBubbleComponent({
     }
   };
 
-  const handleReply = () => {
-    if (onReply) {
-      onReply(message);
-    }
-  };
 
   return (
     <motion.div
@@ -386,44 +403,28 @@ function MessageBubbleComponent({
       )}
 
       <div className="relative max-w-[70%]">
-        {/* Reply button that appears on hover */}
-        {onReply && (
-          <div 
-            className={cn(
-              "absolute top-1/2 -translate-y-1/2 transition-opacity duration-200",
-              isAgent ? "-left-8" : "-right-8",
-              showActions ? "opacity-100" : "opacity-0"
-            )}
-          >
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 rounded-full bg-background/80 hover:bg-background shadow-sm border border-border/50"
-                    onClick={handleReply}
-                  >
-                    <CornerUpLeft className="w-3.5 h-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side={isAgent ? "left" : "right"} className="text-xs">
-                  Responder
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        )}
+        {/* Message Actions - Reply and Select */}
+        <MessageActions
+          show={showActions}
+          isAgent={isAgent}
+          isSelected={isSelected}
+          selectionMode={selectionMode}
+          onReply={handleReply}
+          onToggleSelect={handleToggleSelect}
+        />
         
         <div
           className={cn(
-            'rounded-2xl px-4 py-2.5',
+            'rounded-2xl px-4 py-2.5 transition-all',
             isAgent
               ? 'bg-primary text-primary-foreground rounded-tr-sm'
               : 'bg-card border border-border rounded-tl-sm',
             // Failed message styling - use string comparison for extended statuses
-            (message.status as string) === 'failed' && isAgent && 'bg-destructive/80 border border-destructive'
+            (message.status as string) === 'failed' && isAgent && 'bg-destructive/80 border border-destructive',
+            // Selected message styling
+            isSelected && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
           )}
+          onClick={selectionMode ? handleToggleSelect : undefined}
         >
           {/* Quoted message if this is a reply */}
           {message.quoted_message && (
@@ -537,6 +538,8 @@ export const MessageBubble = memo(MessageBubbleComponent, (prevProps, nextProps)
     prevProps.message.content === nextProps.message.content &&
     prevProps.message.media_url === nextProps.message.media_url &&
     prevProps.isAgent === nextProps.isAgent &&
-    prevProps.showAvatar === nextProps.showAvatar
+    prevProps.showAvatar === nextProps.showAvatar &&
+    prevProps.selectionMode === nextProps.selectionMode &&
+    prevProps.isSelected === nextProps.isSelected
   );
 });

@@ -30,6 +30,8 @@ import { ReplyPreview } from '@/components/inbox/ReplyPreview';
 import { ConversationStatusActions } from '@/components/inbox/ConversationStatusActions';
 import { DateSeparator } from '@/components/inbox/DateSeparator';
 import { ScrollToBottomButton } from '@/components/inbox/ScrollToBottomButton';
+import { SelectionBar } from '@/components/inbox/SelectionBar';
+import { DeleteMessagesModal } from '@/components/inbox/DeleteMessagesModal';
 
 // Lazy loaded components - loaded on demand
 const EmojiPicker = React.lazy(() => import('@/components/inbox/EmojiPicker').then(m => ({ default: m.EmojiPicker })));
@@ -46,6 +48,7 @@ import { useAIReminders } from '@/hooks/useAIReminders';
 import { useInternalNotes } from '@/hooks/useInternalNotes';
 import { useDraftMessages } from '@/hooks/useDraftMessages';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useDeleteMessages } from '@/hooks/useDeleteMessages';
 
 import type { Database } from '@/integrations/supabase/types';
 
@@ -119,6 +122,11 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   
+  // Selection mode state
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedMessages, setSelectedMessages] = useState<string[]>([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -129,6 +137,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   // Hooks
   const { uploadFile, uploadProgress } = useFileUpload();
   const audioRecorder = useAudioRecorder();
+  const { deleteForMe, deleteForEveryone, isDeletingForMe, isDeletingForEveryone } = useDeleteMessages();
   
   // Batch resolve signed URLs para todas as mensagens com mídia
   const mediaUrls = useMemo(() => {
@@ -371,6 +380,49 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     );
   }, [onSendMessage]);
 
+  // Selection mode handlers
+  const toggleSelectMessage = useCallback((messageId: string) => {
+    if (!selectionMode) {
+      setSelectionMode(true);
+    }
+    setSelectedMessages(prev =>
+      prev.includes(messageId)
+        ? prev.filter(id => id !== messageId)
+        : [...prev, messageId]
+    );
+  }, [selectionMode]);
+
+  const cancelSelection = useCallback(() => {
+    setSelectionMode(false);
+    setSelectedMessages([]);
+  }, []);
+
+  const handleDeleteForMe = useCallback(() => {
+    if (!conversation) return;
+    deleteForMe.mutate(
+      { messageIds: selectedMessages, conversationId: conversation.id },
+      {
+        onSuccess: () => {
+          setShowDeleteModal(false);
+          cancelSelection();
+        },
+      }
+    );
+  }, [conversation, selectedMessages, deleteForMe, cancelSelection]);
+
+  const handleDeleteForEveryone = useCallback(() => {
+    if (!conversation) return;
+    deleteForEveryone.mutate(
+      { messageIds: selectedMessages, conversationId: conversation.id },
+      {
+        onSuccess: () => {
+          setShowDeleteModal(false);
+          cancelSelection();
+        },
+      }
+    );
+  }, [conversation, selectedMessages, deleteForEveryone, cancelSelection]);
+
   const handleFileSelect = (file: File, type: 'image' | 'video' | 'audio' | 'document') => {
     setPendingFile({ file, type });
     toast.info(`Arquivo selecionado: ${file.name}`);
@@ -581,6 +633,9 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
                       const prevItem = group.items[index - 1];
                       const showAvatar = index === 0 || prevItem?.itemType === 'note' || (prevItem as any)?.sender_type !== message.sender_type;
 
+                      // Filter out locally deleted messages
+                      if ((message as any).is_deleted_locally) return null;
+
                       return (
                         <MessageBubble
                           key={message.id}
@@ -593,6 +648,9 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
                           onReply={handleReplyMessage}
                           onRetry={handleRetryMessage}
                           resolvedMediaUrl={message.media_url ? getSignedUrl(message.media_url) : undefined}
+                          selectionMode={selectionMode}
+                          isSelected={selectedMessages.includes(message.id)}
+                          onToggleSelect={toggleSelectMessage}
                         />
                       );
                     })}
@@ -622,6 +680,29 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
         <ScrollToBottomButton
           show={showScrollButton}
           onClick={scrollToBottom}
+        />
+        
+        {/* Selection Bar */}
+        <AnimatePresence>
+          {selectionMode && (
+            <SelectionBar
+              selectedCount={selectedMessages.length}
+              onCancel={cancelSelection}
+              onDelete={() => setShowDeleteModal(true)}
+              isDeleting={isDeletingForMe || isDeletingForEveryone}
+            />
+          )}
+        </AnimatePresence>
+        
+        {/* Delete Messages Modal */}
+        <DeleteMessagesModal
+          open={showDeleteModal}
+          onOpenChange={setShowDeleteModal}
+          selectedCount={selectedMessages.length}
+          onDeleteForMe={handleDeleteForMe}
+          onDeleteForEveryone={handleDeleteForEveryone}
+          isDeletingForMe={isDeletingForMe}
+          isDeletingForEveryone={isDeletingForEveryone}
         />
       </div>
 
