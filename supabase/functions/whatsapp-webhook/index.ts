@@ -2058,15 +2058,90 @@ serve(async (req) => {
       }
     }
 
-    // ========== CORREÇÃO: Se é mídia mas não veio URL, buscar via WAHA API ==========
+    // ========== CORREÇÃO: Se é mídia mas não veio URL, buscar via WAHA API ou usar base64 ==========
     let finalMediaUrl = mediaUrl;
     
     // Buscar config do WAHA antecipadamente (pode ser usada para buscar mídia ou fazer upload)
     const wahaConfigForMedia = await getWAHAConfigBySession(supabase, body.session || 'default');
     
-    // Se é mensagem de mídia sem URL, tentar buscar via WAHA API
-    if (!mediaUrl && type !== 'text' && wahaConfigForMedia && externalMessageId) {
-      console.log('[whatsapp-webhook] 📁 Mídia sem URL, tentando buscar via WAHA API...');
+    // ========== TRATAMENTO DE BASE64 DIRETO DO PAYLOAD ==========
+    // Se tem base64 no payload mas não tem URL, fazer upload direto
+    const base64Data = (messageData as any)?._data?.media?.data || 
+                       (messageData as any)?.media?.data ||
+                       (messageData as any)?.mediaData ||
+                       (messageData as any)?._data?.body; // Alguns casos o base64 vem no body
+    
+    const base64Mimetype = (messageData as any)?._data?.media?.mimetype ||
+                           (messageData as any)?.media?.mimetype ||
+                           (messageData as any)?._data?.mimetype ||
+                           '';
+    
+    // Função auxiliar para detectar base64
+    const isValidBase64 = (str: string): boolean => {
+      if (!str || typeof str !== 'string' || str.length < 100) return false;
+      // Padrões comuns de início de base64
+      const base64Patterns = ['/9j/', 'iVBOR', 'R0lGOD', 'UklGR', 'AAAA', 'GkXf', 'T2dn'];
+      return base64Patterns.some(p => str.startsWith(p)) || 
+             (str.length > 500 && !str.includes(' ') && /^[A-Za-z0-9+/=]+$/.test(str.substring(0, 100)));
+    };
+    
+    // Se é mídia sem URL mas tem base64 no payload
+    if (!mediaUrl && type !== 'text' && base64Data && isValidBase64(base64Data)) {
+      console.log('[whatsapp-webhook] 📁 Base64 encontrado no payload, fazendo upload direto...');
+      console.log('[whatsapp-webhook] 📁 Base64 length:', base64Data.length, 'mimetype:', base64Mimetype);
+      
+      try {
+        // Converter base64 para ArrayBuffer
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        // Determinar extensão pelo mimetype ou tipo
+        const extensionMap: Record<string, string> = {
+          'image/jpeg': 'jpg',
+          'image/png': 'png',
+          'image/webp': 'webp',
+          'audio/ogg': 'ogg',
+          'audio/ogg; codecs=opus': 'ogg',
+          'audio/mpeg': 'mp3',
+          'audio/mp4': 'm4a',
+          'video/mp4': 'mp4',
+          'application/pdf': 'pdf',
+        };
+        
+        let extension = extensionMap[base64Mimetype];
+        if (!extension) {
+          const typeExtMap: Record<string, string> = { image: 'jpg', audio: 'ogg', video: 'mp4', document: 'bin' };
+          extension = typeExtMap[type] || 'bin';
+        }
+        
+        const fileName = `leads/${lead.id}/${Date.now()}.${extension}`;
+        const contentType = base64Mimetype || 'application/octet-stream';
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('message-attachments')
+          .upload(fileName, bytes.buffer, {
+            contentType,
+            cacheControl: '31536000',
+            upsert: false,
+          });
+        
+        if (uploadError) {
+          console.error('[whatsapp-webhook] ❌ Erro upload base64:', uploadError);
+        } else {
+          finalMediaUrl = `storage://message-attachments/${uploadData.path}`;
+          console.log('[whatsapp-webhook] ✅ Base64 convertido e salvo:', finalMediaUrl);
+        }
+      } catch (b64Error) {
+        console.error('[whatsapp-webhook] ❌ Erro ao processar base64:', b64Error);
+      }
+    }
+    
+    // Se AINDA não tem mídia e é mídia, tentar buscar via WAHA API
+    if (!finalMediaUrl && type !== 'text' && wahaConfigForMedia && externalMessageId) {
+      console.log('[whatsapp-webhook] 📁 Mídia sem URL/base64, tentando buscar via WAHA API...');
       
       // Extrair chatId e messageId para a chamada
       const rawContact = isFromMe 
@@ -2077,6 +2152,7 @@ serve(async (req) => {
         try {
           // GET /api/{session}/chats/{chatId}/messages/{messageId}?downloadMedia=true
           const cleanChatId = rawContact.includes('@') ? rawContact : `${rawContact}@c.us`;
+          // IMPORTANTE: usar externalMessageId completo (ex: true_554599889851@c.us_3EB0...)
           const url = `${wahaConfigForMedia.baseUrl}/api/${wahaConfigForMedia.sessionName}/chats/${cleanChatId}/messages/${externalMessageId}?downloadMedia=true`;
           
           console.log('[whatsapp-webhook] 📁 Chamando WAHA para obter mídia:', url);
@@ -2097,20 +2173,53 @@ serve(async (req) => {
           clearTimeout(timeoutId);
           
           if (mediaResponse.ok) {
-            const mediaData = await mediaResponse.json();
-            console.log('[whatsapp-webhook] 📁 Resposta WAHA mídia:', JSON.stringify(mediaData).substring(0, 500));
+            const fetchedMediaData = await mediaResponse.json();
+            console.log('[whatsapp-webhook] 📁 Resposta WAHA mídia:', JSON.stringify(fetchedMediaData).substring(0, 500));
             
             // Extrair URL de mídia do resultado
-            const fetchedMediaUrl = mediaData?.media?.url || 
-                                     mediaData?.mediaUrl || 
-                                     mediaData?._data?.media?.url ||
-                                     mediaData?._data?.deprecatedMms3Url;
+            const fetchedMediaUrl = fetchedMediaData?.media?.url || 
+                                     fetchedMediaData?.mediaUrl || 
+                                     fetchedMediaData?._data?.media?.url ||
+                                     fetchedMediaData?._data?.deprecatedMms3Url;
+            
+            // Também checar se veio base64 na resposta da API
+            const fetchedBase64 = fetchedMediaData?.media?.data || fetchedMediaData?._data?.media?.data;
             
             if (fetchedMediaUrl) {
               console.log('[whatsapp-webhook] 📁 URL de mídia recuperada via API:', fetchedMediaUrl.substring(0, 100));
               finalMediaUrl = fetchedMediaUrl;
+            } else if (fetchedBase64 && isValidBase64(fetchedBase64)) {
+              console.log('[whatsapp-webhook] 📁 Base64 recuperado via API, fazendo upload...');
+              // Fazer upload do base64 obtido via API
+              try {
+                const binaryString = atob(fetchedBase64);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                  bytes[i] = binaryString.charCodeAt(i);
+                }
+                
+                const fetchedMimetype = fetchedMediaData?.media?.mimetype || fetchedMediaData?._data?.media?.mimetype || '';
+                const extMap: Record<string, string> = { image: 'jpg', audio: 'ogg', video: 'mp4', document: 'bin' };
+                const ext = extMap[type] || 'bin';
+                const fileName = `leads/${lead.id}/${Date.now()}.${ext}`;
+                
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                  .from('message-attachments')
+                  .upload(fileName, bytes.buffer, {
+                    contentType: fetchedMimetype || 'application/octet-stream',
+                    cacheControl: '31536000',
+                    upsert: false,
+                  });
+                
+                if (!uploadError && uploadData) {
+                  finalMediaUrl = `storage://message-attachments/${uploadData.path}`;
+                  console.log('[whatsapp-webhook] ✅ Base64 da API convertido e salvo:', finalMediaUrl);
+                }
+              } catch (apiB64Error) {
+                console.error('[whatsapp-webhook] ❌ Erro ao processar base64 da API:', apiB64Error);
+              }
             } else {
-              console.log('[whatsapp-webhook] ⚠️ WAHA retornou mas sem media.url');
+              console.log('[whatsapp-webhook] ⚠️ WAHA retornou mas sem media.url nem base64 válido');
             }
           } else {
             console.log('[whatsapp-webhook] ⚠️ WAHA API retornou erro:', mediaResponse.status);

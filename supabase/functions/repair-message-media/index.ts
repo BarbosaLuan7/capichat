@@ -164,7 +164,10 @@ serve(async (req) => {
     console.log('[repair-message-media] ChatId:', chatId);
 
     // 7. Chamar WAHA API para obter a mídia
-    const messageIdForApi = message.waha_message_id || message.external_id;
+    // IMPORTANTE: Usar external_id (completo, ex: true_554599889851@c.us_3EB0...)
+    // O waha_message_id (curto, ex: 3EB0...) pode não funcionar para buscar mensagem
+    const messageIdForApi = message.external_id || message.waha_message_id;
+    console.log('[repair-message-media] IDs disponíveis - external_id:', message.external_id, '| waha_message_id:', message.waha_message_id, '| usando:', messageIdForApi);
     if (!messageIdForApi) {
       console.error('[repair-message-media] Sem external_id/waha_message_id para buscar mídia');
       return new Response(
@@ -206,34 +209,66 @@ serve(async (req) => {
       const mediaData = await response.json();
       console.log('[repair-message-media] Resposta WAHA:', JSON.stringify(mediaData).substring(0, 500));
 
-      // 8. Extrair URL de mídia
+      // 8. Extrair URL de mídia OU base64
       const mediaUrl = mediaData?.media?.url || 
                        mediaData?.mediaUrl || 
                        mediaData?._data?.media?.url ||
                        mediaData?._data?.deprecatedMms3Url;
-
-      if (!mediaUrl) {
-        console.error('[repair-message-media] Mídia não encontrada na resposta WAHA');
-        return new Response(
-          JSON.stringify({ error: 'Media URL not found in WAHA response', data: mediaData }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+      
+      const base64Data = mediaData?.media?.data || mediaData?._data?.media?.data;
+      const base64Mimetype = mediaData?.media?.mimetype || mediaData?._data?.media?.mimetype || '';
+      
+      let storageUrl: string | null = null;
+      
+      if (mediaUrl) {
+        console.log('[repair-message-media] URL de mídia obtida:', mediaUrl.substring(0, 100));
+        
+        // 9a. Fazer upload via URL para o storage
+        storageUrl = await uploadMediaToStorage(supabase, mediaUrl, message.type, lead.id, {
+          baseUrl: baseUrl,
+          apiKey: whatsappConfig.api_key,
+          sessionName: whatsappConfig.instance_name,
+        });
+      } else if (base64Data && base64Data.length > 100) {
+        console.log('[repair-message-media] Base64 encontrado na resposta, fazendo upload direto...');
+        
+        // 9b. Fazer upload direto do base64
+        try {
+          const binaryString = atob(base64Data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          
+          // Determinar extensão
+          const extMap: Record<string, string> = { image: 'jpg', audio: 'ogg', video: 'mp4', document: 'bin' };
+          const ext = extMap[message.type] || 'bin';
+          const fileName = `leads/${lead.id}/${Date.now()}.${ext}`;
+          
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('message-attachments')
+            .upload(fileName, bytes.buffer, {
+              contentType: base64Mimetype || 'application/octet-stream',
+              cacheControl: '31536000',
+              upsert: false,
+            });
+          
+          if (!uploadError && uploadData) {
+            storageUrl = `storage://message-attachments/${uploadData.path}`;
+            console.log('[repair-message-media] ✅ Base64 convertido e salvo:', storageUrl);
+          } else {
+            console.error('[repair-message-media] Erro upload base64:', uploadError);
+          }
+        } catch (b64Error) {
+          console.error('[repair-message-media] Erro ao processar base64:', b64Error);
+        }
       }
 
-      console.log('[repair-message-media] URL de mídia obtida:', mediaUrl.substring(0, 100));
-
-      // 9. Fazer upload para o storage
-      const storageUrl = await uploadMediaToStorage(supabase, mediaUrl, message.type, lead.id, {
-        baseUrl: baseUrl,
-        apiKey: whatsappConfig.api_key,
-        sessionName: whatsappConfig.instance_name,
-      });
-
       if (!storageUrl) {
-        console.error('[repair-message-media] Falha no upload para storage');
+        console.error('[repair-message-media] Mídia não encontrada na resposta WAHA (nem URL nem base64)');
         return new Response(
-          JSON.stringify({ error: 'Failed to upload media to storage' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'Media not found in WAHA response', data: { hasUrl: !!mediaUrl, hasBase64: !!(base64Data && base64Data.length > 100) } }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
