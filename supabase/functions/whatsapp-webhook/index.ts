@@ -1581,7 +1581,12 @@ serve(async (req) => {
           
           const wahaConfigForContact = await getWAHAConfigBySession(supabase, body.session || 'default');
           if (wahaConfigForContact) {
-            const phoneWithCountry = senderPhone.startsWith('55') ? senderPhone : `55${senderPhone}`;
+            // Buscar lead existente para obter country_code
+            const existingLeadForContact = await findLeadByPhone(supabase, senderPhone);
+            const phoneWithCountry = getPhoneWithCountryCode(senderPhone, existingLeadForContact?.country_code);
+            
+            console.log('[whatsapp-webhook] Buscando contato para:', phoneWithCountry);
+            
             const contactInfo = await getContactInfo(
               wahaConfigForContact.baseUrl,
               wahaConfigForContact.apiKey,
@@ -2053,30 +2058,97 @@ serve(async (req) => {
       }
     }
 
-    // Se tiver mídia, fazer upload para o storage permanente
+    // ========== CORREÇÃO: Se é mídia mas não veio URL, buscar via WAHA API ==========
     let finalMediaUrl = mediaUrl;
-    if (mediaUrl && type !== 'text') {
+    
+    // Buscar config do WAHA antecipadamente (pode ser usada para buscar mídia ou fazer upload)
+    const wahaConfigForMedia = await getWAHAConfigBySession(supabase, body.session || 'default');
+    
+    // Se é mensagem de mídia sem URL, tentar buscar via WAHA API
+    if (!mediaUrl && type !== 'text' && wahaConfigForMedia && externalMessageId) {
+      console.log('[whatsapp-webhook] 📁 Mídia sem URL, tentando buscar via WAHA API...');
+      
+      // Extrair chatId e messageId para a chamada
+      const rawContact = isFromMe 
+        ? (messageData as WAHAMessage)?.to || (messageData as WAHAMessage)?.chatId
+        : (messageData as WAHAMessage)?.from || (messageData as WAHAMessage)?.chatId;
+      
+      if (rawContact) {
+        try {
+          // GET /api/{session}/chats/{chatId}/messages/{messageId}?downloadMedia=true
+          const cleanChatId = rawContact.includes('@') ? rawContact : `${rawContact}@c.us`;
+          const url = `${wahaConfigForMedia.baseUrl}/api/${wahaConfigForMedia.sessionName}/chats/${cleanChatId}/messages/${externalMessageId}?downloadMedia=true`;
+          
+          console.log('[whatsapp-webhook] 📁 Chamando WAHA para obter mídia:', url);
+          
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+          
+          const mediaResponse = await fetch(url, {
+            method: 'GET',
+            headers: {
+              'X-Api-Key': wahaConfigForMedia.apiKey,
+              'Authorization': `Bearer ${wahaConfigForMedia.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            signal: controller.signal,
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (mediaResponse.ok) {
+            const mediaData = await mediaResponse.json();
+            console.log('[whatsapp-webhook] 📁 Resposta WAHA mídia:', JSON.stringify(mediaData).substring(0, 500));
+            
+            // Extrair URL de mídia do resultado
+            const fetchedMediaUrl = mediaData?.media?.url || 
+                                     mediaData?.mediaUrl || 
+                                     mediaData?._data?.media?.url ||
+                                     mediaData?._data?.deprecatedMms3Url;
+            
+            if (fetchedMediaUrl) {
+              console.log('[whatsapp-webhook] 📁 URL de mídia recuperada via API:', fetchedMediaUrl.substring(0, 100));
+              finalMediaUrl = fetchedMediaUrl;
+            } else {
+              console.log('[whatsapp-webhook] ⚠️ WAHA retornou mas sem media.url');
+            }
+          } else {
+            console.log('[whatsapp-webhook] ⚠️ WAHA API retornou erro:', mediaResponse.status);
+          }
+        } catch (fetchError) {
+          if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+            console.log('[whatsapp-webhook] ⚠️ Timeout ao buscar mídia via WAHA API');
+          } else {
+            console.error('[whatsapp-webhook] ⚠️ Erro ao buscar mídia via WAHA API:', fetchError);
+          }
+        }
+      }
+    }
+    
+    // Se tiver mídia (original ou recuperada), fazer upload para o storage permanente
+    if (finalMediaUrl && type !== 'text') {
       console.log('[whatsapp-webhook] 📁 Processando mídia para storage:', {
         type,
-        mediaUrl: mediaUrl?.substring(0, 100),
-        mediaUrlLength: mediaUrl?.length,
-        isLocalhost: mediaUrl?.includes('localhost'),
-        hasProtocol: mediaUrl?.startsWith('http'),
+        mediaUrl: finalMediaUrl?.substring(0, 100),
+        mediaUrlLength: finalMediaUrl?.length,
+        isLocalhost: finalMediaUrl?.includes('localhost'),
+        hasProtocol: finalMediaUrl?.startsWith('http'),
       });
       
-      // Buscar config do WAHA para corrigir URL localhost e autenticar download
-      const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
       console.log('[whatsapp-webhook] 📁 WAHA config para mídia:', {
-        hasConfig: !!wahaConfig,
-        baseUrl: wahaConfig?.baseUrl?.substring(0, 50),
+        hasConfig: !!wahaConfigForMedia,
+        baseUrl: wahaConfigForMedia?.baseUrl?.substring(0, 50),
       });
       
-      const storageUrl = await uploadMediaToStorage(supabase, mediaUrl, type, lead.id, wahaConfig);
+      const storageUrl = await uploadMediaToStorage(supabase, finalMediaUrl, type, lead.id, wahaConfigForMedia);
       if (storageUrl) {
         finalMediaUrl = storageUrl;
         console.log('[whatsapp-webhook] 📁 Mídia salva no storage:', storageUrl);
       } else {
-        console.log('[whatsapp-webhook] ⚠️ Falha no upload, usando URL original como fallback');
+        console.log('[whatsapp-webhook] ⚠️ Falha no upload, mantendo referência original');
+        // Não usar URL original como fallback se não conseguiu fazer upload
+        // Deixar undefined para permitir recuperação posterior
+        finalMediaUrl = undefined;
       }
     }
 

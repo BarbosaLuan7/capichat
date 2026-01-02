@@ -2,7 +2,7 @@ import React, { useState, useEffect, memo } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Check, CheckCheck, Image, FileText, Video, Mic, Sparkles, Loader2, Copy, Clock, AlertCircle, ImageOff, VideoOff, ExternalLink, ChevronDown, ChevronUp, RotateCcw, Square, CheckSquare } from 'lucide-react';
+import { Check, CheckCheck, Image, FileText, Video, Mic, Sparkles, Loader2, Copy, Clock, AlertCircle, ImageOff, VideoOff, ExternalLink, ChevronDown, ChevronUp, RotateCcw, Square, CheckSquare, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -17,8 +17,8 @@ import { DocumentPreview } from '@/components/inbox/DocumentPreview';
 import { QuotedMessage } from '@/components/inbox/QuotedMessage';
 import { MessageDetailsPopover } from '@/components/inbox/MessageDetailsPopover';
 import { MessageActions } from '@/components/inbox/MessageActions';
+import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
-
 const MAX_MESSAGE_LENGTH = 500;
 
 // Placeholder texts to filter out from message content display
@@ -139,6 +139,7 @@ function MessageBubbleComponent({
   const [videoError, setVideoError] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showActions, setShowActions] = useState(false);
+  const [isRepairingMedia, setIsRepairingMedia] = useState(false);
 
   // Import MessageActions
   const handleReply = () => {
@@ -189,7 +190,83 @@ function MessageBubbleComponent({
     }
   }, [message.id, message.type, isAgent, getTranscription]);
 
+  // Função para reparar mídia faltante
+  const handleRepairMedia = async () => {
+    if (isRepairingMedia) return;
+    
+    setIsRepairingMedia(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('repair-message-media', {
+        body: { messageId: message.id }
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data?.success) {
+        toast.success('Mídia recuperada! Recarregando...');
+        // Forçar reload da página para atualizar a mensagem
+        window.location.reload();
+      } else if (data?.already_repaired) {
+        toast.info('Mídia já estava disponível');
+        window.location.reload();
+      } else {
+        toast.error(data?.error || 'Não foi possível recuperar a mídia');
+      }
+    } catch (err) {
+      console.error('[MessageBubble] Erro ao reparar mídia:', err);
+      toast.error('Erro ao tentar recuperar mídia');
+    } finally {
+      setIsRepairingMedia(false);
+    }
+  };
+
   const renderMedia = () => {
+    // Se é mensagem de mídia mas NÃO tem media_url, mostrar placeholder com botão de recuperar
+    if (message.type !== 'text' && !message.media_url) {
+      const mediaLabels: Record<string, string> = {
+        'image': 'Imagem',
+        'video': 'Vídeo',
+        'audio': 'Áudio',
+        'document': 'Documento',
+      };
+      const mediaIcons: Record<string, React.ReactNode> = {
+        'image': <ImageOff className="w-5 h-5" />,
+        'video': <VideoOff className="w-5 h-5" />,
+        'audio': <Mic className="w-5 h-5" />,
+        'document': <FileText className="w-5 h-5" />,
+      };
+      
+      return (
+        <div className="mb-2 p-3 rounded-lg bg-muted/50 border border-border">
+          <div className="flex items-center gap-2 text-muted-foreground mb-2">
+            {mediaIcons[message.type] || <FileText className="w-5 h-5" />}
+            <span className="text-sm">{mediaLabels[message.type] || 'Mídia'} indisponível</span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRepairMedia}
+            disabled={isRepairingMedia}
+            className="text-xs"
+          >
+            {isRepairingMedia ? (
+              <>
+                <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                Recuperando...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-3 h-3 mr-1.5" />
+                Tentar recuperar
+              </>
+            )}
+          </Button>
+        </div>
+      );
+    }
+    
     if (!message.media_url) return null;
     
     // Mostrar loading apenas se não temos URL resolvida e está carregando
