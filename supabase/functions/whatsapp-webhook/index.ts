@@ -174,7 +174,11 @@ async function getContactInfo(
     
     const url = `${wahaBaseUrl}/api/contacts?contactId=${cleanNumber}&session=${sessionName}`;
     
-    console.log('[whatsapp-webhook] Buscando info do contato:', url);
+    console.log('[whatsapp-webhook] 📇 Buscando info do contato:', cleanNumber);
+    
+    // Usar AbortController para timeout de 5 segundos
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -183,23 +187,36 @@ async function getContactInfo(
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
+      signal: controller.signal,
     });
     
+    clearTimeout(timeoutId);
+    
     if (!response.ok) {
-      console.log('[whatsapp-webhook] API contato retornou:', response.status);
+      console.log('[whatsapp-webhook] 📇 API contato retornou status:', response.status);
       return { name: null, pushname: null };
     }
     
     const data = await response.json();
-    console.log('[whatsapp-webhook] Resposta info contato:', JSON.stringify(data));
+    console.log('[whatsapp-webhook] 📇 Resposta info contato:', JSON.stringify(data).slice(0, 300));
     
     // A resposta pode ter diferentes formatos
     const name = data?.name || data?.verifiedName || null;
     const pushname = data?.pushname || data?.pushName || data?.notify || null;
     
+    if (name || pushname) {
+      console.log('[whatsapp-webhook] 📇 Info encontrada - name:', name, '| pushname:', pushname);
+    } else {
+      console.log('[whatsapp-webhook] 📇 Nenhum nome encontrado para:', cleanNumber);
+    }
+    
     return { name, pushname };
   } catch (error) {
-    console.error('[whatsapp-webhook] Erro ao buscar info do contato:', error);
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.log('[whatsapp-webhook] 📇 Timeout ao buscar info do contato');
+    } else {
+      console.error('[whatsapp-webhook] 📇 Erro ao buscar info do contato:', error);
+    }
     return { name: null, pushname: null };
   }
 }
@@ -215,10 +232,20 @@ async function getProfilePicture(
     // Usar apenas o número SEM @c.us, conforme documentação oficial WAHA
     const cleanNumber = contactId.replace('@c.us', '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
     
+    // Ignorar números muito curtos ou inválidos
+    if (cleanNumber.length < 10) {
+      console.log('[whatsapp-webhook] 📷 Número muito curto para buscar foto:', cleanNumber);
+      return null;
+    }
+    
     // Adicionar refresh=true para forçar buscar do WhatsApp (evita cache vazio de 24h)
     const url = `${wahaBaseUrl}/api/contacts/profile-picture?contactId=${cleanNumber}&session=${sessionName}&refresh=true`;
     
-    console.log('[whatsapp-webhook] Buscando foto de perfil:', url);
+    console.log('[whatsapp-webhook] 📷 Buscando foto de perfil para:', cleanNumber);
+    
+    // Usar AbortController para timeout de 8 segundos (fotos podem demorar mais)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -227,27 +254,34 @@ async function getProfilePicture(
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
+      signal: controller.signal,
     });
     
+    clearTimeout(timeoutId);
+    
     if (!response.ok) {
-      console.log('[whatsapp-webhook] API foto de perfil retornou:', response.status);
+      console.log('[whatsapp-webhook] 📷 API foto de perfil retornou status:', response.status);
       return null;
     }
     
     const data = await response.json();
-    console.log('[whatsapp-webhook] Resposta foto de perfil:', JSON.stringify(data));
     
     // A resposta pode ter diferentes formatos
     const profilePictureUrl = data?.profilePictureURL || data?.profilePicture || data?.url || data?.imgUrl;
     
     if (profilePictureUrl && typeof profilePictureUrl === 'string' && profilePictureUrl.startsWith('http')) {
-      console.log('[whatsapp-webhook] Foto de perfil encontrada');
+      console.log('[whatsapp-webhook] 📷 Foto de perfil encontrada para:', cleanNumber);
       return profilePictureUrl;
     }
     
+    console.log('[whatsapp-webhook] 📷 Foto não encontrada ou privada para:', cleanNumber);
     return null;
   } catch (error) {
-    console.error('[whatsapp-webhook] Erro ao buscar foto de perfil:', error);
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.log('[whatsapp-webhook] 📷 Timeout ao buscar foto de perfil');
+    } else {
+      console.error('[whatsapp-webhook] 📷 Erro ao buscar foto de perfil:', error);
+    }
     return null;
   }
 }
@@ -1741,11 +1775,19 @@ serve(async (req) => {
       }
 
       // Buscar foto de perfil se ainda não tiver
-      if (!existingLead.avatar_url) {
+      if (!existingLead.avatar_url && !isFromFacebookLid) {
+        console.log('[whatsapp-webhook] 📷 Lead existente sem avatar, tentando buscar...');
         const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
         if (wahaConfig) {
-          // Usar número com código do país (55) para a API
-          const phoneWithCountry = senderPhone.startsWith('55') ? senderPhone : `55${senderPhone}`;
+          // Usar número com código do país para a API
+          let phoneWithCountry = senderPhone;
+          // Se não tem código do país, adicionar baseado no country_code do lead ou default 55
+          if (!senderPhone.match(/^(55|1|595|54|56|57|58|51|52|53)/)) {
+            const countryCode = existingLead.country_code || '55';
+            phoneWithCountry = countryCode + senderPhone;
+          }
+          console.log('[whatsapp-webhook] 📷 Buscando avatar para:', phoneWithCountry);
+          
           const avatarUrl = await getProfilePicture(
             wahaConfig.baseUrl,
             wahaConfig.apiKey,
@@ -1754,7 +1796,28 @@ serve(async (req) => {
           );
           if (avatarUrl) {
             updateData.avatar_url = avatarUrl;
-            console.log('[whatsapp-webhook] Avatar atualizado para lead existente');
+            console.log('[whatsapp-webhook] 📷 Avatar atualizado para lead existente');
+          }
+        }
+      }
+      
+      // Se lead existe mas nome é genérico e não temos nome do WhatsApp, tentar buscar via API
+      if (!senderName && (existingLead.name.startsWith('Lead ') || existingLead.name.includes('via anúncio'))) {
+        console.log('[whatsapp-webhook] 📇 Lead com nome genérico, tentando buscar nome real...');
+        const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
+        if (wahaConfig) {
+          const phoneWithCountry = senderPhone.startsWith('55') ? senderPhone : `55${senderPhone}`;
+          const contactInfo = await getContactInfo(
+            wahaConfig.baseUrl,
+            wahaConfig.apiKey,
+            wahaConfig.sessionName,
+            phoneWithCountry
+          );
+          if (contactInfo.pushname || contactInfo.name) {
+            const newName = contactInfo.name || contactInfo.pushname;
+            updateData.whatsapp_name = contactInfo.pushname || contactInfo.name;
+            updateData.name = newName;
+            console.log('[whatsapp-webhook] 📇 Nome atualizado via API:', newName);
           }
         }
       }
