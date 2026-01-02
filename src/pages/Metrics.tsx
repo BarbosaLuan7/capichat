@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { motion } from 'framer-motion';
 import {
   BarChart3,
@@ -66,6 +66,24 @@ import {
 import { useLabels } from '@/hooks/useLabels';
 import { useReportExport } from '@/hooks/useReportExport';
 
+// Memoized tooltip component - extracted outside to prevent re-creation on every render
+const CustomTooltip = memo(({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+        <p className="font-medium text-foreground">{label}</p>
+        {payload.map((entry: any, index: number) => (
+          <p key={index} className="text-sm text-muted-foreground">
+            {entry.name}: {entry.value}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+});
+CustomTooltip.displayName = 'CustomTooltip';
+
 const Metrics = () => {
   const [periodo, setPeriodo] = useState<PeriodFilter>('month');
   const { exportReport, isExporting } = useReportExport();
@@ -85,22 +103,6 @@ const Metrics = () => {
     refetchAgents();
     refetchDaily();
     refetchConversations();
-  };
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-          <p className="font-medium text-foreground">{label}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-sm text-muted-foreground">
-              {entry.name}: {entry.value}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
   };
 
   const isLoading = loadingLeads || loadingFunnel || loadingAgents || loadingDaily || loadingConversations;
