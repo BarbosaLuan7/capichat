@@ -5,20 +5,29 @@
 
 // Códigos de países conhecidos (ordenados por tamanho decrescente para match correto)
 const COUNTRY_CODES = [
+  // 3 dígitos (DEVEM VIR PRIMEIRO!)
   { code: '595', name: 'Paraguai' },
   { code: '598', name: 'Uruguai' },
+  { code: '593', name: 'Equador' },
+  { code: '591', name: 'Bolívia' },
+  { code: '353', name: 'Irlanda' },
   { code: '351', name: 'Portugal' },
+  // 2 dígitos
+  { code: '81', name: 'Japão' },
+  { code: '61', name: 'Austrália' },
   { code: '55', name: 'Brasil' },
   { code: '54', name: 'Argentina' },
   { code: '56', name: 'Chile' },
   { code: '57', name: 'Colômbia' },
   { code: '58', name: 'Venezuela' },
+  { code: '52', name: 'México' },
   { code: '51', name: 'Peru' },
   { code: '34', name: 'Espanha' },
   { code: '39', name: 'Itália' },
   { code: '49', name: 'Alemanha' },
   { code: '33', name: 'França' },
   { code: '44', name: 'Reino Unido' },
+  // 1 dígito (por último)
   { code: '1', name: 'EUA/Canadá' },
 ];
 
@@ -163,7 +172,7 @@ export function toWhatsAppFormat(localNumber: string, countryCode: string = '55'
 export function formatPhoneByCountry(localNumber: string, countryCode: string): string {
   const digits = localNumber.replace(/\D/g, '');
   
-  // Formatação brasileira
+  // Formatação brasileira: (11) 99999-9999
   if (countryCode === '55') {
     if (digits.length === 11) {
       return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
@@ -173,9 +182,29 @@ export function formatPhoneByCountry(localNumber: string, countryCode: string): 
     }
   }
   
-  // Formatação EUA/Canadá
+  // Formatação EUA/Canadá: (123) 456-7890
   if (countryCode === '1' && digits.length === 10) {
     return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+  
+  // Formatação México: (55) 1234-5678
+  if (countryCode === '52' && digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  
+  // Formatação Irlanda: 87 123 4567
+  if (countryCode === '353' && digits.length >= 9) {
+    return `${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5)}`;
+  }
+  
+  // Formatação Japão: 90-1234-5678
+  if (countryCode === '81' && digits.length >= 10) {
+    return `${digits.slice(0, 2)}-${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  
+  // Formatação Austrália: 0412 345 678
+  if (countryCode === '61' && digits.length >= 9) {
+    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
   }
   
   // Formatação genérica para outros países

@@ -374,20 +374,29 @@ function normalizePhone(phone: string): string {
 
 // Códigos de países conhecidos (ordenados por tamanho decrescente para match correto)
 const COUNTRY_CODES = [
+  // 3 dígitos (DEVEM VIR PRIMEIRO!)
   { code: '595', name: 'Paraguai' },
   { code: '598', name: 'Uruguai' },
+  { code: '593', name: 'Equador' },
+  { code: '591', name: 'Bolívia' },
+  { code: '353', name: 'Irlanda' },
   { code: '351', name: 'Portugal' },
+  // 2 dígitos
+  { code: '81', name: 'Japão' },
+  { code: '61', name: 'Austrália' },
   { code: '55', name: 'Brasil' },
   { code: '54', name: 'Argentina' },
   { code: '56', name: 'Chile' },
   { code: '57', name: 'Colômbia' },
   { code: '58', name: 'Venezuela' },
+  { code: '52', name: 'México' },
   { code: '51', name: 'Peru' },
   { code: '34', name: 'Espanha' },
   { code: '39', name: 'Itália' },
   { code: '49', name: 'Alemanha' },
   { code: '33', name: 'França' },
   { code: '44', name: 'Reino Unido' },
+  // 1 dígito (por último)
   { code: '1', name: 'EUA/Canadá' },
 ];
 
