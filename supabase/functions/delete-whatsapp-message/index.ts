@@ -81,11 +81,12 @@ serve(async (req) => {
     }
 
     const wahaConfig = config[0];
-    const baseUrl = wahaConfig.base_url;
+    // Normalizar base_url removendo barra final para evitar //api/
+    const baseUrl = wahaConfig.base_url.replace(/\/$/, '');
     const apiKey = wahaConfig.api_key;
     const session = wahaConfig.instance_name || 'default';
 
-    // Buscar as mensagens para obter waha_message_id
+    // Buscar as mensagens para obter waha_message_id e external_id
     const { data: messages, error: msgError } = await supabase
       .from('messages')
       .select('id, waha_message_id, external_id')
@@ -99,15 +100,23 @@ serve(async (req) => {
       );
     }
 
-    const results: Array<{ messageId: string; success: boolean; error?: string }> = [];
+    const results: Array<{ messageId: string; success: boolean; error?: string; deletedLocally?: boolean }> = [];
 
     // Deletar cada mensagem no WAHA
     for (const message of messages || []) {
-      const wahaMessageId = message.waha_message_id || message.external_id;
+      // Priorizar external_id que tem o formato completo esperado pelo WAHA
+      const wahaMessageId = message.external_id || message.waha_message_id;
+      
+      console.log(`[delete-whatsapp-message] Mensagem ${message.id}: external_id=${message.external_id}, waha_message_id=${message.waha_message_id}, usando=${wahaMessageId}`);
       
       if (!wahaMessageId) {
-        console.warn(`[delete-whatsapp-message] Mensagem ${message.id} não tem waha_message_id`);
-        results.push({ messageId: message.id, success: false, error: 'Sem ID do WhatsApp' });
+        console.warn(`[delete-whatsapp-message] Mensagem ${message.id} não tem ID do WhatsApp`);
+        // Marcar como deletado localmente mesmo sem ID do WhatsApp
+        await supabase
+          .from('messages')
+          .update({ is_deleted_locally: true })
+          .eq('id', message.id);
+        results.push({ messageId: message.id, success: true, deletedLocally: true, error: 'Sem ID do WhatsApp - removida apenas localmente' });
         continue;
       }
 
