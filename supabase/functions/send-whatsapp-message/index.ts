@@ -520,20 +520,21 @@ async function sendWAHA(
       if (typeof data.id === 'string') {
         messageId = data.id;
       }
-      // Formato 2: data.id é objeto com .id interno (comum no WAHA)
+      // Formato 2: data.id é objeto com ._serialized (priorizar formato completo para DELETE funcionar)
       else if (data.id && typeof data.id === 'object') {
-        messageId = data.id.id || data.id._serialized;
+        // IMPORTANTE: Priorizar _serialized pois contém formato completo necessário para DELETE no WAHA
+        messageId = data.id._serialized || data.id.id;
       }
       // Formato 3: data.key.id
       else if (data.key && typeof data.key.id === 'string') {
         messageId = data.key.id;
       }
-      // Formato 4: data._data.id (fallback)
+      // Formato 4: data._data.id (fallback) - também priorizar _serialized
       else if (data._data?.id && typeof data._data.id === 'object') {
-        messageId = data._data.id.id || data._data.id._serialized;
+        messageId = data._data.id._serialized || data._data.id.id;
       }
       
-      console.log('[WAHA] MessageId extraído:', messageId, 'de data.id:', typeof data.id, data.id?.id || data.id);
+      console.log('[WAHA] MessageId extraído:', messageId, 'raw:', JSON.stringify({ id: data.id?.id, serialized: data.id?._serialized }));
       // Retorna também o chatId para atualização do cache
       return { success: true, messageId, chatId };
     } catch {
