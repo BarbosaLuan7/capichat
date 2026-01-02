@@ -2264,6 +2264,16 @@ serve(async (req) => {
     // Extrair quote se houver (re-extrair do payload porque não está disponível aqui)
     const { quotedMessage } = getMessageContent(messageData, provider);
     
+    // ========== VERIFICAÇÃO DE SEGURANÇA: Garantir que temos conversa ==========
+    if (!conversation || !conversation.id) {
+      console.error('[whatsapp-webhook] ❌ ERRO CRÍTICO: conversation é null/undefined antes de criar mensagem');
+      console.error('[whatsapp-webhook] Lead:', lead?.id, 'Content:', content?.substring(0, 50));
+      return new Response(
+        JSON.stringify({ success: false, error: 'No conversation found - cannot create message' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     // ========== DETERMINAR DIREÇÃO E TIPO DE REMETENTE ==========
     // isFromMe=true: mensagem enviada por nós (celular, CRM, bot)
     // isFromMe=false: mensagem recebida do lead
