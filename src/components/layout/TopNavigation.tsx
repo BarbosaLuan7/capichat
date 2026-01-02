@@ -287,7 +287,7 @@ const TopNavigation = () => {
         <img 
           src={lbAdvLogo} 
           alt="LB ADV" 
-          className="h-8 w-auto object-contain"
+          className="h-10 w-auto object-contain"
         />
         <span className="text-base font-bold text-white hidden sm:block">
           LB ADV
