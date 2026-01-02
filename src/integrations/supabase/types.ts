@@ -622,6 +622,7 @@ export type Database = {
           direction: Database["public"]["Enums"]["message_direction"] | null
           external_id: string | null
           id: string
+          is_deleted_locally: boolean | null
           is_internal_note: boolean | null
           is_starred: boolean | null
           lead_id: string | null
@@ -642,6 +643,7 @@ export type Database = {
           direction?: Database["public"]["Enums"]["message_direction"] | null
           external_id?: string | null
           id?: string
+          is_deleted_locally?: boolean | null
           is_internal_note?: boolean | null
           is_starred?: boolean | null
           lead_id?: string | null
@@ -662,6 +664,7 @@ export type Database = {
           direction?: Database["public"]["Enums"]["message_direction"] | null
           external_id?: string | null
           id?: string
+          is_deleted_locally?: boolean | null
           is_internal_note?: boolean | null
           is_starred?: boolean | null
           lead_id?: string | null
