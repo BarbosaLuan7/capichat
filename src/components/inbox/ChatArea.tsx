@@ -212,11 +212,11 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     }
   }, [conversation?.id, isMobile]);
 
-  const handleMessagesScrollCore = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+  // Core scroll handler - receives the element directly (not the event)
+  const handleMessagesScrollCore = useCallback((element: HTMLElement) => {
     if (ignoreScrollRef.current) return;
     
-    const target = e.currentTarget;
-    const { scrollTop, scrollHeight, clientHeight } = target;
+    const { scrollTop, scrollHeight, clientHeight } = element;
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
     
     // Update near bottom state (within 100px of bottom)
@@ -225,25 +225,31 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     
     // Load more messages when scrolling near the TOP (older messages)
     if (scrollTop < 100 && hasMoreMessages && !isLoadingMoreMessages && onLoadMoreMessages) {
-      // Save current scroll height to restore position after loading
       const previousScrollHeight = scrollHeight;
       onLoadMoreMessages();
       
-      // Restore scroll position after new messages are loaded
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          const newScrollHeight = target.scrollHeight;
+          const newScrollHeight = element.scrollHeight;
           const scrollDelta = newScrollHeight - previousScrollHeight;
           if (scrollDelta > 0) {
-            target.scrollTop = scrollTop + scrollDelta;
+            element.scrollTop = scrollTop + scrollDelta;
           }
         });
       });
     }
   }, [hasMoreMessages, isLoadingMoreMessages, onLoadMoreMessages]);
 
-  // Throttled scroll handler for better performance (100ms)
-  const handleMessagesScroll = useThrottledCallback(handleMessagesScrollCore, 100);
+  // Throttled scroll handler
+  const throttledScroll = useThrottledCallback(handleMessagesScrollCore, 100);
+  
+  // Wrapper that extracts currentTarget synchronously before throttling
+  const handleMessagesScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const element = e.currentTarget;
+    if (element) {
+      throttledScroll(element);
+    }
+  }, [throttledScroll]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
