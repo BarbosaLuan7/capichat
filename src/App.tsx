@@ -38,6 +38,21 @@ const TenantsSettings = lazy(() => import("./pages/settings/TenantsSettings"));
 const ApiDocs = lazy(() => import("./pages/ApiDocs"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
+// Preload critical routes during idle time for faster navigation
+if (typeof window !== 'undefined') {
+  const preloadCriticalRoutes = () => {
+    import("./pages/Dashboard");
+    import("./pages/Inbox");
+  };
+  
+  if ('requestIdleCallback' in window) {
+    (window as any).requestIdleCallback(preloadCriticalRoutes);
+  } else {
+    // Fallback for Safari
+    setTimeout(preloadCriticalRoutes, 1000);
+  }
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
