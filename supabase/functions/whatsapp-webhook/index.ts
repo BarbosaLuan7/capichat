@@ -1226,6 +1226,38 @@ serve(async (req) => {
               const toField = payload.to || payload.chatId || '';
               const toPhone = normalizePhone(toField);
               
+              // ========== VALIDAÇÃO: Ignorar LIDs não resolvidos ==========
+              if (isLID(toField)) {
+                console.log('[whatsapp-webhook] ⏭️ Ignorando criação via ACK para LID não resolvido:', toField);
+                return new Response(
+                  JSON.stringify({ success: true, ignored: true, reason: 'ack_for_unresolved_lid' }),
+                  { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                );
+              }
+              
+              // ========== VALIDAÇÃO: Ignorar se destinatário for o próprio número do WhatsApp ==========
+              const wahaConfigForAck = await getWAHAConfigBySession(supabase, body.session || 'default');
+              if (wahaConfigForAck) {
+                const { data: whatsappConfigData } = await supabase
+                  .from('whatsapp_config')
+                  .select('phone_number')
+                  .eq('id', wahaConfigForAck.instanceId)
+                  .maybeSingle();
+                
+                if (whatsappConfigData?.phone_number) {
+                  const ownPhone = whatsappConfigData.phone_number.replace(/\D/g, '');
+                  const toPhoneDigits = toPhone.replace(/\D/g, '');
+                  // Comparar últimos 10 dígitos (ignora código do país)
+                  if (toPhoneDigits.slice(-10) === ownPhone.slice(-10)) {
+                    console.log('[whatsapp-webhook] ⏭️ Ignorando: destinatário é o próprio número WhatsApp');
+                    return new Response(
+                      JSON.stringify({ success: true, ignored: true, reason: 'self_message_ack' }),
+                      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                    );
+                  }
+                }
+              }
+              
               if (toPhone) {
                 console.log('[whatsapp-webhook] Buscando lead pelo phone:', toPhone);
                 
