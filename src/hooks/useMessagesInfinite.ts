@@ -89,7 +89,7 @@ export function useMessagesInfinite(conversationId: string | undefined) {
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     enabled: !!conversationId,
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 60 * 1000, // 60 seconds - consistent with other hooks
     gcTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
