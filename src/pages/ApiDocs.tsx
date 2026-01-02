@@ -81,10 +81,10 @@ export default function ApiDocs() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">GD</span>
+              <span className="text-primary-foreground font-bold text-sm">LB</span>
             </div>
             <div>
-              <h1 className="text-xl font-bold">GaranteDireito API</h1>
+              <h1 className="text-xl font-bold">LB ADV API</h1>
               <p className="text-sm text-muted-foreground">Documentação pública</p>
             </div>
           </div>

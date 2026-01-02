@@ -80,7 +80,7 @@ const Auth = () => {
         }
       } else {
         toast({
-          title: 'Bem-vindo à GaranteDireito!',
+          title: 'Bem-vindo ao LB ADV!',
           description: 'Login realizado com sucesso.',
         });
         navigate('/dashboard');
@@ -127,7 +127,7 @@ const Auth = () => {
       } else {
         toast({
           title: 'Conta criada!',
-          description: 'Bem-vindo à GaranteDireito. Você já está logado.',
+          description: 'Bem-vindo ao LB ADV. Você já está logado.',
         });
         navigate('/dashboard');
       }
@@ -152,7 +152,7 @@ const Auth = () => {
               <div className="w-12 h-12 rounded-xl bg-primary-foreground/20 backdrop-blur flex items-center justify-center">
                 <MessageSquare className="w-7 h-7" />
               </div>
-              <span className="text-3xl font-bold">GaranteDireito</span>
+              <span className="text-3xl font-bold">LB ADV</span>
             </div>
 
             <h1 className="text-4xl xl:text-5xl font-bold leading-tight mb-6">
@@ -204,7 +204,7 @@ const Auth = () => {
             <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
               <MessageSquare className="w-6 h-6 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold text-foreground">GaranteDireito</span>
+            <span className="text-2xl font-bold text-foreground">LB ADV</span>
           </div>
 
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'login' | 'signup')} className="w-full">
