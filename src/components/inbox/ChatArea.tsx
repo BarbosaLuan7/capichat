@@ -399,8 +399,17 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
 
   const handleDeleteForMe = useCallback(() => {
     if (!conversation) return;
+    
+    // Filtrar IDs temporários (mensagens otimistas ainda não salvas)
+    const validMessageIds = selectedMessages.filter(id => !id.startsWith('temp_'));
+    
+    if (validMessageIds.length === 0) {
+      toast.warning('Aguarde as mensagens serem enviadas antes de apagar');
+      return;
+    }
+    
     deleteForMe.mutate(
-      { messageIds: selectedMessages, conversationId: conversation.id },
+      { messageIds: validMessageIds, conversationId: conversation.id },
       {
         onSuccess: () => {
           setShowDeleteModal(false);
@@ -412,8 +421,17 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
 
   const handleDeleteForEveryone = useCallback(() => {
     if (!conversation) return;
+    
+    // Filtrar IDs temporários (mensagens otimistas ainda não salvas)
+    const validMessageIds = selectedMessages.filter(id => !id.startsWith('temp_'));
+    
+    if (validMessageIds.length === 0) {
+      toast.warning('Aguarde as mensagens serem enviadas antes de apagar');
+      return;
+    }
+    
     deleteForEveryone.mutate(
-      { messageIds: selectedMessages, conversationId: conversation.id },
+      { messageIds: validMessageIds, conversationId: conversation.id },
       {
         onSuccess: () => {
           setShowDeleteModal(false);

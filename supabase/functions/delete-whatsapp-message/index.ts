@@ -18,7 +18,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { messageIds, conversationId } = await req.json();
+    let { messageIds, conversationId } = await req.json();
 
     if (!messageIds || !Array.isArray(messageIds) || messageIds.length === 0) {
       return new Response(
@@ -30,6 +30,22 @@ serve(async (req) => {
     if (!conversationId) {
       return new Response(
         JSON.stringify({ error: 'conversationId é obrigatório' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validar que todos os IDs são UUIDs válidos (filtrar IDs temporários do frontend)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const invalidIds = messageIds.filter((id: string) => !uuidRegex.test(id));
+    
+    if (invalidIds.length > 0) {
+      console.warn('[delete-whatsapp-message] IDs inválidos ignorados:', invalidIds);
+      messageIds = messageIds.filter((id: string) => uuidRegex.test(id));
+    }
+    
+    if (messageIds.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Nenhuma mensagem válida para deletar', invalidIds }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
