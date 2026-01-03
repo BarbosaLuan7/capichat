@@ -156,7 +156,7 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
               {convLead?.temperature === 'hot' && (
                 <span className="text-sm">🔥</span>
               )}
-              {conversation.unread_count > 0 && !isSelected && (
+              {conversation.unread_count > 0 && (
                 <span className="min-w-[20px] h-5 w-5 bg-destructive text-destructive-foreground text-xs font-bold rounded-full flex items-center justify-center">
                   {conversation.unread_count > 9 ? '9+' : conversation.unread_count}
                 </span>

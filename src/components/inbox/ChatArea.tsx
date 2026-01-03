@@ -93,6 +93,8 @@ interface ChatAreaProps {
   hasMoreMessages?: boolean;
   onLoadMoreMessages?: () => void;
   isLoadingMoreMessages?: boolean;
+  // Callback para marcar como lido ao começar a digitar
+  onStartTyping?: () => void;
 }
 
 type ExtendedMessage = Message & { isOptimistic?: boolean; errorMessage?: string };
@@ -114,6 +116,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     hasMoreMessages,
     onLoadMoreMessages,
     isLoadingMoreMessages,
+    onStartTyping,
   }, ref) {
   const isMobile = useIsMobile();
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
@@ -136,7 +139,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   const isNearBottomRef = useRef(true);
   const lastMessageIdRef = useRef<string | null>(null);
   const dragCounter = useRef(0);
-
+  const hasStartedTypingRef = useRef(false);
   // Hooks
   const { uploadFile, uploadProgress } = useFileUpload();
   const audioRecorder = useAudioRecorder();
@@ -214,6 +217,11 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
       return () => clearTimeout(timer);
     }
   }, [conversation?.id, isMobile]);
+
+  // Reset typing flag when conversation changes
+  useEffect(() => {
+    hasStartedTypingRef.current = false;
+  }, [conversation?.id]);
 
   // Core scroll handler - receives the element directly (not the event)
   const handleMessagesScrollCore = useCallback((element: HTMLElement) => {
@@ -488,6 +496,12 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     const value = e.target.value;
     setMessageInput(value);
     setShowSlashCommand(value.includes('/'));
+    
+    // Marcar como lido na primeira digitação
+    if (value.length > 0 && !hasStartedTypingRef.current && onStartTyping) {
+      hasStartedTypingRef.current = true;
+      onStartTyping();
+    }
   };
 
   // Handle paste - suporte a colar imagens da área de transferência

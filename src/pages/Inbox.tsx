@@ -105,10 +105,7 @@ const Inbox = () => {
       notify(message.content, leadName);
       logger.log('[Inbox] New incoming message:', message.id);
     },
-    onMarkSelectedConversationAsRead: (conversationId) => {
-      // Auto-mark as read when message arrives in the open conversation
-      markAsRead.mutate(conversationId);
-    },
+    // REMOVIDO: onMarkSelectedConversationAsRead - badge só some ao digitar
     addMessageOptimistically,
     updateMessageOptimistically,
     addConversationOptimistically,
@@ -133,19 +130,11 @@ const Inbox = () => {
     }
   }, [searchParams, selectedConversationId, setSearchParams]);
 
-  // Mark as read when user explicitly clicks a conversation
+  // REMOVIDO: Mark as read ao clicar - agora badge só some quando agente começa a digitar
   useEffect(() => {
-    if (
-      selectedConversationId &&
-      userClickedConversationRef.current &&
-      selectedConversation?.unread_count &&
-      selectedConversation.unread_count > 0 &&
-      document.visibilityState === 'visible'
-    ) {
-      markAsRead.mutate(selectedConversationId);
-    }
+    // Apenas resetar a flag de clique, sem marcar como lido
     userClickedConversationRef.current = false;
-  }, [selectedConversationId, selectedConversation?.unread_count, markAsRead]);
+  }, [selectedConversationId]);
 
 
   // Prepare lead with labels - memoized to prevent re-renders
@@ -343,6 +332,11 @@ const Inbox = () => {
             hasMoreMessages={hasMoreMessages}
             onLoadMoreMessages={fetchMoreMessages}
             isLoadingMoreMessages={loadingMoreMessages}
+            onStartTyping={() => {
+              if (selectedConversationId && selectedConversation?.unread_count && selectedConversation.unread_count > 0) {
+                markAsRead.mutate(selectedConversationId);
+              }
+            }}
           />
         </Suspense>
       )}
