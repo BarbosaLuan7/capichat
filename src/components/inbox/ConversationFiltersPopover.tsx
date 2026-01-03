@@ -53,9 +53,9 @@ export function ConversationFiltersPopover({ availableInboxes }: ConversationFil
   
   const { 
     filters, 
-    toggleInbox, 
-    setAllInboxes,
-    clearInboxes,
+    toggleInboxExclusion,
+    includeAllInboxes,
+    excludeAllInboxes,
     toggleLabel, 
     clearLabels,
     toggleUser,
@@ -117,13 +117,21 @@ export function ConversationFiltersPopover({ availableInboxes }: ConversationFil
     return name;
   };
 
+  // Check if inbox is included (not excluded)
+  const isInboxIncluded = (inboxId: string) => {
+    return !filters.excludedInboxIds.includes(inboxId);
+  };
+
   const handleSelectAllInboxes = () => {
-    setAllInboxes(availableInboxes.map(i => i.id));
+    includeAllInboxes(); // Clear exclusions = all included
   };
 
   const handleDeselectAllInboxes = () => {
-    clearInboxes();
+    excludeAllInboxes(availableInboxes.map(i => i.id)); // Exclude all
   };
+
+  // Count of excluded inboxes (for badge in accordion)
+  const excludedInboxCount = filters.excludedInboxIds.length;
 
   // Only show tenants filter if user has access to more than one
   const showTenantsFilter = userTenants && userTenants.length > 1;
@@ -182,9 +190,9 @@ export function ConversationFiltersPopover({ availableInboxes }: ConversationFil
                     <div className="flex items-center gap-2">
                       <MessageSquare className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm">Caixas de Entrada</span>
-                      {filters.inboxIds.length > 0 && (
+                      {excludedInboxCount > 0 && (
                         <Badge variant="secondary" className="h-5 px-1 text-2xs">
-                          {filters.inboxIds.length}
+                          -{excludedInboxCount}
                         </Badge>
                       )}
                     </div>
@@ -217,8 +225,8 @@ export function ConversationFiltersPopover({ availableInboxes }: ConversationFil
                           className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/50 cursor-pointer"
                         >
                           <Checkbox
-                            checked={filters.inboxIds.includes(inbox.id)}
-                            onCheckedChange={() => toggleInbox(inbox.id)}
+                            checked={isInboxIncluded(inbox.id)}
+                            onCheckedChange={() => toggleInboxExclusion(inbox.id)}
                           />
                           <span className="text-sm flex-1 truncate">
                             {formatPhone(inbox.phone_number, inbox.name)}

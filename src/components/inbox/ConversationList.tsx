@@ -118,7 +118,7 @@ export function ConversationList({
   const [sortOrder, setSortOrder] = useState<'unread' | 'recent' | 'oldest'>('unread');
   
   // Get filters from global store
-  const { filters, setAllInboxes } = useConversationFilters();
+  const { filters } = useConversationFilters();
   
   // Ref for virtual list container
   const parentRef = useRef<HTMLDivElement>(null);
@@ -156,23 +156,18 @@ export function ConversationList({
       .sort((a, b) => (a.phone_number || a.name).localeCompare(b.phone_number || b.name));
   }, [whatsAppConfigs, conversations]);
 
-  // Initialize filters with all inboxes if none selected (first load)
-  useEffect(() => {
-    if (filters.inboxIds.length === 0 && availableInboxes.length > 0) {
-      setAllInboxes(availableInboxes.map((i) => i.id));
-    }
-  }, [availableInboxes, filters.inboxIds.length, setAllInboxes]);
-
   // Filter conversations by inbox (WhatsApp number) first
+  // Now using EXCLUSION logic: empty excludedInboxIds = show all
   const inboxFilteredConversations = useMemo(() => {
-    // If no inboxes selected, show all (backwards compat)
-    if (filters.inboxIds.length === 0) {
+    // If no exclusions, show all conversations
+    if (filters.excludedInboxIds.length === 0) {
       return conversations || [];
     }
+    // Filter OUT the excluded inboxes
     return (conversations || []).filter((conv) =>
-      conv.whatsapp_config?.id && filters.inboxIds.includes(conv.whatsapp_config.id)
+      !conv.whatsapp_config?.id || !filters.excludedInboxIds.includes(conv.whatsapp_config.id)
     );
-  }, [conversations, filters.inboxIds]);
+  }, [conversations, filters.excludedInboxIds]);
 
   // Filter by labels from global store
   const labelFilteredConversations = useMemo(() => {
