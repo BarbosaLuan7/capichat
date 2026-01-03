@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   Zap,
   Upload,
+  Copy,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -751,7 +752,21 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
           </Avatar>
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-foreground truncate">{chatDisplayName}</p>
-            <p className="text-xs text-muted-foreground truncate">{formatPhoneNumber(lead.phone)}</p>
+            <div className="flex items-center gap-1">
+              <p className="text-xs text-muted-foreground truncate">{formatPhoneNumber(lead.phone)}</p>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 shrink-0"
+                onClick={() => {
+                  navigator.clipboard.writeText(formatPhoneNumber(lead.phone));
+                  toast.success('Telefone copiado!', { duration: 1500 });
+                }}
+                aria-label="Copiar telefone"
+              >
+                <Copy className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+              </Button>
+            </div>
           </div>
         </div>
 
