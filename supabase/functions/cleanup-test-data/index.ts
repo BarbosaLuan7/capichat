@@ -58,11 +58,11 @@ Deno.serve(async (req) => {
 
     console.log('[cleanup-test-data] Iniciando limpeza de dados de teste...');
 
-    // 1. Buscar leads de teste (telefone começa com 5511999000 ou nome contém [TESTE])
+    // 1. Buscar leads de teste (telefone começa com 11999000 ou 5511999000 ou nome contém [TESTE] ou "Lead 11999")
     const { data: testLeads, error: leadsError } = await supabase
       .from('leads')
       .select('id, phone, name')
-      .or('phone.like.5511999000%,name.ilike.%[TESTE]%');
+      .or('phone.like.11999000%,phone.like.5511999000%,name.ilike.%[TESTE]%,name.ilike.Lead 11999%');
 
     if (leadsError) {
       throw new Error(`Erro ao buscar leads de teste: ${leadsError.message}`);
