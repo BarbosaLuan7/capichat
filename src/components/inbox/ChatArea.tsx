@@ -376,7 +376,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     // 3. Enviar mensagem (agora é otimista - não bloqueia)
     const replyToExternalId = currentReplyTo?.external_id || null;
     onSendMessage(
-      currentInput || (messageType !== 'text' ? `[${messageType}]` : ''),
+      currentInput || '',  // Enviar vazio ao invés de [image], [video], etc.
       messageType,
       mediaUrl,
       replyToExternalId
@@ -483,7 +483,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
       const file = new File([audioRecorder.audioBlob], 'audio.webm', { type: 'audio/webm' });
       const mediaUrl = await uploadFile(file, 'audio');
 
-      await onSendMessage('[Áudio]', 'audio', mediaUrl);
+      await onSendMessage('', 'audio', mediaUrl);  // Enviar vazio ao invés de '[Áudio]'
 
       audioRecorder.cancelRecording();
       setShowAudioRecorder(false);

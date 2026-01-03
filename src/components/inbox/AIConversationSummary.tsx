@@ -31,6 +31,7 @@ interface AIConversationSummaryProps {
     phone?: string;
     source?: string;
     funnel_stages?: { name: string } | null;
+    ai_summary?: string | null;  // Campo do resumo salvo no banco
   };
   onSummaryGenerated?: () => void;
   className?: string;
@@ -45,6 +46,7 @@ function AIConversationSummaryComponent({
   const [isExpanded, setIsExpanded] = useState(true);
   const [autoSaved, setAutoSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showingSavedSummary, setShowingSavedSummary] = useState(false);
   const previousLeadIdRef = useRef<string>(lead.id);
   
   const { summaryResult, isLoading, fetchSummary, clearSummary } = useAISummary();
@@ -52,6 +54,8 @@ function AIConversationSummaryComponent({
 
   const handleRefresh = () => {
     setAutoSaved(false);
+    setShowingSavedSummary(false);
+    clearSummary();
     if (messages && messages.length > 0) {
       fetchSummary(messages, {
         id: lead.id,
@@ -94,6 +98,18 @@ function AIConversationSummaryComponent({
     }
   }, [lead.id]);
 
+  // Carregar resumo salvo do lead ao montar ou trocar de lead
+  useEffect(() => {
+    // Se já tem resumo gerado no state, não sobrescrever
+    if (summaryResult) {
+      setShowingSavedSummary(false);
+      return;
+    }
+    
+    // Se o lead tem resumo salvo no banco, mostrar ele
+    setShowingSavedSummary(!!lead.ai_summary);
+  }, [lead.id, lead.ai_summary, summaryResult]);
+
   // Auto-save summary 3 seconds after generation
   useEffect(() => {
     if (summaryResult?.summary && !autoSaved && !isSaving) {
@@ -115,7 +131,60 @@ function AIConversationSummaryComponent({
     );
   }
 
+  // Se não tem resumo gerado no state, verificar se tem resumo salvo no banco
   if (!summaryResult) {
+    // Se tem resumo salvo no lead, mostrar ele com badge "Salvo"
+    if (lead.ai_summary && showingSavedSummary) {
+      return (
+        <Collapsible 
+          open={isExpanded} 
+          onOpenChange={setIsExpanded}
+          className={className}
+        >
+          <div className="rounded-lg bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 overflow-hidden">
+            {/* Header */}
+            <CollapsibleTrigger className="w-full">
+              <div className="flex items-center justify-between p-3 hover:bg-primary/5 transition-colors">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium text-primary">Resumo IA</span>
+                  <Badge variant="secondary" className="text-xs">Salvo</Badge>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRefresh();
+                    }}
+                    title="Gerar novo resumo"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                  </Button>
+                  {isExpanded ? (
+                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  )}
+                </div>
+              </div>
+            </CollapsibleTrigger>
+
+            <CollapsibleContent>
+              <ScrollArea className="max-h-80">
+                <div className="p-3 pt-0">
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{lead.ai_summary}</p>
+                </div>
+              </ScrollArea>
+            </CollapsibleContent>
+          </div>
+        </Collapsible>
+      );
+    }
+    
+    // Se não tem nenhum resumo (nem gerado, nem salvo), mostrar botão para gerar
     return (
       <div className={cn("p-3 rounded-lg bg-muted/50 border border-border", className)}>
         <div className="flex items-center justify-between">
