@@ -17,7 +17,7 @@ interface ActiveFilterChipsProps {
 }
 
 export function ActiveFilterChips({ availableInboxes }: ActiveFilterChipsProps) {
-  const { filters, toggleInbox, toggleLabel, toggleUser, toggleTenant } = useConversationFilters();
+  const { filters, toggleInboxExclusion, toggleLabel, toggleUser, toggleTenant } = useConversationFilters();
   const { data: allLabels } = useLabels();
   const { data: profiles } = useProfiles();
   const { userTenants } = useTenant();
@@ -33,8 +33,9 @@ export function ActiveFilterChips({ availableInboxes }: ActiveFilterChipsProps) 
     return name.slice(0, 8);
   };
 
+  // Active filters: excluded inboxes, labels, users, tenants
   const hasActiveFilters = 
-    filters.inboxIds.length > 0 ||
+    filters.excludedInboxIds.length > 0 ||
     filters.labelIds.length > 0 ||
     filters.userIds.length > 0 ||
     filters.tenantIds.length > 0;
@@ -44,14 +45,14 @@ export function ActiveFilterChips({ availableInboxes }: ActiveFilterChipsProps) 
   // Collect all chips
   const chips: { key: string; label: string; color?: string; onRemove: () => void }[] = [];
 
-  // Inbox chips
-  filters.inboxIds.forEach((inboxId) => {
+  // Excluded inbox chips (show which inboxes are EXCLUDED/hidden)
+  filters.excludedInboxIds.forEach((inboxId) => {
     const inbox = availableInboxes.find(i => i.id === inboxId);
     if (inbox) {
       chips.push({
-        key: `inbox-${inboxId}`,
-        label: formatPhoneShort(inbox.phone_number, inbox.name),
-        onRemove: () => toggleInbox(inboxId),
+        key: `inbox-excluded-${inboxId}`,
+        label: `✕ ${formatPhoneShort(inbox.phone_number, inbox.name)}`,
+        onRemove: () => toggleInboxExclusion(inboxId),
       });
     }
   });

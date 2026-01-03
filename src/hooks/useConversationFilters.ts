@@ -2,7 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 interface ConversationFilters {
-  inboxIds: string[];
+  // excludedInboxIds: inboxes the user explicitly EXCLUDED (deselected)
+  // Empty means "all inboxes" (no filter)
+  excludedInboxIds: string[];
   labelIds: string[];
   userIds: string[];
   tenantIds: string[];
@@ -12,9 +14,10 @@ interface ConversationFiltersStore {
   filters: ConversationFilters;
   
   // Ações para Caixas de Entrada
-  toggleInbox: (inboxId: string) => void;
-  setAllInboxes: (ids: string[]) => void;
-  clearInboxes: () => void;
+  toggleInboxExclusion: (inboxId: string) => void;
+  excludeAllInboxes: (ids: string[]) => void;
+  includeAllInboxes: () => void;
+  isInboxIncluded: (inboxId: string) => boolean;
   
   // Ações para Etiquetas
   toggleLabel: (labelId: string) => void;
@@ -39,29 +42,34 @@ export const useConversationFilters = create<ConversationFiltersStore>()(
   persist(
     (set, get) => ({
       filters: {
-        inboxIds: [],
+        excludedInboxIds: [],
         labelIds: [],
         userIds: [],
         tenantIds: [],
       },
       
-      // Inbox actions
-      toggleInbox: (inboxId) => set((state) => ({
+      // Inbox actions - now works with EXCLUSION logic
+      toggleInboxExclusion: (inboxId) => set((state) => ({
         filters: {
           ...state.filters,
-          inboxIds: state.filters.inboxIds.includes(inboxId)
-            ? state.filters.inboxIds.filter(id => id !== inboxId)
-            : [...state.filters.inboxIds, inboxId]
+          excludedInboxIds: state.filters.excludedInboxIds.includes(inboxId)
+            ? state.filters.excludedInboxIds.filter(id => id !== inboxId)
+            : [...state.filters.excludedInboxIds, inboxId]
         }
       })),
       
-      setAllInboxes: (ids) => set((state) => ({
-        filters: { ...state.filters, inboxIds: ids }
+      excludeAllInboxes: (ids) => set((state) => ({
+        filters: { ...state.filters, excludedInboxIds: ids }
       })),
       
-      clearInboxes: () => set((state) => ({
-        filters: { ...state.filters, inboxIds: [] }
+      includeAllInboxes: () => set((state) => ({
+        filters: { ...state.filters, excludedInboxIds: [] }
       })),
+      
+      isInboxIncluded: (inboxId) => {
+        const { filters } = get();
+        return !filters.excludedInboxIds.includes(inboxId);
+      },
       
       // Label actions
       toggleLabel: (labelId) => set((state) => ({
@@ -108,18 +116,18 @@ export const useConversationFilters = create<ConversationFiltersStore>()(
       // Clear all
       clearAllFilters: () => set({
         filters: {
-          inboxIds: [],
+          excludedInboxIds: [],
           labelIds: [],
           userIds: [],
           tenantIds: [],
         }
       }),
       
-      // Count active filters
+      // Count active filters - only count excluded inboxes, not included ones
       getActiveFiltersCount: () => {
         const { filters } = get();
         return (
-          filters.inboxIds.length +
+          filters.excludedInboxIds.length +
           filters.labelIds.length +
           filters.userIds.length +
           filters.tenantIds.length
@@ -128,6 +136,24 @@ export const useConversationFilters = create<ConversationFiltersStore>()(
     }),
     {
       name: 'conversation-filters',
+      // Migrate old format to new format
+      migrate: (persistedState: any, version: number) => {
+        if (persistedState?.filters?.inboxIds) {
+          // Old format had inboxIds (included), new format has excludedInboxIds
+          // If migrating, clear the old data (default to all included)
+          return {
+            ...persistedState,
+            filters: {
+              excludedInboxIds: [],
+              labelIds: persistedState.filters?.labelIds || [],
+              userIds: persistedState.filters?.userIds || [],
+              tenantIds: persistedState.filters?.tenantIds || [],
+            }
+          };
+        }
+        return persistedState;
+      },
+      version: 1,
     }
   )
 );
