@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, memo } from 'react';
+import { useState, useRef, useEffect, memo, forwardRef } from 'react';
 import { Play, Pause, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -13,7 +13,7 @@ interface AudioPlayerProps {
   'aria-label'?: string;
 }
 
-function AudioPlayerComponent({ src, className, 'aria-label': ariaLabel }: AudioPlayerProps) {
+const AudioPlayerComponent = forwardRef<HTMLDivElement, AudioPlayerProps>(({ src, className, 'aria-label': ariaLabel }, ref) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -88,7 +88,7 @@ function AudioPlayerComponent({ src, className, 'aria-label': ariaLabel }: Audio
   };
 
   return (
-    <div className={cn("flex items-center gap-2 p-2 bg-muted/50 rounded-lg min-w-[200px]", className)} role="region" aria-label={ariaLabel || 'Player de áudio'}>
+    <div ref={ref} className={cn("flex items-center gap-2 p-2 bg-muted/50 rounded-lg min-w-[200px]", className)} role="region" aria-label={ariaLabel || 'Player de áudio'}>
       <audio ref={audioRef} src={src} preload="metadata" />
       
       <TooltipProvider>
@@ -156,7 +156,9 @@ function AudioPlayerComponent({ src, className, 'aria-label': ariaLabel }: Audio
       <Volume2 className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
     </div>
   );
-}
+});
+
+AudioPlayerComponent.displayName = 'AudioPlayer';
 
 export const AudioPlayer = memo(AudioPlayerComponent, (prev, next) =>
   prev.src === next.src && prev.className === next.className
