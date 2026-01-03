@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { Bell, Check, CheckCheck, MessageSquare, User, ClipboardList, Info, AlertTriangle, AlertCircle, CheckCircle } from 'lucide-react';
+import { Bell, CheckCheck, User, ClipboardList, Info, AlertTriangle, AlertCircle, CheckCircle, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
@@ -22,24 +21,27 @@ interface NotificationCenterProps {
   userId?: string;
 }
 
-const typeIcons = {
+// Tipos focados em notificações administrativas/importantes
+const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   info: Info,
   success: CheckCircle,
   warning: AlertTriangle,
   error: AlertCircle,
-  message: MessageSquare,
   task: ClipboardList,
   lead: User,
+  contract: FileText,
+  system: Bell,
 };
 
-const typeColors = {
+const typeColors: Record<string, string> = {
   info: 'text-primary',
   success: 'text-success',
   warning: 'text-warning',
   error: 'text-destructive',
-  message: 'text-primary',
   task: 'text-accent',
   lead: 'text-warning',
+  contract: 'text-success',
+  system: 'text-primary',
 };
 
 export function NotificationCenter({ userId }: NotificationCenterProps) {
