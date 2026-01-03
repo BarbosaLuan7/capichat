@@ -28,7 +28,7 @@ function LabelBadgesComponent({ labels, maxVisible = 2, size = 'sm' }: LabelBadg
   const hasHidden = hiddenLabels.length > 0;
 
   const badgeClasses = size === 'sm' 
-    ? 'text-[10px] px-1.5 py-0 h-5 border-0' 
+    ? 'text-2xs px-1.5 py-0 h-5 border-0' 
     : 'text-xs px-2 py-0.5 border-0';
 
   return (
@@ -60,7 +60,7 @@ function LabelBadgesComponent({ labels, maxVisible = 2, size = 'sm' }: LabelBadg
                   <Badge
                     key={label.id}
                     className={cn(
-                      "text-[10px] px-1.5 py-0 border-0",
+                      "text-2xs px-1.5 py-0 border-0",
                       getContrastTextColor(label.color)
                     )}
                     style={{

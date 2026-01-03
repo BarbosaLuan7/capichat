@@ -324,7 +324,7 @@ const Calendar = () => {
                           />
                         ))}
                         {dayTasks.length > 3 && (
-                          <span className="text-[10px] text-muted-foreground">
+                          <span className="text-2xs text-muted-foreground">
                             +{dayTasks.length - 3}
                           </span>
                         )}
