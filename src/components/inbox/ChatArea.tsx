@@ -148,6 +148,9 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   const initialScrollDoneForConversationRef = useRef<string | null>(null);
   const lastConversationIdRef = useRef<string | null>(null);
   const showScrollButtonRef = useRef(false);
+  const initialScrollRetriesRef = useRef(0);
+  const initialLoadMoreAttemptsRef = useRef(0);
+
   // Hooks
   const { uploadFile, uploadProgress } = useFileUpload();
   const audioRecorder = useAudioRecorder();
@@ -213,6 +216,8 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
       lastConversationIdRef.current = conversation.id;
       initialScrollDoneForConversationRef.current = null;
       initialUnreadCountRef.current = conversation.unread_count ?? 0;
+      initialScrollRetriesRef.current = 0;
+      initialLoadMoreAttemptsRef.current = 0;
       lastMessageIdRef.current = null;
       isNearBottomRef.current = true;
       setShowScrollButton(false);
@@ -224,10 +229,12 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   useEffect(() => {
     // GUARD: Already scrolled for this conversation
     if (initialScrollDoneForConversationRef.current === conversation?.id) return;
-    
+
     if (!conversation?.id || isLoadingMessages || !messages || messages.length === 0) return;
-    
-    const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+
+    const viewport = scrollAreaRef.current?.querySelector(
+      '[data-radix-scroll-area-viewport]'
+    ) as HTMLElement;
     if (!viewport) {
       // Fallback and mark as done
       messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
@@ -235,59 +242,121 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
       lastMessageIdRef.current = messages[messages.length - 1]?.id || null;
       return;
     }
-    
+
     const unreadCount = initialUnreadCountRef.current ?? 0;
-    
+
+    // If we have unread messages but didn't load enough history yet, fetch more first.
+    if (unreadCount > 0 && messages.length < unreadCount) {
+      if (
+        onLoadMoreMessages &&
+        !isLoadingMoreMessages &&
+        initialLoadMoreAttemptsRef.current < 10
+      ) {
+        initialLoadMoreAttemptsRef.current += 1;
+        onLoadMoreMessages();
+      }
+      return;
+    }
+
+    const timeoutIds: number[] = [];
+
     const scrollToAbsoluteBottom = () => {
       // Force scroll to absolute bottom - use scrollHeight directly
       viewport.scrollTop = viewport.scrollHeight;
       // Also use scrollIntoView as backup
       messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
     };
-    
-    const performScroll = () => {
-      if (unreadCount > 0 && messages.length >= unreadCount) {
-        // Has unread messages: scroll to first unread message using scrollIntoView
-        const firstUnreadIndex = messages.length - unreadCount;
-        const messageElements = viewport.querySelectorAll('[data-message-index]');
-        const targetElement = messageElements?.[firstUnreadIndex] as HTMLElement;
-        
-        if (targetElement) {
-          targetElement.scrollIntoView({ behavior: 'auto', block: 'start' });
-          // Adjust for header padding
-          viewport.scrollTop = Math.max(0, viewport.scrollTop - 80);
-        } else {
-          scrollToAbsoluteBottom();
-        }
-      } else {
-        // No unread messages: scroll to absolute bottom
-        scrollToAbsoluteBottom();
-      }
+
+    const tryScrollToFirstUnread = () => {
+      const totalMessages = messages.length;
+      const firstUnreadIndex = totalMessages - unreadCount;
+
+      const messageElements = viewport.querySelectorAll('[data-message-index]');
+      const targetElement = messageElements?.[firstUnreadIndex] as HTMLElement | undefined;
+
+      if (!targetElement) return false;
+
+      targetElement.scrollIntoView({ behavior: 'auto', block: 'start' });
+      // Adjust for header padding
+      viewport.scrollTop = Math.max(0, viewport.scrollTop - 80);
+      return true;
     };
-    
-    // Single RAF to ensure DOM is ready, then scroll
-    requestAnimationFrame(() => {
-      performScroll();
-      
-      // Mark initial scroll as done and set last message id
+
+    const finalizeInitialScroll = () => {
       initialScrollDoneForConversationRef.current = conversation.id;
       lastMessageIdRef.current = messages[messages.length - 1]?.id || null;
-      
-      // For read conversations only: multiple rechecks after images might load
-      if (unreadCount === 0) {
+    };
+
+    const attemptInitialScroll = () => {
+      if (unreadCount > 0) return tryScrollToFirstUnread();
+      scrollToAbsoluteBottom();
+      return true;
+    };
+
+    requestAnimationFrame(() => {
+      const ok = attemptInitialScroll();
+
+      if (unreadCount > 0) {
+        if (ok) {
+          finalizeInitialScroll();
+          return;
+        }
+
+        // If the DOM isn't ready yet (target not rendered), retry a few times.
+        const scheduleRetry = (delayMs: number) => {
+          timeoutIds.push(
+            window.setTimeout(() => {
+              if (initialScrollDoneForConversationRef.current === conversation.id) return;
+              if (lastConversationIdRef.current !== conversation.id) return;
+
+              initialScrollRetriesRef.current += 1;
+              const okRetry = attemptInitialScroll();
+
+              if (okRetry) {
+                finalizeInitialScroll();
+                return;
+              }
+
+              // Fail-safe: after a few retries, just go bottom to avoid getting stuck.
+              if (initialScrollRetriesRef.current >= 6) {
+                scrollToAbsoluteBottom();
+                finalizeInitialScroll();
+              }
+            }, delayMs)
+          );
+        };
+
+        scheduleRetry(50);
+        scheduleRetry(120);
+        scheduleRetry(250);
+        scheduleRetry(400);
+        scheduleRetry(650);
+      } else {
+        finalizeInitialScroll();
+
+        // For read conversations only: multiple rechecks after images might load
         const forceBottomScroll = () => {
           if (initialScrollDoneForConversationRef.current !== conversation.id) return;
           scrollToAbsoluteBottom();
         };
-        
-        // Multiple rechecks to handle lazy-loaded images
-        setTimeout(forceBottomScroll, 100);
-        setTimeout(forceBottomScroll, 300);
-        setTimeout(forceBottomScroll, 600);
-        setTimeout(forceBottomScroll, 1000);
+
+        timeoutIds.push(window.setTimeout(forceBottomScroll, 100));
+        timeoutIds.push(window.setTimeout(forceBottomScroll, 300));
+        timeoutIds.push(window.setTimeout(forceBottomScroll, 600));
+        timeoutIds.push(window.setTimeout(forceBottomScroll, 1000));
       }
     });
-  }, [conversation?.id, isLoadingMessages, messages]);
+
+    return () => {
+      timeoutIds.forEach((id) => window.clearTimeout(id));
+    };
+  }, [
+    conversation?.id,
+    isLoadingMessages,
+    messages,
+    onLoadMoreMessages,
+    isLoadingMoreMessages,
+  ]);
 
   // Auto-focus textarea when conversation changes (desktop only)
   useEffect(() => {
