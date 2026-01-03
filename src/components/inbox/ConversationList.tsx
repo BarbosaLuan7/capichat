@@ -379,7 +379,10 @@ export function ConversationList({
                       tabCounts.pendentes > 0 && "data-[state=inactive]:text-destructive"
                     )}
                   >
-                    <Clock className="w-3.5 h-3.5 shrink-0" />
+                    <Clock className={cn(
+                      "w-3.5 h-3.5 shrink-0",
+                      tabCounts.pendentes > 0 && "text-destructive"
+                    )} />
                     <span className={cn(
                       "font-semibold tabular-nums",
                       tabCounts.pendentes > 0 ? "text-destructive" : ""
