@@ -283,11 +283,11 @@ const TopNavigation = () => {
   return (
     <header className="h-14 bg-[#0b305b] border-b border-[#0a2847] flex items-center px-4 sticky top-0 z-50" role="banner">
       {/* Logo */}
-      <Link to="/dashboard" className="flex items-center gap-2 mr-4 shrink-0">
+      <Link to="/inbox" className="flex items-center gap-2.5 mr-4 shrink-0">
         <img 
           src={lbAdvLogo} 
           alt="LB ADV" 
-          className="h-10 w-auto object-contain"
+          className="h-8 w-8 object-contain"
         />
         <span className="text-base font-bold text-white hidden sm:block">
           LB ADV
