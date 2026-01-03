@@ -38,6 +38,7 @@ interface SendMessagePayload {
   media_url?: string;
   lead_id?: string;
   conversation_id?: string;
+  whatsapp_instance_id?: string; // ID da instância WhatsApp específica a usar
 }
 
 interface WhatsAppConfig {
@@ -541,29 +542,53 @@ serve(async (req) => {
     const processedMessage = replaceTemplateVariables(payload.message, leadData);
     console.log('[api-messages-send] Mensagem processada:', processedMessage.substring(0, 50) + '...');
 
-    // Get active WhatsApp config
-    const { data: configs, error: configError } = await supabase
-      .from('whatsapp_config')
-      .select('*')
-      .eq('is_active', true)
-      .limit(1);
+    // Get WhatsApp config - prioritize specific instance if provided
+    let config: WhatsAppConfig | null = null;
+    
+    if (payload.whatsapp_instance_id) {
+      // Use specific instance if provided
+      const { data: specificConfig, error: specificError } = await supabase
+        .from('whatsapp_config')
+        .select('*')
+        .eq('id', payload.whatsapp_instance_id)
+        .eq('is_active', true)
+        .single();
+      
+      if (specificError || !specificConfig) {
+        console.error('[api-messages-send] Instância específica não encontrada:', payload.whatsapp_instance_id);
+        return new Response(
+          JSON.stringify({ error: 'Instância WhatsApp não encontrada ou inativa' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      config = specificConfig as WhatsAppConfig;
+      console.log('[api-messages-send] Usando instância específica:', config.instance_name);
+    } else {
+      // Fallback: use first active instance
+      const { data: configs, error: configError } = await supabase
+        .from('whatsapp_config')
+        .select('*')
+        .eq('is_active', true)
+        .limit(1);
 
-    if (configError) {
-      console.error('[api-messages-send] Erro ao buscar config:', configError);
-      return new Response(
-        JSON.stringify({ error: 'Erro ao buscar configuração do WhatsApp' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (configError) {
+        console.error('[api-messages-send] Erro ao buscar config:', configError);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao buscar configuração do WhatsApp' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!configs || configs.length === 0) {
+        return new Response(
+          JSON.stringify({ error: 'Nenhum gateway WhatsApp ativo configurado' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      config = configs[0] as WhatsAppConfig;
     }
-
-    if (!configs || configs.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'Nenhum gateway WhatsApp ativo configurado' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const config = configs[0] as WhatsAppConfig;
     console.log('[api-messages-send] Provider:', config.provider, 'Instance:', config.instance_name);
 
     // Create payload with processed message
@@ -600,16 +625,18 @@ serve(async (req) => {
       );
     }
 
-    // Find existing conversation if we have a lead
+    // Find existing conversation if we have a lead - filter by whatsapp_instance_id
     if (!conversationId && leadId) {
-      const { data: conversation } = await supabase
+      let convQuery = supabase
         .from('conversations')
         .select('id')
         .eq('lead_id', leadId)
+        .eq('whatsapp_instance_id', config.id) // Filter by instance to separate conversations
         .in('status', ['open', 'pending'])
         .order('last_message_at', { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
+
+      const { data: conversation } = await convQuery.single();
 
       if (conversation) {
         conversationId = conversation.id;
