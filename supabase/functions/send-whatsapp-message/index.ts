@@ -780,9 +780,22 @@ serve(async (req) => {
       type: payload.type
     });
 
-    if (!payload.conversation_id || !payload.content) {
+    // Validação: conversation_id sempre obrigatório
+    // content obrigatório apenas para tipo 'text' - mídias podem ter content vazio
+    const isMediaType = payload.type && ['image', 'audio', 'video', 'document'].includes(payload.type);
+    const hasMedia = !!payload.media_url;
+    
+    if (!payload.conversation_id) {
       return new Response(
-        JSON.stringify({ error: 'conversation_id e content são obrigatórios' }),
+        JSON.stringify({ error: 'conversation_id é obrigatório' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Para texto, content é obrigatório. Para mídia, content pode ser vazio se tiver media_url
+    if (!payload.content && !hasMedia) {
+      return new Response(
+        JSON.stringify({ error: 'content é obrigatório para mensagens de texto' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
