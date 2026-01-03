@@ -965,9 +965,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
           open={showDeleteModal}
           onOpenChange={setShowDeleteModal}
           selectedCount={selectedMessages.length}
-          onDeleteForMe={handleDeleteForMe}
           onDeleteForEveryone={handleDeleteForEveryone}
-          isDeletingForMe={isDeletingForMe}
           isDeletingForEveryone={isDeletingForEveryone}
         />
       </div>
