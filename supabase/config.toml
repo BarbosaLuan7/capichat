@@ -71,3 +71,9 @@ verify_jwt = true
 
 [functions.api-whatsapp-instances]
 verify_jwt = false
+
+[functions.stress-test]
+verify_jwt = true
+
+[functions.cleanup-test-data]
+verify_jwt = true
