@@ -27,6 +27,21 @@ function normalizeUrl(url: string): string {
   return url.replace(/\/+$/, '');
 }
 
+// Helper para verificar se o texto é um placeholder de mídia
+function isMediaPlaceholder(text: string | undefined | null): boolean {
+  if (!text) return true;
+  const trimmed = text.trim();
+  if (!trimmed) return true;
+  // Verifica se é placeholder como [image], [video], [audio], [document], [Áudio]
+  return /^\[(image|video|audio|document|Áudio)\]$/i.test(trimmed);
+}
+
+// Helper para obter caption limpo (undefined se for placeholder)
+function getCleanCaption(message: string | undefined | null): string | undefined {
+  if (isMediaPlaceholder(message)) return undefined;
+  return message || undefined;
+}
+
 // Converte storage:// URLs para signed URLs públicas
 // deno-lint-ignore no-explicit-any
 async function resolveStorageUrl(
@@ -431,10 +446,22 @@ async function sendWAHA(
 
   if (type === 'image' && mediaUrl) {
     endpoint = '/api/sendImage';
+    const cleanCaption = getCleanCaption(message);
     body = {
       chatId,
       file: { url: mediaUrl },
-      caption: message,
+      ...(cleanCaption && { caption: cleanCaption }),  // Só incluir se tiver texto real
+      session,
+    };
+    if (replyToExternalId) body.reply_to = replyToExternalId;
+  } else if (type === 'video' && mediaUrl) {
+    // Suporte a vídeo
+    endpoint = '/api/sendVideo';
+    const cleanCaption = getCleanCaption(message);
+    body = {
+      chatId,
+      file: { url: mediaUrl },
+      ...(cleanCaption && { caption: cleanCaption }),
       session,
     };
     if (replyToExternalId) body.reply_to = replyToExternalId;
@@ -453,10 +480,11 @@ async function sendWAHA(
     if (replyToExternalId) body.reply_to = replyToExternalId;
   } else if (type === 'document' && mediaUrl) {
     endpoint = '/api/sendFile';
+    const cleanCaption = getCleanCaption(message);
     body = {
       chatId,
       file: { url: mediaUrl },
-      caption: message,
+      ...(cleanCaption && { caption: cleanCaption }),  // Só incluir se tiver texto real
       session,
     };
     if (replyToExternalId) body.reply_to = replyToExternalId;
