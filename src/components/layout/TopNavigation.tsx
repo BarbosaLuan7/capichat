@@ -43,11 +43,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   NavigationMenu,
-  NavigationMenuContent,
   NavigationMenuItem,
-  NavigationMenuLink,
   NavigationMenuList,
-  NavigationMenuTrigger,
 } from '@/components/ui/navigation-menu';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
@@ -330,72 +327,99 @@ const TopNavigation = () => {
             );
           })}
 
-          {/* CRM Dropdown */}
-          <NavigationMenuItem>
-            <NavigationMenuTrigger 
-              className={cn(
-                'px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 bg-transparent data-[state=open]:bg-white/20',
-                isGroupActive(crmItems) && 'bg-white/20 text-white'
-              )}
-            >
-              <Users className="w-4 h-4 mr-2" />
-              CRM
-              {badges.tasks > 0 && (
-                <Badge className="ml-1 h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0 hover:bg-warning">
-                  {badges.tasks}
-                </Badge>
-              )}
-            </NavigationMenuTrigger>
-            <NavigationMenuContent>
-              <div className="w-56 p-2">
-                {crmItems.map((item) => (
-                  <DropdownNavItem key={item.path} item={item} />
-                ))}
-              </div>
-            </NavigationMenuContent>
-          </NavigationMenuItem>
-
-          {/* Tools Dropdown */}
-          <NavigationMenuItem>
-            <NavigationMenuTrigger 
-              className={cn(
-                'px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 bg-transparent data-[state=open]:bg-white/20',
-                isGroupActive(toolsItems) && 'bg-white/20 text-white'
-              )}
-            >
-              <Workflow className="w-4 h-4 mr-2" />
-              Ferramentas
-            </NavigationMenuTrigger>
-            <NavigationMenuContent>
-              <div className="w-56 p-2">
-                {toolsItems.map((item) => (
-                  <DropdownNavItem key={item.path} item={item} />
-                ))}
-              </div>
-            </NavigationMenuContent>
-          </NavigationMenuItem>
-
-          {/* Settings Dropdown */}
-          <NavigationMenuItem>
-            <NavigationMenuTrigger 
-              className={cn(
-                'px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 bg-transparent data-[state=open]:bg-white/20',
-                isGroupActive(settingsItems) && 'bg-white/20 text-white'
-              )}
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              Configurações
-            </NavigationMenuTrigger>
-            <NavigationMenuContent>
-              <div className="w-56 p-2">
-                {settingsItems.map((item) => (
-                  <DropdownNavItem key={item.path} item={item} />
-                ))}
-              </div>
-            </NavigationMenuContent>
-          </NavigationMenuItem>
         </NavigationMenuList>
       </NavigationMenu>
+
+      {/* CRM Dropdown - Separate from NavigationMenu */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            className={cn(
+              'px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10',
+              isGroupActive(crmItems) && 'bg-white/20 text-white'
+            )}
+          >
+            <Users className="w-4 h-4 mr-2" />
+            CRM
+            {badges.tasks > 0 && (
+              <Badge className="ml-1 h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0 hover:bg-warning">
+                {badges.tasks}
+              </Badge>
+            )}
+            <ChevronDown className="ml-1 h-3 w-3" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-56">
+          {crmItems.map((item) => (
+            <DropdownMenuItem key={item.path} asChild>
+              <Link to={item.path} className="flex items-center gap-3 cursor-pointer">
+                <item.icon className="w-4 h-4" />
+                <span className="flex-1">{item.label}</span>
+                {item.badgeKey && badges[item.badgeKey] > 0 && (
+                  <Badge className="h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0">
+                    {badges[item.badgeKey]}
+                  </Badge>
+                )}
+              </Link>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Tools Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            className={cn(
+              'px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10',
+              isGroupActive(toolsItems) && 'bg-white/20 text-white'
+            )}
+          >
+            <Workflow className="w-4 h-4 mr-2" />
+            Ferramentas
+            <ChevronDown className="ml-1 h-3 w-3" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-56">
+          {toolsItems.map((item) => (
+            <DropdownMenuItem key={item.path} asChild>
+              <Link to={item.path} className="flex items-center gap-3 cursor-pointer">
+                <item.icon className="w-4 h-4" />
+                <span>{item.label}</span>
+              </Link>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Settings Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            className={cn(
+              'px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10',
+              isGroupActive(settingsItems) && 'bg-white/20 text-white'
+            )}
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            Configurações
+            <ChevronDown className="ml-1 h-3 w-3" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-56">
+          {settingsItems.map((item) => (
+            <DropdownMenuItem key={item.path} asChild>
+              <Link to={item.path} className="flex items-center gap-3 cursor-pointer">
+                <item.icon className="w-4 h-4" />
+                <span>{item.label}</span>
+              </Link>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* Spacer for mobile */}
       <div className="flex-1 lg:hidden" />

@@ -1,12 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+// Tipos focados em notificações administrativas/importantes
+// Removido 'message' (mensagens tem seu próprio sistema na inbox)
+// Adicionado 'contract' (contrato assinado) e 'system' (avisos do admin)
 export interface Notification {
   id: string;
   user_id: string;
   title: string;
   message: string;
-  type: 'info' | 'success' | 'warning' | 'error' | 'message' | 'task' | 'lead';
+  type: 'info' | 'success' | 'warning' | 'error' | 'task' | 'lead' | 'contract' | 'system';
   read: boolean;
   link: string | null;
   data: Record<string, unknown> | null;
