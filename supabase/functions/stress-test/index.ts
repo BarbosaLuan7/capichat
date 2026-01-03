@@ -95,6 +95,24 @@ function generateRandomCPF(): string {
   return `${n()}${n()}${n()}.${n()}${n()}${n()}.${n()}${n()}${n()}-${n()}${n()}`;
 }
 
+// Gerar API key temporária para o teste
+function generateTempApiKey(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = 'gd_test_';
+  for (let i = 0; i < 32; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+async function hashApiKey(key: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(key);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 async function sendTestMessage(
   supabaseUrl: string,
   apiKey: string,
@@ -213,24 +231,36 @@ Deno.serve(async (req) => {
 
     console.log(`[stress-test] Iniciando teste: ${config.total_leads} leads, ${config.messages_per_lead} msgs cada, total: ${totalMessages}`);
 
-    // Buscar API key válida para usar nos requests
-    const { data: apiKeyData, error: apiKeyError } = await supabase
+    // Criar API key temporária para o teste
+    const tempApiKey = generateTempApiKey();
+    const tempKeyHash = await hashApiKey(tempApiKey);
+    
+    console.log(`[stress-test] Criando API key temporária para o teste...`);
+    
+    const { data: tempKeyData, error: tempKeyError } = await supabase
       .from('api_keys')
+      .insert({
+        name: 'Stress Test Temp Key',
+        key_hash: tempKeyHash,
+        key_prefix: tempApiKey.substring(0, 12) + '...',
+        is_active: true,
+        rate_limit: 100000, // Sem limite para teste
+        created_by: user.id
+      })
       .select('id')
-      .eq('is_active', true)
-      .limit(1)
       .single();
 
-    if (apiKeyError || !apiKeyData) {
+    if (tempKeyError || !tempKeyData) {
+      console.error('[stress-test] Erro ao criar API key temporária:', tempKeyError);
       return new Response(
-        JSON.stringify({ error: 'Nenhuma API key ativa encontrada. Crie uma em Configurações > API.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Erro ao criar API key temporária para o teste' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Para o teste, vamos gerar uma key temporária ou usar service role
-    // Usaremos o service role key para simplificar (já que é um teste interno)
-    const testApiKey = supabaseServiceKey;
+    const testApiKey = tempApiKey;
+    const tempKeyId = tempKeyData.id;
+    console.log(`[stress-test] API key temporária criada: ${tempKeyData.id}`);
 
     // Gerar lista de leads
     const leads: Array<{ phone: string; name: string; cpf: string }> = [];
@@ -340,6 +370,17 @@ Deno.serve(async (req) => {
     // Ajustar min/max se não houve mensagens
     if (metrics.min_response_ms === Infinity) {
       metrics.min_response_ms = 0;
+    }
+
+    // Deletar API key temporária
+    console.log(`[stress-test] Removendo API key temporária: ${tempKeyId}`);
+    const { error: deleteKeyError } = await supabase
+      .from('api_keys')
+      .delete()
+      .eq('id', tempKeyId);
+    
+    if (deleteKeyError) {
+      console.error('[stress-test] Erro ao deletar API key temporária:', deleteKeyError);
     }
 
     console.log(`[stress-test] Teste concluído:`, JSON.stringify(metrics, null, 2));
