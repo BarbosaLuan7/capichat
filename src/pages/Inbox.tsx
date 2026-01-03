@@ -333,7 +333,24 @@ const Inbox = () => {
             onLoadMoreMessages={fetchMoreMessages}
             isLoadingMoreMessages={loadingMoreMessages}
             onStartTyping={() => {
-              if (selectedConversationId && selectedConversation?.unread_count && selectedConversation.unread_count > 0) {
+              // Badge some ao digitar APENAS se já está atribuída
+              if (
+                selectedConversationId && 
+                selectedConversation?.assigned_to &&
+                selectedConversation?.unread_count && 
+                selectedConversation.unread_count > 0
+              ) {
+                markAsRead.mutate(selectedConversationId);
+              }
+            }}
+            onMessageSent={() => {
+              // Badge some ao enviar APENAS se NÃO estava atribuída
+              if (
+                selectedConversationId && 
+                !selectedConversation?.assigned_to &&
+                selectedConversation?.unread_count && 
+                selectedConversation.unread_count > 0
+              ) {
                 markAsRead.mutate(selectedConversationId);
               }
             }}
