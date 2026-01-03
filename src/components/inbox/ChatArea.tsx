@@ -238,6 +238,13 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     
     const unreadCount = initialUnreadCountRef.current ?? 0;
     
+    const scrollToAbsoluteBottom = () => {
+      // Force scroll to absolute bottom - use scrollHeight directly
+      viewport.scrollTop = viewport.scrollHeight;
+      // Also use scrollIntoView as backup
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    };
+    
     const performScroll = () => {
       if (unreadCount > 0 && messages.length >= unreadCount) {
         // Has unread messages: scroll to first unread message using scrollIntoView
@@ -250,11 +257,11 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
           // Adjust for header padding
           viewport.scrollTop = Math.max(0, viewport.scrollTop - 80);
         } else {
-          viewport.scrollTop = viewport.scrollHeight - viewport.clientHeight;
+          scrollToAbsoluteBottom();
         }
       } else {
-        // No unread messages: scroll to bottom
-        viewport.scrollTop = viewport.scrollHeight - viewport.clientHeight;
+        // No unread messages: scroll to absolute bottom
+        scrollToAbsoluteBottom();
       }
     };
     
@@ -266,20 +273,18 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
       initialScrollDoneForConversationRef.current = conversation.id;
       lastMessageIdRef.current = messages[messages.length - 1]?.id || null;
       
-      // For read conversations only: one recheck after images might load
+      // For read conversations only: multiple rechecks after images might load
       if (unreadCount === 0) {
-        let previousScrollHeight = viewport.scrollHeight;
-        
-        const recheckScroll = () => {
+        const forceBottomScroll = () => {
           if (initialScrollDoneForConversationRef.current !== conversation.id) return;
-          if (viewport.scrollHeight > previousScrollHeight && isNearBottomRef.current) {
-            viewport.scrollTop = viewport.scrollHeight - viewport.clientHeight;
-            previousScrollHeight = viewport.scrollHeight;
-          }
+          scrollToAbsoluteBottom();
         };
         
-        setTimeout(recheckScroll, 200);
-        setTimeout(recheckScroll, 500);
+        // Multiple rechecks to handle lazy-loaded images
+        setTimeout(forceBottomScroll, 100);
+        setTimeout(forceBottomScroll, 300);
+        setTimeout(forceBottomScroll, 600);
+        setTimeout(forceBottomScroll, 1000);
       }
     });
   }, [conversation?.id, isLoadingMessages, messages]);
