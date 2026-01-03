@@ -1121,6 +1121,10 @@ components:
           type: string
           format: uuid
           description: "ID da conversa (opcional, sera buscada ou criada automaticamente)"
+        whatsapp_instance_id:
+          type: string
+          format: uuid
+          description: "ID da instância WhatsApp a usar para envio. Se omitido, usa a primeira ativa. Importante para separar conversas por número."
 
     SendMediaMessage:
       type: object
@@ -1147,6 +1151,10 @@ components:
           type: string
           format: uuid
           description: ID da conversa (opcional)
+        whatsapp_instance_id:
+          type: string
+          format: uuid
+          description: "ID da instância WhatsApp a usar para envio. Se omitido, usa a primeira ativa."
 
     MessageResponse:
       type: object
