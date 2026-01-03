@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, memo, forwardRef } from 'react';
+import { useState, useEffect, useCallback, useRef, memo, forwardRef, useMemo } from 'react';
 import {
   Popover,
   PopoverContent,
@@ -7,6 +7,7 @@ import {
 import { useTemplates } from '@/hooks/useTemplates';
 import { cn } from '@/lib/utils';
 import { replaceTemplateVariables, type LeadData } from '@/lib/templateVariables';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface SlashCommandPopoverProps {
   inputValue: string;
@@ -43,18 +44,26 @@ const SlashCommandPopoverComponent = forwardRef<HTMLDivElement, SlashCommandPopo
   const slashIndex = inputValue.lastIndexOf('/');
   const isOpen = slashIndex !== -1;
   const searchQuery = isOpen ? inputValue.slice(slashIndex + 1).toLowerCase() : '';
+  
+  // Debounce search query to reduce filter computations during fast typing
+  const debouncedSearchQuery = useDebounce(searchQuery, 100);
 
-  // Filter templates
-  const filteredTemplates = templates?.filter(
-    (t) =>
-      t.name.toLowerCase().includes(searchQuery) ||
-      t.shortcut.toLowerCase().includes(searchQuery)
-  ) || [];
+  // Filter templates with debounced search
+  const filteredTemplates = useMemo(() => {
+    if (!templates) return [];
+    if (!debouncedSearchQuery) return templates;
+    
+    return templates.filter(
+      (t) =>
+        t.name.toLowerCase().includes(debouncedSearchQuery) ||
+        t.shortcut.toLowerCase().includes(debouncedSearchQuery)
+    );
+  }, [templates, debouncedSearchQuery]);
 
   // Reset selection when search changes
   useEffect(() => {
     setSelectedIndex(0);
-  }, [searchQuery]);
+  }, [debouncedSearchQuery]);
 
   // Handle template selection
   const handleSelect = useCallback((template: { content: string; shortcut: string }) => {
