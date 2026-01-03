@@ -7,6 +7,14 @@ type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
 type TeamMember = Database['public']['Tables']['team_members']['Row'];
 type AppRole = Database['public']['Enums']['app_role'];
 
+interface CreateUserInput {
+  email: string;
+  password: string;
+  name: string;
+  role?: AppRole;
+  tenantId?: string;
+}
+
 // Interface do perfil com relações
 export interface ProfileWithRelations extends Profile {
   team_memberships?: (TeamMember & {
@@ -238,6 +246,28 @@ export function useToggleUserBlock() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['profiles'] });
       queryClient.invalidateQueries({ queryKey: ['profiles', variables.id] });
+    },
+  });
+}
+
+// Criar novo usuário (apenas admin)
+export function useCreateUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: CreateUserInput) => {
+      const { data, error } = await supabase.functions.invoke('admin-create-user', {
+        body: input,
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['user_roles'] });
     },
   });
 }

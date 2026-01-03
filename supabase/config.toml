@@ -65,3 +65,6 @@ verify_jwt = true
 
 [functions.repair-message-media]
 verify_jwt = false
+
+[functions.admin-create-user]
+verify_jwt = true
