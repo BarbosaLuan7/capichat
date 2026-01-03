@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Users, UserCheck, MoreVertical, Loader2 } from 'lucide-react';
+import { logger } from '@/lib/logger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -105,7 +106,7 @@ const TeamsSettings = () => {
       toast({ title: teamData.id ? 'Equipe atualizada com sucesso!' : 'Equipe criada com sucesso!' });
       setModalOpen(false);
     } catch (error) {
-      console.error('Erro ao salvar equipe:', error);
+      logger.error('Erro ao salvar equipe:', error);
       toast({ title: 'Erro ao salvar equipe', variant: 'destructive' });
     }
   };

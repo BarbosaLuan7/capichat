@@ -21,7 +21,7 @@ export function useSyncChatHistory() {
       });
 
       if (error) {
-        console.error('[useSyncChatHistory] Erro:', error);
+        logger.error('[useSyncChatHistory] Erro:', error);
         throw new Error(error.message || 'Erro ao sincronizar histórico');
       }
 
@@ -38,7 +38,7 @@ export function useSyncChatHistory() {
       }
     },
     onError: (error) => {
-      console.error('[useSyncChatHistory] Erro na mutação:', error);
+      logger.error('[useSyncChatHistory] Erro na mutação:', error);
       // Não mostrar toast de erro para não incomodar o usuário
       // O sync é um processo silencioso de background
     },

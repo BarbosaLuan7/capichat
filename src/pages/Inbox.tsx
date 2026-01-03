@@ -183,7 +183,7 @@ const Inbox = () => {
       ]).then(() => {
         toast.info('Lead atribuído a você automaticamente');
       }).catch((error) => {
-        console.error('Erro na auto-atribuição:', error);
+        logger.error('Erro na auto-atribuição:', error);
       });
     }
 

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 
 interface DeleteForMeParams {
   messageIds: string[];
@@ -31,7 +32,7 @@ export function useDeleteMessages() {
       toast.success('Mensagens apagadas para você');
     },
     onError: (error) => {
-      console.error('[useDeleteMessages] Erro ao apagar localmente:', error);
+      logger.error('[useDeleteMessages] Erro ao apagar localmente:', error);
       toast.error('Erro ao apagar mensagens');
     },
   });
@@ -62,7 +63,7 @@ export function useDeleteMessages() {
       }
     },
     onError: (error) => {
-      console.error('[useDeleteMessages] Erro ao apagar para todos:', error);
+      logger.error('[useDeleteMessages] Erro ao apagar para todos:', error);
       toast.error('Erro ao apagar mensagens no WhatsApp');
     },
   });
