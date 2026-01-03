@@ -73,7 +73,7 @@ const CATEGORY_COLORS: Partial<Record<LabelCategory, string>> = {
   condicao_saude: 'bg-red-500/10 text-red-600',
   status: 'bg-purple-500/10 text-purple-600',
   interesse: 'bg-cyan-500/10 text-cyan-600',
-  desqualificacao: 'bg-gray-500/10 text-gray-600',
+  desqualificacao: 'bg-gray-500/10 text-muted-foreground',
   situacao: 'bg-yellow-500/10 text-yellow-600',
   perda: 'bg-rose-500/10 text-rose-600',
 };
