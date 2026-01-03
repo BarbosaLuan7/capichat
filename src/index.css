@@ -1,5 +1,11 @@
 /* Fonte Inter é carregada via preload no index.html - não duplicar aqui */
 
+/* Font loading optimization */
+@font-face {
+  font-family: 'Inter';
+  font-display: swap; /* Show fallback font immediately, swap when loaded */
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
