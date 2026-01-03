@@ -1344,11 +1344,13 @@ serve(async (req) => {
                 if (lead) {
                   console.log('[whatsapp-webhook] Lead encontrado:', lead.id, lead.name);
                   
-                  // Buscar ou criar conversa
+                  // Buscar ou criar conversa (filtrar por instância específica)
+                  const instanceId = wahaConfigForAck?.instanceId || null;
                   let { data: conversation } = await supabase
                     .from('conversations')
                     .select('id')
                     .eq('lead_id', lead.id)
+                    .eq('whatsapp_instance_id', instanceId)
                     .order('created_at', { ascending: false })
                     .limit(1)
                     .maybeSingle();
@@ -1359,12 +1361,12 @@ serve(async (req) => {
                       .insert({
                         lead_id: lead.id,
                         status: 'open',
-                        channel: 'whatsapp',
+                        whatsapp_instance_id: instanceId,
                       })
                       .select('id')
                       .single();
                     conversation = newConv;
-                    console.log('[whatsapp-webhook] Nova conversa criada:', conversation?.id);
+                    console.log('[whatsapp-webhook] Nova conversa criada para instância:', instanceId, '| conv:', conversation?.id);
                   }
                   
                   if (conversation) {
@@ -2023,7 +2025,9 @@ serve(async (req) => {
     
     console.log('[whatsapp-webhook] Buscando conversa para lead:', lead.id, 'instância:', whatsappInstanceId);
     
-    // 1. Buscar conversa existente com match exato (lead_id + whatsapp_instance_id)
+    // Buscar conversa existente com match exato (lead_id + whatsapp_instance_id)
+    // IMPORTANTE: Cada instância WhatsApp = canal separado, então NÃO usar fallback
+    // Se o lead manda msg pelo número 8066, deve ter conversa separada do número 7851
     let { data: existingConversation } = await supabase
       .from('conversations')
       .select('*')
@@ -2033,18 +2037,8 @@ serve(async (req) => {
       .limit(1)
       .maybeSingle();
     
-    // 2. Se não encontrou, buscar qualquer conversa do lead (fallback)
-    if (!existingConversation) {
-      const { data: anyConversation } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('lead_id', lead.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      existingConversation = anyConversation;
-    }
+    // Se não encontrou conversa para esta instância específica, será criada uma nova
+    // NÃO fazer fallback para conversa de outra instância - são canais separados
 
     if (existingConversation) {
       conversation = existingConversation;
@@ -2082,20 +2076,21 @@ serve(async (req) => {
         .single();
 
       if (createConvError) {
-        // Race condition: outra requisição pode ter criado a conversa
-        console.log('[whatsapp-webhook] ⚠️ Erro ao criar conversa, buscando existente:', createConvError.code, createConvError.message);
+        // Race condition: outra requisição pode ter criado a conversa para ESTA instância
+        console.log('[whatsapp-webhook] ⚠️ Erro ao criar conversa, buscando existente para mesma instância:', createConvError.code, createConvError.message);
         
         const { data: fallbackConv } = await supabase
           .from('conversations')
           .select('*')
           .eq('lead_id', lead.id)
+          .eq('whatsapp_instance_id', whatsappInstanceId)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
         
         if (fallbackConv) {
           conversation = fallbackConv;
-          console.log('[whatsapp-webhook] ✅ Conversa encontrada após fallback:', conversation.id);
+          console.log('[whatsapp-webhook] ✅ Conversa encontrada após fallback (mesma instância):', conversation.id);
         } else {
           console.error('[whatsapp-webhook] ❌ Erro ao criar conversa:', createConvError);
           return new Response(
