@@ -120,6 +120,12 @@ export function useSignedUrlBatch(mediaUrls: (string | null | undefined)[]) {
   const [urlMap, setUrlMap] = useState<Map<string, string>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
 
+  // Stable key for dependency - only changes when actual URLs change
+  const urlsKey = useMemo(() => {
+    const sorted = mediaUrls.filter(Boolean).sort();
+    return sorted.join('|');
+  }, [mediaUrls]);
+
   // Filtrar URLs únicas que precisam de signed URL
   const urlsToResolve = useMemo(() => {
     const unique = new Set<string>();
@@ -132,11 +138,11 @@ export function useSignedUrlBatch(mediaUrls: (string | null | undefined)[]) {
       }
     });
     return Array.from(unique);
-  }, [mediaUrls]);
+  }, [urlsKey]);
 
   useEffect(() => {
-    if (urlsToResolve.length === 0) {
-      // Usar cache existente para todas as URLs
+    // Build initial map from cache
+    const buildMapFromCache = () => {
       const cached = new Map<string, string>();
       mediaUrls.forEach(url => {
         if (url) {
@@ -150,12 +156,21 @@ export function useSignedUrlBatch(mediaUrls: (string | null | undefined)[]) {
           }
         }
       });
-      setUrlMap(cached);
+      return cached;
+    };
+
+    if (urlsToResolve.length === 0) {
+      setUrlMap(buildMapFromCache());
       return;
     }
 
+    let cancelled = false;
+
     const resolveBatch = async () => {
       setIsLoading(true);
+
+      // Start with cached values
+      const newMap = buildMapFromCache();
 
       // Processar em chunks para não sobrecarregar
       const chunks: string[][] = [];
@@ -163,25 +178,17 @@ export function useSignedUrlBatch(mediaUrls: (string | null | undefined)[]) {
         chunks.push(urlsToResolve.slice(i, i + MAX_PARALLEL_REQUESTS));
       }
 
-      const newMap = new Map<string, string>();
-      
-      // Adicionar URLs que não precisam de signed URL e cache existente
-      mediaUrls.forEach(url => {
-        if (url) {
-          if (!needsSignedUrl(url)) {
-            newMap.set(url, url);
-          } else {
-            const c = urlCache.get(url);
-            if (c && c.expiresAt > Date.now()) {
-              newMap.set(url, c.url);
-            }
-          }
-        }
-      });
-
       for (const chunk of chunks) {
+        if (cancelled) return;
+
         const results = await Promise.all(
           chunk.map(async (url) => {
+            // Double-check cache before making request
+            const cached = urlCache.get(url);
+            if (cached && cached.expiresAt > Date.now()) {
+              return { original: url, signed: cached.url };
+            }
+
             try {
               const parsed = parseMediaUrl(url);
               if (!parsed) return { original: url, signed: url };
@@ -209,17 +216,25 @@ export function useSignedUrlBatch(mediaUrls: (string | null | undefined)[]) {
           })
         );
 
+        if (cancelled) return;
+
         results.forEach(({ original, signed }) => {
           newMap.set(original, signed);
         });
       }
 
-      setUrlMap(newMap);
-      setIsLoading(false);
+      if (!cancelled) {
+        setUrlMap(newMap);
+        setIsLoading(false);
+      }
     };
 
     resolveBatch();
-  }, [urlsToResolve.join(','), mediaUrls.length]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [urlsKey]);
 
   const getSignedUrl = useCallback((originalUrl: string | null | undefined): string | null => {
     if (!originalUrl) return null;

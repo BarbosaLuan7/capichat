@@ -9,21 +9,34 @@ export function useInternalNotes(conversationId: string | undefined) {
     queryKey: ['internal-notes', conversationId],
     queryFn: async () => {
       if (!conversationId) return [];
-      const { data, error } = await supabase
+      
+      // Fetch notes
+      const { data: notes, error } = await supabase
         .from('internal_notes')
-        .select(`
-          *,
-          profiles:author_id (id, name, email, avatar)
-        `)
+        .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      if (!notes || notes.length === 0) return [];
+      
+      // Fetch profiles for authors
+      const authorIds = [...new Set(notes.map(n => n.author_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, email, avatar')
+        .in('id', authorIds);
+      
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      
+      return notes.map(note => ({
+        ...note,
+        profiles: profileMap.get(note.author_id) || null
+      }));
     },
     enabled: !!conversationId,
-    staleTime: 60 * 1000, // 60 seconds - notes rarely change during session
-    gcTime: 5 * 60 * 1000, // 5 minutes cache
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
   // Realtime subscription
