@@ -1731,12 +1731,63 @@ serve(async (req) => {
       // Precisamos verificar ambos para evitar duplicação
       const { data: existingByWahaId } = await supabase
         .from('messages')
-        .select('id, waha_message_id')
+        .select('id, waha_message_id, media_url, type, conversation_id')
         .or(`waha_message_id.eq.${wahaMessageId},waha_message_id.eq.${externalMessageId}`)
         .limit(1)
         .maybeSingle();
       
       if (existingByWahaId) {
+        // ========== CORREÇÃO CRÍTICA: Se a mensagem existe mas NÃO tem media_url, verificar se este evento tem mídia ==========
+        // WAHA envia primeiro message.ack (sem mídia) e depois message.any (com mídia)
+        // O primeiro evento cria a mensagem sem media_url, o segundo deve atualizar
+        const isMediaType = existingByWahaId.type && ['image', 'audio', 'video', 'document'].includes(existingByWahaId.type);
+        
+        if (isMediaType && !existingByWahaId.media_url) {
+          console.log('[whatsapp-webhook] 📎 Mensagem de mídia existente sem media_url, tentando extrair mídia deste evento...');
+          
+          // Extrair mídia deste evento
+          const { mediaUrl: eventMediaUrl, type: eventType } = getMessageContent(messageData, provider);
+          
+          if (eventMediaUrl) {
+            console.log('[whatsapp-webhook] 📎 Mídia encontrada neste evento, fazendo upload...');
+            
+            // Buscar lead e config para fazer upload
+            const existingLead = await findLeadByPhone(supabase, senderPhone);
+            const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
+            
+            if (existingLead && wahaConfig) {
+              try {
+                const finalMediaUrl = await uploadMediaToStorage(
+                  supabase,
+                  eventMediaUrl,
+                  eventType,
+                  existingLead.id,
+                  wahaConfig
+                );
+                
+                if (finalMediaUrl) {
+                  const { error: updateError } = await supabase
+                    .from('messages')
+                    .update({ media_url: finalMediaUrl })
+                    .eq('id', existingByWahaId.id);
+                  
+                  if (updateError) {
+                    console.error('[whatsapp-webhook] ❌ Erro ao atualizar media_url:', updateError);
+                  } else {
+                    console.log('[whatsapp-webhook] ✅ media_url atualizado com sucesso:', finalMediaUrl.substring(0, 50));
+                  }
+                }
+              } catch (uploadError) {
+                console.error('[whatsapp-webhook] ❌ Erro no upload de mídia:', uploadError);
+              }
+            } else {
+              console.log('[whatsapp-webhook] ⚠️ Não foi possível fazer upload: lead ou config não encontrados');
+            }
+          } else {
+            console.log('[whatsapp-webhook] 📎 Nenhuma mídia neste evento para atualizar mensagem existente');
+          }
+        }
+        
         console.log('[whatsapp-webhook] ⏭️ Mensagem já processada (waha_message_id):', wahaMessageId, 'ou', externalMessageId, '| matched:', existingByWahaId.waha_message_id);
         return new Response(
           JSON.stringify({ success: true, duplicate: true, existing_message_id: existingByWahaId.id, matched_by: 'waha_message_id', matched_value: existingByWahaId.waha_message_id }),
