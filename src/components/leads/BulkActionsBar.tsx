@@ -176,6 +176,7 @@ export function BulkActionsBar({ selectedIds, onClearSelection }: BulkActionsBar
               size="icon"
               onClick={onClearSelection}
               className="ml-2"
+              aria-label="Cancelar seleção"
             >
               <X className="w-4 h-4" />
             </Button>

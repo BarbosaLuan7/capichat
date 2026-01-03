@@ -442,6 +442,7 @@ const TopNavigation = () => {
                 size="icon"
                 className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
                 onClick={() => setSearchOpen(false)}
+                aria-label="Fechar busca"
               >
                 <X className="w-3 h-3" />
               </Button>
@@ -452,6 +453,7 @@ const TopNavigation = () => {
               size="icon"
               className="text-white/70 hover:text-white hover:bg-white/10"
               onClick={() => setSearchOpen(true)}
+              aria-label="Buscar"
             >
               <Search className="w-5 h-5" />
             </Button>
