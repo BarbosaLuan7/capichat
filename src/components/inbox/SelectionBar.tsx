@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Trash2, Forward } from 'lucide-react';
+import { X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 
@@ -7,7 +7,6 @@ interface SelectionBarProps {
   selectedCount: number;
   onCancel: () => void;
   onDelete: () => void;
-  onForward?: () => void;
   isDeleting?: boolean;
 }
 
@@ -15,7 +14,6 @@ export function SelectionBar({
   selectedCount,
   onCancel,
   onDelete,
-  onForward,
   isDeleting = false,
 }: SelectionBarProps) {
   if (selectedCount === 0) return null;
@@ -43,28 +41,16 @@ export function SelectionBar({
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={onDelete}
-            disabled={isDeleting}
-            className="gap-1.5"
-          >
-            <Trash2 className="w-4 h-4" />
-            Excluir
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onForward}
-            disabled={true} // Desabilitado por enquanto - implementação futura
-            className="gap-1.5"
-          >
-            <Forward className="w-4 h-4" />
-            Encaminhar
-          </Button>
-        </div>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={onDelete}
+          disabled={isDeleting}
+          className="gap-1.5"
+        >
+          <Trash2 className="w-4 h-4" />
+          Excluir
+        </Button>
       </div>
     </motion.div>
   );

@@ -14,9 +14,7 @@ interface DeleteMessagesModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedCount: number;
-  onDeleteForMe: () => void;
   onDeleteForEveryone: () => void;
-  isDeletingForMe?: boolean;
   isDeletingForEveryone?: boolean;
 }
 
@@ -24,23 +22,22 @@ export function DeleteMessagesModal({
   open,
   onOpenChange,
   selectedCount,
-  onDeleteForMe,
   onDeleteForEveryone,
-  isDeletingForMe = false,
   isDeletingForEveryone = false,
 }: DeleteMessagesModalProps) {
-  const isDeleting = isDeletingForMe || isDeletingForEveryone;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-warning" />
-            Atenção
+            Apagar mensagem
           </DialogTitle>
           <DialogDescription>
-            Você deseja apagar {selectedCount === 1 ? 'a mensagem enviada' : `as ${selectedCount} mensagens enviadas`} para o contato?
+            {selectedCount === 1 
+              ? 'A mensagem será apagada para você e para o contato. Esta ação não pode ser desfeita.'
+              : `As ${selectedCount} mensagens serão apagadas para você e para o contato. Esta ação não pode ser desfeita.`
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -48,30 +45,15 @@ export function DeleteMessagesModal({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={isDeleting}
+            disabled={isDeletingForEveryone}
             className="w-full sm:w-auto"
           >
             Cancelar
           </Button>
           <Button
-            variant="secondary"
-            onClick={onDeleteForMe}
-            disabled={isDeleting}
-            className="w-full sm:w-auto"
-          >
-            {isDeletingForMe ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Apagando...
-              </>
-            ) : (
-              'Apagar para mim'
-            )}
-          </Button>
-          <Button
             variant="destructive"
             onClick={onDeleteForEveryone}
-            disabled={isDeleting}
+            disabled={isDeletingForEveryone}
             className="w-full sm:w-auto"
           >
             {isDeletingForEveryone ? (
