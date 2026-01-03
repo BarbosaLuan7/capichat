@@ -972,26 +972,117 @@ export type Database = {
           },
         ]
       }
+      team_members: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_supervisor: boolean | null
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_supervisor?: boolean | null
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_supervisor?: boolean | null
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_whatsapp_configs: {
+        Row: {
+          created_at: string | null
+          id: string
+          team_id: string
+          whatsapp_config_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          team_id: string
+          whatsapp_config_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          team_id?: string
+          whatsapp_config_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_whatsapp_configs_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_whatsapp_configs_whatsapp_config_id_fkey"
+            columns: ["whatsapp_config_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_config"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_whatsapp_configs_whatsapp_config_id_fkey"
+            columns: ["whatsapp_config_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_config_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
+          access_level: string | null
+          auto_distribution: boolean | null
           created_at: string
           id: string
+          is_default: boolean | null
           name: string
           supervisor_id: string | null
           tenant_id: string | null
           updated_at: string
         }
         Insert: {
+          access_level?: string | null
+          auto_distribution?: boolean | null
           created_at?: string
           id?: string
+          is_default?: boolean | null
           name: string
           supervisor_id?: string | null
           tenant_id?: string | null
           updated_at?: string
         }
         Update: {
+          access_level?: string | null
+          auto_distribution?: boolean | null
           created_at?: string
           id?: string
+          is_default?: boolean | null
           name?: string
           supervisor_id?: string | null
           tenant_id?: string | null
