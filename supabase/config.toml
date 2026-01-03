@@ -74,6 +74,7 @@ verify_jwt = false
 
 [functions.stress-test]
 verify_jwt = true
+wall_clock_limit = 400
 
 [functions.cleanup-test-data]
 verify_jwt = true

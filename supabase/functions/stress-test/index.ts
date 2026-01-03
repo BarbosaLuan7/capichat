@@ -216,7 +216,7 @@ Deno.serve(async (req) => {
       total_leads: Math.min(body.total_leads || 200, 500), // Max 500 leads
       messages_per_lead: Math.min(body.messages_per_lead || 5, 20), // Max 20 msgs por lead
       batch_size: Math.min(body.batch_size || 10, 50), // Max 50 por batch
-      delay_between_batches_ms: Math.max(body.delay_between_batches_ms || 100, 50), // Min 50ms
+      delay_between_batches_ms: Math.max(body.delay_between_batches_ms || 500, 50), // Min 50ms, default 500ms
       dry_run: body.dry_run || false,
     };
 
