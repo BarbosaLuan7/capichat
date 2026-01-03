@@ -127,6 +127,7 @@ export function DocumentChecklist({ leadId, customFields, labels = [], onUpdate 
               className="flex-1 text-xs"
               onClick={checkAll}
               disabled={isSaving || progress.checked === progress.total}
+              aria-label="Marcar todos os documentos como entregues"
             >
               <ListChecks className="w-3 h-3 mr-1" />
               Marcar todos
@@ -137,6 +138,7 @@ export function DocumentChecklist({ leadId, customFields, labels = [], onUpdate 
               className="flex-1 text-xs"
               onClick={uncheckAll}
               disabled={isSaving || progress.checked === 0}
+              aria-label="Limpar todos os documentos marcados"
             >
               <Trash2 className="w-3 h-3 mr-1" />
               Limpar
