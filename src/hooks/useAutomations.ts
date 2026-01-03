@@ -20,6 +20,7 @@ export function useAutomations() {
     },
     staleTime: 60 * 1000, // 1 minuto
     gcTime: 10 * 60 * 1000, // 10 minutes cache
+    refetchOnWindowFocus: false, // Dados de configuração
   });
 }
 
@@ -40,6 +41,7 @@ export function useAutomation(id: string | undefined) {
     enabled: !!id,
     staleTime: 60 * 1000, // 1 minuto
     gcTime: 10 * 60 * 1000, // 10 minutes cache
+    refetchOnWindowFocus: false, // Dados de configuração
   });
 }
 

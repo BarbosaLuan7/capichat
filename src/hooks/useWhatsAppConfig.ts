@@ -66,6 +66,9 @@ export function useWhatsAppConfigs() {
       if (error) throw error;
       return data as WhatsAppConfig[];
     },
+    staleTime: 5 * 60 * 1000, // 5 minutos - configs raramente mudam
+    gcTime: 30 * 60 * 1000, // 30 minutes cache
+    refetchOnWindowFocus: false, // Dados estáticos
   });
 }
 

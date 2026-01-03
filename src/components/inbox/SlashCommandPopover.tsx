@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, memo, forwardRef } from 'react';
 import {
   Popover,
   PopoverContent,
@@ -21,18 +21,20 @@ interface SlashCommandPopoverProps {
   leadBenefitType?: string;
 }
 
-export function SlashCommandPopover({
-  inputValue,
-  onSelectTemplate,
-  lead,
-  agentName,
-  inputRef,
-  onClose,
-  // Legacy props
-  leadName,
-  leadPhone,
-  leadBenefitType,
-}: SlashCommandPopoverProps) {
+// Usando forwardRef para evitar warning do React quando componente recebe ref
+const SlashCommandPopoverComponent = forwardRef<HTMLDivElement, SlashCommandPopoverProps>(
+  function SlashCommandPopoverComponent({
+    inputValue,
+    onSelectTemplate,
+    lead,
+    agentName,
+    inputRef,
+    onClose,
+    // Legacy props
+    leadName,
+    leadPhone,
+    leadBenefitType,
+  }, ref) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const { data: templates } = useTemplates();
   const listRef = useRef<HTMLDivElement>(null);
@@ -177,6 +179,16 @@ export function SlashCommandPopover({
       </PopoverContent>
     </Popover>
   );
-}
+});
+
+// Memoize to prevent re-renders when parent re-renders
+export const SlashCommandPopover = memo(SlashCommandPopoverComponent, (prev, next) => {
+  return (
+    prev.inputValue === next.inputValue &&
+    prev.agentName === next.agentName &&
+    prev.lead?.name === next.lead?.name &&
+    prev.lead?.phone === next.lead?.phone
+  );
+});
 
 SlashCommandPopover.displayName = 'SlashCommandPopover';
