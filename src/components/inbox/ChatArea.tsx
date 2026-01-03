@@ -73,6 +73,7 @@ interface ConversationData {
   status: ConversationStatus;
   is_favorite?: boolean | null;
   lead_id: string;
+  unread_count?: number;
 }
 
 interface ChatAreaProps {
@@ -194,6 +195,16 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     }
   }, [messages]);
 
+  // Track initial unread count when conversation changes
+  const initialUnreadCountRef = useRef<number | null>(null);
+  
+  // Store initial unread count when conversation changes
+  useEffect(() => {
+    if (conversation?.id) {
+      initialUnreadCountRef.current = conversation.unread_count ?? 0;
+    }
+  }, [conversation?.id]);
+
   // Auto-scroll when conversation changes
   useEffect(() => {
     if (conversation?.id && !isLoadingMessages && messages && messages.length > 0) {
@@ -203,10 +214,28 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
-          if (viewport) {
-            viewport.scrollTop = viewport.scrollHeight;
+          const unreadCount = initialUnreadCountRef.current ?? 0;
+          
+          if (unreadCount > 0 && messages.length > unreadCount) {
+            // Has unread messages: scroll to first unread message
+            const firstUnreadIndex = messages.length - unreadCount;
+            const messageElements = viewport?.querySelectorAll('[data-message-index]');
+            const targetElement = messageElements?.[firstUnreadIndex] as HTMLElement;
+            
+            if (targetElement && viewport) {
+              // Scroll so the first unread message is at the top with some padding
+              viewport.scrollTop = targetElement.offsetTop - 60;
+            } else if (viewport) {
+              // Fallback: scroll to bottom
+              viewport.scrollTop = viewport.scrollHeight;
+            }
           } else {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+            // No unread messages: scroll to bottom
+            if (viewport) {
+              viewport.scrollTop = viewport.scrollHeight;
+            } else {
+              messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+            }
           }
           
           setTimeout(() => {
@@ -790,45 +819,52 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
                 />
               </div>
             ) : (
-              groupedMessages.map((group) => (
-                <div key={group.date.toISOString()}>
-                  <DateSeparator date={group.date} />
-                  
-                  <div className="space-y-4">
-                    {group.items.map((item, index) => {
-                      if (item.itemType === 'note') {
-                        return <InlineNoteMessage key={`note-${item.id}`} note={item as any} />;
-                      }
+              (() => {
+                let messageIndex = 0; // Counter only for messages, not notes
+                return groupedMessages.map((group) => (
+                  <div key={group.date.toISOString()}>
+                    <DateSeparator date={group.date} />
+                    
+                    <div className="space-y-4">
+                      {group.items.map((item, index) => {
+                        if (item.itemType === 'note') {
+                          return <InlineNoteMessage key={`note-${item.id}`} note={item as any} />;
+                        }
 
-                      const message = item as MessageItem;
-                      const isAgent = message.sender_type === 'agent';
-                      const prevItem = group.items[index - 1];
-                      const showAvatar = index === 0 || prevItem?.itemType === 'note' || (prevItem as any)?.sender_type !== message.sender_type;
+                        const message = item as MessageItem;
+                        const currentMessageIndex = messageIndex;
+                        messageIndex++;
+                        
+                        const isAgent = message.sender_type === 'agent';
+                        const prevItem = group.items[index - 1];
+                        const showAvatar = index === 0 || prevItem?.itemType === 'note' || (prevItem as any)?.sender_type !== message.sender_type;
 
-                      // Filter out locally deleted messages
-                      if ((message as any).is_deleted_locally) return null;
+                        // Filter out locally deleted messages
+                        if ((message as any).is_deleted_locally) return null;
 
-                      return (
-                        <MessageBubble
-                          key={message.id}
-                          message={message as any}
-                          isAgent={isAgent}
-                          showAvatar={showAvatar}
-                          leadName={lead.name}
-                          leadAvatarUrl={lead.avatar_url}
-                          agentName={agentName}
-                          onReply={handleReplyMessage}
-                          onRetry={handleRetryMessage}
-                          resolvedMediaUrl={message.media_url ? getSignedUrl(message.media_url) : undefined}
-                          selectionMode={selectionMode}
-                          isSelected={selectedMessages.includes(message.id)}
-                          onToggleSelect={toggleSelectMessage}
-                        />
-                      );
-                    })}
+                        return (
+                          <div key={message.id} data-message-index={currentMessageIndex}>
+                            <MessageBubble
+                              message={message as any}
+                              isAgent={isAgent}
+                              showAvatar={showAvatar}
+                              leadName={lead.name}
+                              leadAvatarUrl={lead.avatar_url}
+                              agentName={agentName}
+                              onReply={handleReplyMessage}
+                              onRetry={handleRetryMessage}
+                              resolvedMediaUrl={message.media_url ? getSignedUrl(message.media_url) : undefined}
+                              selectionMode={selectionMode}
+                              isSelected={selectedMessages.includes(message.id)}
+                              onToggleSelect={toggleSelectMessage}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))
+                ));
+              })()
             )}
             
             {/* Upload progress indicator */}

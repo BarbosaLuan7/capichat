@@ -329,6 +329,7 @@ const Inbox = () => {
               status: selectedConversation.status,
               is_favorite: (selectedConversation as any).is_favorite,
               lead_id: selectedConversation.lead_id,
+              unread_count: selectedConversation.unread_count,
             } : null}
             lead={leadWithLabels}
             messages={messages}
