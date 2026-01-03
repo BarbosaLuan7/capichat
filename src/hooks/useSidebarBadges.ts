@@ -9,10 +9,10 @@ export function useSidebarBadges() {
   const { data: tasks } = useAllTasks();
 
   const badges = useMemo(() => {
-    // Total de mensagens não lidas em todas as conversas visíveis
-    const totalUnreadMessages = conversations?.reduce((total, conv) => {
-      return total + (conv.unread_count || 0);
-    }, 0) || 0;
+    // Quantidade de conversas não atribuídas com mensagens não lidas
+    const unassignedWithUnread = conversations?.filter((conv) => {
+      return conv.unread_count > 0 && conv.assigned_to === null;
+    }).length || 0;
 
     // Tarefas pendentes (todo ou in_progress) atribuídas ao usuário
     const pendingTasks = tasks?.filter((task) => {
@@ -23,7 +23,7 @@ export function useSidebarBadges() {
     }).length || 0;
 
     return {
-      conversations: totalUnreadMessages,
+      conversations: unassignedWithUnread,
       tasks: pendingTasks,
     };
   }, [conversations, tasks, user?.id, user?.role]);
