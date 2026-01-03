@@ -11,12 +11,18 @@ export interface User {
   createdAt: Date;
 }
 
+export type TeamAccessLevel = 'all' | 'team' | 'attendant';
+
 export interface Team {
   id: string;
   name: string;
-  supervisorId: string;
-  memberIds: string[];
+  supervisorId?: string;
+  isDefault: boolean;
+  accessLevel: TeamAccessLevel;
+  autoDistribution: boolean;
+  tenantId?: string;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 export type LeadTemperature = 'cold' | 'warm' | 'hot';
