@@ -487,6 +487,44 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     setShowSlashCommand(value.includes('/'));
   };
 
+  // Handle paste - suporte a colar imagens da área de transferência
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      
+      // Verificar se é uma imagem
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        
+        const file = item.getAsFile();
+        if (file) {
+          setPendingFile({ file, type: 'image' });
+          toast.info('Imagem colada da área de transferência');
+        }
+        return;
+      }
+      
+      // Suportar arquivos copiados
+      if (item.kind === 'file') {
+        e.preventDefault();
+        
+        const file = item.getAsFile();
+        if (file) {
+          const type = file.type.startsWith('image/') ? 'image' : 
+                       file.type.startsWith('video/') ? 'video' : 
+                       file.type.startsWith('audio/') ? 'audio' : 'document';
+          
+          setPendingFile({ file, type: type as 'image' | 'video' | 'audio' | 'document' });
+          toast.info(`Arquivo colado: ${file.name}`);
+        }
+        return;
+      }
+    }
+  }, []);
+
   // Empty state
   if (!conversation || !lead) {
     return (
@@ -753,12 +791,30 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
       {/* Pending File Preview */}
       {pendingFile && !uploadProgress.uploading && (
         <div className="px-4 py-2 bg-muted/50 border-t border-border">
-          <div className="flex items-center gap-2 max-w-3xl mx-auto">
-            <span className="text-sm text-muted-foreground">Arquivo: {pendingFile.file.name}</span>
+          <div className="flex items-center gap-3 max-w-3xl mx-auto">
+            {/* Miniatura da imagem se for imagem */}
+            {pendingFile.type === 'image' && (
+              <img 
+                src={URL.createObjectURL(pendingFile.file)} 
+                alt="Preview" 
+                className="w-12 h-12 object-cover rounded-lg border border-border"
+              />
+            )}
+            
+            <div className="flex-1 flex items-center gap-2 min-w-0">
+              <span className="text-sm text-foreground font-medium truncate">
+                {pendingFile.file.name}
+              </span>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                ({(pendingFile.file.size / 1024).toFixed(1)} KB)
+              </span>
+            </div>
+            
             <Button 
               variant="ghost" 
               size="sm"
               onClick={() => setPendingFile(null)}
+              className="shrink-0"
             >
               Cancelar
             </Button>
@@ -856,6 +912,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
               ref={inputRef as React.RefObject<HTMLTextAreaElement>}
               value={messageInput}
               onChange={handleInputChange}
+              onPaste={handlePaste}
               onKeyDown={(e) => {
                 if (showSlashCommand) return;
                 if (e.key === 'Enter' && !e.shiftKey) {
