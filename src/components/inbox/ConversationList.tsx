@@ -8,6 +8,9 @@ import {
   ArrowDown,
   MessageSquare,
   AlertCircle,
+  Clock,
+  Inbox,
+  CheckCircle2,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -363,45 +366,69 @@ export function ConversationList({
         {/* Active Filter Chips - NEW */}
         <ActiveFilterChips availableInboxes={availableInboxes} />
 
-        {/* Main Filter Tabs - Simplified */}
-        <Tabs value={mainFilter} onValueChange={(v) => setMainFilter(v as MainFilter)}>
-          <TabsList className="grid grid-cols-3 w-full bg-muted h-9">
-            <TabsTrigger 
-              value="pendentes" 
-              className={cn(
-                "flex items-center justify-center gap-1.5 text-xs font-medium h-8",
-                // Always show red count when there are pending items
-                tabCounts.pendentes > 0 && "data-[state=inactive]:text-destructive"
-              )}
-            >
-              Pendentes
-              <span className={cn(
-                "text-xs font-semibold tabular-nums",
-                tabCounts.pendentes > 0 ? "text-destructive" : "text-muted-foreground"
-              )}>
-                ({tabCounts.pendentes})
-              </span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="todos" 
-              className="flex items-center justify-center gap-1.5 text-xs font-medium h-8"
-            >
-              Todos
-              <span className="text-xs font-semibold tabular-nums text-muted-foreground">
-                ({tabCounts.todos})
-              </span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="concluidos" 
-              className="flex items-center justify-center gap-1.5 text-xs font-medium h-8"
-            >
-              Concluídos
-              <span className="text-xs font-semibold tabular-nums text-muted-foreground">
-                ({tabCounts.concluidos})
-              </span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Main Filter Tabs - Simplified with Icons */}
+        <TooltipProvider delayDuration={300}>
+          <Tabs value={mainFilter} onValueChange={(v) => setMainFilter(v as MainFilter)}>
+            <TabsList className="grid grid-cols-3 w-full bg-muted h-auto p-1 gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger 
+                    value="pendentes" 
+                    className={cn(
+                      "flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-medium",
+                      tabCounts.pendentes > 0 && "data-[state=inactive]:text-destructive"
+                    )}
+                  >
+                    <Clock className="w-3.5 h-3.5 shrink-0" />
+                    <span className={cn(
+                      "font-semibold tabular-nums",
+                      tabCounts.pendentes > 0 ? "text-destructive" : ""
+                    )}>
+                      {tabCounts.pendentes}
+                    </span>
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  Pendentes (não lidas)
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger 
+                    value="todos" 
+                    className="flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-medium"
+                  >
+                    <Inbox className="w-3.5 h-3.5 shrink-0" />
+                    <span className="font-semibold tabular-nums">
+                      {tabCounts.todos}
+                    </span>
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  Todos (não resolvidos)
+                </TooltipContent>
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger 
+                    value="concluidos" 
+                    className="flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-medium"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    <span className="font-semibold tabular-nums">
+                      {tabCounts.concluidos}
+                    </span>
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs">
+                  Concluídos (resolvidos)
+                </TooltipContent>
+              </Tooltip>
+            </TabsList>
+          </Tabs>
+        </TooltipProvider>
       </div>
 
       {/* Conversations List */}
