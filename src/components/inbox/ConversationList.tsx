@@ -237,24 +237,43 @@ export function ConversationList({
   }, []);
 
   // Calculate status counts based on assignment-filtered conversations
+  // Nova lógica: Pendente = tem mensagens não lidas, Aberta = sem pendencias
   const statusCounts = useMemo(() => {
     const counts = { all: 0, open: 0, pending: 0, resolved: 0 };
     assignmentFilteredConversations.forEach((conv) => {
       counts.all++;
-      if (conv.status === 'open') counts.open++;
-      else if (conv.status === 'pending') counts.pending++;
-      else if (conv.status === 'resolved') counts.resolved++;
+      
+      // Pendente = tem mensagens não lidas (independente do status manual)
+      if (conv.unread_count > 0) {
+        counts.pending++;
+      }
+      // Aberta = status open e sem mensagens não lidas
+      else if (conv.status === 'open') {
+        counts.open++;
+      }
+      // Resolvida
+      else if (conv.status === 'resolved') {
+        counts.resolved++;
+      }
     });
     return counts;
   }, [assignmentFilteredConversations]);
 
   // Filter and sort conversations (uses pre-filtered by assignment)
+  // Nova lógica de filtro: Pendente = não lidas, Aberta = lidas sem pendencia
   const filteredConversations = useMemo(() => {
     let filtered = assignmentFilteredConversations.filter((conv) => {
-      // Filter by status tab
-      if (statusFilter !== 'all' && conv.status !== statusFilter) {
-        return false;
+      // Filter by status tab com nova lógica baseada em unread_count
+      if (statusFilter === 'pending') {
+        // Pendente = tem mensagens não lidas
+        if (conv.unread_count === 0) return false;
+      } else if (statusFilter === 'open') {
+        // Aberta = status open sem mensagens não lidas
+        if (conv.unread_count > 0 || conv.status !== 'open') return false;
+      } else if (statusFilter === 'resolved') {
+        if (conv.status !== 'resolved') return false;
       }
+      // 'all' - mostrar tudo
       
       const searchLower = debouncedSearchQuery.toLowerCase();
       const matchesSearch = !debouncedSearchQuery || 

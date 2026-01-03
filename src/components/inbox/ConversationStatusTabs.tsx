@@ -22,7 +22,7 @@ interface ConversationStatusTabsProps {
 const tabs = [
   { 
     value: 'pending', 
-    label: 'Pendentes', 
+    label: 'Pendentes (não lidas)', 
     shortLabel: 'Pend.',
     icon: Clock, 
     colorClass: 'text-destructive', 
@@ -30,7 +30,7 @@ const tabs = [
   },
   { 
     value: 'open', 
-    label: 'Abertas', 
+    label: 'Abertas (lidas)', 
     shortLabel: 'Abertas',
     icon: MessageCircle, 
     colorClass: 'text-success', 
