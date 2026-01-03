@@ -633,6 +633,7 @@ export type Database = {
           sender_type: Database["public"]["Enums"]["sender_type"]
           source: string | null
           status: Database["public"]["Enums"]["message_status"]
+          transcription: string | null
           type: Database["public"]["Enums"]["message_type"]
           waha_message_id: string | null
         }
@@ -654,6 +655,7 @@ export type Database = {
           sender_type: Database["public"]["Enums"]["sender_type"]
           source?: string | null
           status?: Database["public"]["Enums"]["message_status"]
+          transcription?: string | null
           type?: Database["public"]["Enums"]["message_type"]
           waha_message_id?: string | null
         }
@@ -675,6 +677,7 @@ export type Database = {
           sender_type?: Database["public"]["Enums"]["sender_type"]
           source?: string | null
           status?: Database["public"]["Enums"]["message_status"]
+          transcription?: string | null
           type?: Database["public"]["Enums"]["message_type"]
           waha_message_id?: string | null
         }
