@@ -105,6 +105,10 @@ const Inbox = () => {
       notify(message.content, leadName);
       logger.log('[Inbox] New incoming message:', message.id);
     },
+    onMarkSelectedConversationAsRead: (conversationId) => {
+      // Auto-mark as read when message arrives in the open conversation
+      markAsRead.mutate(conversationId);
+    },
     addMessageOptimistically,
     updateMessageOptimistically,
     addConversationOptimistically,

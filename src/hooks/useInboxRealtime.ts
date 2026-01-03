@@ -9,6 +9,8 @@ type Message = Database['public']['Tables']['messages']['Row'];
 interface UseInboxRealtimeOptions {
   selectedConversationId?: string | null;
   onNewIncomingMessage?: (message: Message, leadName?: string) => void;
+  // Callback to mark selected conversation as read when new message arrives
+  onMarkSelectedConversationAsRead?: (conversationId: string) => void;
   // Optimistic update functions from infinite hooks
   addMessageOptimistically?: (message: Message) => void;
   updateMessageOptimistically?: (messageId: string, updates: Partial<Message>) => void;
@@ -31,6 +33,7 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
   const {
     selectedConversationId,
     onNewIncomingMessage,
+    onMarkSelectedConversationAsRead,
     addMessageOptimistically,
     updateMessageOptimistically,
     addConversationOptimistically,
@@ -42,10 +45,14 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
   // Use refs to avoid recreating callbacks on every render
   const selectedConversationIdRef = useRef(selectedConversationId);
   const onNewIncomingMessageRef = useRef(onNewIncomingMessage);
+  const onMarkSelectedConversationAsReadRef = useRef(onMarkSelectedConversationAsRead);
   const addMessageOptimisticallyRef = useRef(addMessageOptimistically);
   const updateMessageOptimisticallyRef = useRef(updateMessageOptimistically);
   const addConversationOptimisticallyRef = useRef(addConversationOptimistically);
   const updateConversationOptimisticallyRef = useRef(updateConversationOptimistically);
+  
+  // Debounce ref for mark as read
+  const markAsReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Keep refs in sync
   useEffect(() => {
@@ -55,6 +62,10 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
   useEffect(() => {
     onNewIncomingMessageRef.current = onNewIncomingMessage;
   }, [onNewIncomingMessage]);
+
+  useEffect(() => {
+    onMarkSelectedConversationAsReadRef.current = onMarkSelectedConversationAsRead;
+  }, [onMarkSelectedConversationAsRead]);
 
   useEffect(() => {
     addMessageOptimisticallyRef.current = addMessageOptimistically;
@@ -107,7 +118,22 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
 
     // Calculate unread increment
     const isFromLead = newMessage.sender_type === 'lead';
-    const isOtherConversation = conversationId !== currentSelectedId;
+    const isSelectedConversation = conversationId === currentSelectedId;
+    const isOtherConversation = !isSelectedConversation;
+    
+    // AUTO MARK AS READ: If message arrives in the selected conversation while tab is visible
+    if (isFromLead && isSelectedConversation && document.visibilityState === 'visible') {
+      // Debounce to avoid multiple rapid updates
+      if (markAsReadTimeoutRef.current) {
+        clearTimeout(markAsReadTimeoutRef.current);
+      }
+      markAsReadTimeoutRef.current = setTimeout(() => {
+        if (onMarkSelectedConversationAsReadRef.current) {
+          logger.log('[InboxRealtime] Auto-marking conversation as read:', conversationId);
+          onMarkSelectedConversationAsReadRef.current(conversationId);
+        }
+      }, 300); // 300ms debounce
+    }
     const unreadIncrement = isFromLead && isOtherConversation ? 1 : 0;
 
     // Update conversation in infinite list if function available

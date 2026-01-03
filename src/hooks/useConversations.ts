@@ -172,6 +172,7 @@ export function useMarkConversationAsRead() {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['conversations'] });
       await queryClient.cancelQueries({ queryKey: ['conversations', conversationId] });
+      await queryClient.cancelQueries({ queryKey: ['conversations-infinite'], exact: false });
       
       // Snapshot previous values
       const previousConversations = queryClient.getQueryData(['conversations']);
@@ -190,6 +191,23 @@ export function useMarkConversationAsRead() {
         if (!old) return old;
         return { ...old, unread_count: 0 };
       });
+      
+      // Also update infinite queries (used by Inbox)
+      queryClient.setQueriesData(
+        { queryKey: ['conversations-infinite'], exact: false },
+        (oldData: any) => {
+          if (!oldData?.pages) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page: any) => ({
+              ...page,
+              conversations: page.conversations.map((conv: any) =>
+                conv.id === conversationId ? { ...conv, unread_count: 0 } : conv
+              ),
+            })),
+          };
+        }
+      );
       
       return { previousConversations, previousConversation };
     },
