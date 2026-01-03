@@ -115,7 +115,20 @@ export function ConversationList({
   // New simplified filter: defaults to 'todos' (all non-resolved)
   const [mainFilter, setMainFilter] = useState<MainFilter>('todos');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortOrder, setSortOrder] = useState<'unread' | 'recent' | 'oldest'>('unread');
+  
+  // Sort order with localStorage persistence (default: recent)
+  const [sortOrder, setSortOrderState] = useState<'unread' | 'recent' | 'oldest'>(() => {
+    const saved = localStorage.getItem('inbox-sort-order');
+    if (saved === 'unread' || saved === 'recent' || saved === 'oldest') {
+      return saved;
+    }
+    return 'recent';
+  });
+  
+  const setSortOrder = (order: 'unread' | 'recent' | 'oldest') => {
+    setSortOrderState(order);
+    localStorage.setItem('inbox-sort-order', order);
+  };
   
   // Get filters from global store
   const { filters } = useConversationFilters();
