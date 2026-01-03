@@ -36,50 +36,58 @@ export function MessageActions({
     }
   };
 
+  // Don't render anything if not visible and not in selection mode
+  if (!show && !selectionMode) {
+    return null;
+  }
+
   return (
     <div
       className={cn(
-        "absolute top-1/2 -translate-y-1/2 flex items-center gap-0.5 transition-opacity duration-200",
-        isAgent ? "-left-20" : "-right-20",
-        show || selectionMode ? "opacity-100" : "opacity-0 pointer-events-none"
+        "absolute top-1/2 -translate-y-1/2 flex items-center gap-1 z-50",
+        isAgent ? "-left-24" : "-right-24"
       )}
     >
-      <TooltipProvider delayDuration={200}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "h-7 w-7 rounded-full bg-background/80 hover:bg-background shadow-sm border border-border/50",
-                isSelected && "bg-primary/10 border-primary/30"
-              )}
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleSelect();
-              }}
-            >
-              {isSelected ? (
-                <CheckSquare className="w-3.5 h-3.5 text-primary" />
-              ) : (
-                <Square className="w-3.5 h-3.5" />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side={isAgent ? "left" : "right"} className="text-xs">
-            {isSelected ? "Desmarcar" : "Selecionar"}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      {!selectionMode && content && (
+      {/* Selection checkbox - only show in selection mode or on hover */}
+      {(selectionMode || show) && (
         <TooltipProvider delayDuration={200}>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 rounded-full bg-background/80 hover:bg-background shadow-sm border border-border/50"
+                className={cn(
+                  "h-7 w-7 rounded-full bg-background hover:bg-background shadow-sm border border-border/50",
+                  isSelected && "bg-primary/10 border-primary/30"
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleSelect();
+                }}
+              >
+                {isSelected ? (
+                  <CheckSquare className="w-3.5 h-3.5 text-primary" />
+                ) : (
+                  <Square className="w-3.5 h-3.5" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side={isAgent ? "left" : "right"} className="text-xs">
+              {isSelected ? "Desmarcar" : "Selecionar"}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
+
+      {/* Copy and Reply buttons - only show on hover, not in selection mode */}
+      {show && !selectionMode && content && (
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-full bg-background hover:bg-background shadow-sm border border-border/50"
                 onClick={handleCopy}
               >
                 <Copy className="w-3.5 h-3.5" />
@@ -92,14 +100,14 @@ export function MessageActions({
         </TooltipProvider>
       )}
 
-      {!selectionMode && (
+      {show && !selectionMode && (
         <TooltipProvider delayDuration={200}>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 rounded-full bg-background/80 hover:bg-background shadow-sm border border-border/50"
+                className="h-7 w-7 rounded-full bg-background hover:bg-background shadow-sm border border-border/50"
                 onClick={(e) => {
                   e.stopPropagation();
                   onReply();

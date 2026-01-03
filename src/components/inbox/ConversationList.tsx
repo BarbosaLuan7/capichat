@@ -21,7 +21,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ConversationStatusTabs } from '@/components/inbox/ConversationStatusTabs';
+// ConversationStatusTabs removed - using simplified tabs now
 import { ConversationItem } from '@/components/inbox/ConversationItem';
 import { ConversationFiltersPopover } from '@/components/inbox/ConversationFiltersPopover';
 import { ActiveFilterChips } from '@/components/inbox/ActiveFilterChips';
@@ -58,8 +58,8 @@ const MemoizedConversationItem = React.memo(function MemoizedConversationItem({
 MemoizedConversationItem.displayName = 'MemoizedConversationItem';
 
 type ConversationStatus = Database['public']['Enums']['conversation_status'];
-type StatusFilter = ConversationStatus | 'all';
-type AssignmentFilter = 'novos' | 'meus' | 'outros';
+// New simplified filter type: pendentes (unread), todos (not resolved), concluidos (resolved)
+type MainFilter = 'pendentes' | 'todos' | 'concluidos';
 
 interface WhatsAppConfigData {
   id: string;
@@ -109,9 +109,9 @@ export function ConversationList({
   onLoadMore,
   isLoadingMore,
 }: ConversationListProps) {
-  const [filter, setFilter] = useState<AssignmentFilter>('meus');
+  // New simplified filter: defaults to 'todos' (all non-resolved)
+  const [mainFilter, setMainFilter] = useState<MainFilter>('todos');
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [sortOrder, setSortOrder] = useState<'recent' | 'oldest'>('recent');
   
   // Get filters from global store
@@ -210,71 +210,56 @@ export function ConversationList({
     );
   }, [userFilteredConversations, filters.tenantIds]);
 
-  // Filter conversations by assignment (for accurate status counts)
-  const assignmentFilteredConversations = useMemo(() => {
-    // Handle unauthenticated user for assignment-based filters
-    if (!isUserAuthenticated && (filter === 'meus' || filter === 'outros')) {
-      logger.warn('[ConversationList] userId undefined - cannot filter by assignment');
-      return [];
-    }
-
-    return tenantFilteredConversations.filter((conv) => {
-      if (filter === 'novos') {
-        // Novos = não atribuídos a ninguém
-        return !conv.assigned_to;
-      } else if (filter === 'meus') {
-        return conv.assigned_to === userId;
-      } else if (filter === 'outros') {
-        return !!conv.assigned_to && conv.assigned_to !== userId;
-      }
-      return true;
-    });
-  }, [tenantFilteredConversations, filter, userId, isUserAuthenticated]);
+  // Base filtered conversations (after all filters except main tab)
+  const baseFilteredConversations = tenantFilteredConversations;
 
   // Clear search handler
   const handleClearSearch = useCallback(() => {
     setSearchQuery('');
   }, []);
 
-  // Calculate status counts based on assignment-filtered conversations
-  // Nova lógica: Pendente = tem mensagens não lidas, Aberta = sem pendencias
-  const statusCounts = useMemo(() => {
-    const counts = { all: 0, open: 0, pending: 0, resolved: 0 };
-    assignmentFilteredConversations.forEach((conv) => {
-      counts.all++;
-      
-      // Pendente = tem mensagens não lidas (independente do status manual)
+  // Calculate counts for new simplified tabs
+  const tabCounts = useMemo(() => {
+    let pendentes = 0;
+    let todos = 0;
+    let concluidos = 0;
+    
+    baseFilteredConversations.forEach((conv) => {
+      // Pendentes = tem mensagens não lidas
       if (conv.unread_count > 0) {
-        counts.pending++;
+        pendentes++;
       }
-      // Aberta = status open e sem mensagens não lidas
-      else if (conv.status === 'open') {
-        counts.open++;
+      
+      // Todos = não está resolvido (inclui pendentes também)
+      if (conv.status !== 'resolved') {
+        todos++;
       }
-      // Resolvida
-      else if (conv.status === 'resolved') {
-        counts.resolved++;
+      
+      // Concluídos = status resolved
+      if (conv.status === 'resolved') {
+        concluidos++;
       }
     });
-    return counts;
-  }, [assignmentFilteredConversations]);
+    
+    return { pendentes, todos, concluidos };
+  }, [baseFilteredConversations]);
 
-  // Filter and sort conversations (uses pre-filtered by assignment)
-  // Nova lógica de filtro: Pendente = não lidas, Aberta = lidas sem pendencia
+  // Filter and sort conversations based on new simplified tabs
   const filteredConversations = useMemo(() => {
-    let filtered = assignmentFilteredConversations.filter((conv) => {
-      // Filter by status tab com nova lógica baseada em unread_count
-      if (statusFilter === 'pending') {
-        // Pendente = tem mensagens não lidas
+    let filtered = baseFilteredConversations.filter((conv) => {
+      // Filter by main tab
+      if (mainFilter === 'pendentes') {
+        // Pendentes = tem mensagens não lidas
         if (conv.unread_count === 0) return false;
-      } else if (statusFilter === 'open') {
-        // Aberta = status open sem mensagens não lidas
-        if (conv.unread_count > 0 || conv.status !== 'open') return false;
-      } else if (statusFilter === 'resolved') {
+      } else if (mainFilter === 'todos') {
+        // Todos = não está resolvido
+        if (conv.status === 'resolved') return false;
+      } else if (mainFilter === 'concluidos') {
+        // Concluídos = resolvido
         if (conv.status !== 'resolved') return false;
       }
-      // 'all' - mostrar tudo
       
+      // Search filter
       const searchLower = debouncedSearchQuery.toLowerCase();
       const matchesSearch = !debouncedSearchQuery || 
         conv.leads?.name?.toLowerCase().includes(searchLower) ||
@@ -292,7 +277,7 @@ export function ConversationList({
     });
 
     return filtered;
-  }, [assignmentFilteredConversations, statusFilter, debouncedSearchQuery, sortOrder]);
+  }, [baseFilteredConversations, mainFilter, debouncedSearchQuery, sortOrder]);
 
   return (
     <div className="flex flex-col h-full select-none">
@@ -378,21 +363,43 @@ export function ConversationList({
         {/* Active Filter Chips - NEW */}
         <ActiveFilterChips availableInboxes={availableInboxes} />
 
-        {/* Status Tabs */}
-        <ConversationStatusTabs
-          value={statusFilter}
-          onChange={setStatusFilter}
-          counts={statusCounts}
-        />
-      </div>
-
-      {/* Assignment Filter Tabs */}
-      <div className="p-2 border-b border-border bg-card">
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as AssignmentFilter)}>
-          <TabsList className="w-full bg-muted relative z-10 h-8">
-            <TabsTrigger value="novos" className="flex-1 text-xs h-7">Novos</TabsTrigger>
-            <TabsTrigger value="meus" className="flex-1 text-xs h-7">Meus</TabsTrigger>
-            <TabsTrigger value="outros" className="flex-1 text-xs h-7">Outros</TabsTrigger>
+        {/* Main Filter Tabs - Simplified */}
+        <Tabs value={mainFilter} onValueChange={(v) => setMainFilter(v as MainFilter)}>
+          <TabsList className="grid grid-cols-3 w-full bg-muted h-9">
+            <TabsTrigger 
+              value="pendentes" 
+              className={cn(
+                "flex items-center justify-center gap-1.5 text-xs font-medium h-8",
+                // Always show red count when there are pending items
+                tabCounts.pendentes > 0 && "data-[state=inactive]:text-destructive"
+              )}
+            >
+              Pendentes
+              <span className={cn(
+                "text-xs font-semibold tabular-nums",
+                tabCounts.pendentes > 0 ? "text-destructive" : "text-muted-foreground"
+              )}>
+                ({tabCounts.pendentes})
+              </span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="todos" 
+              className="flex items-center justify-center gap-1.5 text-xs font-medium h-8"
+            >
+              Todos
+              <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                ({tabCounts.todos})
+              </span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="concluidos" 
+              className="flex items-center justify-center gap-1.5 text-xs font-medium h-8"
+            >
+              Concluídos
+              <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                ({tabCounts.concluidos})
+              </span>
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -434,26 +441,6 @@ export function ConversationList({
                 </div>
               </div>
             ))}
-          </div>
-        ) : !isUserAuthenticated && (filter === 'meus' || filter === 'outros') ? (
-          <div className="p-4">
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Você precisa estar autenticado para ver suas conversas.
-              </AlertDescription>
-            </Alert>
-            <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4 text-muted-foreground">
-                <MessageSquare className="w-8 h-8" aria-hidden="true" />
-              </div>
-              <h3 className="text-base font-medium text-foreground mb-1">
-                Sessão não identificada
-              </h3>
-              <p className="text-sm text-muted-foreground max-w-xs">
-                Faça login para acessar suas conversas atribuídas.
-              </p>
-            </div>
           </div>
         ) : filteredConversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 px-4 text-center">

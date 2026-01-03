@@ -456,12 +456,12 @@ function VirtualizedMessageListComponent({
               key={item.id}
               data-index={virtualRow.index}
               ref={virtualizer.measureElement}
-              className="absolute left-0 right-0"
+              className="absolute left-0 right-0 overflow-visible"
               style={{
                 transform: `translateY(${virtualRow.start}px)`,
               }}
             >
-              <div className="py-1">
+              <div className="py-1 overflow-visible">
                 {renderItem(item)}
               </div>
             </div>
