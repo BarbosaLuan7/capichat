@@ -13,6 +13,9 @@ export default {
       },
     },
     extend: {
+      spacing: {
+        15: "3.75rem",
+      },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
