@@ -841,6 +841,10 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
             ) : (
               (() => {
                 let messageIndex = 0; // Counter only for messages, not notes
+                const unreadCount = initialUnreadCountRef.current ?? 0;
+                const totalMessages = messages?.length ?? 0;
+                const firstUnreadIndex = unreadCount > 0 ? totalMessages - unreadCount : -1;
+                
                 return groupedMessages.map((group) => (
                   <div key={group.date.toISOString()}>
                     <DateSeparator date={group.date} />
@@ -861,9 +865,21 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
 
                         // Filter out locally deleted messages
                         if ((message as any).is_deleted_locally) return null;
+                        
+                        // Check if this is the first unread message
+                        const isFirstUnread = currentMessageIndex === firstUnreadIndex;
 
                         return (
                           <div key={message.id} data-message-index={currentMessageIndex}>
+                            {isFirstUnread && (
+                              <div className="flex items-center gap-3 py-3 mb-4">
+                                <div className="flex-1 h-px bg-primary/40" />
+                                <span className="text-xs font-medium text-primary px-2">
+                                  Mensagens não lidas
+                                </span>
+                                <div className="flex-1 h-px bg-primary/40" />
+                              </div>
+                            )}
                             <MessageBubble
                               message={message as any}
                               isAgent={isAgent}
