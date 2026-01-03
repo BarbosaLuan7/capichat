@@ -93,8 +93,10 @@ interface ChatAreaProps {
   hasMoreMessages?: boolean;
   onLoadMoreMessages?: () => void;
   isLoadingMoreMessages?: boolean;
-  // Callback para marcar como lido ao começar a digitar
+  // Callback para marcar como lido ao começar a digitar (apenas atribuídos)
   onStartTyping?: () => void;
+  // Callback para marcar como lido ao enviar mensagem (apenas não atribuídos)
+  onMessageSent?: () => void;
 }
 
 type ExtendedMessage = Message & { isOptimistic?: boolean; errorMessage?: string };
@@ -117,6 +119,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     onLoadMoreMessages,
     isLoadingMoreMessages,
     onStartTyping,
+    onMessageSent,
   }, ref) {
   const isMobile = useIsMobile();
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
@@ -372,7 +375,10 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
       replyToExternalId
     );
     
-    // 4. Check for reminders (em background)
+    // 4. Marcar como lido ao enviar (para conversas não atribuídas)
+    onMessageSent?.();
+    
+    // 5. Check for reminders (em background)
     if (sentMessage.trim().length > 10) {
       aiReminders.detectReminder(sentMessage, lead?.name).then((reminderResult) => {
         if (reminderResult?.hasReminder) {
