@@ -14,13 +14,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
 import { useProfiles, useUserRoles, type ProfileWithRelations } from '@/hooks/useProfiles';
 import { UserDetailsSheet } from '@/components/users/UserDetailsSheet';
 import { UserEditModal } from '@/components/users/UserEditModal';
 import { UserTeamsModal } from '@/components/users/UserTeamsModal';
+import { CreateUserModal } from '@/components/users/CreateUserModal';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 import { getRoleLabel, getRoleColor, SELECTABLE_ROLES } from '@/lib/permissions';
+import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -29,7 +30,7 @@ type AppRole = Database['public']['Enums']['app_role'];
 const UsersSettings = () => {
   const { data: profiles, isLoading, refetch } = useProfiles();
   const { data: userRoles } = useUserRoles();
-  const { toast } = useToast();
+  const { isAdmin } = useAuth();
 
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -37,6 +38,7 @@ const UsersSettings = () => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [teamsModalOpen, setTeamsModalOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
   const debouncedSearch = useDebounce(search, 300);
 
@@ -82,14 +84,6 @@ const UsersSettings = () => {
     setTeamsModalOpen(true);
   };
 
-  const handleAddUser = () => {
-    toast({
-      title: 'Funcionalidade limitada',
-      description: 'Novos usuários devem se registrar pelo sistema de autenticação.',
-      variant: 'destructive',
-    });
-  };
-
   if (isLoading) {
     return (
       <div className="p-6 space-y-6">
@@ -132,10 +126,12 @@ const UsersSettings = () => {
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
-          <Button onClick={handleAddUser} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Novo
-          </Button>
+          {isAdmin && (
+            <Button onClick={() => setCreateModalOpen(true)} className="gap-2">
+              <Plus className="w-4 h-4" />
+              Novo
+            </Button>
+          )}
         </div>
       </div>
 
@@ -236,6 +232,12 @@ const UsersSettings = () => {
         open={teamsModalOpen}
         onOpenChange={setTeamsModalOpen}
         user={selectedUser}
+      />
+
+      {/* Modal de Criar Usuário */}
+      <CreateUserModal
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
       />
     </div>
   );
