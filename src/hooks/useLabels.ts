@@ -32,6 +32,8 @@ export function useLabels() {
     },
     staleTime: 5 * 60 * 1000, // 5 minutos - labels mudam raramente
     gcTime: 30 * 60 * 1000, // 30 minutes cache
+    refetchOnWindowFocus: false, // Dados estáticos
+    placeholderData: [],
   });
 }
 

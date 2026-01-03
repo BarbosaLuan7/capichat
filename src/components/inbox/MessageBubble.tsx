@@ -333,6 +333,7 @@ function MessageBubbleComponent({
                 alt={`Imagem ${isAgent ? 'enviada pelo atendente' : `enviada por ${leadName}`}`}
                 className="max-w-full rounded-lg max-h-64 object-cover cursor-pointer hover:brightness-95 transition-all"
                 loading="lazy"
+                decoding="async"
                 onError={() => {
                   logger.error('[MessageBubble] Erro ao carregar imagem:', message.media_url);
                   setImageError(true);
