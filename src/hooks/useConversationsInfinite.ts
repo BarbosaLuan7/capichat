@@ -51,9 +51,12 @@ export function useConversationsInfinite() {
   
   // Get tenant IDs to filter by
   const tenantIds = currentTenant ? [currentTenant.id] : tenants.map(t => t.id);
+  
+  // Consistent query key for all cache operations
+  const queryKey = ['conversations-infinite', currentTenant?.id || 'all'];
 
   const query = useInfiniteQuery({
-    queryKey: ['conversations-infinite', currentTenant?.id || 'all'],
+    queryKey,
     queryFn: async ({ pageParam }): Promise<ConversationsPage> => {
       let queryBuilder = supabase
         .from('conversations')
@@ -134,29 +137,41 @@ export function useConversationsInfinite() {
   // Função para atualizar uma conversa otimisticamente
   const updateConversationOptimistically = useCallback((
     conversationId: string, 
-    updates: Partial<ConversationData>
+    updates: Partial<ConversationData> & { unread_count_increment?: number }
   ) => {
     queryClient.setQueryData(
-      ['conversations-infinite'],
+      queryKey,
       (oldData: typeof query.data) => {
         if (!oldData) return oldData;
         
         const newPages = oldData.pages.map(page => ({
           ...page,
-          conversations: page.conversations.map(conv => 
-            conv.id === conversationId ? { ...conv, ...updates } : conv
-          ),
+          conversations: page.conversations.map(conv => {
+            if (conv.id !== conversationId) return conv;
+            
+            // Handle unread_count_increment specially
+            const { unread_count_increment, ...rest } = updates;
+            let newUnreadCount = conv.unread_count;
+            if (typeof unread_count_increment === 'number') {
+              newUnreadCount = (conv.unread_count || 0) + unread_count_increment;
+            }
+            if (typeof rest.unread_count === 'number') {
+              newUnreadCount = rest.unread_count;
+            }
+            
+            return { ...conv, ...rest, unread_count: newUnreadCount };
+          }),
         }));
         
         return { ...oldData, pages: newPages };
       }
     );
-  }, [queryClient]);
+  }, [queryClient, queryKey]);
 
   // Função para adicionar nova conversa no topo
   const addConversationOptimistically = useCallback((newConversation: ConversationData) => {
     queryClient.setQueryData(
-      ['conversations-infinite'],
+      queryKey,
       (oldData: typeof query.data) => {
         if (!oldData) return oldData;
         
@@ -175,7 +190,7 @@ export function useConversationsInfinite() {
         return { ...oldData, pages: newPages };
       }
     );
-  }, [queryClient]);
+  }, [queryClient, queryKey]);
 
   return {
     conversations: allConversations,
