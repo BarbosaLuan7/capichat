@@ -163,6 +163,16 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   const messageInput = draft;
   const setMessageInput = saveDraft;
 
+  // Auto-resize textarea based on content (throttled via useEffect instead of onInput)
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+    
+    // Reset height to auto to get proper scrollHeight
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+  }, [messageInput]);
+
   // Auto-scroll to bottom when NEW messages arrive
   // Force scroll if: near bottom, lead message, OR agent just sent a message
   useEffect(() => {
@@ -498,17 +508,23 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     inputRef.current?.focus();
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  // Optimized input change - avoid unnecessary state updates
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setMessageInput(value);
-    setShowSlashCommand(value.includes('/'));
+    
+    // Only update slash command state if it actually changed
+    const hasSlash = value.includes('/');
+    if (hasSlash !== showSlashCommand) {
+      setShowSlashCommand(hasSlash);
+    }
     
     // Marcar como lido na primeira digitação
     if (value.length > 0 && !hasStartedTypingRef.current && onStartTyping) {
       hasStartedTypingRef.current = true;
       onStartTyping();
     }
-  };
+  }, [setMessageInput, showSlashCommand, onStartTyping]);
 
   // Handle paste - suporte a colar imagens da área de transferência
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -1023,11 +1039,6 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
               placeholder="Digite / para atalhos... (Shift+Enter para nova linha)"
               className="pr-12 resize-none min-h-[40px] max-h-[120px] overflow-y-auto py-2"
               rows={1}
-              onInput={(e) => {
-                const target = e.target as HTMLTextAreaElement;
-                target.style.height = 'auto';
-                target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
-              }}
             />
             <div className="absolute right-1 bottom-2">
               <Suspense fallback={null}>
