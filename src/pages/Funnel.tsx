@@ -596,16 +596,16 @@ const Funnel = () => {
       )}
 
       {/* Lead Modal - Lazy loaded */}
-      <Suspense fallback={null}>
-        {showLeadModal && (
+      {showLeadModal && (
+        <Suspense fallback={null}>
           <LeadModal
             open={showLeadModal}
             onOpenChange={setShowLeadModal}
             leadId={editingLeadId}
             mode={leadModalMode}
           />
-        )}
-      </Suspense>
+        </Suspense>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
