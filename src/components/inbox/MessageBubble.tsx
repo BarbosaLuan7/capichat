@@ -131,7 +131,7 @@ function MessageBubbleComponent({
   isSelected = false,
   onToggleSelect,
 }: MessageBubbleProps) {
-  const { transcribeAudio, getTranscription, isLoading } = useAudioTranscription();
+  const { transcribeAudio, getTranscription, setTranscriptionFromDb, isLoading } = useAudioTranscription();
   const [transcription, setTranscription] = useState<string | null>(null);
   const [hasAttempted, setHasAttempted] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -184,17 +184,24 @@ function MessageBubbleComponent({
     }
   };
 
-  // Only load cached transcription on mount - no auto-transcribe to avoid rate limiting
-  // Users can click "Transcrever áudio" to transcribe on-demand
+  // Load transcription from memory cache or from message.transcription (DB cache)
+  // No auto-transcribe to avoid rate limiting - users click "Transcrever áudio" on-demand
   useEffect(() => {
     if (message.type === 'audio' && !isAgent) {
+      // First check memory cache
       const cached = getTranscription(message.id);
       if (cached) {
         setTranscription(cached);
         setHasAttempted(true);
+      } 
+      // Then check if message has transcription from DB (loaded via query)
+      else if ((message as any).transcription) {
+        setTranscriptionFromDb(message.id, (message as any).transcription);
+        setTranscription((message as any).transcription);
+        setHasAttempted(true);
       }
     }
-  }, [message.id, message.type, isAgent, getTranscription]);
+  }, [message.id, message.type, (message as any).transcription, isAgent, getTranscription, setTranscriptionFromDb]);
 
   // Função para reparar mídia faltante
   const handleRepairMedia = async () => {
