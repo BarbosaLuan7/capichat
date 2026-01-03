@@ -40,6 +40,8 @@ export function useTasks(page: number = 1, pageSize: number = 50) {
     },
     staleTime: 60 * 1000, // 60 segundos
     gcTime: 5 * 60 * 1000, // 5 minutes cache
+    refetchOnWindowFocus: false, // Evitar refetch desnecessário
+    placeholderData: { tasks: [], totalCount: 0 },
   });
 }
 
@@ -68,6 +70,8 @@ export function useAllTasks() {
     },
     staleTime: 60 * 1000, // 60 segundos
     gcTime: 5 * 60 * 1000, // 5 minutes cache
+    refetchOnWindowFocus: false, // Evitar refetch desnecessário
+    placeholderData: [],
   });
 }
 
@@ -88,6 +92,7 @@ export function useTask(id: string | undefined) {
     enabled: !!id,
     staleTime: 60 * 1000, // 60 segundos
     gcTime: 5 * 60 * 1000, // 5 minutes cache
+    refetchOnWindowFocus: false, // Evitar refetch desnecessário
   });
 }
 

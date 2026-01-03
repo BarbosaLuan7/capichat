@@ -19,6 +19,7 @@ export function useProfiles() {
     },
     gcTime: 30 * 60 * 1000, // 30 minutes cache
     staleTime: 5 * 60 * 1000, // 5 minutos - usuários mudam raramente
+    refetchOnWindowFocus: false, // Dados estáticos
   });
 }
 
@@ -39,6 +40,7 @@ export function useProfile(id: string | undefined) {
     enabled: !!id,
     gcTime: 30 * 60 * 1000, // 30 minutes cache
     staleTime: 5 * 60 * 1000, // 5 minutos
+    refetchOnWindowFocus: false, // Dados estáticos
   });
 }
 
@@ -76,5 +78,6 @@ export function useUserRoles() {
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
     gcTime: 30 * 60 * 1000, // 30 minutes cache
+    refetchOnWindowFocus: false, // Dados estáticos
   });
 }

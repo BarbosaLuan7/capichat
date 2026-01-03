@@ -23,6 +23,7 @@ export function useTeams() {
     },
     staleTime: 5 * 60 * 1000, // 5 minutos - equipes mudam raramente
     gcTime: 30 * 60 * 1000, // 30 minutes cache
+    refetchOnWindowFocus: false, // Dados estáticos
   });
 }
 
@@ -46,6 +47,7 @@ export function useTeam(id: string | undefined) {
     enabled: !!id,
     staleTime: 5 * 60 * 1000, // 5 minutos
     gcTime: 30 * 60 * 1000, // 30 minutes cache
+    refetchOnWindowFocus: false, // Dados estáticos
   });
 }
 
@@ -66,6 +68,7 @@ export function useTeamMembers(teamId: string | undefined) {
     enabled: !!teamId,
     staleTime: 5 * 60 * 1000, // 5 minutos
     gcTime: 30 * 60 * 1000, // 30 minutes cache
+    refetchOnWindowFocus: false, // Dados estáticos
   });
 }
 
