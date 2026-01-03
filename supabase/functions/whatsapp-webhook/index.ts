@@ -2414,22 +2414,8 @@ serve(async (req) => {
 
     console.log('[whatsapp-webhook] ✅ Mensagem criada:', message?.id, 'waha_message_id:', wahaMessageId);
 
-    // Criar notificação apenas para mensagens INBOUND (do lead)
-    // Mensagens outbound (nossas) não devem gerar notificação
-    if (!isFromMe && conversation.assigned_to) {
-      try {
-        await supabase.rpc('create_notification', {
-          p_user_id: conversation.assigned_to,
-          p_title: 'Nova mensagem',
-          p_message: `${lead.name}: ${content.substring(0, 100)}`,
-          p_type: 'message',
-          p_link: `/inbox?conversation=${conversation.id}`,
-          p_data: { lead_id: lead.id, conversation_id: conversation.id },
-        });
-      } catch (notifError) {
-        console.error('[whatsapp-webhook] Erro ao criar notificação:', notifError);
-      }
-    }
+    // Notificações de mensagens removidas - o sino é reservado para eventos importantes
+    // Alertas de novas mensagens são tratados via toast/som no frontend (useInboxRealtime)
 
     return new Response(
       JSON.stringify({

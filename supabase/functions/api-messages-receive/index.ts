@@ -325,21 +325,8 @@ Deno.serve(async (req) => {
 
     console.log('Message created successfully');
 
-    // Create notification for assigned user
-    if (conversation.assigned_to) {
-      try {
-        await supabase.rpc('create_notification', {
-          p_user_id: conversation.assigned_to,
-          p_title: 'Nova mensagem',
-          p_message: `${lead.name}: ${body.message.substring(0, 100)}`,
-          p_type: 'message',
-          p_link: `/inbox?conversation=${conversation.id}`,
-          p_data: { lead_id: lead.id, conversation_id: conversation.id }
-        });
-      } catch (notifError) {
-        console.error('Error creating notification:', notifError);
-      }
-    }
+    // Notificações de mensagens removidas - o sino é reservado para eventos importantes
+    // Alertas de novas mensagens são tratados via toast/som no frontend (useInboxRealtime)
 
     // Dispatch webhook for message.received
     try {
