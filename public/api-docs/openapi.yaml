@@ -47,6 +47,8 @@ tags:
     description: Gerenciamento de etiquetas
   - name: Templates
     description: Templates de mensagens
+  - name: WhatsApp
+    description: Gerenciamento de instâncias WhatsApp
   - name: Webhooks
     description: Endpoints para receber eventos de provedores externos (WAHA, Evolution API)
 
@@ -245,6 +247,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /api-whatsapp-instances:
+    get:
+      tags: [WhatsApp]
+      summary: Listar instâncias WhatsApp
+      description: |
+        Retorna lista de instâncias WhatsApp configuradas.
+        
+        Use este endpoint para descobrir quais instâncias estão disponíveis e obter seus IDs
+        para usar no parâmetro `whatsapp_instance_id` ao enviar mensagens.
+        
+        **Nota**: Informações sensíveis como API keys e webhooks secrets não são retornadas.
+      parameters:
+        - name: tenant_id
+          in: query
+          description: Filtrar por tenant específico
+          schema:
+            type: string
+            format: uuid
+        - name: active_only
+          in: query
+          description: Retornar apenas instâncias ativas (padrão true)
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Lista de instâncias
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WhatsAppInstance'
+                  total:
+                    type: integer
+              example:
+                data:
+                  - id: "550e8400-e29b-41d4-a716-446655440000"
+                    name: "Atendimento Principal"
+                    phone_number: "5545999957851"
+                    provider: "evolution"
+                    is_active: true
+                    tenant_id: "550e8400-e29b-41d4-a716-446655440001"
+                  - id: "550e8400-e29b-41d4-a716-446655440002"
+                    name: "Suporte"
+                    phone_number: "5545999958066"
+                    provider: "waha"
+                    is_active: true
+                    tenant_id: null
+                total: 2
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /api-messages-receive:
     post:
@@ -1155,6 +1213,32 @@ components:
           type: string
           format: uuid
           description: "ID da instância WhatsApp a usar para envio. Se omitido, usa a primeira ativa."
+
+    WhatsAppInstance:
+      type: object
+      description: Instância WhatsApp configurada no sistema
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ID único da instância
+        name:
+          type: string
+          description: Nome amigável da instância
+        phone_number:
+          type: string
+          description: Número de telefone associado (com código do país)
+        provider:
+          type: string
+          enum: [waha, evolution, z-api, custom]
+          description: Provedor/gateway utilizado
+        is_active:
+          type: boolean
+          description: Se a instância está ativa
+        tenant_id:
+          type: string
+          format: uuid
+          description: ID do tenant associado (null se global)
 
     MessageResponse:
       type: object
