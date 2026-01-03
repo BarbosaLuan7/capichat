@@ -138,11 +138,15 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const ignoreScrollRef = useRef(false);
   const isNearBottomRef = useRef(true);
   const lastMessageIdRef = useRef<string | null>(null);
   const dragCounter = useRef(0);
   const hasStartedTypingRef = useRef(false);
+  
+  // Scroll control refs - prevent flicker by ensuring only ONE scroll per conversation opening
+  const initialScrollDoneForConversationRef = useRef<string | null>(null);
+  const lastConversationIdRef = useRef<string | null>(null);
+  const showScrollButtonRef = useRef(false);
   // Hooks
   const { uploadFile, uploadProgress } = useFileUpload();
   const audioRecorder = useAudioRecorder();
@@ -171,10 +175,13 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
   }, [messageInput]);
 
-  // Auto-scroll to bottom when NEW messages arrive
-  // Force scroll if: near bottom, lead message, OR agent just sent a message
+  // Auto-scroll to bottom when NEW messages arrive (NOT during conversation opening)
   useEffect(() => {
-    if (!messages?.length) return;
+    if (!messages?.length || !conversation?.id) return;
+    
+    // GUARD: Don't run during initial scroll phase for this conversation
+    const isOpeningConversation = initialScrollDoneForConversationRef.current !== conversation.id;
+    if (isOpeningConversation) return;
     
     const lastMessage = messages[messages.length - 1] as ExtendedMessage;
     const isNewMessage = lastMessage.id !== lastMessageIdRef.current;
@@ -193,77 +200,88 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
     }
-  }, [messages]);
+  }, [messages, conversation?.id]);
 
   // Track initial unread count when conversation changes
   const initialUnreadCountRef = useRef<number | null>(null);
   
-  // Store initial unread count when conversation changes
+  // Reset scroll state when conversation changes
   useEffect(() => {
-    if (conversation?.id) {
+    if (conversation?.id && conversation.id !== lastConversationIdRef.current) {
+      // New conversation - reset all scroll control flags
+      lastConversationIdRef.current = conversation.id;
+      initialScrollDoneForConversationRef.current = null;
       initialUnreadCountRef.current = conversation.unread_count ?? 0;
-    }
-  }, [conversation?.id]);
-
-  // Auto-scroll when conversation changes
-  useEffect(() => {
-    if (conversation?.id && !isLoadingMessages && messages && messages.length > 0) {
-      ignoreScrollRef.current = true;
+      lastMessageIdRef.current = null;
+      isNearBottomRef.current = true;
       setShowScrollButton(false);
-      
-      const scrollToPosition = () => {
-        const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
-        const unreadCount = initialUnreadCountRef.current ?? 0;
+      showScrollButtonRef.current = false;
+    }
+  }, [conversation?.id, conversation?.unread_count]);
+
+  // Auto-scroll when conversation changes - RUNS ONLY ONCE per conversation
+  useEffect(() => {
+    // GUARD: Already scrolled for this conversation
+    if (initialScrollDoneForConversationRef.current === conversation?.id) return;
+    
+    if (!conversation?.id || isLoadingMessages || !messages || messages.length === 0) return;
+    
+    const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+    if (!viewport) {
+      // Fallback and mark as done
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      initialScrollDoneForConversationRef.current = conversation.id;
+      lastMessageIdRef.current = messages[messages.length - 1]?.id || null;
+      return;
+    }
+    
+    const unreadCount = initialUnreadCountRef.current ?? 0;
+    
+    const performScroll = () => {
+      if (unreadCount > 0 && messages.length >= unreadCount) {
+        // Has unread messages: scroll to first unread message using scrollIntoView
+        const firstUnreadIndex = messages.length - unreadCount;
+        const messageElements = viewport.querySelectorAll('[data-message-index]');
+        const targetElement = messageElements?.[firstUnreadIndex] as HTMLElement;
         
-        if (!viewport) {
-          // Fallback if viewport not found
-          messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
-          return;
-        }
-        
-        if (unreadCount > 0 && messages.length >= unreadCount) {
-          // Has unread messages: scroll to first unread message
-          const firstUnreadIndex = messages.length - unreadCount;
-          const messageElements = viewport.querySelectorAll('[data-message-index]');
-          const targetElement = messageElements?.[firstUnreadIndex] as HTMLElement;
-          
-          if (targetElement) {
-            // Scroll so the first unread message is at the top with some padding
-            const targetScrollTop = Math.max(0, targetElement.offsetTop - 60);
-            viewport.scrollTop = targetScrollTop;
-          } else {
-            // Fallback: scroll to bottom
-            viewport.scrollTop = viewport.scrollHeight - viewport.clientHeight;
-          }
+        if (targetElement) {
+          targetElement.scrollIntoView({ behavior: 'auto', block: 'start' });
+          // Adjust for header padding
+          viewport.scrollTop = Math.max(0, viewport.scrollTop - 80);
         } else {
-          // No unread messages: scroll to bottom
           viewport.scrollTop = viewport.scrollHeight - viewport.clientHeight;
         }
-      };
+      } else {
+        // No unread messages: scroll to bottom
+        viewport.scrollTop = viewport.scrollHeight - viewport.clientHeight;
+      }
+    };
+    
+    // Single RAF to ensure DOM is ready, then scroll
+    requestAnimationFrame(() => {
+      performScroll();
       
-      // Initial scroll with double RAF to ensure DOM is ready
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          scrollToPosition();
-          
-          // Recheck scroll after media might have loaded
-          setTimeout(() => {
-            const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
-            const unreadCount = initialUnreadCountRef.current ?? 0;
-            
-            // Only re-scroll to bottom if conversation was read (no unread)
-            if (viewport && unreadCount === 0) {
-              viewport.scrollTop = viewport.scrollHeight - viewport.clientHeight;
-            }
-          }, 300);
-          
-          setTimeout(() => {
-            ignoreScrollRef.current = false;
-          }, 350);
-        });
-      });
-    }
-  }, [conversation?.id, isLoadingMessages, messages?.length]);
+      // Mark initial scroll as done and set last message id
+      initialScrollDoneForConversationRef.current = conversation.id;
+      lastMessageIdRef.current = messages[messages.length - 1]?.id || null;
+      
+      // For read conversations only: one recheck after images might load
+      if (unreadCount === 0) {
+        let previousScrollHeight = viewport.scrollHeight;
+        
+        const recheckScroll = () => {
+          if (initialScrollDoneForConversationRef.current !== conversation.id) return;
+          if (viewport.scrollHeight > previousScrollHeight && isNearBottomRef.current) {
+            viewport.scrollTop = viewport.scrollHeight - viewport.clientHeight;
+            previousScrollHeight = viewport.scrollHeight;
+          }
+        };
+        
+        setTimeout(recheckScroll, 200);
+        setTimeout(recheckScroll, 500);
+      }
+    });
+  }, [conversation?.id, isLoadingMessages, messages]);
 
   // Auto-focus textarea when conversation changes (desktop only)
   useEffect(() => {
@@ -283,14 +301,18 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
 
   // Core scroll handler - receives the element directly (not the event)
   const handleMessagesScrollCore = useCallback((element: HTMLElement) => {
-    if (ignoreScrollRef.current) return;
-    
     const { scrollTop, scrollHeight, clientHeight } = element;
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
     
     // Update near bottom state (within 100px of bottom)
     isNearBottomRef.current = distanceFromBottom < 100;
-    setShowScrollButton(distanceFromBottom > 200);
+    
+    // Only update showScrollButton state if it actually changed (reduce re-renders)
+    const shouldShowButton = distanceFromBottom > 200;
+    if (showScrollButtonRef.current !== shouldShowButton) {
+      showScrollButtonRef.current = shouldShowButton;
+      setShowScrollButton(shouldShowButton);
+    }
     
     // Load more messages when scrolling near the TOP (older messages)
     if (scrollTop < 100 && hasMoreMessages && !isLoadingMoreMessages && onLoadMoreMessages) {
