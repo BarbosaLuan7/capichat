@@ -32,6 +32,8 @@ export function useTemplates(enabled: boolean = true) {
     enabled,
     staleTime: 2 * 60 * 1000, // 2 minutes - templates mudam pouco
     gcTime: 10 * 60 * 1000, // 10 minutes cache
+    refetchOnWindowFocus: false, // Dados estáticos
+    placeholderData: [],
   });
 }
 
