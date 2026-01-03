@@ -55,8 +55,8 @@ import { TenantSelector } from '@/components/tenants/TenantSelector';
 
 // Menu structure
 const mainNavItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: MessageSquare, label: 'Conversas', path: '/inbox', badgeKey: 'conversations' as const },
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: Kanban, label: 'Funil', path: '/funnel' },
 ];
 
