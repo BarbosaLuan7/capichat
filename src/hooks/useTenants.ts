@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import type { Tenant, UserTenant } from '@/contexts/TenantContext';
 
 // ==========================================
@@ -75,7 +76,7 @@ export function useCreateTenant() {
       toast.success('Empresa criada com sucesso');
     },
     onError: (error: Error) => {
-      console.error('Error creating tenant:', error);
+      logger.error('Error creating tenant:', error);
       toast.error('Erro ao criar empresa');
     },
   });
@@ -117,7 +118,7 @@ export function useUpdateTenant() {
       toast.success('Empresa atualizada com sucesso');
     },
     onError: (error: Error) => {
-      console.error('Error updating tenant:', error);
+      logger.error('Error updating tenant:', error);
       toast.error('Erro ao atualizar empresa');
     },
   });
@@ -140,7 +141,7 @@ export function useDeleteTenant() {
       toast.success('Empresa excluída com sucesso');
     },
     onError: (error: Error) => {
-      console.error('Error deleting tenant:', error);
+      logger.error('Error deleting tenant:', error);
       toast.error('Erro ao excluir empresa');
     },
   });
@@ -233,7 +234,7 @@ export function useAddUserToTenant() {
       toast.success('Usuário adicionado à empresa');
     },
     onError: (error: Error) => {
-      console.error('Error adding user to tenant:', error);
+      logger.error('Error adding user to tenant:', error);
       if (error.message.includes('duplicate')) {
         toast.error('Usuário já está associado a esta empresa');
       } else {
@@ -276,7 +277,7 @@ export function useUpdateUserTenant() {
       toast.success('Associação atualizada');
     },
     onError: (error: Error) => {
-      console.error('Error updating user tenant:', error);
+      logger.error('Error updating user tenant:', error);
       toast.error('Erro ao atualizar associação');
     },
   });
@@ -301,7 +302,7 @@ export function useRemoveUserFromTenant() {
       toast.success('Usuário removido da empresa');
     },
     onError: (error: Error) => {
-      console.error('Error removing user from tenant:', error);
+      logger.error('Error removing user from tenant:', error);
       toast.error('Erro ao remover usuário da empresa');
     },
   });
@@ -354,7 +355,7 @@ export function useAssignWhatsAppToTenant() {
       toast.success('Caixa de entrada associada');
     },
     onError: (error: Error) => {
-      console.error('Error assigning WhatsApp to tenant:', error);
+      logger.error('Error assigning WhatsApp to tenant:', error);
       toast.error('Erro ao associar caixa de entrada');
     },
   });

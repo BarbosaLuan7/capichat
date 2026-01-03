@@ -24,6 +24,7 @@ function ScrollToBottomButtonComponent({ show, onClick, unreadCount }: ScrollToB
             onClick={onClick}
             size="icon"
             className="rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 relative"
+            aria-label="Rolar para o final da conversa"
           >
             <ChevronDown className="w-5 h-5" />
             {unreadCount && unreadCount > 0 && (

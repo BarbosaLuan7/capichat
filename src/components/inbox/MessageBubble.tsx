@@ -221,7 +221,7 @@ function MessageBubbleComponent({
         toast.error(data?.error || 'Não foi possível recuperar a mídia');
       }
     } catch (err) {
-      console.error('[MessageBubble] Erro ao reparar mídia:', err);
+      logger.error('[MessageBubble] Erro ao reparar mídia:', err);
       toast.error('Erro ao tentar recuperar mídia');
     } finally {
       setIsRepairingMedia(false);
