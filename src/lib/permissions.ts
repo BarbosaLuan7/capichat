@@ -1,4 +1,6 @@
-import { UserRole } from '@/types';
+import type { Database } from '@/integrations/supabase/types';
+
+type AppRole = Database['public']['Enums']['app_role'];
 
 type Permission = 
   | 'manage_users'
@@ -12,7 +14,7 @@ type Permission =
   | 'view_reports'
   | 'manage_templates';
 
-const rolePermissions: Record<UserRole, Permission[]> = {
+const rolePermissions: Record<AppRole, Permission[]> = {
   admin: [
     'manage_users',
     'manage_teams',
@@ -35,21 +37,50 @@ const rolePermissions: Record<UserRole, Permission[]> = {
   viewer: [],
 };
 
-export const hasPermission = (role: UserRole, permission: Permission): boolean => {
+export const hasPermission = (role: AppRole, permission: Permission): boolean => {
   return rolePermissions[role]?.includes(permission) ?? false;
 };
 
-export const canManageUsers = (role: UserRole): boolean => hasPermission(role, 'manage_users');
-export const canManageTeams = (role: UserRole): boolean => hasPermission(role, 'manage_teams');
-export const canViewAllLeads = (role: UserRole): boolean => hasPermission(role, 'view_all_leads');
-export const canViewReports = (role: UserRole): boolean => hasPermission(role, 'view_reports') || role === 'admin';
+export const canManageUsers = (role: AppRole): boolean => hasPermission(role, 'manage_users');
+export const canManageTeams = (role: AppRole): boolean => hasPermission(role, 'manage_teams');
+export const canViewAllLeads = (role: AppRole): boolean => hasPermission(role, 'view_all_leads');
+export const canViewReports = (role: AppRole): boolean => hasPermission(role, 'view_reports') || role === 'admin';
 
-export const getRoleLabel = (role: UserRole): string => {
-  const labels: Record<UserRole, string> = {
-    admin: 'Administrador',
-    manager: 'Gestor',
-    agent: 'Atendente',
-    viewer: 'Visualizador',
-  };
-  return labels[role];
+// Labels para exibição
+export const ROLE_LABELS: Record<AppRole, string> = {
+  admin: 'Administrador',
+  manager: 'Gerente',
+  agent: 'Atendente',
+  viewer: 'Visualizador',
+};
+
+// Descrições detalhadas de cada role
+export const ROLE_DESCRIPTIONS: Record<AppRole, string> = {
+  admin: 'Acesso completo. Permite ao usuário alterar todas as configurações do sistema e visualizar todos os atendimentos, sem restrições.',
+  manager: 'Acesso de gerente. Permite gerenciar equipes, visualizar relatórios e supervisionar atendimentos.',
+  agent: 'Acesso com limitações. Permite visualizar indicadores e configurações, e interagir com os atendimentos das equipes sob sua responsabilidade.',
+  viewer: 'Apenas visualização. Pode ver dados mas não pode realizar ações.',
+};
+
+// Cores para badges de roles
+export const ROLE_COLORS: Record<AppRole, string> = {
+  admin: 'bg-primary text-primary-foreground',
+  manager: 'bg-warning text-warning-foreground',
+  agent: 'bg-secondary text-secondary-foreground',
+  viewer: 'bg-muted text-muted-foreground',
+};
+
+// Roles disponíveis para seleção
+export const SELECTABLE_ROLES: AppRole[] = ['admin', 'manager', 'agent', 'viewer'];
+
+export const getRoleLabel = (role: AppRole): string => {
+  return ROLE_LABELS[role] || role;
+};
+
+export const getRoleDescription = (role: AppRole): string => {
+  return ROLE_DESCRIPTIONS[role] || '';
+};
+
+export const getRoleColor = (role: AppRole): string => {
+  return ROLE_COLORS[role] || 'bg-muted text-muted-foreground';
 };

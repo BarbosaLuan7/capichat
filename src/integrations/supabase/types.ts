@@ -733,8 +733,12 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          is_account_owner: boolean | null
           is_active: boolean
+          is_available: boolean | null
           name: string
+          nickname: string | null
+          phone: string | null
           team_id: string | null
           updated_at: string
         }
@@ -743,8 +747,12 @@ export type Database = {
           created_at?: string
           email: string
           id: string
+          is_account_owner?: boolean | null
           is_active?: boolean
+          is_available?: boolean | null
           name: string
+          nickname?: string | null
+          phone?: string | null
           team_id?: string | null
           updated_at?: string
         }
@@ -753,8 +761,12 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          is_account_owner?: boolean | null
           is_active?: boolean
+          is_available?: boolean | null
           name?: string
+          nickname?: string | null
+          phone?: string | null
           team_id?: string | null
           updated_at?: string
         }

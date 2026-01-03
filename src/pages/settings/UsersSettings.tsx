@@ -1,207 +1,112 @@
 import { useState, useMemo } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { motion } from 'framer-motion';
-import {
-  Plus,
-  Search,
-  MoreVertical,
-  UserCheck,
-  UserX,
-  Mail,
-  Shield,
-  Loader2,
-} from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Plus, Search, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useProfiles, useUpdateProfile, useUserRoles } from '@/hooks/useProfiles';
-import { useTeams } from '@/hooks/useTeams';
-import { UserModal } from '@/components/users/UserModal';
-import { getRoleLabel } from '@/lib/permissions';
+import { useProfiles, useUserRoles, type ProfileWithRelations } from '@/hooks/useProfiles';
+import { UserDetailsSheet } from '@/components/users/UserDetailsSheet';
+import { UserEditModal } from '@/components/users/UserEditModal';
+import { UserTeamsModal } from '@/components/users/UserTeamsModal';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
+import { getRoleLabel, getRoleColor, SELECTABLE_ROLES } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 import type { Database } from '@/integrations/supabase/types';
 
-type Profile = Database['public']['Tables']['profiles']['Row'];
 type AppRole = Database['public']['Enums']['app_role'];
 
 const UsersSettings = () => {
-  const { data: profiles, isLoading: profilesLoading } = useProfiles();
-  const { data: teamsData } = useTeams();
+  const { data: profiles, isLoading, refetch } = useProfiles();
   const { data: userRoles } = useUserRoles();
-  const updateProfile = useUpdateProfile();
-
-  const [search, setSearch] = useState('');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
   const { toast } = useToast();
 
-  const users = profiles || [];
-  const teams = teamsData || [];
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [selectedUser, setSelectedUser] = useState<ProfileWithRelations | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [teamsModalOpen, setTeamsModalOpen] = useState(false);
+
   const debouncedSearch = useDebounce(search, 300);
-
-  const filteredUsers = useMemo(() => users.filter(user =>
-    user.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-    user.email.toLowerCase().includes(debouncedSearch.toLowerCase())
-  ), [users, debouncedSearch]);
-
-  const getTeamName = (teamId?: string | null) => {
-    if (!teamId) return '-';
-    const team = teams.find(t => t.id === teamId);
-    return team?.name || '-';
-  };
 
   const getUserRole = (userId: string): AppRole => {
     const role = userRoles?.find(r => r.user_id === userId);
     return role?.role || 'agent';
   };
 
-  const handleSave = async (userData: {
-    id?: string;
-    name: string;
-    email: string;
-    role: AppRole;
-    teamId?: string;
-    isActive: boolean;
-  }) => {
-    try {
-      if (userData.id) {
-        await updateProfile.mutateAsync({
-          id: userData.id,
-          name: userData.name,
-          team_id: userData.teamId || null,
-          is_active: userData.isActive,
-        });
-        toast({ title: 'Usuário atualizado com sucesso!' });
-      } else {
-        // Note: Creating new users requires Auth API which is handled separately
-        toast({ 
-          title: 'Funcionalidade limitada', 
-          description: 'Novos usuários devem se registrar pelo sistema de autenticação.',
-          variant: 'destructive' 
-        });
-      }
-      setModalOpen(false);
-    } catch (error) {
-      toast({ title: 'Erro ao salvar usuário', variant: 'destructive' });
+  const filteredUsers = useMemo(() => {
+    let result = profiles || [];
+    
+    // Filtro de busca
+    if (debouncedSearch) {
+      result = result.filter(user =>
+        user.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        user.email.toLowerCase().includes(debouncedSearch.toLowerCase())
+      );
     }
-  };
-
-  const confirmDelete = (user: Profile) => {
-    setUserToDelete(user);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleConfirmDelete = () => {
-    // Note: Deleting users requires Auth API
-    toast({ 
-      title: 'Funcionalidade limitada', 
-      description: 'A exclusão de usuários deve ser feita pelo painel administrativo.',
-      variant: 'destructive' 
-    });
-    setDeleteDialogOpen(false);
-    setUserToDelete(null);
-  };
-
-  const handleToggleStatus = async (user: Profile) => {
-    try {
-      await updateProfile.mutateAsync({
-        id: user.id,
-        is_active: !user.is_active,
-      });
-      toast({ title: 'Status atualizado!' });
-    } catch (error) {
-      toast({ title: 'Erro ao atualizar status', variant: 'destructive' });
+    
+    // Filtro de role
+    if (roleFilter !== 'all') {
+      result = result.filter(user => getUserRole(user.id) === roleFilter);
     }
-  };
+    
+    return result;
+  }, [profiles, debouncedSearch, roleFilter, userRoles]);
 
-  const openEditModal = (user: Profile) => {
+  const totalUsers = profiles?.length || 0;
+  const contractedUsers = 12; // TODO: pegar do tenant
+
+  const handleUserClick = (user: ProfileWithRelations) => {
     setSelectedUser(user);
-    setModalOpen(true);
+    setDetailsOpen(true);
   };
 
-  const openCreateModal = () => {
-    setSelectedUser(null);
-    setModalOpen(true);
+  const handleEdit = () => {
+    setDetailsOpen(false);
+    setEditOpen(true);
   };
 
-  const getRoleBadgeColor = (role: AppRole) => {
-    switch (role) {
-      case 'admin':
-        return 'bg-primary text-primary-foreground';
-      case 'manager':
-        return 'bg-warning text-warning-foreground';
-      case 'agent':
-        return 'bg-success text-success-foreground';
-      case 'viewer':
-        return 'bg-muted text-muted-foreground';
-    }
+  const handleEditTeams = () => {
+    setDetailsOpen(false);
+    setTeamsModalOpen(true);
   };
 
-  // Convert profile to modal format
-  const convertUserForModal = (profile: Profile | null) => {
-    if (!profile) return null;
-    return {
-      id: profile.id,
-      name: profile.name,
-      email: profile.email,
-      role: getUserRole(profile.id),
-      avatar: profile.avatar || undefined,
-      teamId: profile.team_id || undefined,
-      isActive: profile.is_active,
-      createdAt: new Date(profile.created_at),
-    };
+  const handleAddUser = () => {
+    toast({
+      title: 'Funcionalidade limitada',
+      description: 'Novos usuários devem se registrar pelo sistema de autenticação.',
+      variant: 'destructive',
+    });
   };
 
-  if (profilesLoading) {
+  if (isLoading) {
     return (
       <div className="p-6 space-y-6">
         <PageBreadcrumb items={[{ label: 'Configurações', href: '/settings' }, { label: 'Usuários' }]} />
         <div className="flex items-center justify-between">
-          <div>
-            <Skeleton className="h-8 w-32" />
-            <Skeleton className="h-4 w-48 mt-2" />
-          </div>
-          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-10 w-24" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => (
-            <Skeleton key={i} className="h-24" />
+        <div className="flex gap-4">
+          <Skeleton className="h-10 flex-1 max-w-md" />
+          <Skeleton className="h-10 w-40" />
+        </div>
+        <div className="space-y-2">
+          {[1, 2, 3, 4, 5].map(i => (
+            <Skeleton key={i} className="h-16" />
           ))}
         </div>
-        <Skeleton className="h-[400px]" />
       </div>
     );
   }
@@ -209,174 +114,129 @@ const UsersSettings = () => {
   return (
     <div className="p-6 space-y-6">
       <PageBreadcrumb items={[{ label: 'Configurações', href: '/settings' }, { label: 'Usuários' }]} />
+      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Usuários</h1>
-          <p className="text-muted-foreground">Gerencie os membros da sua equipe</p>
+          <p className="text-sm text-muted-foreground">
+            {filteredUsers.length} de {contractedUsers} usuários contratados
+          </p>
         </div>
-        <Button onClick={openCreateModal} className="gradient-primary text-primary-foreground gap-2">
-          <Plus className="w-4 h-4" />
-          Novo Usuário
-        </Button>
-      </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Total de Usuários', value: users.length, icon: Shield },
-          { label: 'Ativos', value: users.filter(u => u.is_active).length, icon: UserCheck },
-          { label: 'Inativos', value: users.filter(u => !u.is_active).length, icon: UserX },
-          { label: 'Equipes', value: teams.length, icon: Mail },
-        ].map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => refetch()}
           >
-            <Card>
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <stat.icon className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button onClick={handleAddUser} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Novo
+          </Button>
+        </div>
       </div>
 
-      {/* Search and Table */}
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome ou email..."
-                className="pl-9"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
+      {/* Filtros */}
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome ou email..."
+            className="pl-9"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Filtrar por perfil" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os perfis</SelectItem>
+            {SELECTABLE_ROLES.map(role => (
+              <SelectItem key={role} value={role}>
+                {getRoleLabel(role)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Lista de Usuários */}
+      <div className="space-y-1">
+        {filteredUsers.map((user, index) => {
+          const role = getUserRole(user.id);
+          
+          return (
+            <motion.div
+              key={user.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.03 }}
+              onClick={() => handleUserClick(user)}
+              className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={user.avatar || undefined} alt={user.name} />
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {user.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="font-medium text-foreground">{user.name}</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Badge especial para dono da conta */}
+                {user.is_account_owner && (
+                  <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+                    Administrador da conta
+                  </Badge>
+                )}
+                
+                {/* Badge de role */}
+                <Badge className={cn(getRoleColor(role))}>
+                  {getRoleLabel(role)}
+                </Badge>
+              </div>
+            </motion.div>
+          );
+        })}
+
+        {filteredUsers.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">
+            Nenhum usuário encontrado
           </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Usuário</TableHead>
-                <TableHead>Cargo</TableHead>
-                <TableHead>Equipe</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUsers.map(user => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={user.avatar || undefined} />
-                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium text-foreground">{user.name}</p>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={cn('text-xs', getRoleBadgeColor(getUserRole(user.id)))}>
-                      {getRoleLabel(getUserRole(user.id))}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {getTeamName(user.team_id)}
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={user.is_active}
-                      onCheckedChange={() => handleToggleStatus(user)}
-                      disabled={updateProfile.isPending}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Mais opções</TooltipContent>
-                        </Tooltip>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEditModal(user)}>
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => confirmDelete(user)}
-                        >
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+        )}
+      </div>
 
-              {filteredUsers.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    Nenhum usuário encontrado
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <UserModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        user={convertUserForModal(selectedUser)}
-        onSave={handleSave}
-        onDelete={(userId) => {
-          const user = users.find(u => u.id === userId);
-          if (user) confirmDelete(user);
-        }}
+      {/* Sheet de Detalhes */}
+      <UserDetailsSheet
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        user={selectedUser}
+        userRole={selectedUser ? getUserRole(selectedUser.id) : 'agent'}
+        onEdit={handleEdit}
+        onEditTeams={handleEditTeams}
       />
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir usuário?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir <span className="font-medium">{userToDelete?.name}</span>? 
-              Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Modal de Edição */}
+      <UserEditModal
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        user={selectedUser}
+        userRole={selectedUser ? getUserRole(selectedUser.id) : 'agent'}
+      />
+
+      {/* Modal de Equipes */}
+      <UserTeamsModal
+        open={teamsModalOpen}
+        onOpenChange={setTeamsModalOpen}
+        user={selectedUser}
+      />
     </div>
   );
 };
