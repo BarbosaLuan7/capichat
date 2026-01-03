@@ -39,8 +39,15 @@ export function useWhatsAppConfigs() {
         .rpc('get_whatsapp_configs_safe' as any)
         .order('created_at', { ascending: false });
 
-      // Fallback to original table if RPC doesn't exist yet
-      if (error && error.code === '42883') {
+      // Fallback to original table if RPC doesn't exist
+      // Error 42883 = Postgres function not found
+      // Error PGRST202 = PostgREST function not found (HTTP 404)
+      const isFunctionNotFound = error && (
+        error.code === '42883' || 
+        error.code === 'PGRST202'
+      );
+      
+      if (isFunctionNotFound) {
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('whatsapp_config')
           .select('id, name, provider, base_url, instance_name, phone_number, is_active, created_by, created_at, updated_at, tenant_id')
