@@ -47,7 +47,6 @@ import { useThrottledCallback } from '@/hooks/useThrottle';
 
 import { useAIReminders } from '@/hooks/useAIReminders';
 import { useInternalNotes } from '@/hooks/useInternalNotes';
-import { useDraftMessages } from '@/hooks/useDraftMessages';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useDeleteMessages } from '@/hooks/useDeleteMessages';
 
@@ -157,11 +156,9 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   
   const aiReminders = useAIReminders();
   const { data: internalNotes } = useInternalNotes(conversation?.id || undefined);
-  const { draft, saveDraft, clearDraft } = useDraftMessages(conversation?.id);
-
-  // Use draft as messageInput value
-  const messageInput = draft;
-  const setMessageInput = saveDraft;
+  
+  // Simple local state for message input (no persistence)
+  const [messageInput, setMessageInput] = useState('');
 
   // Auto-resize textarea based on content (throttled via useEffect instead of onInput)
   useEffect(() => {
@@ -353,7 +350,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     // 1. LIMPAR IMEDIATAMENTE - UX instantânea
     const currentInput = messageInput;
     const currentPendingFile = pendingFile;
-    clearDraft();
+    setMessageInput('');
     setReplyingTo(null);
     setPendingFile(null);
     inputRef.current?.focus();
@@ -371,7 +368,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
         const message = error instanceof Error ? error.message : 'Erro ao fazer upload';
         toast.error(message);
         // Restaurar input se upload falhar
-        saveDraft(currentInput);
+        setMessageInput(currentInput);
         return;
       }
     }
