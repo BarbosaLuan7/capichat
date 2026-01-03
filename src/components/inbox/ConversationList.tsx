@@ -295,7 +295,7 @@ export function ConversationList({
   }, [assignmentFilteredConversations, statusFilter, debouncedSearchQuery, sortOrder]);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full select-none">
       {/* Header with New Conversation Button */}
       <div className="p-3 border-b border-border flex items-center justify-between bg-card">
         <span className="font-semibold text-sm">Conversas</span>

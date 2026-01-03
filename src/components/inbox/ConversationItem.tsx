@@ -103,7 +103,7 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
       tabIndex={0}
       aria-label={`Conversa com ${displayName}${conversation.unread_count > 0 ? `, ${conversation.unread_count} mensagens não lidas` : ''}`}
       className={cn(
-        'px-3 py-2 cursor-pointer transition-colors hover:bg-muted/50 border-l-4 border-l-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        'px-3 py-2 cursor-pointer transition-colors hover:bg-muted/50 border-l-4 border-l-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 select-none',
         isSelected && 'bg-primary/10 border-l-primary'
       )}
     >
