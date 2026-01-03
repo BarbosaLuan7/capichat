@@ -18,7 +18,7 @@ import {
   CalendarDays,
   Zap,
   Bot,
-  BarChart3,
+  
   Settings,
   Plus,
   Search,
@@ -68,7 +68,6 @@ export function CommandBar({ open, onOpenChange, onNewLead, onNewTask }: Command
     { icon: CalendarDays, label: 'Calendário', path: '/calendar' },
     { icon: Zap, label: 'Automações', path: '/automations' },
     { icon: Bot, label: 'Chatbot', path: '/chatbot' },
-    { icon: BarChart3, label: 'Métricas', path: '/metrics' },
     { icon: Settings, label: 'Configurações', path: '/settings' },
   ];
 

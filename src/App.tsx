@@ -25,7 +25,7 @@ const Tasks = lazy(() => import("./pages/Tasks"));
 const Calendar = lazy(() => import("./pages/Calendar"));
 const Automations = lazy(() => import("./pages/Automations"));
 const ChatbotBuilder = lazy(() => import("./pages/ChatbotBuilder"));
-const Metrics = lazy(() => import("./pages/Metrics"));
+
 const Settings = lazy(() => import("./pages/Settings"));
 const UsersSettings = lazy(() => import("./pages/settings/UsersSettings"));
 const TeamsSettings = lazy(() => import("./pages/settings/TeamsSettings"));
@@ -149,7 +149,7 @@ function AppContent() {
             <Route path="calendar" element={<Calendar />} />
             <Route path="automations" element={<Automations />} />
             <Route path="chatbot" element={<ChatbotBuilder />} />
-            <Route path="metrics" element={<Metrics />} />
+            {/* Redirect /metrics to /dashboard for backwards compatibility */}
             <Route path="settings" element={<Settings />} />
             <Route path="settings/users" element={<UsersSettings />} />
             <Route path="settings/teams" element={<TeamsSettings />} />
