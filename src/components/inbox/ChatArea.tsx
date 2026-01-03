@@ -9,31 +9,26 @@ import {
   PanelRightClose,
   PanelRightOpen,
   ArrowLeft,
-  Zap,
   Upload,
   Copy,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { formatPhoneNumber } from '@/lib/masks';
-import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 // Components - Static imports for critical components
 import { AttachmentMenu } from '@/components/inbox/AttachmentMenu';
 import { TemplateSelector } from '@/components/inbox/TemplateSelector';
 import { SlashCommandPopover } from '@/components/inbox/SlashCommandPopover';
-import { MessageBubble } from '@/components/inbox/MessageBubble';
-import { InlineNoteMessage } from '@/components/inbox/InlineNoteMessage';
 import { ReplyPreview } from '@/components/inbox/ReplyPreview';
 import { ConversationStatusActions } from '@/components/inbox/ConversationStatusActions';
-import { DateSeparator } from '@/components/inbox/DateSeparator';
 import { ScrollToBottomButton } from '@/components/inbox/ScrollToBottomButton';
 import { SelectionBar } from '@/components/inbox/SelectionBar';
 import { DeleteMessagesModal } from '@/components/inbox/DeleteMessagesModal';
+import { VirtualizedMessageList } from '@/components/inbox/VirtualizedMessageList';
 
 // Lazy loaded components - loaded on demand
 const EmojiPicker = React.lazy(() => import('@/components/inbox/EmojiPicker').then(m => ({ default: m.EmojiPicker })));
@@ -44,7 +39,6 @@ const AIReminderPrompt = React.lazy(() => import('@/components/inbox/AIReminderP
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { useSignedUrlBatch } from '@/hooks/useSignedUrl';
-import { useThrottledCallback } from '@/hooks/useThrottle';
 
 import { useAIReminders } from '@/hooks/useAIReminders';
 import { useInternalNotes } from '@/hooks/useInternalNotes';
@@ -136,20 +130,14 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   const [selectedMessages, setSelectedMessages] = useState<string[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const isNearBottomRef = useRef(true);
-  const lastMessageIdRef = useRef<string | null>(null);
   const dragCounter = useRef(0);
   const hasStartedTypingRef = useRef(false);
   
-  // Scroll control refs - prevent flicker by ensuring only ONE scroll per conversation opening
+  // Scroll control refs
   const initialScrollDoneForConversationRef = useRef<string | null>(null);
   const lastConversationIdRef = useRef<string | null>(null);
-  const showScrollButtonRef = useRef(false);
-  const initialScrollRetriesRef = useRef(0);
-  const initialLoadMoreAttemptsRef = useRef(0);
+  const lastMessageIdRef = useRef<string | null>(null);
 
   // Hooks
   const { uploadFile, uploadProgress } = useFileUpload();
@@ -179,33 +167,6 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
   }, [messageInput]);
 
-  // Auto-scroll to bottom when NEW messages arrive (NOT during conversation opening)
-  useEffect(() => {
-    if (!messages?.length || !conversation?.id) return;
-    
-    // GUARD: Don't run during initial scroll phase for this conversation
-    const isOpeningConversation = initialScrollDoneForConversationRef.current !== conversation.id;
-    if (isOpeningConversation) return;
-    
-    const lastMessage = messages[messages.length - 1] as ExtendedMessage;
-    const isNewMessage = lastMessage.id !== lastMessageIdRef.current;
-    
-    if (isNewMessage) {
-      lastMessageIdRef.current = lastMessage.id;
-      
-      // Check if this is an optimistic message (just sent by agent)
-      const isOptimisticAgentMessage = lastMessage.isOptimistic && lastMessage.sender_type === 'agent';
-      
-      // Force scroll if:
-      // 1. User is near the bottom, OR
-      // 2. It's a new message from the lead (response), OR
-      // 3. Agent just sent this message (optimistic)
-      if (isNearBottomRef.current || lastMessage.sender_type === 'lead' || isOptimisticAgentMessage) {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-  }, [messages, conversation?.id]);
-
   // Track initial unread count when conversation changes
   const initialUnreadCountRef = useRef<number | null>(null);
   
@@ -216,147 +177,10 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
       lastConversationIdRef.current = conversation.id;
       initialScrollDoneForConversationRef.current = null;
       initialUnreadCountRef.current = conversation.unread_count ?? 0;
-      initialScrollRetriesRef.current = 0;
-      initialLoadMoreAttemptsRef.current = 0;
       lastMessageIdRef.current = null;
-      isNearBottomRef.current = true;
       setShowScrollButton(false);
-      showScrollButtonRef.current = false;
     }
   }, [conversation?.id, conversation?.unread_count]);
-
-  // Auto-scroll when conversation changes - RUNS ONLY ONCE per conversation
-  useEffect(() => {
-    // GUARD: Already scrolled for this conversation
-    if (initialScrollDoneForConversationRef.current === conversation?.id) return;
-
-    if (!conversation?.id || isLoadingMessages || !messages || messages.length === 0) return;
-
-    const viewport = scrollAreaRef.current?.querySelector(
-      '[data-radix-scroll-area-viewport]'
-    ) as HTMLElement;
-    if (!viewport) {
-      // Fallback and mark as done
-      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
-      initialScrollDoneForConversationRef.current = conversation.id;
-      lastMessageIdRef.current = messages[messages.length - 1]?.id || null;
-      return;
-    }
-
-    const unreadCount = initialUnreadCountRef.current ?? 0;
-
-    // If we have unread messages but didn't load enough history yet, fetch more first.
-    if (unreadCount > 0 && messages.length < unreadCount) {
-      if (
-        onLoadMoreMessages &&
-        !isLoadingMoreMessages &&
-        initialLoadMoreAttemptsRef.current < 10
-      ) {
-        initialLoadMoreAttemptsRef.current += 1;
-        onLoadMoreMessages();
-      }
-      return;
-    }
-
-    const timeoutIds: number[] = [];
-
-    const scrollToAbsoluteBottom = () => {
-      // Force scroll to absolute bottom - use scrollHeight directly
-      viewport.scrollTop = viewport.scrollHeight;
-      // Also use scrollIntoView as backup
-      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
-    };
-
-    const tryScrollToFirstUnread = () => {
-      const totalMessages = messages.length;
-      const firstUnreadIndex = totalMessages - unreadCount;
-
-      const messageElements = viewport.querySelectorAll('[data-message-index]');
-      const targetElement = messageElements?.[firstUnreadIndex] as HTMLElement | undefined;
-
-      if (!targetElement) return false;
-
-      targetElement.scrollIntoView({ behavior: 'auto', block: 'start' });
-      // Adjust for header padding
-      viewport.scrollTop = Math.max(0, viewport.scrollTop - 80);
-      return true;
-    };
-
-    const finalizeInitialScroll = () => {
-      initialScrollDoneForConversationRef.current = conversation.id;
-      lastMessageIdRef.current = messages[messages.length - 1]?.id || null;
-    };
-
-    const attemptInitialScroll = () => {
-      if (unreadCount > 0) return tryScrollToFirstUnread();
-      scrollToAbsoluteBottom();
-      return true;
-    };
-
-    requestAnimationFrame(() => {
-      const ok = attemptInitialScroll();
-
-      if (unreadCount > 0) {
-        if (ok) {
-          finalizeInitialScroll();
-          return;
-        }
-
-        // If the DOM isn't ready yet (target not rendered), retry a few times.
-        const scheduleRetry = (delayMs: number) => {
-          timeoutIds.push(
-            window.setTimeout(() => {
-              if (initialScrollDoneForConversationRef.current === conversation.id) return;
-              if (lastConversationIdRef.current !== conversation.id) return;
-
-              initialScrollRetriesRef.current += 1;
-              const okRetry = attemptInitialScroll();
-
-              if (okRetry) {
-                finalizeInitialScroll();
-                return;
-              }
-
-              // Fail-safe: after a few retries, just go bottom to avoid getting stuck.
-              if (initialScrollRetriesRef.current >= 6) {
-                scrollToAbsoluteBottom();
-                finalizeInitialScroll();
-              }
-            }, delayMs)
-          );
-        };
-
-        scheduleRetry(50);
-        scheduleRetry(120);
-        scheduleRetry(250);
-        scheduleRetry(400);
-        scheduleRetry(650);
-      } else {
-        finalizeInitialScroll();
-
-        // For read conversations only: multiple rechecks after images might load
-        const forceBottomScroll = () => {
-          if (initialScrollDoneForConversationRef.current !== conversation.id) return;
-          scrollToAbsoluteBottom();
-        };
-
-        timeoutIds.push(window.setTimeout(forceBottomScroll, 100));
-        timeoutIds.push(window.setTimeout(forceBottomScroll, 300));
-        timeoutIds.push(window.setTimeout(forceBottomScroll, 600));
-        timeoutIds.push(window.setTimeout(forceBottomScroll, 1000));
-      }
-    });
-
-    return () => {
-      timeoutIds.forEach((id) => window.clearTimeout(id));
-    };
-  }, [
-    conversation?.id,
-    isLoadingMessages,
-    messages,
-    onLoadMoreMessages,
-    isLoadingMoreMessages,
-  ]);
 
   // Auto-focus textarea when conversation changes (desktop only)
   useEffect(() => {
@@ -374,117 +198,11 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     hasStartedTypingRef.current = false;
   }, [conversation?.id]);
 
-  // Core scroll handler - receives the element directly (not the event)
-  const handleMessagesScrollCore = useCallback((element: HTMLElement) => {
-    const { scrollTop, scrollHeight, clientHeight } = element;
-    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-    
-    // Update near bottom state (within 100px of bottom)
-    isNearBottomRef.current = distanceFromBottom < 100;
-    
-    // Only update showScrollButton state if it actually changed (reduce re-renders)
-    const shouldShowButton = distanceFromBottom > 200;
-    if (showScrollButtonRef.current !== shouldShowButton) {
-      showScrollButtonRef.current = shouldShowButton;
-      setShowScrollButton(shouldShowButton);
-    }
-    
-    // Load more messages when scrolling near the TOP (older messages)
-    if (scrollTop < 100 && hasMoreMessages && !isLoadingMoreMessages && onLoadMoreMessages) {
-      const previousScrollHeight = scrollHeight;
-      onLoadMoreMessages();
-      
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const newScrollHeight = element.scrollHeight;
-          const scrollDelta = newScrollHeight - previousScrollHeight;
-          if (scrollDelta > 0) {
-            element.scrollTop = scrollTop + scrollDelta;
-          }
-        });
-      });
-    }
-  }, [hasMoreMessages, isLoadingMoreMessages, onLoadMoreMessages]);
-
-  // Throttled scroll handler
-  const throttledScroll = useThrottledCallback(handleMessagesScrollCore, 100);
-  
-  // Wrapper that extracts currentTarget synchronously before throttling
-  const handleMessagesScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const element = e.currentTarget;
-    if (element) {
-      throttledScroll(element);
-    }
-  }, [throttledScroll]);
-
+  // Scroll to bottom (used by ScrollToBottomButton)
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // TODO: Integrate with VirtualizedMessageList scrollToIndex when exposed
     setShowScrollButton(false);
-    isNearBottomRef.current = true;
   }, []);
-
-  // Merge messages and notes for inline display
-  type MessageItem = Message & { itemType: 'message' };
-  type NoteItem = NonNullable<typeof internalNotes>[number] & { itemType: 'note' };
-  type CombinedItem = MessageItem | NoteItem;
-
-  const messagesWithNotes = useMemo((): CombinedItem[] => {
-    if (!messages) return [];
-    
-    const messageItems: CombinedItem[] = messages.map(m => ({ ...m, itemType: 'message' as const })) as CombinedItem[];
-    
-    if (!internalNotes || internalNotes.length === 0) {
-      return messageItems;
-    }
-
-    const noteItems: CombinedItem[] = internalNotes.map(n => ({ ...n, itemType: 'note' as const })) as CombinedItem[];
-    const combined = [...messageItems, ...noteItems].sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    );
-
-    return combined;
-  }, [messages, internalNotes]);
-
-  // Group messages by date
-  const groupedMessages = useMemo(() => {
-    if (!messagesWithNotes.length) return [];
-    
-    type GroupedItem = {
-      date: Date;
-      items: typeof messagesWithNotes;
-    };
-    
-    const groups: GroupedItem[] = [];
-    let currentDateKey: string | null = null;
-    let currentGroup: typeof messagesWithNotes = [];
-
-    messagesWithNotes.forEach((item) => {
-      const itemDate = new Date(item.created_at);
-      const dateKey = format(itemDate, 'yyyy-MM-dd');
-
-      if (dateKey !== currentDateKey) {
-        if (currentGroup.length > 0) {
-          groups.push({ 
-            date: new Date(currentGroup[0].created_at), 
-            items: currentGroup 
-          });
-        }
-        currentDateKey = dateKey;
-        currentGroup = [item];
-      } else {
-        currentGroup.push(item);
-      }
-    });
-
-    if (currentGroup.length > 0) {
-      groups.push({ 
-        date: new Date(currentGroup[0].created_at), 
-        items: currentGroup 
-      });
-    }
-
-    return groups;
-  }, [messagesWithNotes]);
 
   const handleSendMessage = async () => {
     if ((!messageInput.trim() && !pendingFile) || !conversation) return;
@@ -880,157 +598,37 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
         </div>
       </div>
 
-      {/* Messages */}
+      {/* Messages - Virtualized */}
       <div className="flex-1 relative overflow-hidden">
-        <ScrollArea 
-          ref={scrollAreaRef}
-          className="h-full p-4 bg-muted/30"
-          style={{ willChange: 'scroll-position' }}
-          onScrollCapture={handleMessagesScroll}
-        >
-          <div className="space-y-2 max-w-3xl mx-auto" style={{ willChange: 'contents' }}>
-            {/* Loading more indicator at top */}
-            {isLoadingMoreMessages && (
-              <div className="flex justify-center py-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Carregando mensagens anteriores...</span>
-                </div>
-              </div>
-            )}
-            
-            {/* Indicator when there are no more old messages */}
-            {!isLoadingMoreMessages && !hasMoreMessages && messages && messages.length > 10 && (
-              <div className="flex justify-center py-3">
-                <span className="text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
-                  Início da conversa
-                </span>
-              </div>
-            )}
-            
-            {isLoadingMessages ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className={cn("flex gap-2 animate-pulse", i % 2 === 0 && "flex-row-reverse")}>
-                    <div className="w-8 h-8 rounded-full bg-muted shrink-0" />
-                    <div className={cn(
-                      "rounded-2xl p-4 max-w-[70%] space-y-2",
-                      i % 2 === 0 ? "bg-primary/20" : "bg-card"
-                    )}>
-                      <div className="h-3 w-32 bg-muted rounded" />
-                      <div className="h-3 w-48 bg-muted rounded" />
-                      <div className="h-2 w-12 bg-muted rounded" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : groupedMessages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4 text-muted-foreground">
-                  <MessageSquare className="w-8 h-8" />
-                </div>
-                <h3 className="text-base font-medium text-foreground mb-1">
-                  Nenhuma mensagem ainda
-                </h3>
-                <p className="text-sm text-muted-foreground max-w-xs mb-4">
-                  Envie a primeira mensagem para iniciar a conversa
-                </p>
-                <TemplateSelector
-                  onSelectTemplate={handleTemplateSelect}
-                  leadName={lead.name}
-                  leadPhone={lead.phone}
-                  leadBenefitType={lead.benefit_type || undefined}
-                  agentName={agentName}
-                  triggerElement={
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Zap className="w-4 h-4" />
-                      Usar template de boas-vindas
-                    </Button>
-                  }
-                />
-              </div>
-            ) : (
-              (() => {
-                let messageIndex = 0; // Counter only for messages, not notes
-                const unreadCount = initialUnreadCountRef.current ?? 0;
-                const totalMessages = messages?.length ?? 0;
-                const firstUnreadIndex = unreadCount > 0 ? totalMessages - unreadCount : -1;
-                
-                return groupedMessages.map((group) => (
-                  <div key={group.date.toISOString()}>
-                    <DateSeparator date={group.date} />
-                    
-                    <div className="space-y-4">
-                      {group.items.map((item, index) => {
-                        if (item.itemType === 'note') {
-                          return <InlineNoteMessage key={`note-${item.id}`} note={item as any} />;
-                        }
-
-                        const message = item as MessageItem;
-                        const currentMessageIndex = messageIndex;
-                        messageIndex++;
-                        
-                        const isAgent = message.sender_type === 'agent';
-                        const prevItem = group.items[index - 1];
-                        const showAvatar = index === 0 || prevItem?.itemType === 'note' || (prevItem as any)?.sender_type !== message.sender_type;
-
-                        // Filter out locally deleted messages
-                        if ((message as any).is_deleted_locally) return null;
-                        
-                        // Check if this is the first unread message
-                        const isFirstUnread = currentMessageIndex === firstUnreadIndex;
-
-                        return (
-                          <div key={message.id} data-message-index={currentMessageIndex}>
-                            {isFirstUnread && (
-                              <div className="flex items-center gap-3 py-3 mb-4">
-                                <div className="flex-1 h-px bg-primary/40" />
-                                <span className="text-xs font-medium text-primary px-2">
-                                  Mensagens não lidas
-                                </span>
-                                <div className="flex-1 h-px bg-primary/40" />
-                              </div>
-                            )}
-                            <MessageBubble
-                              message={message as any}
-                              isAgent={isAgent}
-                              showAvatar={showAvatar}
-                              leadName={lead.name}
-                              leadAvatarUrl={lead.avatar_url}
-                              agentName={agentName}
-                              onReply={handleReplyMessage}
-                              onRetry={handleRetryMessage}
-                              resolvedMediaUrl={message.media_url ? getSignedUrl(message.media_url) : undefined}
-                              selectionMode={selectionMode}
-                              isSelected={selectedMessages.includes(message.id)}
-                              onToggleSelect={toggleSelectMessage}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ));
-              })()
-            )}
-            
-            {/* Upload progress indicator */}
-            {uploadProgress.uploading && (
-              <div className="flex gap-2 flex-row-reverse animate-pulse">
-                <div className="w-8 h-8 rounded-full bg-primary/30 shrink-0" />
-                <div className="rounded-2xl rounded-tr-sm bg-primary/40 p-4 max-w-[70%] space-y-2">
-                  <div className="h-3 w-32 bg-primary/30 rounded" />
-                  <div className="flex items-center gap-1 justify-end">
-                    <Loader2 className="w-3 h-3 animate-spin text-primary-foreground/50" />
-                    <span className="text-xs text-primary-foreground/50">Enviando arquivo...</span>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div ref={messagesEndRef} className="h-1" />
-          </div>
-        </ScrollArea>
+        <VirtualizedMessageList
+          messages={messages || []}
+          internalNotes={internalNotes}
+          initialUnreadCount={initialUnreadCountRef.current ?? 0}
+          lead={{
+            id: lead.id,
+            name: lead.name,
+            phone: lead.phone,
+            avatar_url: lead.avatar_url,
+            benefit_type: lead.benefit_type,
+          }}
+          agentName={agentName}
+          onReply={handleReplyMessage}
+          onRetry={handleRetryMessage}
+          selectionMode={selectionMode}
+          selectedMessages={selectedMessages}
+          onToggleSelect={toggleSelectMessage}
+          isLoadingMessages={isLoadingMessages}
+          isLoadingMoreMessages={isLoadingMoreMessages}
+          hasMoreMessages={hasMoreMessages}
+          onLoadMoreMessages={onLoadMoreMessages}
+          getSignedUrl={getSignedUrl}
+          onTemplateSelect={handleTemplateSelect}
+          onInitialScrollDone={() => {
+            initialScrollDoneForConversationRef.current = conversation.id;
+            lastMessageIdRef.current = messages?.[messages.length - 1]?.id || null;
+          }}
+          uploadProgress={uploadProgress}
+        />
         
         <ScrollToBottomButton
           show={showScrollButton}
