@@ -178,7 +178,7 @@ const LeadCardComponent = ({ lead, labels, leadLabels, isDragging, onEdit, onDel
                 className="text-xs border-0"
                 style={{ 
                   backgroundColor: label.color, 
-                  color: getContrastTextColor(label.color) === 'text-white' ? 'white' : '#111827'
+                  color: getContrastTextColor(label.color) === 'text-white' ? 'white' : 'hsl(var(--foreground))'
                 }}
               >
                 {label.name}
