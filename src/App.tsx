@@ -83,18 +83,18 @@ class ErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full">
-            <h1 className="text-xl font-bold text-red-600 mb-4">Algo deu errado</h1>
-            <p className="text-gray-700 mb-4">
+        <div className="min-h-screen flex items-center justify-center bg-muted p-4">
+          <div className="bg-card p-6 rounded-lg shadow-lg max-w-lg w-full border border-border">
+            <h1 className="text-xl font-bold text-destructive mb-4">Algo deu errado</h1>
+            <p className="text-foreground mb-4">
               Ocorreu um erro ao carregar a aplicação.
             </p>
-            <pre className="bg-gray-100 p-3 rounded text-sm overflow-auto max-h-40 text-red-500">
+            <pre className="bg-muted p-3 rounded text-sm overflow-auto max-h-40 text-destructive">
               {this.state.error?.message}
             </pre>
             <button
               onClick={() => window.location.reload()}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
             >
               Recarregar
             </button>

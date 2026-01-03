@@ -159,7 +159,7 @@ export default function TenantsSettings() {
             </CardTitle>
           </CardHeader>
           <CardContent className="pb-4">
-            <p className="text-2xl font-bold text-green-600">
+            <p className="text-2xl font-bold text-success">
               {tenants?.filter((t) => t.is_active).length || 0}
             </p>
           </CardContent>

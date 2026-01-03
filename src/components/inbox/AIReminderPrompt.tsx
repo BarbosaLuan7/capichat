@@ -29,7 +29,7 @@ interface AIReminderPromptProps {
 
 const priorityLabels = {
   low: { label: 'Baixa', color: 'bg-muted text-muted-foreground' },
-  medium: { label: 'Média', color: 'bg-blue-500/10 text-blue-600' },
+  medium: { label: 'Média', color: 'bg-info/10 text-info' },
   high: { label: 'Alta', color: 'bg-warning/10 text-warning' },
   urgent: { label: 'Urgente', color: 'bg-destructive/10 text-destructive' },
 };

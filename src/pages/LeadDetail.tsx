@@ -102,9 +102,9 @@ const LeadDetail = () => {
   }
 
   const temperatureColors: Record<LeadTemperature, string> = {
-    cold: 'bg-blue-500',
-    warm: 'bg-yellow-500',
-    hot: 'bg-red-500',
+    cold: 'bg-temp-cold',
+    warm: 'bg-temp-warm',
+    hot: 'bg-temp-hot',
   };
 
   const temperatureLabels: Record<LeadTemperature, string> = {
