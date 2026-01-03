@@ -162,6 +162,27 @@ const Inbox = () => {
   const handleSendMessage = useCallback(async (content: string, type: string, mediaUrl?: string | null, replyToExternalId?: string | null) => {
     if (!selectedConversationId || !user) return;
 
+    // AUTO-ATRIBUIÇÃO: Se a conversa não está atribuída, atribuir ao usuário atual
+    const isUnassigned = !selectedConversation?.assigned_to;
+    
+    if (isUnassigned && leadData) {
+      // Atribuir conversa e lead ao usuário atual (em paralelo, não bloqueia o envio)
+      Promise.all([
+        updateAssignee.mutateAsync({
+          conversationId: selectedConversationId,
+          assignedTo: user.id,
+        }),
+        updateLead.mutateAsync({
+          id: leadData.id,
+          assigned_to: user.id,
+        }),
+      ]).then(() => {
+        toast.info('Lead atribuído a você automaticamente');
+      }).catch((error) => {
+        console.error('Erro na auto-atribuição:', error);
+      });
+    }
+
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     
     // 1. IMEDIATAMENTE adicionar mensagem otimista
@@ -210,7 +231,7 @@ const Inbox = () => {
       const errorMsg = error instanceof Error ? error.message : 'Erro ao enviar';
       markMessageFailed(tempId, errorMsg);
     });
-  }, [selectedConversationId, user, sendMessage, addMessageOptimistically, replaceOptimisticMessage, updateMessageOptimistically, markMessageFailed]);
+  }, [selectedConversationId, selectedConversation?.assigned_to, user, leadData, sendMessage, updateAssignee, updateLead, addMessageOptimistically, replaceOptimisticMessage, updateMessageOptimistically, markMessageFailed]);
 
   const handleStatusChange = useCallback((status: ConversationStatus) => {
     if (!selectedConversationId) return;
