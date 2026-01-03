@@ -271,6 +271,7 @@ export function TenantUsersModal({ open, onOpenChange, tenant }: TenantUsersModa
                           size="icon"
                           onClick={() => confirmRemoveUser(ut.user_id, ut.profile?.name || 'Usuário')}
                           className="text-destructive hover:text-destructive"
+                          aria-label={`Remover ${ut.profile?.name || 'usuário'} do escritório`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

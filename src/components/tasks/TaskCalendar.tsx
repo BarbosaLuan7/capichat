@@ -58,6 +58,7 @@ export const TaskCalendar = ({ tasks, onTaskClick }: TaskCalendarProps) => {
               variant="outline"
               size="icon"
               onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+              aria-label="Mês anterior"
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
@@ -72,6 +73,7 @@ export const TaskCalendar = ({ tasks, onTaskClick }: TaskCalendarProps) => {
               variant="outline"
               size="icon"
               onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+              aria-label="Próximo mês"
             >
               <ChevronRight className="w-4 h-4" />
             </Button>

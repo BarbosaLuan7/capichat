@@ -40,7 +40,7 @@ import { useLeadLabels } from '@/hooks/useLabels';
 import { useProfiles } from '@/hooks/useProfiles';
 import { LeadTimeline } from '@/components/leads/LeadTimeline';
 import { LeadActivityTimeline } from '@/components/leads/LeadActivityTimeline';
-import { cn } from '@/lib/utils';
+import { cn, getContrastTextColor } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -317,7 +317,7 @@ const LeadDetail = () => {
                   <Badge
                     key={label.id}
                     style={{ backgroundColor: label.color }}
-                    className="text-white"
+                    className={getContrastTextColor(label.color)}
                   >
                     {label.name}
                   </Badge>

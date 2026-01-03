@@ -53,6 +53,7 @@ import { useLabels, useCreateLabel, useUpdateLabel, useDeleteLabel } from '@/hoo
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Database } from '@/integrations/supabase/types';
+import { getContrastTextColor } from '@/lib/utils';
 
 type LabelCategory = Database['public']['Enums']['label_category'];
 type LabelRow = Database['public']['Tables']['labels']['Row'];
@@ -254,7 +255,7 @@ const LabelsSettings = () => {
                     <TableCell>
                       <Badge
                         style={{ backgroundColor: label.color }}
-                        className="text-white"
+                        className={getContrastTextColor(label.color)}
                       >
                         {label.name}
                       </Badge>
