@@ -66,7 +66,6 @@ const crmItems = [
 const toolsItems = [
   { icon: Workflow, label: 'Automações', path: '/automations' },
   { icon: Zap, label: 'Chatbot', path: '/chatbot' },
-  { icon: BarChart3, label: 'Métricas', path: '/metrics' },
 ];
 
 const settingsItems = [
