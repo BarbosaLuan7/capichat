@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo, forwardRef, Suspense } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   Send,
   MessageSquare,
@@ -10,6 +10,7 @@ import {
   PanelRightOpen,
   ArrowLeft,
   Zap,
+  Upload,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -121,6 +122,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   const [showReminderPrompt, setShowReminderPrompt] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   
   // Selection mode state
   const [selectionMode, setSelectionMode] = useState(false);
@@ -133,6 +135,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   const ignoreScrollRef = useRef(false);
   const isNearBottomRef = useRef(true);
   const lastMessageIdRef = useRef<string | null>(null);
+  const dragCounter = useRef(0);
 
   // Hooks
   const { uploadFile, uploadProgress } = useFileUpload();
@@ -525,6 +528,51 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     }
   }, []);
 
+  // Drag-and-drop handlers
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragging(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    
+    if (dragCounter.current === 0) {
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounter.current = 0;
+    
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+    
+    const file = files[0];
+    
+    const type = file.type.startsWith('image/') ? 'image' : 
+                 file.type.startsWith('video/') ? 'video' : 
+                 file.type.startsWith('audio/') ? 'audio' : 'document';
+    
+    setPendingFile({ file, type });
+    toast.success(`Arquivo "${file.name}" pronto para envio`);
+  }, []);
+
   // Empty state
   if (!conversation || !lead) {
     return (
@@ -548,7 +596,36 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   const chatDisplayName = (lead as any).whatsapp_name || (!isPhoneAsName ? lead.name : null) || formatPhoneNumber(lead.phone);
 
   return (
-    <div ref={ref} className="flex-1 min-w-0 flex flex-col overflow-hidden">
+    <div 
+      ref={ref} 
+      className="flex-1 min-w-0 flex flex-col overflow-hidden relative"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Drop Zone Overlay */}
+      <AnimatePresence>
+        {isDragging && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 bg-primary/10 backdrop-blur-sm border-2 border-dashed border-primary rounded-lg flex items-center justify-center"
+          >
+            <div className="text-center p-8 bg-card rounded-xl shadow-lg border border-border">
+              <Upload className="w-12 h-12 text-primary mx-auto mb-3" />
+              <p className="text-lg font-medium text-foreground">
+                Solte o arquivo aqui
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Imagens, vídeos, áudios ou documentos
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Chat Header */}
       <div className="h-16 px-4 flex items-center gap-3 border-b border-border bg-card">
         {/* Mobile back button */}
