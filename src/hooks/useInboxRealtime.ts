@@ -41,6 +41,7 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
   } = options;
   const queryClient = useQueryClient();
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+  const [showDisconnectedBanner, setShowDisconnectedBanner] = useState(false);
   
   // Use refs to avoid recreating callbacks on every render
   const selectedConversationIdRef = useRef(selectedConversationId);
@@ -53,6 +54,10 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
   
   // Debounce ref for mark as read
   const markAsReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Ref for disconnect delay timer
+  const disconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Ref for channel to allow force reconnect
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   
   // Keep refs in sync
   useEffect(() => {
@@ -259,7 +264,8 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
     // Labels will be updated on next natural refetch or when user opens the conversation
   }, [queryClient]);
 
-  useEffect(() => {
+  // Setup subscription with reconnect capability
+  const setupChannel = useCallback(() => {
     logger.log('[InboxRealtime] Setting up unified subscription');
 
     const channel = supabase
@@ -308,21 +314,63 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
         logger.log('[InboxRealtime] Subscription status:', status);
         if (status === 'SUBSCRIBED') {
           setConnectionStatus('connected');
+          setShowDisconnectedBanner(false);
+          // Clear any pending disconnect timeout
+          if (disconnectTimeoutRef.current) {
+            clearTimeout(disconnectTimeoutRef.current);
+            disconnectTimeoutRef.current = null;
+          }
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
           setConnectionStatus('disconnected');
+          // Only show banner after 3 seconds of being disconnected
+          if (!disconnectTimeoutRef.current) {
+            disconnectTimeoutRef.current = setTimeout(() => {
+              setShowDisconnectedBanner(true);
+            }, 3000);
+          }
         } else {
           setConnectionStatus('connecting');
         }
       });
 
+    channelRef.current = channel;
+    return channel;
+  }, [handleMessageInsert, handleMessageUpdate, handleConversationChange, handleLeadLabelsChange]);
+
+  useEffect(() => {
+    const channel = setupChannel();
+
     return () => {
       logger.log('[InboxRealtime] Cleaning up subscription');
       setConnectionStatus('disconnected');
+      if (disconnectTimeoutRef.current) {
+        clearTimeout(disconnectTimeoutRef.current);
+      }
       supabase.removeChannel(channel);
     };
-  // Empty dependency array - callbacks use refs for dynamic values
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { connectionStatus };
+  // Force reconnect function
+  const forceReconnect = useCallback(() => {
+    logger.log('[InboxRealtime] Force reconnecting...');
+    setShowDisconnectedBanner(false);
+    setConnectionStatus('connecting');
+    
+    // Clear timeout
+    if (disconnectTimeoutRef.current) {
+      clearTimeout(disconnectTimeoutRef.current);
+      disconnectTimeoutRef.current = null;
+    }
+    
+    // Remove current channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+    }
+    
+    // Setup new channel
+    setupChannel();
+  }, [setupChannel]);
+
+  return { connectionStatus, showDisconnectedBanner, forceReconnect };
 }
