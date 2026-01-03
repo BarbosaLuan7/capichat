@@ -40,8 +40,9 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Preload critical routes during idle time for faster navigation
 if (typeof window !== 'undefined') {
-  const preloadCriticalRoutes = () => {
-    import("./pages/Dashboard");
+const preloadCriticalRoutes = () => {
+    // Preload apenas Inbox - tela principal do time
+    // Dashboard carrega sob demanda (apenas admin usa)
     import("./pages/Inbox");
   };
   
