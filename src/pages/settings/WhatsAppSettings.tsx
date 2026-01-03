@@ -243,8 +243,8 @@ const WhatsAppSettings = () => {
             <Card key={config.id}>
               <CardContent className="py-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                    <Smartphone className="w-5 h-5 text-green-600" />
+                  <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
+                    <Smartphone className="w-5 h-5 text-success" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -258,7 +258,7 @@ const WhatsAppSettings = () => {
                     </div>
                     <p className="text-sm text-muted-foreground truncate">{config.base_url}</p>
                     {config.phone_number && (
-                      <p className="text-sm text-green-600">📱 {config.phone_number}</p>
+                      <p className="text-sm text-success">📱 {config.phone_number}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-2">

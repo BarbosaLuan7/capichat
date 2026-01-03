@@ -14,7 +14,7 @@ interface AISuggestionsProps {
 
 const intentColors: Record<string, string> = {
   greeting: 'bg-primary/10 text-primary hover:bg-primary/20',
-  info: 'bg-blue-500/10 text-blue-600 hover:bg-blue-500/20',
+  info: 'bg-info/10 text-info hover:bg-info/20',
   action: 'bg-success/10 text-success hover:bg-success/20',
   closing: 'bg-muted text-muted-foreground hover:bg-muted/80',
 };

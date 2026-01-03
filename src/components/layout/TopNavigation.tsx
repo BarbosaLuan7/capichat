@@ -278,7 +278,7 @@ const TopNavigation = () => {
   );
 
   return (
-    <header className="h-16 bg-[#0b305b] border-b border-[#0a2847] flex items-center px-4 sticky top-0 z-50" role="banner">
+    <header className="h-16 bg-sidebar border-b border-sidebar-border flex items-center px-4 sticky top-0 z-50" role="banner">
       {/* Logo */}
       <Link to="/inbox" className="flex items-center gap-2.5 mr-4 shrink-0">
         <img 

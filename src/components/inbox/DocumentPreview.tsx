@@ -58,10 +58,10 @@ function DocumentPreviewComponent({ url, fileName, isAgent = false }: DocumentPr
           "flex items-center gap-2 p-2",
           isAgent ? "bg-primary-foreground/5" : "bg-muted/30"
         )}>
-          <FileText className={cn(
-            "w-4 h-4 flex-shrink-0",
-            isPdf ? "text-red-500" : "text-muted-foreground"
-          )} />
+        <FileText className={cn(
+          "w-4 h-4 flex-shrink-0",
+          isPdf ? "text-destructive" : "text-muted-foreground"
+        )} />
           <a
             href={url}
             target="_blank"
@@ -101,7 +101,7 @@ function DocumentPreviewComponent({ url, fileName, isAgent = false }: DocumentPr
     )}>
       <FileText className={cn(
         "w-5 h-5 flex-shrink-0",
-        isPdf ? "text-red-500" : isAgent ? "text-primary-foreground/70" : "text-muted-foreground"
+        isPdf ? "text-destructive" : isAgent ? "text-primary-foreground/70" : "text-muted-foreground"
       )} />
       
       <div className="flex-1 min-w-0">
