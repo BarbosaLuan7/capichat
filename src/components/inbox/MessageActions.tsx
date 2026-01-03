@@ -1,14 +1,16 @@
 import React from 'react';
-import { CornerUpLeft, Square, CheckSquare } from 'lucide-react';
+import { CornerUpLeft, Square, CheckSquare, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface MessageActionsProps {
   show: boolean;
   isAgent: boolean;
   isSelected: boolean;
   selectionMode: boolean;
+  content?: string;
   onReply: () => void;
   onToggleSelect: () => void;
 }
@@ -18,14 +20,27 @@ export function MessageActions({
   isAgent,
   isSelected,
   selectionMode,
+  content,
   onReply,
   onToggleSelect,
 }: MessageActionsProps) {
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!content) return;
+    
+    try {
+      await navigator.clipboard.writeText(content);
+      toast.success('Copiado!', { duration: 1500 });
+    } catch {
+      toast.error('Erro ao copiar');
+    }
+  };
+
   return (
     <div
       className={cn(
         "absolute top-1/2 -translate-y-1/2 flex items-center gap-0.5 transition-opacity duration-200",
-        isAgent ? "-left-16" : "-right-16",
+        isAgent ? "-left-20" : "-right-20",
         show || selectionMode ? "opacity-100" : "opacity-0 pointer-events-none"
       )}
     >
@@ -56,6 +71,26 @@ export function MessageActions({
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
+
+      {!selectionMode && content && (
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 rounded-full bg-background/80 hover:bg-background shadow-sm border border-border/50"
+                onClick={handleCopy}
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side={isAgent ? "left" : "right"} className="text-xs">
+              Copiar
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
 
       {!selectionMode && (
         <TooltipProvider delayDuration={200}>

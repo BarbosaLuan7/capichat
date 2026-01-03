@@ -497,12 +497,13 @@ function MessageBubbleComponent({
       )}
 
       <div className="relative max-w-[70%]">
-        {/* Message Actions - Reply and Select */}
+        {/* Message Actions - Reply, Copy and Select */}
         <MessageActions
           show={showActions}
           isAgent={isAgent}
           isSelected={isSelected}
           selectionMode={selectionMode}
+          content={message.content}
           onReply={handleReply}
           onToggleSelect={handleToggleSelect}
         />
