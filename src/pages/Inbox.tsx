@@ -275,7 +275,7 @@ const Inbox = () => {
 
   return (
     <div className={cn(
-      "h-[calc(100vh-4rem)] flex flex-col min-w-0 overflow-hidden relative",
+      "h-[calc(100vh-4rem)] flex flex-col min-w-0 overflow-hidden relative select-none",
       isMobile && "h-[calc(100vh-4rem-3.5rem)]"
     )}>
       {/* Disconnection Banner - only shows after 3s delay */}
