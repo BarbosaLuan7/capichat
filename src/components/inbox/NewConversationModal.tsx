@@ -31,6 +31,7 @@ import { useFunnelStages } from '@/hooks/useFunnelStages';
 import { useWhatsAppConfigs } from '@/hooks/useWhatsAppConfig';
 import { formatPhoneNumber } from '@/lib/masks';
 import { useTenant } from '@/contexts/TenantContext';
+import { getBrazilianPhoneVariations } from '@/lib/internationalPhone';
 
 interface NewConversationModalProps {
   open: boolean;
@@ -132,7 +133,7 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
     return true;
   }, [normalizedPhone, countryCode]);
   
-  // Check for duplicate phone with debounce - busca flexível por múltiplos formatos
+  // Check for duplicate phone with debounce - busca flexível com variações do 9º dígito para Brasil
   useEffect(() => {
     if (!isPhoneValid || normalizedPhone.length < 8) {
       setExistingLead(null);
@@ -142,17 +143,22 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
     const timeout = setTimeout(async () => {
       setIsCheckingDuplicity(true);
       try {
-        // Extrair últimos 8-9 dígitos para busca flexível
-        // Isso funciona independente se o telefone foi salvo com ou sem código do país
-        const phoneDigits = normalizedPhone.slice(-9); // Ex: 991159994
+        let query = supabase.from('leads').select('id, name, phone');
         
-        // Buscar por múltiplos formatos possíveis
-        const { data, error } = await supabase
-          .from('leads')
-          .select('id, name, phone')
-          .or(`phone.eq.${fullPhoneNumber},phone.ilike.%${phoneDigits}`)
-          .limit(1)
-          .maybeSingle();
+        if (countryCode === '55') {
+          // Para números brasileiros, buscar ambas as variações (com e sem 9º dígito)
+          const variations = getBrazilianPhoneVariations(normalizedPhone);
+          
+          // Construir condição OR para todas as variações
+          // Ex: phone.eq.45999957851,phone.eq.4599957851
+          const conditions = variations.map(v => `phone.eq.${v}`).join(',');
+          query = query.or(conditions);
+        } else {
+          // Para outros países, busca simples
+          query = query.eq('phone', normalizedPhone);
+        }
+        
+        const { data, error } = await query.limit(1).maybeSingle();
         
         if (error) {
           logger.error('[NewConversation] Error checking phone duplicity:', error);
@@ -167,7 +173,7 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
     }, 300);
     
     return () => clearTimeout(timeout);
-  }, [fullPhoneNumber, isPhoneValid, normalizedPhone]);
+  }, [fullPhoneNumber, isPhoneValid, normalizedPhone, countryCode]);
   
   // Reset form when modal closes
   useEffect(() => {

@@ -210,3 +210,40 @@ export function formatPhoneByCountry(localNumber: string, countryCode: string): 
   // Formatação genérica para outros países
   return digits;
 }
+
+/**
+ * Para números brasileiros, gera as variações com e sem o 9º dígito
+ * pois o WhatsApp aceita ambos formatos para o mesmo número
+ * 
+ * Ex: 45999957851 -> ['45999957851', '4599957851']
+ * Ex: 4599957851 -> ['4599957851', '45999957851']
+ * 
+ * Para outros países, retorna apenas o número original
+ */
+export function getBrazilianPhoneVariations(phone: string): string[] {
+  const digits = phone.replace(/\D/g, '');
+  
+  // Se não for número brasileiro (10-11 dígitos), retorna apenas o original
+  if (digits.length < 10 || digits.length > 11) {
+    return [digits];
+  }
+  
+  const ddd = digits.substring(0, 2);
+  const variations: string[] = [digits];
+  
+  if (digits.length === 11) {
+    // Tem 11 dígitos (DDD + 9 + 8 dígitos)
+    // Se o terceiro dígito for 9, criar versão sem ele
+    if (digits[2] === '9') {
+      const withoutNine = ddd + digits.substring(3);
+      variations.push(withoutNine);
+    }
+  } else if (digits.length === 10) {
+    // Tem 10 dígitos (DDD + 8 dígitos)
+    // Adicionar o 9 após o DDD
+    const withNine = ddd + '9' + digits.substring(2);
+    variations.push(withNine);
+  }
+  
+  return variations;
+}
