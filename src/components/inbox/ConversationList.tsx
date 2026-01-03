@@ -115,7 +115,7 @@ export function ConversationList({
   // New simplified filter: defaults to 'todos' (all non-resolved)
   const [mainFilter, setMainFilter] = useState<MainFilter>('todos');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortOrder, setSortOrder] = useState<'recent' | 'oldest'>('recent');
+  const [sortOrder, setSortOrder] = useState<'unread' | 'recent' | 'oldest'>('unread');
   
   // Get filters from global store
   const { filters, setAllInboxes } = useConversationFilters();
@@ -272,8 +272,17 @@ export function ConversationList({
       return matchesSearch;
     });
 
-    // Sort by date
+    // Sort based on selected order
     filtered = filtered.sort((a, b) => {
+      if (sortOrder === 'unread') {
+        // Não lidos primeiro, depois por data recente
+        if (a.unread_count > 0 && b.unread_count === 0) return -1;
+        if (a.unread_count === 0 && b.unread_count > 0) return 1;
+        // Se ambos têm ou não têm não lidos, ordenar por data recente
+        const dateA = new Date(a.last_message_at).getTime();
+        const dateB = new Date(b.last_message_at).getTime();
+        return dateB - dateA;
+      }
       const dateA = new Date(a.last_message_at).getTime();
       const dateB = new Date(b.last_message_at).getTime();
       return sortOrder === 'recent' ? dateB - dateA : dateA - dateB;
@@ -333,7 +342,9 @@ export function ConversationList({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-8 px-2 shrink-0" aria-label="Ordenar conversas">
-                      {sortOrder === 'recent' ? (
+                      {sortOrder === 'unread' ? (
+                        <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
+                      ) : sortOrder === 'recent' ? (
                         <ArrowDown className="w-3.5 h-3.5" aria-hidden="true" />
                       ) : (
                         <ArrowUp className="w-3.5 h-3.5" aria-hidden="true" />
@@ -341,6 +352,12 @@ export function ConversationList({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="bg-popover">
+                    <DropdownMenuItem 
+                      onClick={() => setSortOrder('unread')}
+                      className={sortOrder === 'unread' ? 'bg-accent' : ''}
+                    >
+                      Não lidos primeiro
+                    </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => setSortOrder('recent')}
                       className={sortOrder === 'recent' ? 'bg-accent' : ''}
@@ -357,7 +374,7 @@ export function ConversationList({
                 </DropdownMenu>
               </TooltipTrigger>
               <TooltipContent side="bottom">
-                {sortOrder === 'recent' ? 'Recentes primeiro' : 'Antigos primeiro'}
+                {sortOrder === 'unread' ? 'Não lidos primeiro' : sortOrder === 'recent' ? 'Recentes primeiro' : 'Antigos primeiro'}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
