@@ -211,36 +211,55 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
       ignoreScrollRef.current = true;
       setShowScrollButton(false);
       
+      const scrollToPosition = () => {
+        const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+        const unreadCount = initialUnreadCountRef.current ?? 0;
+        
+        if (!viewport) {
+          // Fallback if viewport not found
+          messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+          return;
+        }
+        
+        if (unreadCount > 0 && messages.length >= unreadCount) {
+          // Has unread messages: scroll to first unread message
+          const firstUnreadIndex = messages.length - unreadCount;
+          const messageElements = viewport.querySelectorAll('[data-message-index]');
+          const targetElement = messageElements?.[firstUnreadIndex] as HTMLElement;
+          
+          if (targetElement) {
+            // Scroll so the first unread message is at the top with some padding
+            const targetScrollTop = Math.max(0, targetElement.offsetTop - 60);
+            viewport.scrollTop = targetScrollTop;
+          } else {
+            // Fallback: scroll to bottom
+            viewport.scrollTop = viewport.scrollHeight - viewport.clientHeight;
+          }
+        } else {
+          // No unread messages: scroll to bottom
+          viewport.scrollTop = viewport.scrollHeight - viewport.clientHeight;
+        }
+      };
+      
+      // Initial scroll with double RAF to ensure DOM is ready
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
-          const unreadCount = initialUnreadCountRef.current ?? 0;
+          scrollToPosition();
           
-          if (unreadCount > 0 && messages.length > unreadCount) {
-            // Has unread messages: scroll to first unread message
-            const firstUnreadIndex = messages.length - unreadCount;
-            const messageElements = viewport?.querySelectorAll('[data-message-index]');
-            const targetElement = messageElements?.[firstUnreadIndex] as HTMLElement;
+          // Recheck scroll after media might have loaded
+          setTimeout(() => {
+            const viewport = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+            const unreadCount = initialUnreadCountRef.current ?? 0;
             
-            if (targetElement && viewport) {
-              // Scroll so the first unread message is at the top with some padding
-              viewport.scrollTop = targetElement.offsetTop - 60;
-            } else if (viewport) {
-              // Fallback: scroll to bottom
-              viewport.scrollTop = viewport.scrollHeight;
+            // Only re-scroll to bottom if conversation was read (no unread)
+            if (viewport && unreadCount === 0) {
+              viewport.scrollTop = viewport.scrollHeight - viewport.clientHeight;
             }
-          } else {
-            // No unread messages: scroll to bottom
-            if (viewport) {
-              viewport.scrollTop = viewport.scrollHeight;
-            } else {
-              messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
-            }
-          }
+          }, 300);
           
           setTimeout(() => {
             ignoreScrollRef.current = false;
-          }, 300);
+          }, 350);
         });
       });
     }
@@ -753,6 +772,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
       {/* Messages */}
       <div className="flex-1 relative overflow-hidden">
         <ScrollArea 
+          ref={scrollAreaRef}
           className="h-full p-4 bg-muted/30"
           style={{ willChange: 'scroll-position' }}
           onScrollCapture={handleMessagesScroll}
