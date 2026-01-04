@@ -49,13 +49,20 @@ async function testWAHA(config: TestConnectionPayload): Promise<{ success: boole
         const data = await response.json();
         console.log('[WAHA] Resposta sucesso:', JSON.stringify(data));
 
-        const engine =
+        // Extrai engine garantindo que seja string
+        const rawEngine =
           data?.engine ||
           data?.config?.engine ||
           data?.session?.engine ||
           data?.config?.session?.engine ||
-          data?.settings?.engine ||
-          undefined;
+          data?.settings?.engine;
+        
+        let engine: string | undefined;
+        if (typeof rawEngine === 'string') {
+          engine = rawEngine;
+        } else if (rawEngine && typeof rawEngine === 'object') {
+          engine = rawEngine.name || rawEngine.type || JSON.stringify(rawEngine);
+        }
 
         return { 
           success: true, 
