@@ -37,27 +37,8 @@ function TenantSelectorComponent({ className, variant = 'header' }: TenantSelect
   }
 
   if (!hasMultipleTenants) {
-    // Single tenant - just display it without dropdown
-    const tenant = tenants[0];
-    return (
-      <div className={cn(
-        'flex items-center gap-2 px-2 py-1',
-        variant === 'header' ? 'text-white/90' : 'text-foreground',
-        className
-      )}>
-        {tenant.logo_url ? (
-          <Avatar className="h-6 w-6">
-            <AvatarImage src={tenant.logo_url} alt={tenant.name} />
-            <AvatarFallback className="bg-white/20 text-white text-xs">
-              {tenant.name.charAt(0)}
-            </AvatarFallback>
-          </Avatar>
-        ) : (
-          <Building2 className="h-4 w-4" />
-        )}
-        <span className="text-sm font-medium truncate max-w-32">{tenant.name}</span>
-      </div>
-    );
+    // Single tenant - don't show selector since logo already displays brand
+    return null;
   }
 
   return (
