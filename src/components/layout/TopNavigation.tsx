@@ -290,43 +290,78 @@ const TopNavigation = () => {
         </NavigationMenuList>
       </NavigationMenu>
 
-      {/* CRM Dropdown - Always visible on md+ */}
-      <div className="hidden md:flex">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className={cn(
-                'px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10',
-                isGroupActive(crmItems) && 'bg-white/20 text-white'
-              )}
-            >
-              <Users className="w-4 h-4 mr-2" />
-              CRM
-              {badges.tasks > 0 && (
-                <Badge className="ml-1 h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0 hover:bg-warning">
-                  {badges.tasks}
-                </Badge>
-              )}
-              <ChevronDown className="ml-1 h-3 w-3" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            {crmItems.map((item) => (
-              <DropdownMenuItem key={item.path} asChild>
-                <Link to={item.path} className="flex items-center gap-3 cursor-pointer">
-                  <item.icon className="w-4 h-4" />
-                  <span className="flex-1">{item.label}</span>
-                  {item.badgeKey && badges[item.badgeKey] > 0 && (
-                    <Badge className="h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0">
-                      {badges[item.badgeKey]}
-                    </Badge>
-                  )}
-                </Link>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+      {/* CRM Items - Inline for non-account owners, Dropdown for account owners */}
+      <div className="hidden md:flex items-center">
+        {isAccountOwner ? (
+          // Dropdown for account owners (more compact)
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className={cn(
+                  'px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10',
+                  isGroupActive(crmItems) && 'bg-white/20 text-white'
+                )}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                CRM
+                {badges.tasks > 0 && (
+                  <Badge className="ml-1 h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0 hover:bg-warning">
+                    {badges.tasks}
+                  </Badge>
+                )}
+                <ChevronDown className="ml-1 h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              {crmItems.map((item) => (
+                <DropdownMenuItem key={item.path} asChild>
+                  <Link to={item.path} className="flex items-center gap-3 cursor-pointer">
+                    <item.icon className="w-4 h-4" />
+                    <span className="flex-1">{item.label}</span>
+                    {item.badgeKey && badges[item.badgeKey] > 0 && (
+                      <Badge className="h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0">
+                        {badges[item.badgeKey]}
+                      </Badge>
+                    )}
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          // Inline items for regular users - better distribution
+          <NavigationMenu>
+            <NavigationMenuList className="gap-1">
+              {crmItems.map((item) => {
+                const active = isActive(item.path);
+                const badge = item.badgeKey ? badges[item.badgeKey] : undefined;
+                
+                return (
+                  <NavigationMenuItem key={item.path}>
+                    <Link
+                      to={item.path}
+                      className={cn(
+                        'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                        active
+                          ? 'bg-white text-primary shadow-sm'
+                          : 'text-white/80 hover:text-white hover:bg-white/10'
+                      )}
+                    >
+                      <item.icon className="w-4 h-4" />
+                      <span>{item.label}</span>
+                      {badge !== undefined && badge > 0 && (
+                        <Badge className="ml-1 h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0 hover:bg-warning">
+                          {badge}
+                        </Badge>
+                      )}
+                    </Link>
+                  </NavigationMenuItem>
+                );
+              })}
+            </NavigationMenuList>
+          </NavigationMenu>
+        )}
       </div>
 
       {/* Secondary Navigation - Only visible on lg+ */}
