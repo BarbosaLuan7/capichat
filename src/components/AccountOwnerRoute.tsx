@@ -12,9 +12,10 @@ interface AccountOwnerRouteProps {
  * Redireciona para /inbox se o usuário não for account owner
  */
 export function AccountOwnerRoute({ children }: AccountOwnerRouteProps) {
-  const { loading, isAccountOwner } = useAuth();
+  const { loading, isAccountOwner, profile } = useAuth();
 
-  if (loading) {
+  // Wait until profile is loaded before deciding
+  if (loading || profile === null) {
     return <PageSkeleton />;
   }
 

@@ -101,17 +101,23 @@ export function ConversationFiltersPopover({ availableInboxes }: ConversationFil
     return filtered;
   }, [labelsByCategory, labelSearchTerm]);
 
-  // Format phone for display
+  // Format phone for display - Brazilian format (DDD) XXXXX-XXXX
   const formatPhone = (phone: string | null, name: string) => {
     if (phone) {
+      // Brazilian numbers: format as (DDD) XXXXX-XXXX
       if (phone.startsWith('55') && phone.length >= 12) {
         const ddd = phone.slice(2, 4);
         const number = phone.slice(4);
         if (number.length === 9) {
-          return `+55 ${ddd} ${number.slice(0, 5)}-${number.slice(5)}`;
+          // Mobile: (45) 98806-0050
+          return `(${ddd}) ${number.slice(0, 5)}-${number.slice(5)}`;
+        } else if (number.length === 8) {
+          // Landline: (45) 3256-1234
+          return `(${ddd}) ${number.slice(0, 4)}-${number.slice(4)}`;
         }
-        return `+55 ${ddd} ${number}`;
+        return `(${ddd}) ${number}`;
       }
+      // International numbers: keep original format
       return `+${phone}`;
     }
     return name;
