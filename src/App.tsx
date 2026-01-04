@@ -9,6 +9,7 @@ import { TenantProvider } from "@/contexts/TenantContext";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { CommandBar } from "@/components/command/CommandBar";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { AccountOwnerRoute } from "./components/AccountOwnerRoute";
 import MainLayout from "./components/layout/MainLayout";
 import { PageSkeleton } from "./components/layout/PageSkeleton";
 import { logger } from "@/lib/logger";
@@ -141,7 +142,18 @@ function AppContent() {
             }
           >
             <Route index element={<Navigate to="/inbox" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
+            
+            {/* Rotas protegidas apenas para account owners */}
+            <Route path="dashboard" element={<AccountOwnerRoute><Dashboard /></AccountOwnerRoute>} />
+            <Route path="settings/users" element={<AccountOwnerRoute><UsersSettings /></AccountOwnerRoute>} />
+            <Route path="settings/teams" element={<AccountOwnerRoute><TeamsSettings /></AccountOwnerRoute>} />
+            <Route path="settings/webhooks" element={<AccountOwnerRoute><WebhooksSettings /></AccountOwnerRoute>} />
+            <Route path="settings/whatsapp" element={<AccountOwnerRoute><WhatsAppSettings /></AccountOwnerRoute>} />
+            <Route path="settings/api" element={<AccountOwnerRoute><ApiSettings /></AccountOwnerRoute>} />
+            <Route path="settings/tenants" element={<AccountOwnerRoute><TenantsSettings /></AccountOwnerRoute>} />
+            <Route path="admin/seed" element={<AccountOwnerRoute><SeedPage /></AccountOwnerRoute>} />
+            
+            {/* Rotas disponíveis para todos os usuários */}
             <Route path="inbox" element={<Inbox />} />
             <Route path="funnel" element={<Funnel />} />
             <Route path="leads" element={<Leads />} />
@@ -150,17 +162,9 @@ function AppContent() {
             <Route path="calendar" element={<Calendar />} />
             <Route path="automations" element={<Automations />} />
             <Route path="chatbot" element={<ChatbotBuilder />} />
-            {/* Redirect /metrics to /dashboard for backwards compatibility */}
             <Route path="settings" element={<Settings />} />
-            <Route path="settings/users" element={<UsersSettings />} />
-            <Route path="settings/teams" element={<TeamsSettings />} />
             <Route path="settings/labels" element={<LabelsSettings />} />
             <Route path="settings/templates" element={<TemplatesSettings />} />
-            <Route path="settings/webhooks" element={<WebhooksSettings />} />
-            <Route path="settings/whatsapp" element={<WhatsAppSettings />} />
-            <Route path="settings/api" element={<ApiSettings />} />
-            <Route path="settings/tenants" element={<TenantsSettings />} />
-            <Route path="admin/seed" element={<SeedPage />} />
             
           </Route>
           <Route path="*" element={<NotFound />} />
