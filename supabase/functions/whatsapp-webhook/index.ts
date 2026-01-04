@@ -1557,20 +1557,52 @@ serve(async (req) => {
           if (realPhone) {
             senderPhone = normalizePhone(realPhone);
           } else {
-            // ========== CORREÇÃO: Ignorar mensagens OUTBOUND para LIDs não resolvidos ==========
-            // Se é mensagem outbound (fromMe) e não conseguimos resolver o LID, ignorar
-            // Isso evita criar leads incorretos (usando nosso próprio número ou LID bruto)
+            // ========== CORREÇÃO: Buscar lead existente pelo original_lid para mensagens OUTBOUND ==========
+            // Se é mensagem outbound (fromMe) e não conseguimos resolver o LID via API,
+            // tentar buscar um lead existente pelo original_lid no banco de dados
             if (isFromMe) {
-              console.log('[whatsapp-webhook] ⏭️ Ignorando mensagem outbound para LID não resolvido:', rawContact);
-              return new Response(
-                JSON.stringify({ 
-                  success: true, 
-                  ignored: true, 
-                  reason: 'outbound_to_unresolved_lid',
-                  lid: rawContact 
-                }),
-                { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-              );
+              const lidNumber = rawContact.replace('@lid', '').replace(/\D/g, '');
+              console.log('[whatsapp-webhook] Buscando lead existente pelo original_lid:', lidNumber);
+              
+              // Buscar config para obter tenant_id
+              const wahaConfigForLid = await getWAHAConfigBySession(supabase, body.session || 'default');
+              const tenantIdForLid = wahaConfigForLid?.tenantId;
+              
+              // Buscar lead pelo original_lid (com filtro de tenant se disponível)
+              let leadByLidQuery = supabase
+                .from('leads')
+                .select('id, phone, name, country_code')
+                .eq('original_lid', lidNumber);
+              
+              if (tenantIdForLid) {
+                leadByLidQuery = leadByLidQuery.eq('tenant_id', tenantIdForLid);
+              }
+              
+              const { data: existingLeadByLid, error: lidError } = await leadByLidQuery.maybeSingle();
+              
+              if (lidError) {
+                console.error('[whatsapp-webhook] Erro ao buscar lead por LID:', lidError);
+              }
+              
+              if (existingLeadByLid) {
+                // Lead encontrado! Usar o telefone real do lead
+                console.log('[whatsapp-webhook] ✅ Lead encontrado pelo original_lid:', existingLeadByLid.name, existingLeadByLid.phone);
+                senderPhone = normalizePhone(existingLeadByLid.phone);
+                senderName = existingLeadByLid.name || '';
+                isFromFacebookLid = true; // Marcar que veio de LID para manter consistência
+              } else {
+                // Não encontrou lead - agora sim ignorar para evitar criar lead incorreto
+                console.log('[whatsapp-webhook] ⏭️ Ignorando outbound para LID sem lead associado:', lidNumber);
+                return new Response(
+                  JSON.stringify({ 
+                    success: true, 
+                    ignored: true, 
+                    reason: 'outbound_to_unresolved_lid_no_lead',
+                    lid: rawContact 
+                  }),
+                  { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                );
+              }
             }
             
             // Para mensagens inbound de LID não resolvido, continuar normalmente
