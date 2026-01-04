@@ -1476,6 +1476,15 @@ export type Database = {
       }
     }
     Functions: {
+      can_view_conversation_by_team: {
+        Args: {
+          _assigned_to: string
+          _lead_id: string
+          _user_id: string
+          _whatsapp_instance_id: string
+        }
+        Returns: boolean
+      }
       create_notification: {
         Args: {
           p_data?: Json
