@@ -55,25 +55,25 @@ const primaryNavItems = [
   { icon: Kanban, label: 'Funil', path: '/funnel' },
 ];
 
-// CRM items
+// CRM items - visible for all users
 const crmItems = [
   { icon: Users, label: 'Leads', path: '/leads' },
   { icon: CheckSquare, label: 'Tarefas', path: '/tasks', badgeKey: 'tasks' as const },
   { icon: Calendar, label: 'Calendário', path: '/calendar' },
 ];
 
-// Tools items
+// Tools items - visible for all users
 const toolsItems = [
+  { icon: Tags, label: 'Etiquetas', path: '/settings/labels' },
+  { icon: FileText, label: 'Templates', path: '/settings/templates' },
   { icon: Workflow, label: 'Automações', path: '/automations' },
   { icon: Zap, label: 'Chatbot', path: '/chatbot' },
 ];
 
-// Settings items
-const settingsItems = [
+// Admin-only settings items - only visible for account owners
+const adminSettingsItems = [
   { icon: UserCog, label: 'Usuários', path: '/settings/users' },
   { icon: UsersRound, label: 'Equipes', path: '/settings/teams' },
-  { icon: Tags, label: 'Etiquetas', path: '/settings/labels' },
-  { icon: FileText, label: 'Templates', path: '/settings/templates' },
   { icon: Webhook, label: 'Webhooks', path: '/settings/webhooks' },
   { icon: MessageCircle, label: 'WhatsApp', path: '/settings/whatsapp' },
   { icon: Key, label: 'API', path: '/settings/api' },
@@ -82,7 +82,7 @@ const settingsItems = [
 
 const TopNavigation = () => {
   const location = useLocation();
-  const { authUser: user, signOut } = useAuth();
+  const { authUser: user, signOut, isAccountOwner } = useAuth();
   const badges = useSidebarBadges();
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -157,25 +157,27 @@ const TopNavigation = () => {
         </div>
       </div>
 
-      {/* Dashboard - moved to mobile menu */}
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">Visão Geral</p>
-        <div className="space-y-1">
-          <Link
-            to="/dashboard"
-            className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full',
-              isActive('/dashboard')
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-foreground hover:text-foreground hover:bg-primary/10'
-            )}
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <LayoutDashboard className="w-4 h-4" />
-            <span>Dashboard</span>
-          </Link>
+      {/* Dashboard - only for account owners */}
+      {isAccountOwner && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">Visão Geral</p>
+          <div className="space-y-1">
+            <Link
+              to="/dashboard"
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full',
+                isActive('/dashboard')
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-foreground hover:text-foreground hover:bg-primary/10'
+              )}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              <span>Dashboard</span>
+            </Link>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Tools */}
       <div className="space-y-2">
@@ -204,32 +206,34 @@ const TopNavigation = () => {
         </div>
       </div>
 
-      {/* Settings */}
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">Configurações</p>
-        <div className="space-y-1">
-          {settingsItems.map((item) => {
-            const active = isActive(item.path);
-            
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full',
-                  active
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-foreground hover:text-foreground hover:bg-primary/10'
-                )}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <item.icon className="w-4 h-4" />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
+      {/* Admin Settings - only for account owners */}
+      {isAccountOwner && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">Configurações</p>
+          <div className="space-y-1">
+            {adminSettingsItems.map((item) => {
+              const active = isActive(item.path);
+              
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full',
+                    active
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-foreground hover:text-foreground hover:bg-primary/10'
+                  )}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <item.icon className="w-4 h-4" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 
@@ -323,21 +327,23 @@ const TopNavigation = () => {
         </DropdownMenu>
       </div>
 
-      {/* Secondary Navigation - Only visible on lg+ (Dashboard, Ferramentas, Configurações) */}
+      {/* Secondary Navigation - Only visible on lg+ */}
       <div className="hidden lg:flex items-center">
-        {/* Dashboard Link */}
-        <Link
-          to="/dashboard"
-          className={cn(
-            'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
-            isActive('/dashboard')
-              ? 'bg-white text-primary shadow-sm'
-              : 'text-white/80 hover:text-white hover:bg-white/10'
-          )}
-        >
-          <LayoutDashboard className="w-4 h-4" />
-          <span>Dashboard</span>
-        </Link>
+        {/* Dashboard Link - only for account owners */}
+        {isAccountOwner && (
+          <Link
+            to="/dashboard"
+            className={cn(
+              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+              isActive('/dashboard')
+                ? 'bg-white text-primary shadow-sm'
+                : 'text-white/80 hover:text-white hover:bg-white/10'
+            )}
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            <span>Dashboard</span>
+          </Link>
+        )}
 
         {/* Tools Dropdown */}
         <DropdownMenu>
@@ -366,32 +372,34 @@ const TopNavigation = () => {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Settings Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className={cn(
-                'px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10',
-                isGroupActive(settingsItems) && 'bg-white/20 text-white'
-              )}
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              Configurações
-              <ChevronDown className="ml-1 h-3 w-3" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            {settingsItems.map((item) => (
-              <DropdownMenuItem key={item.path} asChild>
-                <Link to={item.path} className="flex items-center gap-3 cursor-pointer">
-                  <item.icon className="w-4 h-4" />
-                  <span>{item.label}</span>
-                </Link>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Admin Settings Dropdown - only for account owners */}
+        {isAccountOwner && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className={cn(
+                  'px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10',
+                  isGroupActive(adminSettingsItems) && 'bg-white/20 text-white'
+                )}
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Configurações
+                <ChevronDown className="ml-1 h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              {adminSettingsItems.map((item) => (
+                <DropdownMenuItem key={item.path} asChild>
+                  <Link to={item.path} className="flex items-center gap-3 cursor-pointer">
+                    <item.icon className="w-4 h-4" />
+                    <span>{item.label}</span>
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {/* Spacer */}

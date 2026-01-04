@@ -15,6 +15,7 @@ export interface AuthUser {
   teamId?: string | null;
   isActive: boolean;
   role: AppRole;
+  isAccountOwner: boolean;
 }
 
 export function useAuth() {
@@ -155,6 +156,7 @@ export function useAuth() {
     teamId: profile.team_id,
     isActive: profile.is_active,
     role: role || 'agent',
+    isAccountOwner: profile.is_account_owner ?? false,
   } : null;
 
   return {
@@ -172,5 +174,6 @@ export function useAuth() {
     isAdmin: role === 'admin',
     isManager: role === 'manager' || role === 'admin',
     isAgent: role === 'agent' || role === 'manager' || role === 'admin',
+    isAccountOwner: profile?.is_account_owner ?? false,
   };
 }
