@@ -206,3 +206,36 @@ export function useTestWhatsAppConnection() {
     },
   });
 }
+
+// Hook para enviar mensagem de teste
+export function useTestWhatsAppMessage() {
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (payload: { 
+      whatsapp_instance_id: string; 
+      phone: string; 
+    }) => {
+      const { data, error } = await supabase.functions.invoke('whatsapp-test-message', {
+        body: payload,
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+      return data as { success: boolean; messageId?: string; instance?: string; phone?: string };
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: 'Mensagem enviada!', 
+        description: `Teste enviado para ${data.phone} via ${data.instance}`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: 'Falha ao enviar mensagem', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    },
+  });
+}
