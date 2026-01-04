@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { logger } from '@/lib/logger';
+import { parseWhatsAppMarkdown } from '@/lib/whatsappMarkdown';
 import { useAudioTranscription } from '@/hooks/useAudioTranscription';
 import { useSignedUrl } from '@/hooks/useSignedUrl';
 import { AudioPlayer } from '@/components/inbox/AudioPlayer';
@@ -584,9 +585,9 @@ function MessageBubbleComponent({
             <>
               {message.content.length > MAX_MESSAGE_LENGTH && !isExpanded ? (
                 <div>
-                  <p className="text-sm whitespace-pre-wrap">
-                    {message.content.slice(0, MAX_MESSAGE_LENGTH)}...
-                  </p>
+                  <div className="text-sm whitespace-pre-wrap">
+                    {parseWhatsAppMarkdown(message.content.slice(0, MAX_MESSAGE_LENGTH))}...
+                  </div>
                   <button
                     onClick={() => setIsExpanded(true)}
                     aria-expanded="false"
@@ -598,7 +599,7 @@ function MessageBubbleComponent({
                 </div>
               ) : (
                 <div>
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  <div className="text-sm whitespace-pre-wrap">{parseWhatsAppMarkdown(message.content)}</div>
                   {message.content.length > MAX_MESSAGE_LENGTH && isExpanded && (
                     <button
                       onClick={() => setIsExpanded(false)}
