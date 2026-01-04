@@ -35,6 +35,7 @@ const WebhooksSettings = lazy(() => import("./pages/settings/WebhooksSettings"))
 const WhatsAppSettings = lazy(() => import("./pages/settings/WhatsAppSettings"));
 const ApiSettings = lazy(() => import("./pages/settings/ApiSettings"));
 const TenantsSettings = lazy(() => import("./pages/settings/TenantsSettings"));
+const SeedPage = lazy(() => import("./pages/admin/Seed"));
 
 const ApiDocs = lazy(() => import("./pages/ApiDocs"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -159,6 +160,7 @@ function AppContent() {
             <Route path="settings/whatsapp" element={<WhatsAppSettings />} />
             <Route path="settings/api" element={<ApiSettings />} />
             <Route path="settings/tenants" element={<TenantsSettings />} />
+            <Route path="admin/seed" element={<SeedPage />} />
             
           </Route>
           <Route path="*" element={<NotFound />} />
