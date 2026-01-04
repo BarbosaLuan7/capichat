@@ -22,10 +22,15 @@ export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [userDataLoading, setUserDataLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Loading is true until BOTH session AND user data are loaded
+  const loading = sessionLoading || userDataLoading;
+
   const fetchUserData = useCallback(async (userId: string) => {
+    setUserDataLoading(true);
     try {
       // Fetch profile
       const { data: profileData, error: profileError } = await supabase
@@ -49,40 +54,54 @@ export function useAuth() {
     } catch (err) {
       logger.error('Error fetching user data:', err);
       setError('Erro ao carregar dados do usuário');
+    } finally {
+      setUserDataLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        if (!isMounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
 
         // Defer Supabase calls with setTimeout
         if (session?.user) {
           setTimeout(() => {
-            fetchUserData(session.user.id);
+            if (isMounted) {
+              fetchUserData(session.user.id);
+            }
           }, 0);
         } else {
           setProfile(null);
           setRole(null);
+          setUserDataLoading(false);
         }
-        setLoading(false);
+        setSessionLoading(false);
       }
     );
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
+      
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchUserData(session.user.id);
       }
-      setLoading(false);
+      setSessionLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [fetchUserData]);
 
   const signIn = async (email: string, password: string) => {
