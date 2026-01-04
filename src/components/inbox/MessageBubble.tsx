@@ -1,9 +1,10 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect, memo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Check, CheckCheck, Image, FileText, Video, Mic, Sparkles, Loader2, Copy, Clock, AlertCircle, ImageOff, VideoOff, ExternalLink, ChevronDown, ChevronUp, RotateCcw, Square, CheckSquare, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -19,6 +20,12 @@ import { MessageDetailsPopover } from '@/components/inbox/MessageDetailsPopover'
 import { MessageActions } from '@/components/inbox/MessageActions';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+
+// Controle de auto-repair em nível de módulo (sobrevive virtualização)
+const autoRepairAttempted = new Set<string>();
+const autoRepairInFlight = new Set<string>();
+const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutos
+const lastAttemptTime = new Map<string, number>();
 const MAX_MESSAGE_LENGTH = 500;
 
 // Placeholder texts to filter out from message content display
@@ -131,6 +138,7 @@ function MessageBubbleComponent({
   isSelected = false,
   onToggleSelect,
 }: MessageBubbleProps) {
+  const queryClient = useQueryClient();
   const { transcribeAudio, getTranscription, setTranscriptionFromDb, isLoading } = useAudioTranscription();
   const [transcription, setTranscription] = useState<string | null>(null);
   const [hasAttempted, setHasAttempted] = useState(false);
@@ -140,6 +148,8 @@ function MessageBubbleComponent({
   const [isExpanded, setIsExpanded] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [isRepairingMedia, setIsRepairingMedia] = useState(false);
+  const [autoRepairFailed, setAutoRepairFailed] = useState(false);
+  const autoRepairTriggered = useRef(false);
 
   // Import MessageActions
   const handleReply = () => {
@@ -203,37 +213,71 @@ function MessageBubbleComponent({
     }
   }, [message.id, message.type, (message as any).transcription, isAgent, getTranscription, setTranscriptionFromDb]);
 
-  // Função para reparar mídia faltante
-  const handleRepairMedia = async () => {
-    if (isRepairingMedia) return;
+  // Função para reparar mídia faltante (usada por auto-repair e botão manual)
+  const handleRepairMedia = async (silent = false) => {
+    if (isRepairingMedia || autoRepairInFlight.has(message.id)) return false;
     
     setIsRepairingMedia(true);
+    autoRepairInFlight.add(message.id);
+    
     try {
       const { data, error } = await supabase.functions.invoke('repair-message-media', {
         body: { messageId: message.id }
       });
       
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
       
-      if (data?.success) {
-        toast.success('Mídia recuperada! Recarregando...');
-        // Forçar reload da página para atualizar a mensagem
-        window.location.reload();
-      } else if (data?.already_repaired) {
-        toast.info('Mídia já estava disponível');
-        window.location.reload();
+      if (data?.success || data?.already_repaired) {
+        // Atualizar cache sem reload da página
+        queryClient.invalidateQueries({ queryKey: ['messages-infinite', message.conversation_id] });
+        if (!silent) {
+          toast.success('Mídia recuperada!');
+        }
+        return true;
       } else {
-        toast.error(data?.error || 'Não foi possível recuperar a mídia');
+        if (!silent) {
+          toast.error(data?.error || 'Não foi possível recuperar a mídia');
+        }
+        return false;
       }
     } catch (err) {
       logger.error('[MessageBubble] Erro ao reparar mídia:', err);
-      toast.error('Erro ao tentar recuperar mídia');
+      if (!silent) {
+        toast.error('Erro ao tentar recuperar mídia');
+      }
+      return false;
     } finally {
       setIsRepairingMedia(false);
+      autoRepairInFlight.delete(message.id);
     }
   };
+
+  // Auto-repair: tentar recuperar mídia automaticamente ao montar
+  useEffect(() => {
+    // Condições para auto-repair
+    const needsRepair = message.type !== 'text' && !message.media_url;
+    const isOptimistic = message.isOptimistic || message.id.startsWith('temp_');
+    const alreadyAttempted = autoRepairAttempted.has(message.id);
+    const inCooldown = (lastAttemptTime.get(message.id) || 0) + COOLDOWN_MS > Date.now();
+    
+    if (!needsRepair || isOptimistic || alreadyAttempted || inCooldown || autoRepairTriggered.current) {
+      return;
+    }
+    
+    // Marcar como tentado e disparar
+    autoRepairTriggered.current = true;
+    autoRepairAttempted.add(message.id);
+    lastAttemptTime.set(message.id, Date.now());
+    
+    logger.info('[MessageBubble] Auto-repair iniciado para:', message.id);
+    
+    handleRepairMedia(true).then((success) => {
+      if (!success) {
+        setAutoRepairFailed(true);
+        logger.warn('[MessageBubble] Auto-repair falhou para:', message.id);
+      }
+    });
+  }, [message.id, message.type, message.media_url, message.isOptimistic]);
 
   const renderMedia = () => {
     // Se é mensagem de mídia mas NÃO tem media_url, mostrar placeholder com botão de recuperar
@@ -257,25 +301,28 @@ function MessageBubbleComponent({
             {mediaIcons[message.type] || <FileText className="w-5 h-5" />}
             <span className="text-sm">{mediaLabels[message.type] || 'Mídia'} indisponível</span>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRepairMedia}
-            disabled={isRepairingMedia}
-            className="text-xs"
-          >
-            {isRepairingMedia ? (
-              <>
-                <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
-                Recuperando...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="w-3 h-3 mr-1.5" />
-                Tentar recuperar
-              </>
-            )}
-          </Button>
+          
+          {isRepairingMedia ? (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span>Recuperando automaticamente...</span>
+            </div>
+          ) : autoRepairFailed ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleRepairMedia(false)}
+              className="text-xs"
+            >
+              <RefreshCw className="w-3 h-3 mr-1.5" />
+              Tentar recuperar
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span>Recuperando...</span>
+            </div>
+          )}
         </div>
       );
     }

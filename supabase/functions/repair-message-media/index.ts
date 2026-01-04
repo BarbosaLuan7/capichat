@@ -79,10 +79,10 @@ serve(async (req) => {
       return jsonResponse({ error: 'WhatsApp config not found' }, 400);
     }
 
-    // 4. Buscar lead para chatId
+    // 4. Buscar lead para chatId (incluir original_lid para Facebook)
     const { data: lead } = await supabase
       .from('leads')
-      .select('id, phone, country_code, whatsapp_chat_id')
+      .select('id, phone, country_code, whatsapp_chat_id, original_lid')
       .eq('id', message.lead_id)
       .single();
 
@@ -199,11 +199,26 @@ async function getWhatsAppConfig(supabase: any, instanceId?: string) {
   return data;
 }
 
-function buildChatId(lead: { phone: string; country_code?: string | null; whatsapp_chat_id?: string | null }) {
-  if (lead.whatsapp_chat_id?.includes('@')) return lead.whatsapp_chat_id;
+function buildChatId(lead: { phone: string; country_code?: string | null; whatsapp_chat_id?: string | null; original_lid?: string | null }) {
+  // Prioridade: whatsapp_chat_id > original_lid > telefone
+  if (lead.whatsapp_chat_id?.includes('@')) {
+    console.log('[repair-media] Usando whatsapp_chat_id:', lead.whatsapp_chat_id);
+    return lead.whatsapp_chat_id;
+  }
+  
+  // Para leads de Facebook, usar o LID
+  if (lead.original_lid) {
+    const lidChatId = `${lead.original_lid}@lid`;
+    console.log('[repair-media] Usando LID do Facebook:', lidChatId);
+    return lidChatId;
+  }
+  
+  // Fallback: telefone
   const countryCode = lead.country_code || '55';
   const phone = lead.phone.replace(/\D/g, '');
-  return `${countryCode}${phone}@c.us`;
+  const phoneChatId = `${countryCode}${phone}@c.us`;
+  console.log('[repair-media] Usando telefone:', phoneChatId);
+  return phoneChatId;
 }
 
 function isBase64Content(str: string): boolean {
