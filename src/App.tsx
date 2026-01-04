@@ -140,7 +140,7 @@ function AppContent() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route index element={<Navigate to="/inbox" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="inbox" element={<Inbox />} />
             <Route path="funnel" element={<Funnel />} />

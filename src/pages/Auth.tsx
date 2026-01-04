@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MessageSquare, Lock, Mail, ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,12 @@ const loginSchema = z.object({
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
 });
 
+interface LocationState {
+  from?: {
+    pathname: string;
+  };
+}
+
 const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,14 +27,18 @@ const Auth = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   const navigate = useNavigate();
-  const { signIn, isAuthenticated } = useAuth();
+  const location = useLocation();
+  const { signIn, isAuthenticated, loading } = useAuth();
   const { toast } = useToast();
 
-  // Redirect if already authenticated
-  if (isAuthenticated) {
-    navigate('/dashboard');
-    return null;
-  }
+  const from = (location.state as LocationState)?.from?.pathname || '/inbox';
+
+  // Redirect if already authenticated (via useEffect to avoid render issues)
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, loading, navigate, from]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,12 +79,30 @@ const Auth = () => {
           title: 'Bem-vindo ao LB ADV!',
           description: 'Login realizado com sucesso.',
         });
-        navigate('/dashboard');
+        navigate(from, { replace: true });
       }
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Show nothing while checking auth status
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Already authenticated - will redirect via useEffect
+  if (isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex">

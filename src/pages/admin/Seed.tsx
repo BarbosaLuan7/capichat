@@ -43,23 +43,34 @@ interface SeedResult {
 }
 
 export default function SeedPage() {
-  const { role, loading: authLoading } = useAuthContext();
+  const { role, loading: authLoading, user } = useAuthContext();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SeedResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Wait for auth to load before checking role
+  // Wait for auth to fully load (session + user data including role)
   if (authLoading) {
     return (
-      <div className="container max-w-4xl py-6 flex items-center justify-center">
+      <div className="container max-w-4xl py-6 flex items-center justify-center min-h-[50vh]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // If user exists but role is still null, something went wrong - show error
+  if (user && role === null) {
+    return (
+      <div className="container max-w-4xl py-6">
+        <div className="text-center text-destructive">
+          Erro ao carregar permissões. Tente recarregar a página.
+        </div>
       </div>
     );
   }
 
   // Only admins can access this page
   if (role !== "admin") {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/inbox" replace />;
   }
 
   const executeSeed = async () => {
