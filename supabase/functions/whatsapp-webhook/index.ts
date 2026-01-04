@@ -1310,13 +1310,65 @@ serve(async (req) => {
               const toField = payload.to || payload.chatId || '';
               const toPhone = normalizePhone(toField);
               
-              // ========== VALIDAÇÃO: Ignorar LIDs não resolvidos ==========
+              // ========== CORREÇÃO: Buscar lead pelo original_lid para LIDs ==========
+              let resolvedToPhone = toPhone;
+              let leadFromLid: { id: string; name: string; phone: string } | null = null;
+              
               if (isLID(toField)) {
-                console.log('[whatsapp-webhook] ⏭️ Ignorando criação via ACK para LID não resolvido:', toField);
-                return new Response(
-                  JSON.stringify({ success: true, ignored: true, reason: 'ack_for_unresolved_lid' }),
-                  { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-                );
+                const lidNumber = toField.replace('@lid', '').replace(/\D/g, '');
+                console.log('[whatsapp-webhook] ACK para LID detectado, buscando lead pelo original_lid:', lidNumber);
+                
+                // Buscar config para obter tenant_id
+                const wahaConfigForLid = await getWAHAConfigBySession(supabase, body.session || 'default');
+                const tenantIdForLid = wahaConfigForLid?.tenantId;
+                
+                // Buscar lead pelo original_lid (com filtro de tenant se disponível)
+                let leadByLidQuery = supabase
+                  .from('leads')
+                  .select('id, phone, name')
+                  .eq('original_lid', lidNumber);
+                
+                if (tenantIdForLid) {
+                  leadByLidQuery = leadByLidQuery.eq('tenant_id', tenantIdForLid);
+                }
+                
+                const { data: existingLeadByLid, error: lidError } = await leadByLidQuery.maybeSingle();
+                
+                if (lidError) {
+                  console.error('[whatsapp-webhook] Erro ao buscar lead por LID no ACK:', lidError);
+                }
+                
+                if (existingLeadByLid) {
+                  console.log('[whatsapp-webhook] ✅ Lead encontrado pelo original_lid no ACK:', existingLeadByLid.name, existingLeadByLid.phone);
+                  resolvedToPhone = normalizePhone(existingLeadByLid.phone);
+                  leadFromLid = existingLeadByLid;
+                } else {
+                  // Tentar resolver via API do WAHA
+                  if (wahaConfigForLid) {
+                    const resolvedPhone = await resolvePhoneFromLID(
+                      wahaConfigForLid.baseUrl,
+                      wahaConfigForLid.apiKey,
+                      wahaConfigForLid.sessionName,
+                      lidNumber
+                    );
+                    if (resolvedPhone) {
+                      console.log('[whatsapp-webhook] ✅ LID resolvido via API no ACK:', resolvedPhone);
+                      resolvedToPhone = normalizePhone(resolvedPhone);
+                    } else {
+                      console.log('[whatsapp-webhook] ⏭️ Ignorando ACK: LID não resolvido e sem lead associado:', lidNumber);
+                      return new Response(
+                        JSON.stringify({ success: true, ignored: true, reason: 'ack_for_unresolved_lid_no_lead', lid: toField }),
+                        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                      );
+                    }
+                  } else {
+                    console.log('[whatsapp-webhook] ⏭️ Ignorando ACK: LID sem config WAHA para resolver:', lidNumber);
+                    return new Response(
+                      JSON.stringify({ success: true, ignored: true, reason: 'ack_for_unresolved_lid_no_config', lid: toField }),
+                      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                    );
+                  }
+                }
               }
               
               // ========== VALIDAÇÃO: Ignorar se destinatário for o próprio número do WhatsApp ==========
@@ -1330,7 +1382,7 @@ serve(async (req) => {
                 
                 if (whatsappConfigData?.phone_number) {
                   const ownPhone = whatsappConfigData.phone_number.replace(/\D/g, '');
-                  const toPhoneDigits = toPhone.replace(/\D/g, '');
+                  const toPhoneDigits = resolvedToPhone.replace(/\D/g, '');
                   // Comparar últimos 10 dígitos (ignora código do país)
                   if (toPhoneDigits.slice(-10) === ownPhone.slice(-10)) {
                     console.log('[whatsapp-webhook] ⏭️ Ignorando: destinatário é o próprio número WhatsApp');
@@ -1342,14 +1394,15 @@ serve(async (req) => {
                 }
               }
               
-              if (toPhone) {
-                console.log('[whatsapp-webhook] Buscando lead pelo phone:', toPhone);
-                
-                // Buscar lead pelo phone
-                const lead = await findLeadByPhone(supabase, toPhone);
-                
-                if (lead) {
-                  console.log('[whatsapp-webhook] Lead encontrado:', lead.id, lead.name);
+              // Usar lead já encontrado pelo LID ou buscar pelo phone
+              let lead = leadFromLid;
+              if (!lead && resolvedToPhone) {
+                console.log('[whatsapp-webhook] Buscando lead pelo phone:', resolvedToPhone);
+                lead = await findLeadByPhone(supabase, resolvedToPhone);
+              }
+              
+              if (lead) {
+                console.log('[whatsapp-webhook] Lead encontrado para ACK:', lead.id, lead.name);
                   
                   // Buscar ou criar conversa (filtrar por instância específica)
                   const instanceId = wahaConfigForAck?.instanceId || null;
@@ -1450,11 +1503,8 @@ serve(async (req) => {
                     }
                   }
                 } else {
-                  console.log('[whatsapp-webhook] Lead não encontrado para phone:', toPhone);
+                  console.log('[whatsapp-webhook] Lead não encontrado para phone:', resolvedToPhone);
                 }
-              } else {
-                console.log('[whatsapp-webhook] Phone do destinatário não encontrado no ACK payload');
-              }
             } catch (createError) {
               console.error('[whatsapp-webhook] Erro ao tentar criar mensagem via ACK:', createError);
             }
