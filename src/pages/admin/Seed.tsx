@@ -43,10 +43,19 @@ interface SeedResult {
 }
 
 export default function SeedPage() {
-  const { role } = useAuthContext();
+  const { role, loading: authLoading } = useAuthContext();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SeedResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Wait for auth to load before checking role
+  if (authLoading) {
+    return (
+      <div className="container max-w-4xl py-6 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   // Only admins can access this page
   if (role !== "admin") {
