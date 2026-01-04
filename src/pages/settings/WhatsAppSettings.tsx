@@ -13,6 +13,7 @@ import {
   Copy,
   Info,
   Zap,
+  MessageCircle,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,7 @@ import {
   useUpdateWhatsAppConfig, 
   useDeleteWhatsAppConfig,
   useTestWhatsAppConnection,
+  useTestWhatsAppMessage,
   WhatsAppConfig,
   WhatsAppConfigInsert,
 } from '@/hooks/useWhatsAppConfig';
@@ -94,6 +96,7 @@ const WhatsAppSettings = () => {
   const updateMutation = useUpdateWhatsAppConfig();
   const deleteMutation = useDeleteWhatsAppConfig();
   const testMutation = useTestWhatsAppConnection();
+  const testMessageMutation = useTestWhatsAppMessage();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<WhatsAppConfig | null>(null);
@@ -106,6 +109,14 @@ const WhatsAppSettings = () => {
     phone_number: '',
     is_active: true,
   });
+
+  // Test message modal state
+  const [testMessageModal, setTestMessageModal] = useState<{ open: boolean; instanceId: string; instanceName: string }>({
+    open: false,
+    instanceId: '',
+    instanceName: '',
+  });
+  const [testPhone, setTestPhone] = useState('');
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const webhookUrl = `${supabaseUrl}/functions/v1/api-messages-receive`;
@@ -165,6 +176,31 @@ const WhatsAppSettings = () => {
 
   const handleToggleActive = async (config: WhatsAppConfig) => {
     await updateMutation.mutateAsync({ id: config.id, is_active: !config.is_active });
+  };
+
+  const handleSendTestMessage = (config: WhatsAppConfig) => {
+    setTestMessageModal({
+      open: true,
+      instanceId: config.id,
+      instanceName: config.name,
+    });
+    setTestPhone('');
+  };
+
+  const submitTestMessage = () => {
+    if (!testPhone.trim()) {
+      toast({ title: 'Digite um número de telefone', variant: 'destructive' });
+      return;
+    }
+    testMessageMutation.mutate({
+      whatsapp_instance_id: testMessageModal.instanceId,
+      phone: testPhone,
+    }, {
+      onSuccess: () => {
+        setTestMessageModal({ open: false, instanceId: '', instanceName: '' });
+        setTestPhone('');
+      },
+    });
   };
 
   const copyToClipboard = (text: string) => {
@@ -266,7 +302,15 @@ const WhatsAppSettings = () => {
                       checked={config.is_active}
                       onCheckedChange={() => handleToggleActive(config)}
                     />
-                    {/* Test button removed - API key is masked for security */}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleSendTestMessage(config)}
+                      disabled={!config.is_active}
+                    >
+                      <Play className="w-4 h-4 mr-1" />
+                      Testar
+                    </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm">
@@ -512,6 +556,55 @@ const WhatsAppSettings = () => {
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
               )}
               {editingConfig ? 'Salvar' : 'Criar Gateway'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Test Message Modal */}
+      <Dialog open={testMessageModal.open} onOpenChange={(open) => setTestMessageModal(prev => ({ ...prev, open }))}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="w-5 h-5" />
+              Enviar Mensagem de Teste
+            </DialogTitle>
+            <DialogDescription>
+              Envie uma mensagem de teste via <strong>{testMessageModal.instanceName}</strong>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Número de destino (WhatsApp)</Label>
+              <Input
+                placeholder="5511999999999"
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Digite o número com DDD (ex: 11999999999). O código 55 será adicionado automaticamente.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setTestMessageModal({ open: false, instanceId: '', instanceName: '' })}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={submitTestMessage}
+              disabled={testMessageMutation.isPending || !testPhone.trim()}
+            >
+              {testMessageMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Play className="w-4 h-4 mr-2" />
+              )}
+              Enviar Teste
             </Button>
           </DialogFooter>
         </DialogContent>
