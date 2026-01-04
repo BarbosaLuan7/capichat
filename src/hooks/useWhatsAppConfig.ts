@@ -189,7 +189,9 @@ export function useTestWhatsAppConnection() {
     onSuccess: (data) => {
       const parts = [
         data.phone ? `Conectado ao número: ${data.phone}` : (data.status ? `Status: ${data.status}` : ''),
-        data.engine ? `Engine: ${String(data.engine).toUpperCase()}` : '',
+        data.engine 
+          ? `Engine: ${typeof data.engine === 'string' ? data.engine.toUpperCase() : JSON.stringify(data.engine)}` 
+          : '',
       ].filter(Boolean);
 
       toast({ 
