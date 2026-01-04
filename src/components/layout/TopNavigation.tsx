@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   MessageSquare,
@@ -23,6 +23,7 @@ import {
   Search,
   Menu,
   X,
+  User,
 } from 'lucide-react';
 import lbAdvLogo from '@/assets/lb-adv-logo.svg';
 import { cn } from '@/lib/utils';
@@ -82,6 +83,7 @@ const adminSettingsItems = [
 
 const TopNavigation = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { authUser: user, signOut, isAccountOwner } = useAuth();
   const badges = useSidebarBadges();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -468,11 +470,12 @@ const TopNavigation = () => {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link to="/settings/users" className="cursor-pointer">
-                <UserCog className="mr-2 h-4 w-4" />
-                <span>Minha conta</span>
-              </Link>
+            <DropdownMenuItem 
+              onClick={() => navigate('/account')}
+              className="cursor-pointer"
+            >
+              <User className="mr-2 h-4 w-4" />
+              <span>Minha Conta</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
