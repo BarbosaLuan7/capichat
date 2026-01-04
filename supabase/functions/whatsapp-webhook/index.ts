@@ -80,9 +80,16 @@ function isStatusBroadcast(chatId: string): boolean {
          chatId.includes('@broadcast');
 }
 
-// Detecta se é um LID do Facebook (formato: número@lid)
+// Detecta se é um LID do Facebook (formato: número@lid ou número muito longo sem @c.us)
 function isLID(phone: string): boolean {
-  return phone.includes('@lid') || /^\d{15,}$/.test(phone.replace(/\D/g, ''));
+  if (!phone) return false;
+  // Formatos conhecidos de LID:
+  // - "174621106159626@lid"
+  // - Números com 15+ dígitos sem @c.us/@s.whatsapp.net
+  const cleanPhone = phone.replace(/\D/g, '');
+  return phone.includes('@lid') || 
+         phone.endsWith('@lid') ||
+         (cleanPhone.length >= 15 && !phone.includes('@c.us') && !phone.includes('@s.whatsapp.net'));
 }
 
 // Extrai o número real do payload WAHA quando é um LID
@@ -1572,6 +1579,36 @@ serve(async (req) => {
           }
         } else {
           senderPhone = normalizePhone(rawContact);
+        }
+        
+        // ========== PROTEÇÃO: Ignorar self-messages (mensagens para o próprio número da instância) ==========
+        // Isso evita criar leads com o número do WhatsApp Business
+        const wahaConfigForSelfCheck = await getWAHAConfigBySession(supabase, body.session || 'default');
+        if (wahaConfigForSelfCheck) {
+          const { data: instancePhoneData } = await supabase
+            .from('whatsapp_config')
+            .select('phone_number')
+            .eq('id', wahaConfigForSelfCheck.instanceId)
+            .maybeSingle();
+          
+          if (instancePhoneData?.phone_number) {
+            const instancePhone = instancePhoneData.phone_number.replace(/\D/g, '');
+            const senderPhoneDigits = senderPhone.replace(/\D/g, '');
+            
+            // Comparar últimos 10 dígitos (ignora código do país)
+            if (senderPhoneDigits.slice(-10) === instancePhone.slice(-10)) {
+              console.log('[whatsapp-webhook] ⏭️ Ignorando self-message: telefone é o próprio número da instância:', senderPhone);
+              return new Response(
+                JSON.stringify({ 
+                  success: true, 
+                  ignored: true, 
+                  reason: 'self_message',
+                  phone: senderPhone 
+                }),
+                { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+          }
         }
         
         // ========== EXTRAÇÃO DO NOME DO CONTATO ==========
