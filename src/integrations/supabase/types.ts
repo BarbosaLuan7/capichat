@@ -1497,6 +1497,10 @@ export type Database = {
         Returns: Database["public"]["Enums"]["app_role"]
       }
       get_user_tenants: { Args: { _user_id: string }; Returns: string[] }
+      get_user_whatsapp_configs: {
+        Args: { _user_id: string }
+        Returns: string[]
+      }
       get_whatsapp_config_full: {
         Args: { config_id: string }
         Returns: {
