@@ -40,7 +40,7 @@ const TEAMS = [
   {
     id: '0c21f025-21b5-423d-be16-663eb9c2138b',
     name: 'IA - CAPI',
-    access_level: 'agent',
+    access_level: 'attendant',
     auto_distribution: false,
     is_default: false,
   },
@@ -275,13 +275,22 @@ Deno.serve(async (req) => {
         console.log(`Profile created/updated: ${userData.email}`);
       }
 
-      // Create/Update Role
+      // Create/Update Role - delete existing roles first, then insert the correct one
+      const { error: deleteRoleError } = await supabaseAdmin
+        .from('user_roles')
+        .delete()
+        .eq('user_id', actualUserId);
+
+      if (deleteRoleError) {
+        console.error(`Error deleting existing roles for ${userData.email}:`, deleteRoleError);
+      }
+
       const { error: roleError } = await supabaseAdmin
         .from('user_roles')
-        .upsert({
+        .insert({
           user_id: actualUserId,
           role: userData.role,
-        }, { onConflict: 'user_id' });
+        });
 
       if (roleError) {
         console.error(`Error creating role for ${userData.email}:`, roleError);
