@@ -1476,6 +1476,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_assign_conversation: {
+        Args: { _conversation_id: string; _user_id: string }
+        Returns: undefined
+      }
       can_view_conversation_by_team: {
         Args: {
           _assigned_to: string
