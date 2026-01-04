@@ -11,6 +11,7 @@ import {
   ArrowLeft,
   Upload,
   Copy,
+  RefreshCw,
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,8 @@ import { useAIReminders } from '@/hooks/useAIReminders';
 import { useInternalNotes } from '@/hooks/useInternalNotes';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useDeleteMessages } from '@/hooks/useDeleteMessages';
+import { useSyncChatHistory } from '@/hooks/useSyncChatHistory';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import type { Database } from '@/integrations/supabase/types';
 
@@ -143,6 +146,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
   const { uploadFile, uploadProgress } = useFileUpload();
   const audioRecorder = useAudioRecorder();
   const { deleteForMe, deleteForEveryone, isDeletingForMe, isDeletingForEveryone } = useDeleteMessages();
+  const { mutate: syncHistory, isPending: isSyncing } = useSyncChatHistory();
   
   // Batch resolve signed URLs para todas as mensagens com mídia
   const mediaUrls = useMemo(() => {
@@ -579,6 +583,27 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
               conversation.is_favorite && "fill-warning text-warning"
             )} />
           </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => syncHistory(conversation.id)}
+                  disabled={isSyncing}
+                  aria-label="Sincronizar histórico do WhatsApp"
+                >
+                  <RefreshCw className={cn(
+                    "w-4 h-4",
+                    isSyncing && "animate-spin"
+                  )} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Sincronizar histórico do WhatsApp
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <Button
             variant={showLeadPanel ? "secondary" : "ghost"}
             size="icon"
