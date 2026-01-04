@@ -37,6 +37,7 @@ const WhatsAppSettings = lazy(() => import("./pages/settings/WhatsAppSettings"))
 const ApiSettings = lazy(() => import("./pages/settings/ApiSettings"));
 const TenantsSettings = lazy(() => import("./pages/settings/TenantsSettings"));
 const SeedPage = lazy(() => import("./pages/admin/Seed"));
+const MyAccount = lazy(() => import("./pages/MyAccount"));
 
 const ApiDocs = lazy(() => import("./pages/ApiDocs"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -165,6 +166,7 @@ function AppContent() {
             <Route path="settings" element={<Settings />} />
             <Route path="settings/labels" element={<LabelsSettings />} />
             <Route path="settings/templates" element={<TemplatesSettings />} />
+            <Route path="account" element={<MyAccount />} />
             
           </Route>
           <Route path="*" element={<NotFound />} />
