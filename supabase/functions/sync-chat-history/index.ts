@@ -178,10 +178,22 @@ serve(async (req) => {
       );
     }
 
-    // Montar chatId
+    // Montar chatId - priorizar original_lid para leads de Facebook
     const countryCode = lead.country_code || '55';
     const phoneWithCountry = lead.phone.startsWith(countryCode) ? lead.phone : `${countryCode}${lead.phone}`;
-    const chatId = lead.whatsapp_chat_id || `${phoneWithCountry}@c.us`;
+    
+    let chatId = lead.whatsapp_chat_id;
+    if (!chatId) {
+      if (lead.original_lid) {
+        chatId = `${lead.original_lid}@lid`;
+        console.log('[sync-chat-history] Usando LID do Facebook:', chatId);
+      } else {
+        chatId = `${phoneWithCountry}@c.us`;
+        console.log('[sync-chat-history] Usando telefone:', chatId);
+      }
+    } else {
+      console.log('[sync-chat-history] Usando whatsapp_chat_id existente:', chatId);
+    }
     
     console.log('[sync-chat-history] Buscando mensagens do WAHA para chatId:', chatId);
 
