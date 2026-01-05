@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { LeadAvatar } from '@/components/ui/lead-avatar';
 import { TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -72,10 +72,7 @@ function LeadTableRowComponent({
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-3">
-          <Avatar className="w-10 h-10">
-            <AvatarImage src={(lead as any).avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.name}`} />
-            <AvatarFallback>{lead.name.charAt(0)}</AvatarFallback>
-          </Avatar>
+          <LeadAvatar lead={lead} size="md" />
           <div>
             <p className="font-medium text-foreground">{lead.name}</p>
             <div className="flex items-center gap-1 mt-1">
