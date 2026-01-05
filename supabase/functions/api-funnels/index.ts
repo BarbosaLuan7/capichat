@@ -123,6 +123,35 @@ Deno.serve(async (req) => {
       );
     }
 
+    // GET /api-funnels?id=xxx&action=campos-personalizados - Get custom fields for funnel
+    if (id && url.searchParams.get('action') === 'campos-personalizados') {
+      // Get custom field definitions for this tenant/funnel
+      const { data: customFields, error } = await supabase
+        .from('custom_field_definitions')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        return safeErrorResponse(error, 'Error fetching custom fields');
+      }
+
+      // Transform to API format
+      const campos = (customFields || []).map((cf: any) => ({
+        id: `campo_${cf.id.slice(0, 8)}`,
+        nome: cf.name,
+        tipo: cf.field_type,
+        obrigatorio: cf.is_required,
+        opcoes: cf.options
+      }));
+
+      console.log('[api-funnels] Custom fields for funnel:', campos.length);
+
+      return new Response(
+        JSON.stringify(campos),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // GET /api-funnels?id=xxx - Get specific funnel (by grupo name or stage ID)
     if (id) {
       let query = supabase

@@ -529,8 +529,119 @@ Deno.serve(async (req) => {
       );
     }
 
+    // POST /api-leads?action=filtro - Advanced filter search
+    if (method === 'POST' && action === 'filtro') {
+      const body = await req.json();
+      const etiquetas = body.etiquetas || [];
+      const campos = body.campos || {};
+      const periodo = body.periodo || {};
+      const temperatura = body.temperatura || body.temperature;
+      const etapaFunil = body.etapa_funil || body.stage_id;
+      const responsavel = body.responsavel || body.assigned_to;
+      const tenantId = body.tenant_id;
+      const pagina = body.pagina || body.page || 1;
+      const porPagina = body.por_pagina || body.page_size || 50;
+      const offset = (pagina - 1) * porPagina;
+
+      console.log('[api-leads] Filtro avançado:', { etiquetas, campos, periodo, temperatura, etapaFunil, responsavel });
+
+      let query = supabase
+        .from('leads')
+        .select('*, funnel_stages(*), lead_labels(*, labels(*))', { count: 'exact' });
+
+      // Filter by tenant
+      if (tenantId) {
+        query = query.eq('tenant_id', tenantId);
+      }
+
+      // Filter by labels (leads that have ALL specified labels)
+      if (etiquetas.length > 0) {
+        const { data: leadIdsWithLabels } = await supabase
+          .from('lead_labels')
+          .select('lead_id')
+          .in('label_id', etiquetas);
+
+        if (leadIdsWithLabels && leadIdsWithLabels.length > 0) {
+          const leadIds = [...new Set(leadIdsWithLabels.map(l => l.lead_id))];
+          query = query.in('id', leadIds);
+        } else {
+          // No leads with these labels - return empty
+          return new Response(
+            JSON.stringify({
+              dados: [],
+              paginacao: { pagina, por_pagina: porPagina, total: 0, total_paginas: 0 }
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      // Filter by custom fields
+      if (Object.keys(campos).length > 0) {
+        for (const [key, value] of Object.entries(campos)) {
+          query = query.contains('custom_fields', { [key]: value });
+        }
+      }
+
+      // Filter by period
+      if (periodo.inicio) {
+        query = query.gte('created_at', periodo.inicio);
+      }
+      if (periodo.fim) {
+        query = query.lte('created_at', periodo.fim);
+      }
+
+      // Filter by temperature
+      if (temperatura) {
+        query = query.eq('temperature', temperatura);
+      }
+
+      // Filter by funnel stage
+      if (etapaFunil) {
+        // Handle prefixed stage IDs
+        const stageId = etapaFunil.startsWith('etapa_') 
+          ? etapaFunil.replace('etapa_', '') 
+          : etapaFunil;
+        query = query.ilike('stage_id', `${stageId}%`);
+      }
+
+      // Filter by assigned user
+      if (responsavel) {
+        const userId = responsavel.startsWith('usr_') 
+          ? responsavel.replace('usr_', '') 
+          : responsavel;
+        query = query.ilike('assigned_to', `${userId}%`);
+      }
+
+      // Apply pagination
+      const { data, error, count } = await query
+        .order('created_at', { ascending: false })
+        .range(offset, offset + porPagina - 1);
+
+      if (error) {
+        return safeErrorResponse(error, 'Error filtering leads');
+      }
+
+      const totalPaginas = Math.ceil((count || 0) / porPagina);
+
+      console.log('[api-leads] Filtro retornou:', data?.length || 0, 'leads');
+
+      return new Response(
+        JSON.stringify({
+          dados: data || [],
+          paginacao: {
+            pagina,
+            por_pagina: porPagina,
+            total: count || 0,
+            total_paginas: totalPaginas
+          }
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // POST /api-leads?id=xxx&action=etiquetas - Update lead labels
-    if (method === 'POST' && id && url.searchParams.get('action') === 'etiquetas') {
+    if (method === 'POST' && id && action === 'etiquetas') {
       const body = await req.json();
       const adicionar = body.adicionar || body.add || [];
       const remover = body.remover || body.remove || [];
