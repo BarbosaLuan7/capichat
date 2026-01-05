@@ -129,76 +129,100 @@ export function useMessagesInfinite(conversationId: string | undefined) {
     );
   }, [queryClient, conversationId]);
 
-  // Função para atualizar uma mensagem existente
+  // Função para atualizar uma mensagem existente (otimizada)
   const updateMessageOptimistically = useCallback((messageId: string, updates: Partial<Message>) => {
     queryClient.setQueryData(
       ['messages-infinite', conversationId],
       (oldData: typeof query.data) => {
         if (!oldData) return oldData;
         
-        const newPages = oldData.pages.map(page => ({
-          ...page,
-          messages: page.messages.map(msg => 
-            msg.id === messageId ? { ...msg, ...updates } : msg
-          ),
-        }));
+        // Só recria páginas que contém a mensagem a ser atualizada
+        const newPages = oldData.pages.map(page => {
+          const hasMessage = page.messages.some(m => m.id === messageId);
+          if (!hasMessage) return page; // Reusar referência original
+          
+          return {
+            ...page,
+            messages: page.messages.map(msg => 
+              msg.id === messageId ? { ...msg, ...updates } : msg
+            ),
+          };
+        });
         
         return { ...oldData, pages: newPages };
       }
     );
   }, [queryClient, conversationId]);
 
-  // Função para substituir mensagem otimista pela real (quando API retorna)
+  // Função para substituir mensagem otimista pela real (otimizada)
   const replaceOptimisticMessage = useCallback((tempId: string, realMessage: Message) => {
     queryClient.setQueryData(
       ['messages-infinite', conversationId],
       (oldData: typeof query.data) => {
         if (!oldData) return oldData;
         
-        const newPages = oldData.pages.map(page => ({
-          ...page,
-          messages: page.messages.map(msg => 
-            msg.id === tempId ? { ...realMessage, isOptimistic: false } : msg
-          ),
-        }));
+        // Só recria páginas que contém a mensagem a ser substituída
+        const newPages = oldData.pages.map(page => {
+          const hasMessage = page.messages.some(m => m.id === tempId);
+          if (!hasMessage) return page; // Reusar referência original
+          
+          return {
+            ...page,
+            messages: page.messages.map(msg => 
+              msg.id === tempId ? { ...realMessage, isOptimistic: false } : msg
+            ),
+          };
+        });
         
         return { ...oldData, pages: newPages };
       }
     );
   }, [queryClient, conversationId]);
 
-  // Função para marcar mensagem como falha
+  // Função para marcar mensagem como falha (otimizada)
   const markMessageFailed = useCallback((tempId: string, errorMessage?: string) => {
     queryClient.setQueryData(
       ['messages-infinite', conversationId],
       (oldData: typeof query.data) => {
         if (!oldData) return oldData;
         
-        const newPages = oldData.pages.map(page => ({
-          ...page,
-          messages: page.messages.map(msg => 
-            msg.id === tempId 
-              ? { ...msg, status: 'failed' as const, errorMessage } 
-              : msg
-          ),
-        }));
+        // Só recria páginas que contém a mensagem
+        const newPages = oldData.pages.map(page => {
+          const hasMessage = page.messages.some(m => m.id === tempId);
+          if (!hasMessage) return page; // Reusar referência original
+          
+          return {
+            ...page,
+            messages: page.messages.map(msg => 
+              msg.id === tempId 
+                ? { ...msg, status: 'failed' as const, errorMessage } 
+                : msg
+            ),
+          };
+        });
         
         return { ...oldData, pages: newPages };
       }
     );
   }, [queryClient, conversationId]);
 
-  // Função para remover mensagem (ex: após reenvio bem-sucedido)
+  // Função para remover mensagem (otimizada)
   const removeMessage = useCallback((messageId: string) => {
     queryClient.setQueryData(
       ['messages-infinite', conversationId],
       (oldData: typeof query.data) => {
         if (!oldData) return oldData;
         
-        const newPages = oldData.pages.map(page => ({
-          ...page,
-          messages: page.messages.filter(msg => msg.id !== messageId),
-        }));
+        // Só recria páginas que contém a mensagem
+        const newPages = oldData.pages.map(page => {
+          const hasMessage = page.messages.some(m => m.id === messageId);
+          if (!hasMessage) return page; // Reusar referência original
+          
+          return {
+            ...page,
+            messages: page.messages.filter(msg => msg.id !== messageId),
+          };
+        });
         
         return { ...oldData, pages: newPages };
       }
