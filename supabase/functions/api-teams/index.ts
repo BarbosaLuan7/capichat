@@ -5,6 +5,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper to format phone numbers
+function formatTelefone(phone: string | null): string | null {
+  if (!phone) return null;
+  const clean = phone.replace(/\D/g, '');
+  if (clean.length >= 12) {
+    return `+${clean.slice(0, 2)} (${clean.slice(2, 4)}) ${clean.slice(4, 9)}-${clean.slice(9)}`;
+  }
+  if (clean.length >= 10) {
+    return `+55 (${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
+  }
+  return phone;
+}
+
 function safeErrorResponse(internalError: unknown, publicMessage: string, status: number = 500): Response {
   console.error('Internal error:', internalError);
   return new Response(
@@ -68,7 +81,7 @@ Deno.serve(async (req) => {
         const availableMembers = members.filter((m: any) => m.profiles?.is_available);
         
         return {
-          id: team.id,
+          id: `eqp_${team.id.slice(0, 8)}`,
           nome: team.name,
           nivel_acesso: team.access_level || 'all',
           distribuicao_automatica: team.auto_distribution || false,
@@ -114,7 +127,7 @@ Deno.serve(async (req) => {
       const availableMembers = members.filter((m: any) => m.profiles?.is_available);
 
       const transformed = {
-        id: team.id,
+        id: `eqp_${team.id.slice(0, 8)}`,
         nome: team.name,
         nivel_acesso: team.access_level || 'all',
         distribuicao_automatica: team.auto_distribution || false,
@@ -123,17 +136,17 @@ Deno.serve(async (req) => {
         membros_disponiveis: availableMembers.length,
         criado_em: team.created_at,
         membros: members.map((m: any) => ({
-          id: m.profiles?.id,
+          id: m.profiles?.id ? `usr_${m.profiles.id.slice(0, 8)}` : null,
           nome: m.profiles?.name,
           email: m.profiles?.email,
           supervisor: m.is_supervisor,
           disponivel: m.profiles?.is_available
         })),
         canais: (team.team_whatsapp_configs || []).map((twc: any) => ({
-          id: twc.whatsapp_config?.id,
+          id: twc.whatsapp_config?.id ? `inst_${twc.whatsapp_config.id.slice(0, 8)}` : null,
           tipo: 'whatsapp',
           nome: twc.whatsapp_config?.name,
-          telefone: twc.whatsapp_config?.phone_number
+          telefone: formatTelefone(twc.whatsapp_config?.phone_number)
         })).filter((c: any) => c.id)
       };
 
@@ -157,10 +170,10 @@ Deno.serve(async (req) => {
       }
 
       const channels = (data || []).map((twc: any) => ({
-        id: twc.whatsapp_config?.id,
+        id: twc.whatsapp_config?.id ? `inst_${twc.whatsapp_config.id.slice(0, 8)}` : null,
         tipo: 'whatsapp',
         nome: twc.whatsapp_config?.name,
-        telefone: twc.whatsapp_config?.phone_number,
+        telefone: formatTelefone(twc.whatsapp_config?.phone_number),
         ativo: twc.whatsapp_config?.is_active
       })).filter((c: any) => c.id);
 
@@ -200,7 +213,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({
-          id: newTeam.id,
+          id: `eqp_${newTeam.id.slice(0, 8)}`,
           nome: newTeam.name,
           nivel_acesso: newTeam.access_level,
           distribuicao_automatica: newTeam.auto_distribution,
@@ -238,7 +251,7 @@ Deno.serve(async (req) => {
         JSON.stringify({
           sucesso: true,
           equipe: {
-            id: updatedTeam.id,
+            id: `eqp_${updatedTeam.id.slice(0, 8)}`,
             nome: updatedTeam.name,
             nivel_acesso: updatedTeam.access_level,
             distribuicao_automatica: updatedTeam.auto_distribution,

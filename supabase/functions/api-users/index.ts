@@ -24,6 +24,19 @@ const roleMapReverse: Record<string, string> = {
   'viewer': 'visualizador'
 };
 
+// Helper to format phone numbers
+function formatTelefone(phone: string | null): string | null {
+  if (!phone) return null;
+  const clean = phone.replace(/\D/g, '');
+  if (clean.length >= 12) {
+    return `+${clean.slice(0, 2)} (${clean.slice(2, 4)}) ${clean.slice(4, 9)}-${clean.slice(9)}`;
+  }
+  if (clean.length >= 10) {
+    return `+55 (${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
+  }
+  return phone;
+}
+
 function safeErrorResponse(internalError: unknown, publicMessage: string, status: number = 500): Response {
   console.error('Internal error:', internalError);
   return new Response(
@@ -117,17 +130,17 @@ Deno.serve(async (req) => {
 
       // Transform response
       const transformed = filteredData.map((user: any) => ({
-        id: user.id,
+        id: `usr_${user.id.slice(0, 8)}`,
         nome: user.name,
         email: user.email,
-        telefone: user.phone,
+        telefone: formatTelefone(user.phone),
         avatar_url: user.avatar,
         perfil: roleMapReverse[user.user_roles?.[0]?.role] || 'atendente',
         ativo: user.is_active,
         disponivel: user.is_available,
         dono_conta: user.is_account_owner,
         equipes: (user.team_members || []).map((tm: any) => ({
-          id: tm.teams?.id,
+          id: tm.teams?.id ? `eqp_${tm.teams.id.slice(0, 8)}` : null,
           nome: tm.teams?.name,
           supervisor: tm.is_supervisor
         })).filter((e: any) => e.id),
@@ -174,17 +187,17 @@ Deno.serve(async (req) => {
       }
 
       const transformed = {
-        id: user.id,
+        id: `usr_${user.id.slice(0, 8)}`,
         nome: user.name,
         email: user.email,
-        telefone: user.phone,
+        telefone: formatTelefone(user.phone),
         avatar_url: user.avatar,
         perfil: roleMapReverse[user.user_roles?.[0]?.role] || 'atendente',
         ativo: user.is_active,
         disponivel: user.is_available,
         dono_conta: user.is_account_owner,
         equipes: (user.team_members || []).map((tm: any) => ({
-          id: tm.teams?.id,
+          id: tm.teams?.id ? `eqp_${tm.teams.id.slice(0, 8)}` : null,
           nome: tm.teams?.name,
           supervisor: tm.is_supervisor
         })).filter((e: any) => e.id),

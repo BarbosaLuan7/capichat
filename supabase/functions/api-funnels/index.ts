@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
         return safeErrorResponse(error, 'Error listing funnel stages');
       }
 
-      // Group stages by "grupo" field
+      // Group stages by "grupo" field - preserve original ID for count lookup
       const groups: Record<string, any[]> = {};
       (stages || []).forEach((stage: any) => {
         const grupo = stage.grupo || 'Principal';
@@ -81,7 +81,8 @@ Deno.serve(async (req) => {
           groups[grupo] = [];
         }
         groups[grupo].push({
-          id: stage.id,
+          original_id: stage.id,
+          id: `etapa_${stage.id.slice(0, 8)}`,
           nome: stage.name,
           ordem: stage.order,
           cor: stage.color
@@ -101,13 +102,16 @@ Deno.serve(async (req) => {
 
       // Transform to funnel format
       const funnels = Object.entries(groups).map(([grupo, etapas]) => ({
-        id: grupo.toLowerCase().replace(/\s+/g, '_'),
+        id: `funil_${grupo.toLowerCase().replace(/\s+/g, '_').slice(0, 8)}`,
         nome: grupo,
         total_etapas: etapas.length,
-        total_oportunidades: etapas.reduce((sum, e) => sum + (countByStage[e.id] || 0), 0),
+        total_oportunidades: etapas.reduce((sum, e) => sum + (countByStage[e.original_id] || 0), 0),
         etapas: etapas.map(e => ({
-          ...e,
-          total: countByStage[e.id] || 0
+          id: e.id,
+          nome: e.nome,
+          ordem: e.ordem,
+          cor: e.cor,
+          total: countByStage[e.original_id] || 0
         }))
       }));
 
@@ -166,10 +170,10 @@ Deno.serve(async (req) => {
       });
 
       const funnel = {
-        id: funnelName.toLowerCase().replace(/\s+/g, '_'),
+        id: `funil_${funnelName.toLowerCase().replace(/\s+/g, '_').slice(0, 8)}`,
         nome: funnelName,
         etapas: stages.map((s: any) => ({
-          id: s.id,
+          id: `etapa_${s.id.slice(0, 8)}`,
           nome: s.name,
           ordem: s.order,
           cor: s.color,

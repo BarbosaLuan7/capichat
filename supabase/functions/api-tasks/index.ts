@@ -5,6 +5,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper to format phone numbers
+function formatTelefone(phone: string | null): string | null {
+  if (!phone) return null;
+  const clean = phone.replace(/\D/g, '');
+  if (clean.length >= 12) {
+    return `+${clean.slice(0, 2)} (${clean.slice(2, 4)}) ${clean.slice(4, 9)}-${clean.slice(9)}`;
+  }
+  if (clean.length >= 10) {
+    return `+55 (${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
+  }
+  return phone;
+}
+
 function safeErrorResponse(internalError: unknown, publicMessage: string, status: number = 500): Response {
   console.error('Internal error:', internalError);
   return new Response(
@@ -84,20 +97,20 @@ Deno.serve(async (req) => {
       }
 
       const transformed = (data || []).map((task: any) => ({
-        id: task.id,
+        id: `task_${task.id.slice(0, 8)}`,
         titulo: task.title,
         descricao: task.description,
         status: task.status,
         prioridade: task.priority,
         prazo: task.due_date,
         responsavel: task.assignee ? {
-          id: task.assignee.id,
+          id: `usr_${task.assignee.id.slice(0, 8)}`,
           nome: task.assignee.name
         } : null,
         contato: task.lead ? {
-          id: task.lead.id,
+          id: `cnt_${task.lead.id.slice(0, 8)}`,
           nome: task.lead.name,
-          telefone: task.lead.phone
+          telefone: formatTelefone(task.lead.phone)
         } : null,
         criado_em: task.created_at,
         atualizado_em: task.updated_at
@@ -144,7 +157,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({
-          id: task.id,
+          id: `task_${task.id.slice(0, 8)}`,
           titulo: task.title,
           descricao: task.description,
           status: task.status,
@@ -152,13 +165,13 @@ Deno.serve(async (req) => {
           prazo: task.due_date,
           subtarefas: task.subtasks,
           responsavel: task.assignee ? {
-            id: task.assignee.id,
+            id: `usr_${task.assignee.id.slice(0, 8)}`,
             nome: task.assignee.name
           } : null,
           contato: task.lead ? {
-            id: task.lead.id,
+            id: `cnt_${task.lead.id.slice(0, 8)}`,
             nome: task.lead.name,
-            telefone: task.lead.phone
+            telefone: formatTelefone(task.lead.phone)
           } : null,
           criado_em: task.created_at,
           atualizado_em: task.updated_at
@@ -207,18 +220,18 @@ Deno.serve(async (req) => {
         JSON.stringify({
           sucesso: true,
           tarefa: {
-            id: newTask.id,
+            id: `task_${newTask.id.slice(0, 8)}`,
             titulo: newTask.title,
             descricao: newTask.description,
             status: newTask.status,
             prioridade: newTask.priority,
             prazo: newTask.due_date,
             responsavel: newTask.assignee ? {
-              id: newTask.assignee.id,
+              id: `usr_${newTask.assignee.id.slice(0, 8)}`,
               nome: newTask.assignee.name
             } : null,
             contato: newTask.lead ? {
-              id: newTask.lead.id,
+              id: `cnt_${newTask.lead.id.slice(0, 8)}`,
               nome: newTask.lead.name
             } : null,
             criado_em: newTask.created_at
@@ -260,7 +273,7 @@ Deno.serve(async (req) => {
         JSON.stringify({
           sucesso: true,
           tarefa: {
-            id: updatedTask.id,
+            id: `task_${updatedTask.id.slice(0, 8)}`,
             titulo: updatedTask.title,
             status: updatedTask.status,
             atualizado_em: updatedTask.updated_at
@@ -293,7 +306,7 @@ Deno.serve(async (req) => {
           sucesso: true,
           mensagem: 'Tarefa concluída com sucesso',
           tarefa: {
-            id: completedTask.id,
+            id: `task_${completedTask.id.slice(0, 8)}`,
             titulo: completedTask.title,
             status: completedTask.status
           }
