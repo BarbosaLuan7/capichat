@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,8 +12,9 @@ import { CodeExample } from '@/components/docs/CodeExample';
 import { ApiStatusBadge } from '@/components/docs/ApiStatusBadge';
 import { SwaggerUISkeleton } from '@/components/docs/SwaggerUISkeleton';
 
+import 'swagger-ui/dist/swagger-ui.css';
+
 export default function ApiDocs() {
-  const swaggerContainerRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
   const [swaggerLoading, setSwaggerLoading] = useState(true);
   const navigate = useNavigate();
@@ -24,25 +25,18 @@ export default function ApiDocs() {
   const specUrl = '/api-docs/openapi.yaml';
 
   useEffect(() => {
-    // Load Swagger UI CSS
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css';
-    document.head.appendChild(link);
+    let cancelled = false;
+    let swaggerUi: any;
 
-    // Load Swagger UI JS
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js';
-    script.onload = () => {
-      if (swaggerContainerRef.current && (window as any).SwaggerUIBundle) {
-        (window as any).SwaggerUIBundle({
+    const init = async () => {
+      try {
+        const mod: any = await import('swagger-ui');
+        const SwaggerUI = mod?.default ?? mod;
+
+        swaggerUi = SwaggerUI({
           url: specUrl,
           dom_id: '#swagger-ui',
           deepLinking: true,
-          presets: [
-            (window as any).SwaggerUIBundle.presets.apis,
-            (window as any).SwaggerUIBundle.SwaggerUIStandalonePreset
-          ],
           layout: 'BaseLayout',
           defaultModelsExpandDepth: 1,
           defaultModelExpandDepth: 1,
@@ -52,20 +46,35 @@ export default function ApiDocs() {
           showCommonExtensions: true,
           tryItOutEnabled: true,
           onComplete: () => {
-            setSwaggerLoading(false);
+            if (!cancelled) setSwaggerLoading(false);
           },
         });
-        // Fallback timeout for onComplete
-        setTimeout(() => setSwaggerLoading(false), 3000);
+
+        // Fallback timeout (ex.: spec inválida ou onComplete não dispara)
+        setTimeout(() => {
+          if (!cancelled) setSwaggerLoading(false);
+        }, 3000);
+      } catch (err) {
+        if (!cancelled) {
+          setSwaggerLoading(false);
+          toast.error('Falha ao carregar a documentação interativa.');
+          // eslint-disable-next-line no-console
+          console.error('Swagger UI load error', err);
+        }
       }
     };
-    document.body.appendChild(script);
+
+    init();
 
     return () => {
-      document.head.removeChild(link);
-      document.body.removeChild(script);
+      cancelled = true;
+      try {
+        swaggerUi?.destroy?.();
+      } catch {
+        // ignore
+      }
     };
-  }, []);
+  }, [specUrl]);
 
   const handleCopyBaseUrl = () => {
     navigator.clipboard.writeText(baseUrl);
@@ -484,13 +493,12 @@ print(f"Temperatura atualizada: {result['lead']['temperature']}")`
           </CardHeader>
           <CardContent className="p-0">
             {swaggerLoading && <SwaggerUISkeleton />}
-            <div 
-              id="swagger-ui" 
-              ref={swaggerContainerRef}
+            <div
+              id="swagger-ui"
               className={swaggerLoading ? 'hidden' : 'swagger-ui-container'}
-              style={{ 
+              style={{
                 minHeight: '600px',
-                padding: '1rem'
+                padding: '1rem',
               }}
             />
           </CardContent>
@@ -515,20 +523,28 @@ print(f"Temperatura atualizada: {result['lead']['temperature']}")`
           border-radius: 0.375rem !important; 
           padding: 0.5rem 1rem !important;
         }
-        
-        /* Dark mode styles */
-        .dark .swagger-ui,
-        @media (prefers-color-scheme: dark) {
-          .swagger-ui { 
-            filter: invert(88%) hue-rotate(180deg); 
-          }
-          .swagger-ui img { 
-            filter: invert(100%) hue-rotate(180deg); 
-          }
-          .swagger-ui .opblock-body pre.microlight {
-            filter: invert(100%) hue-rotate(180deg);
-          }
-        }
+         /* Dark mode styles */
+         .dark .swagger-ui { 
+           filter: invert(88%) hue-rotate(180deg); 
+         }
+         .dark .swagger-ui img { 
+           filter: invert(100%) hue-rotate(180deg); 
+         }
+         .dark .swagger-ui .opblock-body pre.microlight {
+           filter: invert(100%) hue-rotate(180deg);
+         }
+
+         @media (prefers-color-scheme: dark) {
+           .swagger-ui { 
+             filter: invert(88%) hue-rotate(180deg); 
+           }
+           .swagger-ui img { 
+             filter: invert(100%) hue-rotate(180deg); 
+           }
+           .swagger-ui .opblock-body pre.microlight {
+             filter: invert(100%) hue-rotate(180deg);
+           }
+         }
       `}</style>
     </div>
   );
