@@ -309,50 +309,85 @@ function LeadDetailsPanelComponent({
           <TabsContent value="dados" className="flex-1 m-0 min-h-0 overflow-hidden data-[state=inactive]:hidden flex flex-col">
             <ScrollArea className="flex-1 min-h-0 w-full max-w-full [&_[data-radix-scroll-area-viewport]]:!overflow-x-hidden [&_[data-radix-scroll-area-viewport]]:max-w-full">
               <div className="p-4 space-y-4 pb-8 max-w-full min-w-0 overflow-hidden box-border">
+                {/* Facebook LID Warning */}
+                {(lead as any).is_facebook_lid && (
+                  <div className="p-3 rounded-lg bg-warning/10 border border-warning/30 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <div className="w-5 h-5 rounded-full bg-warning/20 flex items-center justify-center shrink-0 mt-0.5">
+                        <span className="text-warning text-xs">!</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-warning">Número Privado</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Contato veio de anúncio Facebook. O número real ainda não foi resolvido por privacidade.
+                        </p>
+                      </div>
+                    </div>
+                    {(lead as any).original_lid && (
+                      <div className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded font-mono">
+                        LID: {(lead as any).original_lid}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Contact Info */}
                 <div className="space-y-2">
                   <h4 className="font-medium text-xs text-muted-foreground uppercase">
                     Contato
                   </h4>
                   <div className="space-y-1.5">
-                    <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 group">
-                      <Phone className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="text-sm flex-1">{formatPhoneNumber(lead.phone)}</span>
-                      <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-5 w-5"
-                                onClick={() => handleCopy(lead.phone, 'Telefone')}
-                                aria-label="Copiar telefone"
-                              >
-                                <Copy className="w-2.5 h-2.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Copiar telefone</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-5 w-5 text-success"
-                                onClick={openWhatsApp}
-                                aria-label="Abrir no WhatsApp"
-                              >
-                                <MessageSquare className="w-2.5 h-2.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Abrir no WhatsApp</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                    {/* Phone - with special handling for LID leads */}
+                    {(lead as any).is_facebook_lid ? (
+                      <div className="flex items-center gap-2 p-2 rounded-md bg-warning/5 border border-warning/20 group">
+                        <Phone className="w-3.5 h-3.5 text-warning" />
+                        <span className="text-sm flex-1 text-muted-foreground italic">
+                          Aguardando resolução...
+                        </span>
+                        <Badge variant="outline" className="text-2xs border-warning/30 text-warning">
+                          Facebook
+                        </Badge>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 group">
+                        <Phone className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="text-sm flex-1">{formatPhoneNumber(lead.phone)}</span>
+                        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5"
+                                  onClick={() => handleCopy(lead.phone, 'Telefone')}
+                                  aria-label="Copiar telefone"
+                                >
+                                  <Copy className="w-2.5 h-2.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Copiar telefone</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 text-success"
+                                  onClick={openWhatsApp}
+                                  aria-label="Abrir no WhatsApp"
+                                >
+                                  <MessageSquare className="w-2.5 h-2.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Abrir no WhatsApp</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </div>
+                    )}
                     {lead.email && (
                       <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 group">
                         <Mail className="w-3.5 h-3.5 text-muted-foreground" />
