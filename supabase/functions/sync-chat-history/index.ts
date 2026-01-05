@@ -138,10 +138,10 @@ serve(async (req) => {
 
     console.log('[sync-chat-history] Iniciando sync para conversa:', conversation_id, 'limit:', limit);
 
-    // Buscar conversa e lead
+    // Buscar conversa e lead COM a instância WhatsApp
     const { data: conversation, error: convError } = await supabase
       .from('conversations')
-      .select('*, lead:leads(*)')
+      .select('*, lead:leads(*), whatsapp_instance_id')
       .eq('id', conversation_id)
       .single();
 
@@ -161,17 +161,42 @@ serve(async (req) => {
       );
     }
 
-    // Buscar config do WhatsApp (WAHA)
-    const { data: wahaConfig, error: configError } = await supabase
-      .from('whatsapp_config')
-      .select('*')
-      .eq('is_active', true)
-      .eq('provider', 'waha')
-      .limit(1)
-      .maybeSingle();
+    // Buscar config do WhatsApp - priorizar a instância da conversa
+    let wahaConfig = null;
 
-    if (configError || !wahaConfig) {
-      console.error('[sync-chat-history] Config WAHA não encontrada:', configError);
+    if (conversation.whatsapp_instance_id) {
+      // Usar a instância específica da conversa
+      const { data, error } = await supabase
+        .from('whatsapp_config')
+        .select('*')
+        .eq('id', conversation.whatsapp_instance_id)
+        .eq('is_active', true)
+        .single();
+        
+      if (!error && data) {
+        wahaConfig = data;
+        console.log('[sync-chat-history] Usando instância da conversa:', data.instance_name);
+      }
+    }
+
+    // Fallback: buscar qualquer instância WAHA ativa
+    if (!wahaConfig) {
+      const { data, error } = await supabase
+        .from('whatsapp_config')
+        .select('*')
+        .eq('is_active', true)
+        .eq('provider', 'waha')
+        .limit(1)
+        .maybeSingle();
+        
+      wahaConfig = data;
+      if (wahaConfig) {
+        console.log('[sync-chat-history] Usando fallback - primeira instância ativa:', wahaConfig.instance_name);
+      }
+    }
+
+    if (!wahaConfig) {
+      console.error('[sync-chat-history] Nenhuma config WAHA encontrada');
       return new Response(
         JSON.stringify({ error: 'WhatsApp configuration not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
