@@ -275,17 +275,34 @@ function MessageBubbleComponent({
     }
   }, [message.id, message.type, message.transcription, isAgent, getTranscription, setTranscriptionFromDb]);
 
+  // Mensagem de erro detalhada para exibir ao usuário
+  const [repairErrorMessage, setRepairErrorMessage] = useState<string | null>(null);
+  const [mediaExpired, setMediaExpired] = useState(false);
+  
   // Função para reparar mídia faltante (usada por auto-repair e botão manual)
   const handleRepairMedia = async (silent = false) => {
     if (isRepairingMedia || autoRepairInFlight.has(message.id)) return false;
     
     setIsRepairingMedia(true);
+    setRepairErrorMessage(null);
     autoRepairInFlight.add(message.id);
     
+    // Timeout do cliente (20s) - fallback se a edge function não responder
+    const clientTimeout = new Promise<{ error: string; code: string }>((resolve) => {
+      setTimeout(() => resolve({ error: 'Tempo limite excedido', code: 'CLIENT_TIMEOUT' }), 20000);
+    });
+    
     try {
-      const { data, error } = await supabase.functions.invoke('repair-message-media', {
+      const invokePromise = supabase.functions.invoke('repair-message-media', {
         body: { messageId: message.id }
       });
+      
+      const result = await Promise.race([
+        invokePromise,
+        clientTimeout.then(timeoutResult => ({ data: timeoutResult, error: null }))
+      ]);
+      
+      const { data, error } = result;
       
       if (error) throw error;
       
@@ -295,15 +312,29 @@ function MessageBubbleComponent({
         if (!silent) {
           toast.success('Mídia recuperada!');
         }
+        setRepairErrorMessage(null);
+        setMediaExpired(false);
         return true;
       } else {
+        // Verificar se mídia expirou
+        if (data?.expired || data?.code === 'MEDIA_EXPIRED' || data?.code === 'MEDIA_NOT_FOUND') {
+          setMediaExpired(true);
+          setRepairErrorMessage('Mídia expirou no WhatsApp');
+        } else if (data?.code === 'TIMEOUT' || data?.code === 'CLIENT_TIMEOUT') {
+          setRepairErrorMessage('Servidor não respondeu');
+        } else {
+          setRepairErrorMessage(data?.error || 'Não foi possível recuperar');
+        }
+        
         if (!silent) {
-          toast.error(data?.error || 'Não foi possível recuperar a mídia');
+          const msg = data?.expired ? 'Mídia pode ter expirado' : (data?.error || 'Não foi possível recuperar a mídia');
+          toast.error(msg);
         }
         return false;
       }
     } catch (err) {
       logger.error('[MessageBubble] Erro ao reparar mídia:', err);
+      setRepairErrorMessage('Erro ao tentar recuperar');
       if (!silent) {
         toast.error('Erro ao tentar recuperar mídia');
       }
@@ -350,24 +381,47 @@ function MessageBubbleComponent({
         <div className="mb-2 p-3 rounded-lg bg-muted/50 border border-border">
           <div className="flex items-center gap-2 text-muted-foreground mb-2">
             <IconComponent className="w-5 h-5" />
-            <span className="text-sm">{MEDIA_LABELS[message.type] || 'Mídia'} indisponível</span>
+            <span className="text-sm">
+              {mediaExpired 
+                ? `${MEDIA_LABELS[message.type] || 'Mídia'} expirou` 
+                : `${MEDIA_LABELS[message.type] || 'Mídia'} indisponível`
+              }
+            </span>
           </div>
           
           {isRepairingMedia ? (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="w-3 h-3 animate-spin" />
-              <span>Recuperando automaticamente...</span>
+              <span>Recuperando...</span>
+            </div>
+          ) : mediaExpired ? (
+            <div className="text-xs text-muted-foreground">
+              <p className="mb-1">A mídia não está mais disponível no WhatsApp.</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleRepairMedia(false)}
+                className="text-xs h-6 px-2"
+              >
+                <RefreshCw className="w-3 h-3 mr-1" />
+                Tentar novamente
+              </Button>
             </div>
           ) : autoRepairFailed ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleRepairMedia(false)}
-              className="text-xs"
-            >
-              <RefreshCw className="w-3 h-3 mr-1.5" />
-              Tentar recuperar
-            </Button>
+            <div className="space-y-1">
+              {repairErrorMessage && (
+                <p className="text-xs text-muted-foreground">{repairErrorMessage}</p>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleRepairMedia(false)}
+                className="text-xs"
+              >
+                <RefreshCw className="w-3 h-3 mr-1.5" />
+                Tentar recuperar
+              </Button>
+            </div>
           ) : (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="w-3 h-3 animate-spin" />
