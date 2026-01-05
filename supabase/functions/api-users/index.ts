@@ -90,11 +90,11 @@ Deno.serve(async (req) => {
       const equipeId = url.searchParams.get('equipe_id');
       const perfil = url.searchParams.get('perfil');
 
+      // First get profiles, then fetch roles separately to avoid FK relationship issues
       let query = supabase
         .from('profiles')
         .select(`
           *,
-          user_roles(role),
           team_members(team_id, is_supervisor, teams(id, name))
         `, { count: 'exact' });
 
@@ -119,13 +119,20 @@ Deno.serve(async (req) => {
         return safeErrorResponse(error, 'Error listing users');
       }
 
+      // Fetch roles separately for all users
+      const userIds = (data || []).map((u: any) => u.id);
+      const { data: rolesData } = userIds.length > 0 
+        ? await supabase.from('user_roles').select('user_id, role').in('user_id', userIds)
+        : { data: [] };
+      
+      const rolesMap = new Map<string, string>();
+      (rolesData || []).forEach((r: any) => rolesMap.set(r.user_id, r.role));
+
       // Filter by role if specified
       let filteredData = data || [];
       if (perfil) {
         const dbRole = roleMap[perfil] || perfil;
-        filteredData = filteredData.filter((u: any) => 
-          u.user_roles?.some((r: any) => r.role === dbRole)
-        );
+        filteredData = filteredData.filter((u: any) => rolesMap.get(u.id) === dbRole);
       }
 
       // Transform response
@@ -135,7 +142,7 @@ Deno.serve(async (req) => {
         email: user.email,
         telefone: formatTelefone(user.phone),
         avatar_url: user.avatar,
-        perfil: roleMapReverse[user.user_roles?.[0]?.role] || 'atendente',
+        perfil: roleMapReverse[rolesMap.get(user.id) || 'agent'] || 'atendente',
         ativo: user.is_active,
         disponivel: user.is_available,
         dono_conta: user.is_account_owner,
@@ -169,7 +176,6 @@ Deno.serve(async (req) => {
         .from('profiles')
         .select(`
           *,
-          user_roles(role),
           team_members(team_id, is_supervisor, teams(id, name))
         `)
         .eq('id', id)
@@ -186,13 +192,20 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Fetch role separately
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', id)
+        .maybeSingle();
+
       const transformed = {
         id: `usr_${user.id.slice(0, 8)}`,
         nome: user.name,
         email: user.email,
         telefone: formatTelefone(user.phone),
         avatar_url: user.avatar,
-        perfil: roleMapReverse[user.user_roles?.[0]?.role] || 'atendente',
+        perfil: roleMapReverse[roleData?.role || 'agent'] || 'atendente',
         ativo: user.is_active,
         disponivel: user.is_available,
         dono_conta: user.is_account_owner,
