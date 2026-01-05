@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: LB ADV CRM API
-  version: 2.3.0
+  version: 3.0.0
   description: |
     API RESTful para integração externa com o **LB ADV CRM** (GaranteDireito).
 
@@ -34,18 +34,37 @@ info:
 
     ## Paginação
 
-    Endpoints de listagem retornam:
+    Endpoints de listagem retornam campos em português e inglês:
     ```json
     {
+      "sucesso": true,
+      "success": true,
       "dados": [...],
+      "data": [...],
       "paginacao": {
         "pagina": 1,
         "por_pagina": 50,
         "total": 150,
         "total_paginas": 3
+      },
+      "pagination": {
+        "page": 1,
+        "page_size": 50,
+        "total": 150,
+        "total_pages": 3
       }
     }
     ```
+
+    ## Identificação de Contatos
+
+    A maioria dos endpoints aceita **UUID** ou **telefone** para identificar contatos:
+    - `id=8454ff97-627b-4730-901e-b091ed5e5685` (UUID)
+    - `id=5511999990001` (telefone)
+    - `lead_id=11999990001` (telefone sem código país)
+    - `contato_id=+55 (11) 99999-0001` (telefone formatado)
+
+    O sistema detecta automaticamente se o valor é UUID ou telefone.
 
   contact:
     name: GaranteDireito Suporte
@@ -350,13 +369,16 @@ paths:
       tags: [Contatos]
       summary: Listar/buscar contatos
       operationId: listarContatos
+      description: |
+        O parâmetro `id` aceita UUID ou telefone:
+        - `id=8454ff97-627b-4730-901e-b091ed5e5685`
+        - `id=5511999990001`
       parameters:
         - name: id
           in: query
-          description: ID do contato (busca específico)
+          description: ID do contato (UUID ou telefone)
           schema:
             type: string
-            format: uuid
         - name: phone
           in: query
           description: Buscar por telefone
@@ -403,10 +425,9 @@ paths:
       parameters:
         - name: id
           in: query
-          description: ID do contato (para action=etiquetas)
+          description: ID do contato (UUID ou telefone, para action=etiquetas)
           schema:
             type: string
-            format: uuid
         - name: action
           in: query
           schema:
@@ -422,37 +443,6 @@ paths:
                 - $ref: "#/components/schemas/CriarContatosLoteRequest"
                 - $ref: "#/components/schemas/FiltroAvancadoRequest"
                 - $ref: "#/components/schemas/GerenciarEtiquetasRequest"
-            examples:
-              criar_contato:
-                summary: Criar contato
-                value:
-                  name: "Maria Silva"
-                  phone: "11999990001"
-                  email: "maria@email.com"
-                  temperature: "warm"
-              criar_lote:
-                summary: Criar em lote (action=lote)
-                value:
-                  contatos:
-                    - name: "João Santos"
-                      phone: "11999990002"
-                    - name: "Ana Costa"
-                      phone: "11999990003"
-              filtro_avancado:
-                summary: Filtro avançado (action=filtro)
-                value:
-                  etiquetas: ["uuid-etiqueta-1"]
-                  temperatura: "hot"
-                  periodo:
-                    inicio: "2026-01-01"
-                    fim: "2026-01-31"
-                  pagina: 1
-                  por_pagina: 50
-              gerenciar_etiquetas:
-                summary: Etiquetas (action=etiquetas)
-                value:
-                  adicionar: ["uuid-etiqueta-1"]
-                  remover: ["uuid-etiqueta-2"]
       responses:
         "200":
           description: Sucesso
@@ -467,9 +457,9 @@ paths:
         - name: id
           in: query
           required: true
+          description: ID do contato (UUID ou telefone)
           schema:
             type: string
-            format: uuid
       requestBody:
         content:
           application/json:
@@ -487,9 +477,9 @@ paths:
         - name: id
           in: query
           required: true
+          description: ID do contato (UUID ou telefone)
           schema:
             type: string
-            format: uuid
       responses:
         "200":
           description: Contato removido
@@ -513,14 +503,6 @@ paths:
                   maxItems: 100
                   items:
                     $ref: "#/components/schemas/CriarContatoLoteItem"
-            example:
-              contatos:
-                - nome: "Maria Silva"
-                  telefone: "11999990001"
-                  email: "maria@email.com"
-                - nome: "João Santos"
-                  telefone: "11999990002"
-                  tipo_beneficio: "BPC Idoso"
       responses:
         "200":
           description: Resultado do lote
@@ -542,21 +524,6 @@ paths:
                         type: integer
                       erros:
                         type: integer
-                  resultados:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        indice:
-                          type: integer
-                        sucesso:
-                          type: boolean
-                        id:
-                          type: string
-                        erro:
-                          type: string
-                        duplicado:
-                          type: boolean
 
   # ============================================================================
   # ETIQUETAS
@@ -677,11 +644,6 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/CriarCampoRequest"
-            example:
-              nome: "data_pericia"
-              rotulo: "Data da Perícia"
-              tipo: "data"
-              obrigatorio: false
       responses:
         "201":
           description: Campo criado
@@ -801,17 +763,6 @@ paths:
                     contato_id:
                       type: string
                       format: uuid
-            examples:
-              criar_carteira:
-                summary: Criar carteira
-                value:
-                  nome: "Clientes BPC"
-                  descricao: "Carteira de clientes BPC"
-                  cor: "#22c55e"
-              adicionar_contato:
-                summary: Adicionar contato (action=contatos)
-                value:
-                  contato_id: "uuid-do-contato"
       responses:
         "201":
           description: Criado
@@ -840,9 +791,6 @@ paths:
       tags: [Carteiras]
       summary: Remover carteira ou contato da carteira
       operationId: removerCarteira
-      description: |
-        Sem action: Remove a carteira
-        Com action=contatos: Remove contato da carteira
       parameters:
         - name: id
           in: query
@@ -857,7 +805,6 @@ paths:
             enum: [contatos]
         - name: contato_id
           in: query
-          description: ID do contato (quando action=contatos)
           schema:
             type: string
             format: uuid
@@ -1029,15 +976,19 @@ paths:
   /api-conversations:
     get:
       tags: [Conversas]
-      summary: Listar conversas
+      summary: Listar conversas ou buscar específica
       operationId: listarConversas
+      description: |
+        O parâmetro `id` e `lead_id` aceitam UUID ou telefone:
+        - `id=8454ff97-627b-4730-901e-b091ed5e5685`
+        - `id=5511999990001` (busca conversa pelo telefone do lead)
+        - `lead_id=11999990001` (telefone sem código país)
       parameters:
         - name: id
           in: query
-          description: ID da conversa (busca com mensagens)
+          description: ID da conversa (UUID) ou telefone do lead
           schema:
             type: string
-            format: uuid
         - name: action
           in: query
           description: "notas: Lista notas da conversa"
@@ -1051,38 +1002,132 @@ paths:
             enum: [open, pending, resolved]
         - name: assigned_to
           in: query
+          description: Alias para responsavel_id
+          schema:
+            type: string
+            format: uuid
+        - name: responsavel_id
+          in: query
+          description: ID do responsável
           schema:
             type: string
             format: uuid
         - name: lead_id
           in: query
+          description: ID do lead (UUID ou telefone)
           schema:
             type: string
-            format: uuid
+        - name: contato_id
+          in: query
+          description: Alias para lead_id
+          schema:
+            type: string
         - name: page
+          in: query
+          description: Alias para pagina
+          schema:
+            type: integer
+            default: 1
+        - name: pagina
           in: query
           schema:
             type: integer
             default: 1
         - name: page_size
           in: query
+          description: Alias para por_pagina
+          schema:
+            type: integer
+            default: 50
+        - name: por_pagina
+          in: query
           schema:
             type: integer
             default: 50
       responses:
         "200":
-          description: Lista de conversas
+          description: Conversa(s) encontrada(s)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  dados:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Conversa"
-                  paginacao:
-                    $ref: "#/components/schemas/Paginacao"
+                oneOf:
+                  - $ref: "#/components/schemas/ConversaDetalhadaResponse"
+                  - $ref: "#/components/schemas/ListaConversasResponse"
+              examples:
+                conversa_unica:
+                  summary: Conversa específica (com mensagens)
+                  value:
+                    sucesso: true
+                    success: true
+                    conversa:
+                      id: "8454ff97-627b-4730-901e-b091ed5e5685"
+                      status: "open"
+                      status_pt: "aberta"
+                      nao_lidas: 5
+                      unread_count: 5
+                      favorita: false
+                      is_favorite: false
+                      responsavel:
+                        id: "uuid-usuario"
+                        nome: "Maria Advogada"
+                        name: "Maria Advogada"
+                        email: "maria@email.com"
+                      instancia_whatsapp:
+                        id: "uuid-instancia"
+                        nome: "WhatsApp Principal"
+                        telefone: "+55 (11) 99999-0001"
+                        identificador: "principal"
+                        provider: "waha"
+                      ultima_mensagem_em: "2026-01-05T14:30:00Z"
+                      criada_em: "2026-01-01T10:00:00Z"
+                    lead:
+                      id: "uuid-lead"
+                      nome: "João Silva"
+                      name: "João Silva"
+                      telefone: "+55 (11) 99999-0002"
+                      phone: "11999990002"
+                      email: "joao@email.com"
+                      temperatura: "morno"
+                      temperature: "warm"
+                      etapa_funil:
+                        id: "uuid-etapa"
+                        nome: "Qualificação"
+                        cor: "#22c55e"
+                      etiquetas:
+                        - id: "uuid-etiqueta"
+                          nome: "BPC Idoso"
+                          cor: "#3b82f6"
+                      responsavel:
+                        id: "uuid-usuario"
+                        nome: "Maria Advogada"
+                    mensagens:
+                      - id: "uuid-msg"
+                        type: "text"
+                        content: "Olá, preciso de ajuda"
+                        direction: "inbound"
+                        status: "delivered"
+                        created_at: "2026-01-05T14:30:00Z"
+                lista_conversas:
+                  summary: Lista de conversas
+                  value:
+                    sucesso: true
+                    success: true
+                    dados:
+                      - id: "uuid-conversa"
+                        status: "open"
+                        status_pt: "aberta"
+                        nao_lidas: 3
+                        ultima_mensagem: "Preciso de ajuda"
+                        lead:
+                          id: "uuid-lead"
+                          nome: "João Silva"
+                          telefone: "+55 (11) 99999-0002"
+                          temperatura: "morno"
+                    paginacao:
+                      pagina: 1
+                      por_pagina: 50
+                      total: 150
+                      total_paginas: 3
 
     post:
       tags: [Conversas]
@@ -1091,13 +1136,14 @@ paths:
       description: |
         Sem action: Cria nova conversa
         Com action=notas: Adiciona nota interna à conversa
+        
+        O campo `lead_id`/`contato_id` aceita UUID ou telefone.
       parameters:
         - name: id
           in: query
-          description: ID da conversa (para action=notas)
+          description: ID da conversa (UUID ou telefone, para action=notas)
           schema:
             type: string
-            format: uuid
         - name: action
           in: query
           schema:
@@ -1109,45 +1155,50 @@ paths:
           application/json:
             schema:
               oneOf:
-                - type: object
-                  required: [lead_id]
-                  properties:
-                    lead_id:
-                      type: string
-                      format: uuid
-                    assigned_to:
-                      type: string
-                      format: uuid
-                    status:
-                      type: string
-                      enum: [open, pending, resolved]
-                - type: object
-                  required: [conteudo]
-                  properties:
-                    conteudo:
-                      type: string
+                - $ref: "#/components/schemas/CriarConversaRequest"
+                - $ref: "#/components/schemas/CriarNotaRequest"
+            examples:
+              criar_conversa:
+                summary: Criar conversa (UUID)
+                value:
+                  lead_id: "8454ff97-627b-4730-901e-b091ed5e5685"
+                  status: "open"
+              criar_conversa_telefone:
+                summary: Criar conversa (telefone)
+                value:
+                  contato_id: "5511999990001"
+                  status: "open"
+              adicionar_nota:
+                summary: Adicionar nota (action=notas)
+                value:
+                  conteudo: "Cliente solicitou documentos"
       responses:
         "201":
           description: Criado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversaCriadaResponse"
 
     put:
       tags: [Conversas]
       summary: Atualizar conversa
       operationId: atualizarConversa
       description: |
-        Usa action para operações específicas:
-        - Sem action: Atualiza dados
-        - `transferir`: Transfere para usuário/equipe
-        - `atribuir`: Atribui a usuário
+        O parâmetro `id` aceita UUID ou telefone.
+        
+        Ações disponíveis:
+        - `transferir`: Transfere para usuário ou equipe
+        - `atribuir`: Atribui a um usuário
         - `finalizar`: Marca como resolvida
-        - `reabrir`: Reabre conversa
+        - `reabrir`: Reabre conversa finalizada
       parameters:
         - name: id
           in: query
           required: true
+          description: ID da conversa (UUID ou telefone do lead)
           schema:
             type: string
-            format: uuid
         - name: action
           in: query
           schema:
@@ -1157,27 +1208,14 @@ paths:
         content:
           application/json:
             schema:
-              oneOf:
-                - type: object
-                  properties:
-                    status:
-                      type: string
-                    assigned_to:
-                      type: string
-                    is_favorite:
-                      type: boolean
-                - type: object
-                  properties:
-                    tipo:
-                      type: string
-                      enum: [usuario, equipe]
-                    usuario_id:
-                      type: string
-                    equipe_id:
-                      type: string
+              $ref: "#/components/schemas/AtualizarConversaRequest"
       responses:
         "200":
           description: Conversa atualizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversaAtualizadaResponse"
 
     delete:
       tags: [Conversas]
@@ -1187,15 +1225,267 @@ paths:
         - name: id
           in: query
           required: true
+          description: ID da conversa (UUID ou telefone)
           schema:
             type: string
-            format: uuid
       responses:
         "200":
           description: Conversa removida
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sucesso:
+                    type: boolean
+                  success:
+                    type: boolean
+                  mensagem:
+                    type: string
+                  message:
+                    type: string
 
   # ============================================================================
-  # MENSAGENS
+  # MENSAGENS - ENVIO
+  # ============================================================================
+  /chat-v2-mensagem:
+    post:
+      tags: [Mensagens]
+      summary: Enviar mensagem via WhatsApp
+      operationId: enviarMensagem
+      description: |
+        Endpoint principal para envio de mensagens.
+        
+        **Identificação do destinatário:**
+        - `contato_id`: Aceita UUID ou telefone
+        - `telefone`: Número de telefone (qualquer formato)
+        
+        **Tipos de mensagem:**
+        - `texto`: Mensagem de texto simples
+        - `imagem`: Imagem com URL
+        - `audio`: Áudio com URL
+        - `video`: Vídeo com URL
+        - `documento`: Documento com URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnviarMensagemRequest"
+            examples:
+              enviar_por_uuid:
+                summary: Enviar por UUID
+                value:
+                  contato_id: "8454ff97-627b-4730-901e-b091ed5e5685"
+                  conteudo: "Olá! Como posso ajudar?"
+                  tipo: "texto"
+              enviar_por_telefone:
+                summary: Enviar por telefone
+                value:
+                  contato_id: "5511999990001"
+                  conteudo: "Olá! Como posso ajudar?"
+                  tipo: "texto"
+              enviar_imagem:
+                summary: Enviar imagem
+                value:
+                  telefone: "5511999990001"
+                  conteudo: "Confira a imagem"
+                  tipo: "imagem"
+                  midia_url: "https://exemplo.com/imagem.jpg"
+      responses:
+        "200":
+          description: Mensagem enviada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensagemEnviadaResponse"
+              example:
+                sucesso: true
+                success: true
+                request_id: "req_abc12345"
+                mensagem_id: "uuid-mensagem"
+                message_id: "uuid-mensagem"
+                instancia_whatsapp:
+                  id: "uuid-instancia"
+                  nome: "WhatsApp Principal"
+                  telefone: "+55 (11) 99999-0001"
+                  identificador: "principal"
+                  provider: "waha"
+                whatsapp_instance:
+                  id: "uuid-instancia"
+                  name: "WhatsApp Principal"
+                  phone_number: "5511999990001"
+                  instance_name: "principal"
+                  provider: "waha"
+                mensagem:
+                  id: "uuid-mensagem"
+                  tipo: "texto"
+                  type: "text"
+                  conteudo: "Olá! Como posso ajudar?"
+                  content: "Olá! Como posso ajudar?"
+                  enviada_em: "2026-01-05T14:30:00Z"
+                  sent_at: "2026-01-05T14:30:00Z"
+                  status: "enviada"
+                  direcao: "saida"
+                  direction: "outbound"
+                lead:
+                  id: "uuid-lead"
+                  nome: "João Silva"
+                  name: "João Silva"
+                  telefone: "+55 (11) 99999-0002"
+                  phone: "11999990002"
+                  email: "joao@email.com"
+                  temperatura: "morno"
+                  temperature: "warm"
+                  etapa_funil:
+                    id: "uuid-etapa"
+                    nome: "Qualificação"
+                    name: "Qualificação"
+                    cor: "#22c55e"
+                    color: "#22c55e"
+                  etiquetas:
+                    - id: "uuid-etiqueta"
+                      nome: "BPC Idoso"
+                      name: "BPC Idoso"
+                      cor: "#3b82f6"
+                      color: "#3b82f6"
+                  responsavel:
+                    id: "uuid-usuario"
+                    nome: "Maria Advogada"
+                    name: "Maria Advogada"
+                conversa:
+                  id: "uuid-conversa"
+                  status: "open"
+                  status_pt: "aberta"
+                  nao_lidas: 0
+                  unread_count: 0
+
+  /api-messages-send:
+    post:
+      tags: [Mensagens]
+      summary: Enviar mensagem (API alternativa)
+      operationId: enviarMensagemAlt
+      description: |
+        Endpoint alternativo para envio de mensagens (em inglês).
+        
+        **Identificação do destinatário:**
+        - `lead_id`: Aceita UUID ou telefone
+        - `phone`: Número de telefone
+        
+        **Variáveis de template:**
+        O conteúdo da mensagem pode incluir variáveis que serão substituídas:
+        - `{{nome}}`: Nome do contato
+        - `{{primeiro_nome}}`: Primeiro nome
+        - `{{telefone}}`: Telefone formatado
+        - `{{data}}`: Data atual
+        - `{{hora}}`: Hora atual
+        - `{{beneficio}}`: Tipo de benefício
+        - `{{cpf}}`: CPF formatado
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageRequest"
+            examples:
+              enviar_simples:
+                summary: Enviar mensagem simples
+                value:
+                  phone: "5511999990001"
+                  message: "Olá {{primeiro_nome}}! Como posso ajudar?"
+              enviar_com_lead:
+                summary: Enviar com lead_id (telefone)
+                value:
+                  lead_id: "11999990001"
+                  message: "Olá! Seu benefício de {{beneficio}} está em andamento."
+      responses:
+        "200":
+          description: Mensagem enviada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensagemEnviadaResponse"
+
+  /api-messages-receive:
+    post:
+      tags: [Mensagens]
+      summary: Receber mensagem (webhook)
+      operationId: receberMensagem
+      description: |
+        Endpoint para receber mensagens (geralmente chamado por webhooks de provedores WhatsApp).
+        
+        - Cria lead automaticamente se não existir
+        - Cria conversa automaticamente se não existir
+        - Atualiza contadores de não lidas
+        - Dispara webhooks de `message.received`, `lead.created`, `conversation.created`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReceiveMessageRequest"
+            example:
+              phone: "5511999990001"
+              message: "Olá, preciso de ajuda com meu benefício"
+              type: "text"
+              sender_name: "João Silva"
+              timestamp: "2026-01-05T14:30:00Z"
+      responses:
+        "201":
+          description: Mensagem recebida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MensagemRecebidaResponse"
+              example:
+                sucesso: true
+                success: true
+                request_id: "req_abc12345"
+                mensagem_id: "uuid-mensagem"
+                message_id: "uuid-mensagem"
+                instancia_whatsapp:
+                  id: "uuid-instancia"
+                  nome: "WhatsApp Principal"
+                  telefone: "+55 (11) 99999-0001"
+                mensagem:
+                  id: "uuid-mensagem"
+                  tipo: "texto"
+                  type: "text"
+                  conteudo: "Olá, preciso de ajuda com meu benefício"
+                  content: "Olá, preciso de ajuda com meu benefício"
+                  recebida_em: "2026-01-05T14:30:00Z"
+                  received_at: "2026-01-05T14:30:00Z"
+                  status: "entregue"
+                  direcao: "entrada"
+                  direction: "inbound"
+                  remetente:
+                    tipo: "lead"
+                    id: "uuid-lead"
+                    nome: "João Silva"
+                lead:
+                  id: "uuid-lead"
+                  nome: "João Silva"
+                  name: "João Silva"
+                  telefone: "+55 (11) 99999-0001"
+                  phone: "11999990001"
+                  temperatura: "morno"
+                  temperature: "warm"
+                  is_new: true
+                  etapa_funil:
+                    id: "uuid-etapa"
+                    nome: "Novo Lead"
+                  etiquetas: []
+                conversa:
+                  id: "uuid-conversa"
+                  status: "open"
+                  status_pt: "aberta"
+                  nao_lidas: 1
+                  unread_count: 1
+                  is_new: true
+                  nova: true
+
+  # ============================================================================
+  # MENSAGENS - BUSCA
   # ============================================================================
   /api-mensagens:
     get:
@@ -1261,36 +1551,6 @@ paths:
         "200":
           description: Mensagem apagada
 
-  /chat-v2-mensagem:
-    post:
-      tags: [Mensagens]
-      summary: Enviar mensagem
-      operationId: enviarMensagem
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/EnviarMensagemRequest"
-            example:
-              contato_id: "uuid-do-contato"
-              conteudo: "Olá! Como posso ajudar?"
-              tipo: "texto"
-      responses:
-        "200":
-          description: Mensagem enviada
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  sucesso:
-                    type: boolean
-                  mensagem_id:
-                    type: string
-                  status:
-                    type: string
-
   # ============================================================================
   # MENSAGENS AGENDADAS
   # ============================================================================
@@ -1344,9 +1604,6 @@ paths:
       tags: [Mensagens Agendadas]
       summary: Agendar mensagem ou cancelar
       operationId: agendarMensagem
-      description: |
-        Sem action: Agenda nova mensagem
-        Com action=cancelar: Cancela mensagem agendada
       parameters:
         - name: id
           in: query
@@ -1364,10 +1621,6 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/AgendarMensagemRequest"
-            example:
-              contato_id: "uuid-do-contato"
-              conteudo: "Lembrete: sua perícia é amanhã!"
-              agendar_para: "2026-01-10T10:00:00Z"
       responses:
         "201":
           description: Mensagem agendada
@@ -1536,9 +1789,6 @@ paths:
       tags: [Chatbots]
       summary: Criar chatbot ou iniciar fluxo
       operationId: criarChatbot
-      description: |
-        Sem action: Cria chatbot
-        Com action=enviar: Inicia fluxo para contato
       parameters:
         - name: action
           in: query
@@ -1664,11 +1914,6 @@ paths:
       tags: [Oportunidades]
       summary: Criar oportunidade ou ações
       operationId: criarOportunidade
-      description: |
-        Sem action: Cria oportunidade
-        Com action:
-        - `duplicar`: Duplica oportunidade
-        - `notas`: Adiciona nota
       parameters:
         - name: id
           in: query
@@ -1701,9 +1946,6 @@ paths:
       tags: [Oportunidades]
       summary: Atualizar oportunidade
       operationId: atualizarOportunidade
-      description: |
-        Sem action: Atualiza dados
-        Com action=mover: Move para outra etapa
       parameters:
         - name: id
           in: query
@@ -1806,22 +2048,22 @@ paths:
           schema:
             type: string
             enum: [todo, in_progress, done]
-        - name: assigned_to
+        - name: responsavel_id
           in: query
           schema:
             type: string
             format: uuid
-        - name: lead_id
+        - name: contato_id
           in: query
           schema:
             type: string
             format: uuid
-        - name: page
+        - name: pagina
           in: query
           schema:
             type: integer
             default: 1
-        - name: page_size
+        - name: por_pagina
           in: query
           schema:
             type: integer
@@ -1843,24 +2085,10 @@ paths:
 
     post:
       tags: [Tarefas]
-      summary: Criar tarefa ou concluir
+      summary: Criar tarefa
       operationId: criarTarefa
-      description: |
-        Sem action: Cria tarefa
-        Com action=concluir: Marca como concluída
-      parameters:
-        - name: id
-          in: query
-          description: ID da tarefa (para action=concluir)
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          schema:
-            type: string
-            enum: [concluir]
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -1913,19 +2141,18 @@ paths:
       summary: Obter resumo do caso
       operationId: obterResumoCaso
       description: |
-        Retorna o resumo de qualificação do caso (case_summary) armazenado em custom_fields.
+        Retorna o resumo de qualificação do caso.
         
-        Identifique o contato por `lead_id` OU `phone`.
+        Identifique o contato por `lead_id` OU `phone` (aceita UUID ou telefone).
       parameters:
         - name: lead_id
           in: query
-          description: ID do contato
+          description: ID do contato (UUID ou telefone)
           schema:
             type: string
-            format: uuid
         - name: phone
           in: query
-          description: Telefone do contato (alternativo ao lead_id)
+          description: Telefone do contato
           schema:
             type: string
       responses:
@@ -1947,37 +2174,20 @@ paths:
                         type: string
                       case_summary:
                         type: string
-                        description: Resumo da qualificação do caso
-              example:
-                success: true
-                data:
-                  lead_id: "8454ff97-627b-4730-901e-b091ed5e5685"
-                  lead_name: "Maria Silva"
-                  case_summary: "🆕 *NOVO LEAD QUALIFICADO*\n\n👤 *Cliente:* Maria Silva\n📱 *WhatsApp:* 5511999990001\n\n📋 *QUALIFICAÇÃO*\n\n- *Condição de saúde:* Diabetes tipo 2\n- *Renda familiar:* R$ 1.200\n- *CadÚnico:* Sim\n\n✅ *Status:* Qualificado"
-        "404":
-          $ref: "#/components/responses/NaoEncontrado"
 
     put:
       tags: [Resumo do Caso]
       summary: Atualizar resumo do caso
       operationId: atualizarResumoCaso
-      description: |
-        Atualiza o resumo de qualificação do caso.
-        
-        Este endpoint é ideal para integrações com automações (n8n, Make, Zapier) 
-        que processam a qualificação do lead e desejam salvar o resumo estruturado.
-        
-        Identifique o contato por `lead_id` OU `phone`.
       parameters:
         - name: lead_id
           in: query
-          description: ID do contato
+          description: ID do contato (UUID ou telefone)
           schema:
             type: string
-            format: uuid
         - name: phone
           in: query
-          description: Telefone do contato (alternativo ao lead_id)
+          description: Telefone do contato
           schema:
             type: string
       requestBody:
@@ -1991,69 +2201,28 @@ paths:
                 summary:
                   type: string
                   description: Resumo formatado do caso
-            example:
-              summary: "🆕 *NOVO LEAD QUALIFICADO*\n━━━━━━━━━━━━━━━━━━━━━━━\n\n👤 *Cliente:* João Santos\n📱 *WhatsApp:* 5511999990002\n📅 *Data:* 05/01/2026 às 14:30\n\n━━━━━━━━━━━━━━━━━━━━━━━\n📋 *QUALIFICAÇÃO*\n━━━━━━━━━━━━━━━━━━━━━━━\n\n- *Condição de saúde:* Hérnia inguinal\n- *Renda familiar:* R$ 1.400 (aposentadoria da mãe)\n- *CadÚnico:* Sim\n- *Possui laudo:* Sim\n\n━━━━━━━━━━━━━━━━━━━━━━━\n✅ *Status:* Qualificado\n🔖 *ID:* #1461"
       responses:
         "200":
           description: Resumo atualizado
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: object
-                    properties:
-                      lead_id:
-                        type: string
-                      lead_name:
-                        type: string
-                      case_summary:
-                        type: string
-        "404":
-          $ref: "#/components/responses/NaoEncontrado"
 
     delete:
       tags: [Resumo do Caso]
       summary: Remover resumo do caso
       operationId: removerResumoCaso
-      description: |
-        Remove o resumo de qualificação do caso.
-        
-        Identifique o contato por `lead_id` OU `phone`.
       parameters:
         - name: lead_id
           in: query
-          description: ID do contato
+          description: ID do contato (UUID ou telefone)
           schema:
             type: string
-            format: uuid
         - name: phone
           in: query
-          description: Telefone do contato (alternativo ao lead_id)
+          description: Telefone do contato
           schema:
             type: string
       responses:
         "200":
           description: Resumo removido
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      lead_id:
-                        type: string
-                      lead_name:
-                        type: string
 
 components:
   securitySchemes:
@@ -2063,6 +2232,9 @@ components:
       description: API Key gerada no sistema
 
   schemas:
+    # ============================================================================
+    # SCHEMAS COMUNS
+    # ============================================================================
     Paginacao:
       type: object
       properties:
@@ -2075,7 +2247,689 @@ components:
         total_paginas:
           type: integer
 
-    # ------------ Usuários ------------
+    PaginationEN:
+      type: object
+      properties:
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total:
+          type: integer
+        total_pages:
+          type: integer
+
+    InstanciaWhatsApp:
+      type: object
+      description: Dados da instância WhatsApp (bilíngue)
+      properties:
+        id:
+          type: string
+        nome:
+          type: string
+        name:
+          type: string
+        telefone:
+          type: string
+          description: Telefone formatado (+55 (11) 99999-0001)
+        phone_number:
+          type: string
+          description: Telefone raw (5511999990001)
+        identificador:
+          type: string
+        instance_name:
+          type: string
+        provider:
+          type: string
+          enum: [waha, evolution, z-api, custom]
+
+    EtapaFunil:
+      type: object
+      description: Etapa do funil (bilíngue)
+      properties:
+        id:
+          type: string
+        nome:
+          type: string
+        name:
+          type: string
+        cor:
+          type: string
+        color:
+          type: string
+
+    Responsavel:
+      type: object
+      description: Usuário responsável (bilíngue)
+      properties:
+        id:
+          type: string
+        nome:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+
+    EtiquetaCompleta:
+      type: object
+      description: Etiqueta com dados completos (bilíngue)
+      properties:
+        id:
+          type: string
+        nome:
+          type: string
+        name:
+          type: string
+        cor:
+          type: string
+        color:
+          type: string
+        categoria:
+          type: string
+        category:
+          type: string
+
+    LeadCompleto:
+      type: object
+      description: Dados completos do lead/contato (bilíngue)
+      properties:
+        id:
+          type: string
+        nome:
+          type: string
+        name:
+          type: string
+        telefone:
+          type: string
+          description: Telefone formatado
+        phone:
+          type: string
+          description: Telefone raw
+        email:
+          type: string
+        cpf:
+          type: string
+        temperatura:
+          type: string
+          enum: [frio, morno, quente]
+        temperature:
+          type: string
+          enum: [cold, warm, hot]
+        etapa_funil:
+          $ref: "#/components/schemas/EtapaFunil"
+        funnel_stage:
+          $ref: "#/components/schemas/EtapaFunil"
+        etiquetas:
+          type: array
+          items:
+            $ref: "#/components/schemas/EtiquetaCompleta"
+        labels:
+          type: array
+          items:
+            $ref: "#/components/schemas/EtiquetaCompleta"
+        responsavel:
+          $ref: "#/components/schemas/Responsavel"
+        assigned_to:
+          $ref: "#/components/schemas/Responsavel"
+        origem:
+          type: string
+        source:
+          type: string
+        tipo_beneficio:
+          type: string
+        benefit_type:
+          type: string
+        avatar_url:
+          type: string
+        is_new:
+          type: boolean
+          description: true se o lead foi criado nesta operação
+        criado_em:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    ConversaCompleta:
+      type: object
+      description: Dados completos da conversa (bilíngue)
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [open, pending, resolved]
+        status_pt:
+          type: string
+          enum: [aberta, pendente, finalizada]
+        nao_lidas:
+          type: integer
+        unread_count:
+          type: integer
+        favorita:
+          type: boolean
+        is_favorite:
+          type: boolean
+        is_new:
+          type: boolean
+          description: true se a conversa foi criada nesta operação
+        nova:
+          type: boolean
+        responsavel:
+          $ref: "#/components/schemas/Responsavel"
+        assigned_to:
+          $ref: "#/components/schemas/Responsavel"
+        instancia_whatsapp:
+          $ref: "#/components/schemas/InstanciaWhatsApp"
+        whatsapp_instance:
+          $ref: "#/components/schemas/InstanciaWhatsApp"
+        ultima_mensagem_em:
+          type: string
+          format: date-time
+        last_message_at:
+          type: string
+          format: date-time
+        ultima_mensagem:
+          type: string
+        last_message_content:
+          type: string
+        criada_em:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    MensagemCompleta:
+      type: object
+      description: Dados completos da mensagem (bilíngue)
+      properties:
+        id:
+          type: string
+        tipo:
+          type: string
+          enum: [texto, imagem, audio, video, documento]
+        type:
+          type: string
+          enum: [text, image, audio, video, document]
+        conteudo:
+          type: string
+        content:
+          type: string
+        midia_url:
+          type: string
+        media_url:
+          type: string
+        enviada_em:
+          type: string
+          format: date-time
+        sent_at:
+          type: string
+          format: date-time
+        recebida_em:
+          type: string
+          format: date-time
+        received_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+        direcao:
+          type: string
+          enum: [entrada, saida]
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        remetente:
+          type: object
+          properties:
+            tipo:
+              type: string
+              enum: [lead, sistema]
+            type:
+              type: string
+              enum: [lead, system]
+            id:
+              type: string
+            nome:
+              type: string
+            name:
+              type: string
+
+    # ============================================================================
+    # RESPONSES DE CONVERSAS
+    # ============================================================================
+    ConversaDetalhadaResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        success:
+          type: boolean
+        conversa:
+          $ref: "#/components/schemas/ConversaCompleta"
+        conversation:
+          $ref: "#/components/schemas/ConversaCompleta"
+        lead:
+          $ref: "#/components/schemas/LeadCompleto"
+        contato:
+          $ref: "#/components/schemas/LeadCompleto"
+        mensagens:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mensagem"
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Mensagem"
+
+    ListaConversasResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        success:
+          type: boolean
+        dados:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConversaResumo"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConversaResumo"
+        paginacao:
+          $ref: "#/components/schemas/Paginacao"
+        pagination:
+          $ref: "#/components/schemas/PaginationEN"
+
+    ConversaResumo:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+        status_pt:
+          type: string
+        nao_lidas:
+          type: integer
+        unread_count:
+          type: integer
+        favorita:
+          type: boolean
+        is_favorite:
+          type: boolean
+        ultima_mensagem_em:
+          type: string
+          format: date-time
+        last_message_at:
+          type: string
+          format: date-time
+        ultima_mensagem:
+          type: string
+        last_message_content:
+          type: string
+        lead:
+          type: object
+          properties:
+            id:
+              type: string
+            nome:
+              type: string
+            name:
+              type: string
+            telefone:
+              type: string
+            phone:
+              type: string
+            avatar_url:
+              type: string
+            temperatura:
+              type: string
+            temperature:
+              type: string
+        contato:
+          type: object
+          properties:
+            id:
+              type: string
+            nome:
+              type: string
+            telefone:
+              type: string
+            avatar_url:
+              type: string
+            temperatura:
+              type: string
+        criada_em:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    ConversaCriadaResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        success:
+          type: boolean
+        conversa:
+          type: object
+          properties:
+            id:
+              type: string
+            status:
+              type: string
+            status_pt:
+              type: string
+            criada_em:
+              type: string
+              format: date-time
+            created_at:
+              type: string
+              format: date-time
+        conversation:
+          type: object
+          properties:
+            id:
+              type: string
+            status:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+        lead:
+          $ref: "#/components/schemas/LeadCompleto"
+        contato:
+          $ref: "#/components/schemas/LeadCompleto"
+
+    ConversaAtualizadaResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        success:
+          type: boolean
+        acao:
+          type: string
+          enum: [transferir, atribuir, finalizar, reabrir, atualizar]
+        action:
+          type: string
+          enum: [transfer, assign, resolve, reopen, update]
+        conversa:
+          type: object
+          properties:
+            id:
+              type: string
+            status:
+              type: string
+            status_pt:
+              type: string
+            atualizada_em:
+              type: string
+              format: date-time
+        conversation:
+          type: object
+          properties:
+            id:
+              type: string
+            status:
+              type: string
+            updated_at:
+              type: string
+              format: date-time
+        transferido_para:
+          type: object
+          properties:
+            tipo:
+              type: string
+              enum: [usuario, equipe]
+            id:
+              type: string
+        transferred_to:
+          type: object
+          properties:
+            tipo:
+              type: string
+            id:
+              type: string
+        lead:
+          $ref: "#/components/schemas/LeadCompleto"
+        contato:
+          $ref: "#/components/schemas/LeadCompleto"
+
+    # ============================================================================
+    # RESPONSES DE MENSAGENS
+    # ============================================================================
+    MensagemEnviadaResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        success:
+          type: boolean
+        request_id:
+          type: string
+          description: ID único da requisição
+        mensagem_id:
+          type: string
+        message_id:
+          type: string
+        external_message_id:
+          type: string
+          description: ID da mensagem no provedor WhatsApp
+        instancia_whatsapp:
+          $ref: "#/components/schemas/InstanciaWhatsApp"
+        whatsapp_instance:
+          $ref: "#/components/schemas/InstanciaWhatsApp"
+        mensagem:
+          $ref: "#/components/schemas/MensagemCompleta"
+        message:
+          $ref: "#/components/schemas/MensagemCompleta"
+        lead:
+          $ref: "#/components/schemas/LeadCompleto"
+        contato:
+          $ref: "#/components/schemas/LeadCompleto"
+        conversa:
+          $ref: "#/components/schemas/ConversaCompleta"
+        conversation:
+          $ref: "#/components/schemas/ConversaCompleta"
+
+    MensagemRecebidaResponse:
+      type: object
+      properties:
+        sucesso:
+          type: boolean
+        success:
+          type: boolean
+        request_id:
+          type: string
+        mensagem_id:
+          type: string
+        message_id:
+          type: string
+        instancia_whatsapp:
+          $ref: "#/components/schemas/InstanciaWhatsApp"
+        whatsapp_instance:
+          $ref: "#/components/schemas/InstanciaWhatsApp"
+        mensagem:
+          $ref: "#/components/schemas/MensagemCompleta"
+        message:
+          $ref: "#/components/schemas/MensagemCompleta"
+        lead:
+          $ref: "#/components/schemas/LeadCompleto"
+        contato:
+          $ref: "#/components/schemas/LeadCompleto"
+        conversa:
+          $ref: "#/components/schemas/ConversaCompleta"
+        conversation:
+          $ref: "#/components/schemas/ConversaCompleta"
+
+    # ============================================================================
+    # REQUESTS
+    # ============================================================================
+    CriarConversaRequest:
+      type: object
+      required: [lead_id]
+      properties:
+        lead_id:
+          type: string
+          description: ID do lead (UUID ou telefone)
+        contato_id:
+          type: string
+          description: Alias para lead_id (UUID ou telefone)
+        assigned_to:
+          type: string
+          format: uuid
+        responsavel_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [open, pending, resolved]
+          default: open
+        whatsapp_instance_id:
+          type: string
+          format: uuid
+        instancia_id:
+          type: string
+          format: uuid
+
+    CriarNotaRequest:
+      type: object
+      required: [conteudo]
+      properties:
+        conteudo:
+          type: string
+        content:
+          type: string
+        author_id:
+          type: string
+          format: uuid
+
+    AtualizarConversaRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [open, pending, resolved]
+        assigned_to:
+          type: string
+          format: uuid
+        responsavel_id:
+          type: string
+          format: uuid
+        usuario_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        is_favorite:
+          type: boolean
+        favorito:
+          type: boolean
+        tipo:
+          type: string
+          enum: [usuario, equipe]
+          description: Para action=transferir
+        equipe_id:
+          type: string
+          format: uuid
+          description: Para action=transferir com tipo=equipe
+
+    EnviarMensagemRequest:
+      type: object
+      required: [conteudo]
+      description: |
+        O campo `contato_id` aceita UUID ou telefone.
+      properties:
+        contato_id:
+          type: string
+          description: ID do contato (UUID ou telefone)
+        telefone:
+          type: string
+          description: Número de telefone (alternativo ao contato_id)
+        tipo:
+          type: string
+          enum: [texto, imagem, audio, video, documento]
+          default: texto
+        conteudo:
+          type: string
+        midia_url:
+          type: string
+        instancia_id:
+          type: string
+          format: uuid
+          description: ID da instância WhatsApp a usar
+
+    SendMessageRequest:
+      type: object
+      required: [phone, message]
+      description: |
+        O campo `lead_id` aceita UUID ou telefone.
+      properties:
+        phone:
+          type: string
+          description: Número de telefone do destinatário
+        message:
+          type: string
+          description: Conteúdo da mensagem (suporta variáveis de template)
+        type:
+          type: string
+          enum: [text, image, audio, video, document]
+          default: text
+        media_url:
+          type: string
+        lead_id:
+          type: string
+          description: ID do lead (UUID ou telefone)
+        conversation_id:
+          type: string
+          format: uuid
+        whatsapp_instance_id:
+          type: string
+          format: uuid
+
+    ReceiveMessageRequest:
+      type: object
+      required: [phone, message]
+      properties:
+        phone:
+          type: string
+          description: Número de telefone do remetente
+        country_code:
+          type: string
+          description: Código do país (55, 1, etc)
+        message:
+          type: string
+        type:
+          type: string
+          enum: [text, image, audio, video, document]
+          default: text
+        media_url:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        external_id:
+          type: string
+          description: ID da mensagem no provedor WhatsApp
+        sender_name:
+          type: string
+          description: Nome do remetente (do WhatsApp)
+        whatsapp_instance_id:
+          type: string
+          format: uuid
+
+    # ============================================================================
+    # SCHEMAS EXISTENTES (mantidos)
+    # ============================================================================
     Usuario:
       type: object
       properties:
@@ -2121,7 +2975,6 @@ components:
         disponivel:
           type: boolean
 
-    # ------------ Equipes ------------
     Equipe:
       type: object
       properties:
@@ -2164,7 +3017,6 @@ components:
         distribuicao_automatica:
           type: boolean
 
-    # ------------ Contatos ------------
     Contato:
       type: object
       properties:
@@ -2227,10 +3079,6 @@ components:
           type: string
         nit_pis:
           type: string
-        utm_source:
-          type: string
-        utm_medium:
-          type: string
         source:
           type: string
         stage_id:
@@ -2281,7 +3129,6 @@ components:
             format: uuid
         campos:
           type: object
-          description: Filtrar por campos personalizados
         periodo:
           type: object
           properties:
@@ -2365,7 +3212,6 @@ components:
           type: string
           format: uuid
 
-    # ------------ Etiquetas ------------
     Etiqueta:
       type: object
       properties:
@@ -2377,7 +3223,7 @@ components:
           type: string
         categoria:
           type: string
-          enum: [origem, interesse, prioridade, status, beneficio, condicao_saude, desqualificacao]
+          enum: [origem, interesse, prioridade, status, beneficio, condicao_saude, desqualificacao, situacao, perda]
 
     CriarEtiquetaRequest:
       type: object
@@ -2398,7 +3244,6 @@ components:
         cor:
           type: string
 
-    # ------------ Campos Personalizados ------------
     CampoPersonalizado:
       type: object
       properties:
@@ -2460,7 +3305,6 @@ components:
         ordem:
           type: integer
 
-    # ------------ Carteiras ------------
     Carteira:
       type: object
       properties:
@@ -2499,7 +3343,6 @@ components:
         cor:
           type: string
 
-    # ------------ Webhooks ------------
     Webhook:
       type: object
       properties:
@@ -2548,7 +3391,6 @@ components:
         ativo:
           type: boolean
 
-    # ------------ Conversas ------------
     Conversa:
       type: object
       properties:
@@ -2556,22 +3398,11 @@ components:
           type: string
         lead_id:
           type: string
-        lead:
-          type: object
-          properties:
-            id:
-              type: string
-            name:
-              type: string
-            phone:
-              type: string
-            avatar_url:
-              type: string
-        assigned_to:
-          type: string
         status:
           type: string
           enum: [open, pending, resolved]
+        assigned_to:
+          type: string
         unread_count:
           type: integer
         last_message_at:
@@ -2585,7 +3416,6 @@ components:
           type: string
           format: date-time
 
-    # ------------ Mensagens ------------
     Mensagem:
       type: object
       properties:
@@ -2615,33 +3445,6 @@ components:
           type: string
           format: date-time
 
-    EnviarMensagemRequest:
-      type: object
-      required: [conteudo]
-      description: |
-        Enviar mensagem. Use `contato_id` OU `telefone` para identificar o destinatário.
-      properties:
-        contato_id:
-          type: string
-          format: uuid
-          description: ID do contato (alternativo ao telefone)
-        telefone:
-          type: string
-          description: Número de telefone (alternativo ao contato_id)
-        tipo:
-          type: string
-          enum: [texto, imagem, audio, video, documento]
-          default: texto
-        conteudo:
-          type: string
-        midia_url:
-          type: string
-        instancia_id:
-          type: string
-          format: uuid
-          description: ID da instância WhatsApp a usar
-
-    # ------------ Mensagens Agendadas ------------
     MensagemAgendada:
       type: object
       properties:
@@ -2685,7 +3488,6 @@ components:
           type: string
           format: uuid
 
-    # ------------ Templates ------------
     Template:
       type: object
       properties:
@@ -2722,7 +3524,6 @@ components:
         conteudo:
           type: string
 
-    # ------------ Canais ------------
     Canal:
       type: object
       properties:
@@ -2741,7 +3542,6 @@ components:
           type: string
           format: date-time
 
-    # ------------ Chatbots ------------
     Chatbot:
       type: object
       properties:
@@ -2802,7 +3602,6 @@ components:
         ativo:
           type: boolean
 
-    # ------------ Oportunidades ------------
     Oportunidade:
       type: object
       properties:
@@ -2898,7 +3697,6 @@ components:
         tipo_beneficio:
           type: string
 
-    # ------------ Funis ------------
     Funil:
       type: object
       properties:
@@ -2926,7 +3724,6 @@ components:
               total:
                 type: integer
 
-    # ------------ Tarefas ------------
     Tarefa:
       type: object
       properties:
@@ -3012,9 +3809,15 @@ components:
               sucesso:
                 type: boolean
                 example: false
+              success:
+                type: boolean
+                example: false
               erro:
                 type: string
                 example: "API key inválida"
+              error:
+                type: string
+                example: "Invalid API key"
 
     RequisicaoInvalida:
       description: Dados inválidos
@@ -3026,7 +3829,12 @@ components:
               sucesso:
                 type: boolean
                 example: false
+              success:
+                type: boolean
+                example: false
               erro:
+                type: string
+              error:
                 type: string
 
     NaoEncontrado:
@@ -3039,6 +3847,12 @@ components:
               sucesso:
                 type: boolean
                 example: false
+              success:
+                type: boolean
+                example: false
               erro:
                 type: string
                 example: "Recurso não encontrado"
+              error:
+                type: string
+                example: "Resource not found"
