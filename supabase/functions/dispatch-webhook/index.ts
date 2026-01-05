@@ -63,8 +63,23 @@ function formatarCPF(cpf: string | null | undefined): string | null {
   return `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6,9)}-${digits.slice(9)}`;
 }
 
+// Formatar timestamp em GMT-3 (São Paulo/Brasília)
 function formatTimestamp(): string {
-  return new Date().toISOString().replace('Z', '-03:00');
+  const now = new Date();
+  // Offset de -3 horas em milissegundos
+  const brasiliaOffset = -3 * 60 * 60 * 1000;
+  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60 * 1000);
+  const brasiliaTime = new Date(utcTime + brasiliaOffset);
+  
+  const year = brasiliaTime.getFullYear();
+  const month = String(brasiliaTime.getMonth() + 1).padStart(2, '0');
+  const day = String(brasiliaTime.getDate()).padStart(2, '0');
+  const hours = String(brasiliaTime.getHours()).padStart(2, '0');
+  const minutes = String(brasiliaTime.getMinutes()).padStart(2, '0');
+  const seconds = String(brasiliaTime.getSeconds()).padStart(2, '0');
+  const ms = String(brasiliaTime.getMilliseconds()).padStart(3, '0');
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${ms}-03:00`;
 }
 
 function traduzirTemperatura(temp: string): string {
