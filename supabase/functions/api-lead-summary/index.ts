@@ -34,6 +34,18 @@ function normalizePhoneForSearch(phone: string): NormalizedPhone {
   };
 }
 
+// Helper: Validar se é UUID válido
+function isValidUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
+// Helper: Verificar se parece um telefone
+function looksLikePhone(str: string): boolean {
+  const digits = str.replace(/\D/g, '');
+  return digits.length >= 10 && digits.length <= 13 && /^\d+$/.test(digits);
+}
+
 // Helper: Return safe error response
 function safeErrorResponse(
   internalError: unknown, 
@@ -100,8 +112,53 @@ Deno.serve(async (req) => {
 
     // Resolve lead_id from phone if needed
     let leadId = leadIdParam;
-    if (phoneParam && !leadIdParam) {
-      // Usar normalização robusta
+    
+    // Auto-detect: se lead_id parece um telefone (não é UUID), tratar como busca por telefone
+    if (leadIdParam && !isValidUUID(leadIdParam) && looksLikePhone(leadIdParam)) {
+      console.log('[api-lead-summary] lead_id looks like a phone number, treating as phone search:', leadIdParam);
+      
+      const phone = normalizePhoneForSearch(leadIdParam);
+      
+      const { data: leadByPhone, error: phoneError } = await supabase
+        .from('leads')
+        .select('id, phone')
+        .or(`phone.eq.${phone.withoutCountry},phone.eq.${phone.last11},phone.eq.${phone.last10},phone.ilike.%${phone.last10}`)
+        .limit(1)
+        .maybeSingle();
+
+      if (phoneError) {
+        console.error('[api-lead-summary] Error searching by phone:', phoneError);
+        return safeErrorResponse(phoneError, 'Error searching lead by phone');
+      }
+
+      if (!leadByPhone) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Lead not found with this phone number',
+            hint: 'You passed a phone number in lead_id parameter. Use ?phone=XXXX or a valid UUID for lead_id.',
+            searched: { input: leadIdParam, variations_tried: [phone.withoutCountry, phone.last11, phone.last10] }
+          }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      leadId = leadByPhone.id;
+      console.log('[api-lead-summary] Found lead by phone (auto-detected):', leadId, '| stored phone:', leadByPhone.phone);
+      
+    } else if (leadIdParam && !isValidUUID(leadIdParam)) {
+      // Não é UUID válido nem parece telefone
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Invalid lead_id format',
+          hint: 'lead_id must be a valid UUID. For phone search, use ?phone=XXXX or pass a valid phone number.'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+      
+    } else if (phoneParam && !leadIdParam) {
+      // Busca explícita por telefone
       const phone = normalizePhoneForSearch(phoneParam);
       
       console.log('[api-lead-summary] Searching lead by phone:', {
@@ -109,7 +166,6 @@ Deno.serve(async (req) => {
         normalized: phone
       });
       
-      // Buscar com múltiplas variações para máxima compatibilidade
       const { data: leadByPhone, error: phoneError } = await supabase
         .from('leads')
         .select('id, phone')
