@@ -116,3 +116,6 @@ verify_jwt = false
 
 [functions.api-mensagens]
 verify_jwt = false
+
+[functions.get-whatsapp-avatar]
+verify_jwt = false

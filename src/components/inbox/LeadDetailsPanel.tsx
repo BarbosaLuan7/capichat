@@ -20,7 +20,7 @@ import {
   Activity,
   Filter,
 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { LeadAvatar } from '@/components/ui/lead-avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -152,14 +152,7 @@ function LeadDetailsPanelComponent({
         <div className="p-4 border-b border-border">
           <div className="flex items-start gap-3">
             <div className="relative">
-              <Avatar className="w-14 h-14">
-                <AvatarImage
-                  src={(lead as any).avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.name}`}
-                />
-                <AvatarFallback className="text-lg">
-                  {lead.name.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
+              <LeadAvatar lead={lead} size="lg" />
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>

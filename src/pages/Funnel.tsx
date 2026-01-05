@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { LeadAvatar } from '@/components/ui/lead-avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -104,10 +104,7 @@ const LeadCardComponent = ({ lead, labels, leadLabels, isDragging, onEdit, onDel
       aria-label={`Lead ${lead.name}${lead.estimated_value ? `, valor estimado R$ ${Number(lead.estimated_value).toLocaleString('pt-BR')}` : ''}`}
     >
       <div className="flex items-start gap-3">
-        <Avatar className="w-10 h-10">
-          <AvatarImage src={(lead as any).avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.name}`} />
-          <AvatarFallback>{lead.name.charAt(0)}</AvatarFallback>
-        </Avatar>
+        <LeadAvatar lead={lead} size="md" />
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">

@@ -1,11 +1,11 @@
 import React, { memo } from 'react';
 import { Star, Phone } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn, getContrastTextColor } from '@/lib/utils';
 import { formatPhoneNumber } from '@/lib/masks';
 import { format, isSameDay, isYesterday } from 'date-fns';
+import { LeadAvatar } from '@/components/ui/lead-avatar';
 import type { Database } from '@/integrations/supabase/types';
 
 type ConversationStatus = Database['public']['Enums']['conversation_status'];
@@ -109,10 +109,16 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
     >
       <div className="flex gap-3">
         {/* Avatar */}
-        <Avatar className="w-10 h-10 shrink-0">
-          <AvatarImage src={convLead?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${convLead?.name}`} />
-          <AvatarFallback>{displayName?.charAt(0)}</AvatarFallback>
-        </Avatar>
+        <LeadAvatar 
+          lead={{ 
+            id: convLead?.id || '', 
+            name: convLead?.name || '', 
+            phone: convLead?.phone,
+            avatar_url: convLead?.avatar_url 
+          }} 
+          size="md" 
+          className="shrink-0" 
+        />
 
         {/* Content */}
         <div className="flex-1 min-w-0 flex flex-col gap-0.5">
@@ -273,6 +279,7 @@ export const ConversationItem = memo(ConversationItemComponent, (prevProps, next
     prevProps.conversation.leads?.temperature === nextProps.conversation.leads?.temperature &&
     prevProps.conversation.leads?.benefit_type === nextProps.conversation.leads?.benefit_type &&
     prevProps.conversation.leads?.whatsapp_name === nextProps.conversation.leads?.whatsapp_name &&
+    prevProps.conversation.leads?.avatar_url === nextProps.conversation.leads?.avatar_url &&
     areLabelsEqual(prevProps.conversation.leads?.lead_labels, nextProps.conversation.leads?.lead_labels)
   );
 });
