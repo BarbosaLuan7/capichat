@@ -64,6 +64,47 @@ function normalizePhone(phone: string): string {
   return numbers;
 }
 
+// Buscar foto de perfil do WhatsApp
+async function getProfilePicture(
+  wahaBaseUrl: string,
+  apiKey: string,
+  sessionName: string,
+  phone: string
+): Promise<string | null> {
+  try {
+    const phoneWithCountry = phone.startsWith('55') ? phone : `55${phone}`;
+    const url = `${wahaBaseUrl}/api/contacts/profile-picture?contactId=${phoneWithCountry}&session=${sessionName}&refresh=true`;
+    
+    console.log('[resolve-lids] Buscando avatar para:', phoneWithCountry);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'X-Api-Key': apiKey,
+        'Authorization': `Bearer ${apiKey}`,
+      },
+    });
+    
+    if (!response.ok) {
+      console.log('[resolve-lids] Avatar não encontrado:', response.status);
+      return null;
+    }
+    
+    const data = await response.json();
+    const avatarUrl = data?.profilePictureURL || data?.profilePicture || data?.url;
+    
+    if (avatarUrl) {
+      console.log('[resolve-lids] Avatar encontrado');
+      return avatarUrl;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[resolve-lids] Erro ao buscar avatar:', error);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -175,6 +216,14 @@ serve(async (req) => {
               .replace(/⚠️ Número Privado \(Facebook Ads\)[\s\S]*?conversar normalmente com o cliente\./g, '')
               .trim();
             
+            // Buscar avatar do WhatsApp
+            const avatarUrl = await getProfilePicture(
+              baseUrl,
+              wahaConfig.api_key,
+              sessionName,
+              normalizedPhone
+            );
+            
             const { error: updateError } = await supabase
               .from('leads')
               .update({
@@ -182,7 +231,8 @@ serve(async (req) => {
                 is_facebook_lid: false,
                 name: cleanName,
                 source: 'facebook_ads_resolved',
-                internal_notes: cleanNotes || null, // Limpar notas se ficou vazio
+                internal_notes: cleanNotes || null,
+                avatar_url: avatarUrl, // Adicionar avatar se encontrado
               })
               .eq('id', lead.id);
 
