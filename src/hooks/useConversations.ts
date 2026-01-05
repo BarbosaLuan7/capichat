@@ -48,19 +48,26 @@ export function useConversations() {
   });
 }
 
-export function useConversation(id: string | undefined) {
+export function useConversation(id: string | undefined, tenantId?: string | null) {
   return useQuery({
-    queryKey: ['conversations', id],
+    queryKey: ['conversations', id, tenantId],
     queryFn: async () => {
       if (!id) return null;
-      const { data, error } = await supabase
+      
+      let query = supabase
         .from('conversations')
         .select(`
           *,
-          leads (id, name, phone, email, temperature, avatar_url)
+          leads (id, name, phone, email, temperature, avatar_url, tenant_id)
         `)
-        .eq('id', id)
-        .maybeSingle();
+        .eq('id', id);
+      
+      // Add tenant filter if provided to prevent cross-tenant access
+      if (tenantId) {
+        query = query.eq('leads.tenant_id', tenantId);
+      }
+      
+      const { data, error } = await query.maybeSingle();
       
       if (error) throw error;
       return data;

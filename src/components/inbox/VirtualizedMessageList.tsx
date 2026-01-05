@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useEffect, useCallback, memo } from 'react';
+import React, { useRef, useMemo, useEffect, useCallback, memo, forwardRef, useImperativeHandle } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { format } from 'date-fns';
 import { Loader2, MessageSquare, Zap } from 'lucide-react';
@@ -80,6 +80,10 @@ interface VirtualizedMessageListProps {
   onInitialScrollDone?: () => void;
   // Upload progress for showing indicator
   uploadProgress?: { uploading: boolean; progress: number };
+}
+
+export interface VirtualizedMessageListRef {
+  scrollToBottom: () => void;
 }
 
 // Estimate item heights for virtualization
@@ -192,26 +196,27 @@ function flattenItems(
   return items;
 }
 
-function VirtualizedMessageListComponent({
-  messages,
-  internalNotes,
-  initialUnreadCount,
-  lead,
-  agentName,
-  onReply,
-  onRetry,
-  selectionMode,
-  selectedMessages,
-  onToggleSelect,
-  isLoadingMessages,
-  isLoadingMoreMessages,
-  hasMoreMessages,
-  onLoadMoreMessages,
-  getSignedUrl,
-  onTemplateSelect,
-  onInitialScrollDone,
-  uploadProgress,
-}: VirtualizedMessageListProps) {
+const VirtualizedMessageListComponent = forwardRef<VirtualizedMessageListRef, VirtualizedMessageListProps>(
+  function VirtualizedMessageListComponent({
+    messages,
+    internalNotes,
+    initialUnreadCount,
+    lead,
+    agentName,
+    onReply,
+    onRetry,
+    selectionMode,
+    selectedMessages,
+    onToggleSelect,
+    isLoadingMessages,
+    isLoadingMoreMessages,
+    hasMoreMessages,
+    onLoadMoreMessages,
+    getSignedUrl,
+    onTemplateSelect,
+    onInitialScrollDone,
+    uploadProgress,
+  }, ref) {
   const parentRef = useRef<HTMLDivElement>(null);
   const initialScrollDoneRef = useRef(false);
   const prevItemCountRef = useRef(0);
@@ -239,6 +244,15 @@ function VirtualizedMessageListComponent({
   });
 
   const virtualItems = virtualizer.getVirtualItems();
+
+  // Expose scrollToBottom method via ref
+  useImperativeHandle(ref, () => ({
+    scrollToBottom: () => {
+      if (flatItems.length > 0) {
+        virtualizer.scrollToIndex(flatItems.length - 1, { align: 'end' });
+      }
+    },
+  }), [flatItems.length, virtualizer]);
 
   // Handle initial scroll positioning
   useEffect(() => {
@@ -341,16 +355,17 @@ function VirtualizedMessageListComponent({
         return <InlineNoteMessage note={item.note} />;
 
       case 'message':
+        // Cast to MessageBubble's expected Message type - both have same structure
         return (
           <MessageBubble
-            message={item.message as any}
+            message={item.message as Parameters<typeof MessageBubble>[0]['message']}
             isAgent={item.message.sender_type === 'agent'}
             showAvatar={item.showAvatar}
             leadName={lead.name}
             leadAvatarUrl={lead.avatar_url}
             agentName={agentName}
-            onReply={onReply as any}
-            onRetry={onRetry as any}
+            onReply={onReply as (message: Parameters<typeof MessageBubble>[0]['message']) => void}
+            onRetry={onRetry as (message: Parameters<typeof MessageBubble>[0]['message']) => void}
             resolvedMediaUrl={item.message.media_url ? getSignedUrl(item.message.media_url) : undefined}
             selectionMode={selectionMode}
             isSelected={selectedMessages.includes(item.message.id)}
@@ -489,7 +504,7 @@ function VirtualizedMessageListComponent({
       </div>
     </div>
   );
-}
+});
 
 VirtualizedMessageListComponent.displayName = 'VirtualizedMessageList';
 
