@@ -235,26 +235,38 @@ interface ProfilePictureResult {
 }
 
 // Busca foto de perfil do WhatsApp via WAHA API
+// Suporta tanto números normais quanto LIDs do Facebook
 async function getProfilePictureWithReason(
   wahaBaseUrl: string,
   apiKey: string,
   sessionName: string,
-  contactId: string
+  contactId: string,
+  isLid: boolean = false
 ): Promise<ProfilePictureResult> {
   try {
-    // Usar apenas o número SEM @c.us, conforme documentação oficial WAHA
-    const cleanNumber = contactId.replace('@c.us', '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
+    let formattedContactId: string;
     
-    // Ignorar números muito curtos ou inválidos
-    if (cleanNumber.length < 10) {
-      console.log('[whatsapp-webhook] 📷 Número muito curto para buscar foto:', cleanNumber);
-      return { url: null, reason: 'number_too_short' };
+    if (isLid) {
+      // Para LIDs: garantir que tem @lid no final
+      const cleanLid = contactId.replace('@lid', '').replace(/\D/g, '');
+      formattedContactId = `${cleanLid}@lid`;
+      console.log('[whatsapp-webhook] 📷 Buscando foto via LID:', formattedContactId);
+    } else {
+      // Para números normais: usar apenas o número SEM @c.us
+      formattedContactId = contactId.replace('@c.us', '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
+      
+      // Ignorar números muito curtos ou inválidos
+      if (formattedContactId.length < 10) {
+        console.log('[whatsapp-webhook] 📷 Número muito curto para buscar foto:', formattedContactId);
+        return { url: null, reason: 'number_too_short' };
+      }
+      console.log('[whatsapp-webhook] 📷 Buscando foto via telefone:', formattedContactId);
     }
     
     // Adicionar refresh=true para forçar buscar do WhatsApp (evita cache vazio de 24h)
-    const url = `${wahaBaseUrl}/api/contacts/profile-picture?contactId=${cleanNumber}&session=${sessionName}&refresh=true`;
+    const url = `${wahaBaseUrl}/api/contacts/profile-picture?contactId=${formattedContactId}&session=${sessionName}&refresh=true`;
     
-    console.log('[whatsapp-webhook] 📷 Buscando foto de perfil para:', cleanNumber);
+    console.log('[whatsapp-webhook] 📷 Request URL:', url);
     
     // Usar AbortController para timeout de 8 segundos (fotos podem demorar mais)
     const controller = new AbortController();
@@ -285,11 +297,11 @@ async function getProfilePictureWithReason(
     const profilePictureUrl = data?.profilePictureURL || data?.profilePicture || data?.url || data?.imgUrl;
     
     if (profilePictureUrl && typeof profilePictureUrl === 'string' && profilePictureUrl.startsWith('http')) {
-      console.log('[whatsapp-webhook] 📷 Foto de perfil encontrada para:', cleanNumber);
+      console.log('[whatsapp-webhook] 📷 Foto de perfil encontrada!');
       return { url: profilePictureUrl };
     }
     
-    console.log('[whatsapp-webhook] 📷 Foto não encontrada ou privada para:', cleanNumber);
+    console.log('[whatsapp-webhook] 📷 Foto não encontrada ou privada');
     return { url: null, reason: 'no_picture_or_private' };
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
@@ -2015,19 +2027,35 @@ serve(async (req) => {
       }
 
       // Buscar foto de perfil se ainda não tiver
-      if (!existingLead.avatar_url && !isFromFacebookLid) {
+      // CORREÇÃO: Para leads LID, usar o original_lid com @lid para buscar foto
+      if (!existingLead.avatar_url) {
         console.log('[whatsapp-webhook] 📷 Lead existente sem avatar, tentando buscar...');
         const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
         if (wahaConfig) {
-          // Usar função correta para montar número com código do país
-          const phoneWithCountry = getPhoneWithCountryCode(senderPhone, existingLead.country_code);
-          console.log('[whatsapp-webhook] 📷 Buscando avatar para:', phoneWithCountry);
+          // Se é lead LID, usar o original_lid com sufixo @lid
+          // Senão, usar número com código do país
+          let contactIdForAvatar: string;
+          let isLidRequest = false;
+          
+          if (isFromFacebookLid && originalLid) {
+            contactIdForAvatar = `${originalLid}@lid`;
+            isLidRequest = true;
+            console.log('[whatsapp-webhook] 📷 Buscando avatar via LID:', contactIdForAvatar);
+          } else if (existingLead.original_lid && existingLead.is_facebook_lid) {
+            contactIdForAvatar = `${existingLead.original_lid}@lid`;
+            isLidRequest = true;
+            console.log('[whatsapp-webhook] 📷 Buscando avatar via LID existente:', contactIdForAvatar);
+          } else {
+            contactIdForAvatar = getPhoneWithCountryCode(senderPhone, existingLead.country_code);
+            console.log('[whatsapp-webhook] 📷 Buscando avatar via telefone:', contactIdForAvatar);
+          }
           
           const avatarResult = await getProfilePictureWithReason(
             wahaConfig.baseUrl,
             wahaConfig.apiKey,
             wahaConfig.sessionName,
-            phoneWithCountry
+            contactIdForAvatar,
+            isLidRequest
           );
           
           if (avatarResult.url) {
@@ -2040,7 +2068,8 @@ serve(async (req) => {
               event: 'avatar_retry',
               payload: {
                 lead_id: existingLead.id,
-                phone: phoneWithCountry,
+                contact_id: contactIdForAvatar,
+                is_lid: isLidRequest,
                 session: wahaConfig.sessionName,
                 instance_id: wahaConfig.instanceId,
                 attempt: 1,
@@ -2101,20 +2130,32 @@ serve(async (req) => {
       }
 
       // Buscar foto de perfil para novo lead
+      // CORREÇÃO: Para leads LID, usar o original_lid com @lid para buscar foto
       let avatarUrl: string | null = null;
       let shouldScheduleAvatarRetry = false;
-      let avatarRetryData: { phone: string; session: string; instance_id: string; reason?: string } | null = null;
+      let avatarRetryData: { contact_id: string; is_lid: boolean; session: string; instance_id: string; reason?: string } | null = null;
       
-      if (!isFromFacebookLid && wahaConfigForLead) {
-        // Usar função correta para montar número com código do país (detecta automaticamente)
-        const phoneWithCountry = getPhoneWithCountryCode(senderPhone);
-        console.log('[whatsapp-webhook] 📷 Buscando avatar para novo lead:', phoneWithCountry);
+      if (wahaConfigForLead) {
+        // Se é lead LID, usar o original_lid com sufixo @lid
+        // Senão, usar número com código do país
+        let contactIdForAvatar: string;
+        let isLidRequest = false;
+        
+        if (isFromFacebookLid && originalLid) {
+          contactIdForAvatar = `${originalLid}@lid`;
+          isLidRequest = true;
+          console.log('[whatsapp-webhook] 📷 Buscando avatar para novo lead via LID:', contactIdForAvatar);
+        } else {
+          contactIdForAvatar = getPhoneWithCountryCode(senderPhone);
+          console.log('[whatsapp-webhook] 📷 Buscando avatar para novo lead via telefone:', contactIdForAvatar);
+        }
         
         const avatarResult = await getProfilePictureWithReason(
           wahaConfigForLead.baseUrl,
           wahaConfigForLead.apiKey,
           wahaConfigForLead.sessionName,
-          phoneWithCountry
+          contactIdForAvatar,
+          isLidRequest
         );
         
         if (avatarResult.url) {
@@ -2124,7 +2165,8 @@ serve(async (req) => {
           // Marcar para agendar retry após criar o lead
           shouldScheduleAvatarRetry = true;
           avatarRetryData = {
-            phone: phoneWithCountry,
+            contact_id: contactIdForAvatar,
+            is_lid: isLidRequest,
             session: wahaConfigForLead.sessionName,
             instance_id: wahaConfigForLead.instanceId,
             reason: avatarResult.reason,
@@ -2193,7 +2235,8 @@ serve(async (req) => {
             event: 'avatar_retry',
             payload: {
               lead_id: lead.id,
-              phone: avatarRetryData.phone,
+              contact_id: avatarRetryData.contact_id,
+              is_lid: avatarRetryData.is_lid,
               session: avatarRetryData.session,
               instance_id: avatarRetryData.instance_id,
               attempt: 1,
