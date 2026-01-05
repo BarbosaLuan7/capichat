@@ -21,9 +21,10 @@ info:
 
     | Operação | Limite |
     |----------|--------|
-    | Envio de mensagens | 100 req/min |
-    | Leitura (GET) | 1000 req/min |
-    | Escrita (POST/PUT/DELETE) | 300 req/min |
+    | Envio de mensagens | 300 req/min |
+    | Leitura (GET) | 3000 req/min |
+    | Escrita (POST/PUT/DELETE) | 500 req/min |
+    | Webhooks recebidos | 1000 req/min |
 
     ## Paginação
 
@@ -2604,6 +2605,9 @@ components:
       properties:
         sucesso:
           type: boolean
+        request_id:
+          type: string
+          description: "ID único para debug/rastreio"
         mensagem:
           type: object
           properties:
@@ -2621,6 +2625,19 @@ components:
               format: date-time
             status:
               type: string
+            direcao:
+              type: string
+              enum: [entrada, saida]
+            remetente:
+              type: object
+              properties:
+                tipo:
+                  type: string
+                  enum: [contato, atendente]
+                id:
+                  type: string
+                nome:
+                  type: string
         lead:
           type: object
           properties:
@@ -2630,14 +2647,33 @@ components:
               type: string
             whatsapp:
               type: string
+            email:
+              type: string
+              nullable: true
             temperatura:
               type: string
             etapa_funil:
+              type: string
+            tipo_beneficio:
+              type: string
+              nullable: true
+            origem:
               type: string
             etiquetas:
               type: array
               items:
                 type: string
+            responsavel:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                nome:
+                  type: string
+            criado_em:
+              type: string
+              format: date-time
         conversa:
           type: object
           properties:
@@ -2645,6 +2681,34 @@ components:
               type: string
             status:
               type: string
+            nao_lidas:
+              type: integer
+            responsavel:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                nome:
+                  type: string
+            equipe:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                nome:
+                  type: string
+            canal:
+              type: object
+              properties:
+                tipo:
+                  type: string
+                nome:
+                  type: string
+            iniciada_em:
+              type: string
+              format: date-time
 
     # --------------------------------------------------------------------------
     # Oportunidades
@@ -2741,6 +2805,202 @@ components:
           type: string
         etapa_id:
           type: string
+
+    # --------------------------------------------------------------------------
+    # Webhook Payload
+    # --------------------------------------------------------------------------
+    WebhookPayload:
+      type: object
+      description: "Payload enviado nos webhooks configurados"
+      properties:
+        evento:
+          type: string
+          description: "Tipo do evento"
+          enum:
+            - mensagem.recebida
+            - mensagem.enviada
+            - mensagem.entregue
+            - mensagem.lida
+            - conversa.iniciada
+            - conversa.transferida
+            - conversa.finalizada
+            - contato.criado
+            - contato.atualizado
+            - etiqueta.adicionada
+            - etiqueta.removida
+            - oportunidade.criada
+            - oportunidade.movida
+        timestamp:
+          type: string
+          format: date-time
+        request_id:
+          type: string
+          description: "ID único para debug/rastreio"
+        instancia_whatsapp:
+          type: object
+          properties:
+            id:
+              type: string
+            nome:
+              type: string
+            telefone:
+              type: string
+            identificador:
+              type: string
+        mensagem:
+          type: object
+          properties:
+            id:
+              type: string
+            tipo:
+              type: string
+              enum: [texto, imagem, audio, video, documento, localizacao]
+            conteudo:
+              type: string
+            midia_url:
+              type: string
+              nullable: true
+            enviada_em:
+              type: string
+              format: date-time
+            status:
+              type: string
+              enum: [enviando, enviada, entregue, lida, erro]
+            direcao:
+              type: string
+              enum: [entrada, saida]
+            remetente:
+              type: object
+              properties:
+                tipo:
+                  type: string
+                  enum: [contato, atendente]
+                id:
+                  type: string
+                nome:
+                  type: string
+        lead:
+          type: object
+          properties:
+            id:
+              type: string
+            nome:
+              type: string
+            whatsapp:
+              type: string
+            email:
+              type: string
+              nullable: true
+            temperatura:
+              type: string
+              enum: [frio, morno, quente]
+            etapa_funil:
+              type: string
+            tipo_beneficio:
+              type: string
+              nullable: true
+            origem:
+              type: string
+            etiquetas:
+              type: array
+              items:
+                type: string
+            responsavel:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                nome:
+                  type: string
+            criado_em:
+              type: string
+              format: date-time
+        conversa:
+          type: object
+          properties:
+            id:
+              type: string
+            status:
+              type: string
+              enum: [aberta, pendente, finalizada]
+            nao_lidas:
+              type: integer
+            responsavel:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                nome:
+                  type: string
+            equipe:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                nome:
+                  type: string
+            canal:
+              type: object
+              properties:
+                tipo:
+                  type: string
+                nome:
+                  type: string
+            iniciada_em:
+              type: string
+              format: date-time
+      example:
+        evento: "mensagem.enviada"
+        timestamp: "2026-01-05T00:13:02.217-03:00"
+        request_id: "req_8f3a2b1c"
+        instancia_whatsapp:
+          id: "inst_c818cd5d"
+          nome: "0050"
+          telefone: "+55 (45) 8806-0050"
+          identificador: "0050"
+        mensagem:
+          id: "msg_5f1146fb"
+          tipo: "texto"
+          conteudo: "*Marina - GaranteDireito*\n\nOi, você ainda tem interesse?\ntenho certeza que conseguimos ajudar você 😉💚"
+          midia_url: null
+          enviada_em: "2026-01-05T00:11:34-03:00"
+          status: "entregue"
+          direcao: "saida"
+          remetente:
+            tipo: "atendente"
+            id: "usr_737b7efc"
+            nome: "Marina"
+        lead:
+          id: "lead_fc61373a"
+          nome: "Laercio Caetano"
+          whatsapp: "+55 (21) 96720-0464"
+          email: null
+          temperatura: "morno"
+          etapa_funil: "✍ Atendimento Inicial"
+          tipo_beneficio: "BPC/LOAS"
+          origem: "landing_page"
+          etiquetas: ["BPC", "Idoso 65+"]
+          responsavel:
+            id: "usr_737b7efc"
+            nome: "Marina"
+          criado_em: "2025-12-20T14:30:00-03:00"
+        conversa:
+          id: "conv_0c23739b"
+          status: "aberta"
+          nao_lidas: 0
+          responsavel:
+            id: "usr_737b7efc"
+            nome: "Marina"
+          equipe:
+            id: "eqp_19eac12b"
+            nome: "GD | Previdenciário 👴"
+          canal:
+            tipo: "whatsapp"
+            nome: "0050"
+          iniciada_em: "2025-12-20T14:35:00-03:00"
 
     # --------------------------------------------------------------------------
     # Erros
