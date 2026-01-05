@@ -11,9 +11,9 @@ const corsHeaders = {
 // ============================================
 
 function gerarIdLegivel(tipo: string, uuid: string): string {
-  const prefixos: Record<string, string> = {
-    lead: 'lead_', mensagem: 'msg_', conversa: 'conv_', usuario: 'user_', tarefa: 'task_', instancia: 'inst_'
-  };
+const prefixos: Record<string, string> = {
+  lead: 'lead_', mensagem: 'msg_', conversa: 'conv_', usuario: 'usr_', tarefa: 'task_', instancia: 'inst_'
+};
   return (prefixos[tipo] || '') + uuid.replace(/-/g, '').substring(0, 8);
 }
 
