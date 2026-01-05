@@ -184,9 +184,18 @@ Deno.serve(async (req) => {
     if (method === 'POST' && !id) {
       const body = await req.json();
 
-      if (!body.title || !body.assigned_to) {
+      // Accept both PT and EN parameter names
+      const titulo = body.titulo || body.title;
+      const descricao = body.descricao || body.description;
+      const responsavelId = body.responsavel_id || body.assigned_to;
+      const contatoId = body.contato_id || body.lead_id;
+      const prioridade = body.prioridade || body.priority || 'medium';
+      const prazo = body.data_vencimento || body.prazo || body.due_date;
+      const tenantId = body.tenant_id;
+
+      if (!titulo || !responsavelId) {
         return new Response(
-          JSON.stringify({ success: false, error: 'title and assigned_to are required' }),
+          JSON.stringify({ sucesso: false, erro: 'Campos obrigatórios: titulo, responsavel_id' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -194,14 +203,14 @@ Deno.serve(async (req) => {
       const { data: newTask, error } = await supabase
         .from('tasks')
         .insert({
-          title: body.title,
-          description: body.description || null,
-          assigned_to: body.assigned_to,
-          lead_id: body.lead_id || null,
-          due_date: body.due_date || null,
-          priority: body.priority || 'medium',
+          title: titulo,
+          description: descricao || null,
+          assigned_to: responsavelId,
+          lead_id: contatoId || null,
+          due_date: prazo || null,
+          priority: prioridade,
           status: 'todo',
-          tenant_id: body.tenant_id || null
+          tenant_id: tenantId || null
         })
         .select(`
           *,
@@ -211,10 +220,10 @@ Deno.serve(async (req) => {
         .single();
 
       if (error) {
-        return safeErrorResponse(error, 'Error creating task');
+        return safeErrorResponse(error, 'Erro ao criar tarefa');
       }
 
-      console.log('[api-tasks] Task created:', newTask.id);
+      console.log('[api-tasks] Tarefa criada:', newTask.id);
 
       return new Response(
         JSON.stringify({
@@ -248,13 +257,26 @@ Deno.serve(async (req) => {
       const updateData: Record<string, unknown> = {
         updated_at: new Date().toISOString()
       };
-      if (body.title !== undefined) updateData.title = body.title;
-      if (body.description !== undefined) updateData.description = body.description;
-      if (body.due_date !== undefined) updateData.due_date = body.due_date;
-      if (body.priority !== undefined) updateData.priority = body.priority;
+      // Accept both PT and EN parameter names
+      if (body.titulo !== undefined || body.title !== undefined) {
+        updateData.title = body.titulo || body.title;
+      }
+      if (body.descricao !== undefined || body.description !== undefined) {
+        updateData.description = body.descricao || body.description;
+      }
+      if (body.prazo !== undefined || body.data_vencimento !== undefined || body.due_date !== undefined) {
+        updateData.due_date = body.prazo || body.data_vencimento || body.due_date;
+      }
+      if (body.prioridade !== undefined || body.priority !== undefined) {
+        updateData.priority = body.prioridade || body.priority;
+      }
       if (body.status !== undefined) updateData.status = body.status;
-      if (body.assigned_to !== undefined) updateData.assigned_to = body.assigned_to;
-      if (body.subtasks !== undefined) updateData.subtasks = body.subtasks;
+      if (body.responsavel_id !== undefined || body.assigned_to !== undefined) {
+        updateData.assigned_to = body.responsavel_id || body.assigned_to;
+      }
+      if (body.subtarefas !== undefined || body.subtasks !== undefined) {
+        updateData.subtasks = body.subtarefas || body.subtasks;
+      }
 
       const { data: updatedTask, error } = await supabase
         .from('tasks')
@@ -264,10 +286,10 @@ Deno.serve(async (req) => {
         .single();
 
       if (error) {
-        return safeErrorResponse(error, 'Error updating task');
+        return safeErrorResponse(error, 'Erro ao atualizar tarefa');
       }
 
-      console.log('[api-tasks] Task updated:', id);
+      console.log('[api-tasks] Tarefa atualizada:', id);
 
       return new Response(
         JSON.stringify({

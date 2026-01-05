@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
 
         console.log('Lead found by ID');
         return new Response(
-          JSON.stringify({ success: true, data }),
+          JSON.stringify({ success: true, dados: data, data }), // PT + EN
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -213,7 +213,7 @@ Deno.serve(async (req) => {
 
         console.log('Leads found by phone:', data?.length || 0);
         return new Response(
-          JSON.stringify({ success: true, data }),
+          JSON.stringify({ success: true, dados: data, data }), // PT + EN
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -231,7 +231,14 @@ Deno.serve(async (req) => {
 
       console.log('Leads listed:', data?.length || 0);
       return new Response(
-        JSON.stringify({ success: true, data, total: count, limit, offset }),
+        JSON.stringify({ 
+          success: true, 
+          dados: data, // PT format
+          data, // Retrocompatibilidade EN
+          total: count, 
+          limit, 
+          offset 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
