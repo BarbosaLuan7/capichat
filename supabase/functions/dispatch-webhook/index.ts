@@ -160,6 +160,59 @@ async function buscarConversa(supabase: any, conversationId: string) {
     .select('*', { count: 'exact', head: true })
     .eq('conversation_id', conversationId);
   
+  // Buscar responsável da conversa
+  let responsavel = null;
+  if (conv.assigned_to) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, name, team_id')
+      .eq('id', conv.assigned_to)
+      .maybeSingle();
+    
+    if (profile) {
+      responsavel = {
+        id: gerarIdLegivel('usuario', profile.id),
+        nome: profile.name
+      };
+    }
+  }
+  
+  // Buscar equipe (do responsável ou do lead)
+  let equipe = null;
+  if (conv.assigned_to) {
+    // Primeiro tentar buscar equipe pelo team_members do responsável
+    const { data: teamMember } = await supabase
+      .from('team_members')
+      .select('team_id, teams(id, name)')
+      .eq('user_id', conv.assigned_to)
+      .limit(1)
+      .maybeSingle();
+    
+    if (teamMember?.teams) {
+      equipe = {
+        id: `eqp_${teamMember.teams.id.slice(0, 8)}`,
+        nome: teamMember.teams.name
+      };
+    }
+  }
+  
+  // Buscar canal/instância WhatsApp
+  let canal = null;
+  if (conv.whatsapp_instance_id) {
+    const { data: instance } = await supabase
+      .from('whatsapp_config')
+      .select('id, name, instance_name')
+      .eq('id', conv.whatsapp_instance_id)
+      .maybeSingle();
+    
+    if (instance) {
+      canal = {
+        tipo: 'whatsapp',
+        nome: instance.instance_name || instance.name
+      };
+    }
+  }
+  
   return {
     id: gerarIdLegivel('conversa', conv.id),
     id_original: conv.id,
@@ -167,7 +220,11 @@ async function buscarConversa(supabase: any, conversationId: string) {
     nao_lidas: conv.unread_count || 0,
     total_mensagens: count || 0,
     lead_id: conv.lead_id,
-    whatsapp_instance_id: conv.whatsapp_instance_id
+    whatsapp_instance_id: conv.whatsapp_instance_id,
+    responsavel,
+    equipe,
+    canal,
+    iniciada_em: conv.created_at
   };
 }
 
@@ -235,28 +292,43 @@ async function buildMensagemRecebida(supabase: any, eventData: any) {
   return {
     evento: 'mensagem.recebida',
     timestamp: formatTimestamp(),
+    request_id: `req_${crypto.randomUUID().slice(0, 8)}`,
     instancia_whatsapp: instancia,
     mensagem: {
       id: msg?.id ? gerarIdLegivel('mensagem', msg.id) : null,
       tipo: traduzirTipoMensagem(msg?.type || 'text'),
       conteudo: msg?.content || null,
       midia_url: msg?.media_url || null,
-      recebida_em: msg?.created_at || formatTimestamp()
+      recebida_em: msg?.created_at || formatTimestamp(),
+      direcao: 'entrada',
+      remetente: {
+        tipo: 'contato',
+        id: lead?.id || null,
+        nome: lead?.nome || null
+      }
     },
     lead: lead ? {
       id: lead.id,
       nome: lead.nome,
       whatsapp: lead.whatsapp,
+      email: lead.email,
       temperatura: lead.temperatura,
       etapa_funil: lead.etapa_funil,
-      etiquetas: lead.etiquetas
+      tipo_beneficio: lead.beneficio,
+      origem: lead.origem,
+      etiquetas: lead.etiquetas,
+      responsavel: lead.responsavel,
+      criado_em: lead.criado_em
     } : null,
     conversa: conversa ? {
       id: conversa.id,
       status: conversa.status,
-      nao_lidas: conversa.nao_lidas
-    } : null,
-    responsavel: lead?.responsavel || null
+      nao_lidas: conversa.nao_lidas,
+      responsavel: conversa.responsavel,
+      equipe: conversa.equipe,
+      canal: conversa.canal,
+      iniciada_em: conversa.iniciada_em
+    } : null
   };
 }
 
@@ -267,12 +339,35 @@ async function buildMensagemEnviada(supabase: any, eventData: any) {
   
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
   const conversa = convId ? await buscarConversa(supabase, convId) : null;
-  const enviadaPor = msg?.sender_id ? await buscarUsuario(supabase, msg.sender_id) : null;
   const instancia = conversa?.whatsapp_instance_id ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id) : null;
+  
+  // Buscar remetente (quem enviou a mensagem)
+  let remetente = null;
+  if (msg?.sender_id) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, name')
+      .eq('id', msg.sender_id)
+      .maybeSingle();
+    
+    if (profile) {
+      remetente = {
+        tipo: msg?.sender_type === 'agent' ? 'atendente' : msg?.sender_type === 'lead' ? 'contato' : 'sistema',
+        id: gerarIdLegivel('usuario', profile.id),
+        nome: profile.name
+      };
+    }
+  } else if (msg?.sender_type === 'agent') {
+    remetente = { tipo: 'atendente', id: null, nome: null };
+  }
+  
+  // Determinar direção
+  const direcao = msg?.direction === 'inbound' ? 'entrada' : 'saida';
   
   return {
     evento: 'mensagem.enviada',
     timestamp: formatTimestamp(),
+    request_id: `req_${crypto.randomUUID().slice(0, 8)}`,
     instancia_whatsapp: instancia,
     mensagem: {
       id: msg?.id ? gerarIdLegivel('mensagem', msg.id) : null,
@@ -280,18 +375,32 @@ async function buildMensagemEnviada(supabase: any, eventData: any) {
       conteudo: msg?.content || null,
       midia_url: msg?.media_url || null,
       enviada_em: msg?.created_at || formatTimestamp(),
-      status: traduzirStatusMensagem(msg?.status || 'sent')
+      status: traduzirStatusMensagem(msg?.status || 'sent'),
+      direcao,
+      remetente
     },
     lead: lead ? {
       id: lead.id,
       nome: lead.nome,
       whatsapp: lead.whatsapp,
+      email: lead.email,
       temperatura: lead.temperatura,
       etapa_funil: lead.etapa_funil,
-      etiquetas: lead.etiquetas
+      tipo_beneficio: lead.beneficio,
+      origem: lead.origem,
+      etiquetas: lead.etiquetas,
+      responsavel: lead.responsavel,
+      criado_em: lead.criado_em
     } : null,
-    conversa: conversa ? { id: conversa.id, status: conversa.status } : null,
-    enviada_por: enviadaPor
+    conversa: conversa ? {
+      id: conversa.id,
+      status: conversa.status,
+      nao_lidas: conversa.nao_lidas,
+      responsavel: conversa.responsavel,
+      equipe: conversa.equipe,
+      canal: conversa.canal,
+      iniciada_em: conversa.iniciada_em
+    } : null
   };
 }
 
