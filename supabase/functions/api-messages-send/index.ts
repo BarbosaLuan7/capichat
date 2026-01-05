@@ -42,6 +42,18 @@ function validatePhone(phone: string): { valid: boolean; normalized: string; err
   return { valid: true, normalized };
 }
 
+// Helper: Validar se é UUID válido
+function isValidUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
+// Helper: Verificar se parece um telefone
+function looksLikePhone(str: string): boolean {
+  const digits = str.replace(/\D/g, '');
+  return digits.length >= 10 && digits.length <= 13 && /^\d+$/.test(digits);
+}
+
 // Helper: Return safe error response (don't expose internal details)
 function safeErrorResponse(
   internalError: unknown, 
@@ -532,15 +544,42 @@ serve(async (req) => {
     
     // Try to find lead by ID or phone
     if (payload.lead_id) {
-      const { data: lead } = await supabase
-        .from('leads')
-        .select('id, name, phone, estimated_value, benefit_type, cpf, email, created_at')
-        .eq('id', payload.lead_id)
-        .single();
-      
-      if (lead) {
-        leadData = lead;
-        leadId = lead.id;
+      // Auto-detect: se lead_id parece um telefone (não é UUID), tratar como busca por telefone
+      if (!isValidUUID(payload.lead_id) && looksLikePhone(payload.lead_id)) {
+        console.log('[api-messages-send] lead_id looks like a phone number, treating as phone search:', payload.lead_id);
+        
+        const phone = normalizePhoneForSearch(payload.lead_id);
+        const { data: lead } = await supabase
+          .from('leads')
+          .select('id, name, phone, estimated_value, benefit_type, cpf, email, created_at')
+          .or(`phone.eq.${phone.withoutCountry},phone.eq.${phone.last11},phone.eq.${phone.last10},phone.ilike.%${phone.last10}`)
+          .limit(1)
+          .maybeSingle();
+        
+        if (lead) {
+          leadData = lead;
+          leadId = lead.id;
+          console.log('[api-messages-send] Lead encontrado por telefone (auto-detected):', lead.id, '| stored phone:', lead.phone);
+        } else {
+          console.log('[api-messages-send] Lead não encontrado para telefone (em lead_id):', payload.lead_id);
+        }
+        
+      } else if (!isValidUUID(payload.lead_id)) {
+        // Não é UUID válido nem parece telefone - tentar buscar mesmo assim
+        console.warn('[api-messages-send] lead_id não é UUID válido nem parece telefone:', payload.lead_id);
+        
+      } else {
+        // É UUID válido - buscar normalmente
+        const { data: lead } = await supabase
+          .from('leads')
+          .select('id, name, phone, estimated_value, benefit_type, cpf, email, created_at')
+          .eq('id', payload.lead_id)
+          .single();
+        
+        if (lead) {
+          leadData = lead;
+          leadId = lead.id;
+        }
       }
     } else if (payload.phone) {
       // Usar normalização robusta para buscar lead
