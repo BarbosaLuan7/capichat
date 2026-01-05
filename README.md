@@ -60,6 +60,32 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Acessibilidade
+
+O sistema segue as diretrizes WCAG 2.1 nível AA:
+
+### Recursos Implementados
+- **Navegação por teclado**: Todas as ações principais acessíveis via Tab/Enter/Espaço
+- **Leitores de tela**: Elementos com aria-labels apropriados
+- **Live regions**: Anúncio automático de novas mensagens
+- **Semântica correta**: `role="log"`, `role="listbox"`, `role="option"` aplicados
+
+### Atalhos de Teclado
+| Atalho | Ação |
+|--------|------|
+| `Ctrl+K` | Busca rápida (Command Bar) |
+| `Esc` | Fechar modais |
+| `Enter` | Enviar mensagem |
+| `Shift+Enter` | Nova linha na mensagem |
+| `Tab` | Navegar entre elementos |
+| `/` | Abrir seletor de templates |
+
+### Testando Acessibilidade
+1. Navegar usando apenas teclado
+2. Testar com VoiceOver (macOS/iOS) ou NVDA/JAWS (Windows)
+3. Verificar que anúncios de novas mensagens funcionam
+4. Validar contraste de cores (mínimo 4.5:1)
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.

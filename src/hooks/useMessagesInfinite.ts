@@ -40,7 +40,24 @@ export interface OptimisticMessage {
 
 /**
  * Hook para carregar mensagens com paginação infinita (scroll para cima).
- * Carrega as últimas 50 mensagens inicialmente, e mais ao scroll.
+ * 
+ * @description
+ * Carrega as últimas 50 mensagens inicialmente, e mais ao scroll para cima.
+ * Implementa cache otimizado que só recria objetos de páginas modificadas,
+ * melhorando performance em conversas longas.
+ * 
+ * @param conversationId - ID da conversa para carregar mensagens
+ * @returns {Object} Objeto com mensagens e funções de manipulação
+ * 
+ * @example
+ * ```tsx
+ * const { messages, addMessageOptimistically, isLoading } = useMessagesInfinite(conversationId);
+ * ```
+ * 
+ * @optimization Cache Pattern
+ * As funções de atualização (updateMessageOptimistically, replaceOptimisticMessage, etc)
+ * usam o padrão `hasMessage` check para evitar recriar páginas que não contém
+ * a mensagem alvo, reduzindo re-renders desnecessários.
  */
 export function useMessagesInfinite(conversationId: string | undefined) {
   const queryClient = useQueryClient();
@@ -104,7 +121,10 @@ export function useMessagesInfinite(conversationId: string | undefined) {
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
     ?? [];
 
-  // Função para adicionar nova mensagem otimisticamente (realtime)
+  /**
+   * Adiciona uma nova mensagem otimisticamente no cache.
+   * Usada para feedback imediato ao enviar mensagens e para realtime.
+   */
   const addMessageOptimistically = useCallback((newMessage: Message | OptimisticMessage) => {
     queryClient.setQueryData(
       ['messages-infinite', conversationId],
@@ -129,7 +149,10 @@ export function useMessagesInfinite(conversationId: string | undefined) {
     );
   }, [queryClient, conversationId]);
 
-  // Função para atualizar uma mensagem existente (otimizada)
+  /**
+   * Atualiza uma mensagem existente no cache.
+   * @optimization Só recria páginas que contém a mensagem (hasMessage check).
+   */
   const updateMessageOptimistically = useCallback((messageId: string, updates: Partial<Message>) => {
     queryClient.setQueryData(
       ['messages-infinite', conversationId],
@@ -154,7 +177,10 @@ export function useMessagesInfinite(conversationId: string | undefined) {
     );
   }, [queryClient, conversationId]);
 
-  // Função para substituir mensagem otimista pela real (otimizada)
+  /**
+   * Substitui uma mensagem otimista (temp_*) pela versão real do servidor.
+   * @optimization Só recria páginas que contém a mensagem temporária.
+   */
   const replaceOptimisticMessage = useCallback((tempId: string, realMessage: Message) => {
     queryClient.setQueryData(
       ['messages-infinite', conversationId],
@@ -179,7 +205,10 @@ export function useMessagesInfinite(conversationId: string | undefined) {
     );
   }, [queryClient, conversationId]);
 
-  // Função para marcar mensagem como falha (otimizada)
+  /**
+   * Marca uma mensagem otimista como falha no envio.
+   * @optimization Só recria páginas que contém a mensagem.
+   */
   const markMessageFailed = useCallback((tempId: string, errorMessage?: string) => {
     queryClient.setQueryData(
       ['messages-infinite', conversationId],
@@ -206,7 +235,10 @@ export function useMessagesInfinite(conversationId: string | undefined) {
     );
   }, [queryClient, conversationId]);
 
-  // Função para remover mensagem (otimizada)
+  /**
+   * Remove uma mensagem do cache (ex: após exclusão).
+   * @optimization Só recria páginas que contém a mensagem.
+   */
   const removeMessage = useCallback((messageId: string) => {
     queryClient.setQueryData(
       ['messages-infinite', conversationId],

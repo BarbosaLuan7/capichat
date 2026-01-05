@@ -3,14 +3,35 @@ import { MessageCircle, Search, Inbox, FileText, Tag, Users, Filter, CheckCircle
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+/**
+ * Tipos de empty state disponíveis:
+ * 
+ * - `conversations`: Lista de conversas vazia (estado inicial)
+ * - `messages`: Nenhuma mensagem na conversa
+ * - `search`: Busca sem resultados
+ * - `notes`: Nenhuma nota interna
+ * - `labels`: Nenhuma etiqueta criada
+ * - `team`: Equipe sem membros
+ * - `filtered`: Filtros aplicados sem resultados
+ * - `no-pending`: Nenhuma conversa pendente (positivo)
+ * - `no-open`: Nenhuma conversa aberta
+ * - `no-resolved`: Nenhuma conversa resolvida
+ */
+type EmptyStateType = 'conversations' | 'messages' | 'search' | 'notes' | 'labels' | 'team' | 'filtered' | 'no-pending' | 'no-open' | 'no-resolved';
+
 interface EmptyStateProps {
-  type: 'conversations' | 'messages' | 'search' | 'notes' | 'labels' | 'team' | 'filtered' | 'no-pending' | 'no-open' | 'no-resolved';
+  /** Tipo de empty state a exibir */
+  type: EmptyStateType;
+  /** Título customizado (opcional, sobrescreve o padrão) */
   title?: string;
+  /** Descrição customizada (opcional, sobrescreve o padrão) */
   description?: string;
+  /** Ação opcional com botão */
   action?: {
     label: string;
     onClick: () => void;
   };
+  /** Classes CSS adicionais */
   className?: string;
 }
 
