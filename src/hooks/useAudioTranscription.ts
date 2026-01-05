@@ -30,7 +30,7 @@ export function useAudioTranscription() {
         .from('messages')
         .select('transcription')
         .eq('id', messageId)
-        .single();
+        .maybeSingle();
 
       if (existingMessage?.transcription) {
         transcriptionCache[messageId] = existingMessage.transcription;
