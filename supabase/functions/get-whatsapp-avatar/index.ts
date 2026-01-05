@@ -90,7 +90,22 @@ serve(async (req) => {
 
     console.log('[get-whatsapp-avatar] Buscando avatar para lead:', lead_id);
 
-    // Buscar configuração WAHA ativa
+    // Validar que o lead existe antes de prosseguir
+    const { data: leadData, error: leadError } = await supabase
+      .from('leads')
+      .select('id, phone, tenant_id')
+      .eq('id', lead_id)
+      .single();
+
+    if (leadError || !leadData) {
+      console.log('[get-whatsapp-avatar] Lead não encontrado:', lead_id);
+      return new Response(
+        JSON.stringify({ success: false, error: 'lead_not_found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Buscar configuração WAHA ativa (preferencialmente do mesmo tenant)
     const { data: wahaConfig, error: configError } = await supabase
       .from('whatsapp_config')
       .select('id, base_url, api_key, instance_name')
