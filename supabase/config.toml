@@ -72,9 +72,6 @@ verify_jwt = true
 [functions.api-whatsapp-instances]
 verify_jwt = false
 
-[functions.seed-teams-users]
-verify_jwt = true
-
 [functions.api-users]
 verify_jwt = false
 

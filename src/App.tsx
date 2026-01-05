@@ -36,7 +36,6 @@ const WebhooksSettings = lazy(() => import("./pages/settings/WebhooksSettings"))
 const WhatsAppSettings = lazy(() => import("./pages/settings/WhatsAppSettings"));
 const ApiSettings = lazy(() => import("./pages/settings/ApiSettings"));
 const TenantsSettings = lazy(() => import("./pages/settings/TenantsSettings"));
-const SeedPage = lazy(() => import("./pages/admin/Seed"));
 const MyAccount = lazy(() => import("./pages/MyAccount"));
 
 const ApiDocs = lazy(() => import("./pages/ApiDocs"));
@@ -152,7 +151,6 @@ function AppContent() {
             <Route path="settings/whatsapp" element={<AccountOwnerRoute><WhatsAppSettings /></AccountOwnerRoute>} />
             <Route path="settings/api" element={<AccountOwnerRoute><ApiSettings /></AccountOwnerRoute>} />
             <Route path="settings/tenants" element={<AccountOwnerRoute><TenantsSettings /></AccountOwnerRoute>} />
-            <Route path="admin/seed" element={<AccountOwnerRoute><SeedPage /></AccountOwnerRoute>} />
             
             {/* Rotas disponíveis para todos os usuários */}
             <Route path="inbox" element={<Inbox />} />
