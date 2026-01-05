@@ -78,6 +78,7 @@ function ConversationStatusTabsComponent({ value, onChange, counts }: Conversati
               <TooltipTrigger asChild>
                 <TabsTrigger 
                   value={tab.value} 
+                  aria-label={`${tab.label}: ${count} ${count === 1 ? 'conversa' : 'conversas'}`}
                   className={cn(
                     "flex items-center justify-center gap-1 px-2 py-2 text-xs font-medium transition-all",
                     "hover:bg-background/50 active:scale-[0.98]",
@@ -85,7 +86,7 @@ function ConversationStatusTabsComponent({ value, onChange, counts }: Conversati
                     (tab.value === 'pending' && count > 0) ? tab.colorClass : (isActive && tab.colorClass)
                   )}
                 >
-                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                   <span className="hidden sm:inline text-[10px] font-medium">{tab.shortLabel}</span>
                   <span className="font-semibold tabular-nums">{count}</span>
                 </TabsTrigger>

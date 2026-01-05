@@ -581,8 +581,9 @@ function VirtualizedConversationList({
       ref={parentRef}
       className="h-full overflow-auto"
       style={{ willChange: 'scroll-position' }}
-      role="list"
+      role="listbox"
       aria-label="Lista de conversas"
+      aria-activedescendant={selectedConversationId ? `conversation-${selectedConversationId}` : undefined}
     >
       <div
         style={{
@@ -596,6 +597,7 @@ function VirtualizedConversationList({
           return (
             <div
               key={conversation.id}
+              id={`conversation-${conversation.id}`}
               style={{
                 position: 'absolute',
                 top: 0,

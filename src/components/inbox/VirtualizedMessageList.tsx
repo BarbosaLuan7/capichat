@@ -436,6 +436,9 @@ const VirtualizedMessageListComponent = forwardRef<VirtualizedMessageListRef, Vi
       ref={parentRef}
       className="h-full overflow-auto p-4 bg-muted/30"
       onScroll={handleScroll}
+      role="log"
+      aria-label="Histórico de mensagens"
+      aria-live="polite"
     >
       <div
         className="relative max-w-3xl mx-auto"
