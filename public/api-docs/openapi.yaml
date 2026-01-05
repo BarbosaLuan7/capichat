@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: LB ADV CRM API
-  version: 2.1.0
+  version: 2.2.0
   description: |
     API RESTful para integração externa com o **LB ADV CRM** (GaranteDireito).
 
@@ -31,7 +31,6 @@ info:
     | Envio de mensagens | 300 req/min |
     | Leitura (GET) | 3000 req/min |
     | Escrita (POST/PUT/DELETE) | 500 req/min |
-    | Webhooks recebidos | 1000 req/min |
 
     ## Paginação
 
@@ -48,10 +47,6 @@ info:
     }
     ```
 
-    ## Estrutura de Respostas
-
-    Todas as respostas seguem o padrão em português brasileiro para facilitar integração.
-
   contact:
     name: GaranteDireito Suporte
     email: contato@garantedireito.com.br
@@ -66,81 +61,84 @@ security:
   - BearerAuth: []
 
 tags:
-  # CORE
   - name: Usuários
-    description: Gerenciamento de usuários/atendentes do sistema
+    description: Gerenciamento de usuários/atendentes
   - name: Equipes
-    description: Gerenciamento de equipes de atendimento
+    description: Gerenciamento de equipes
   - name: Contatos
     description: Gerenciamento de contatos/leads
   - name: Etiquetas
-    description: Gerenciamento de etiquetas (tags)
+    description: Gerenciamento de etiquetas
   - name: Campos Personalizados
-    description: Campos customizados para contatos
+    description: Campos customizados
   - name: Carteiras
-    description: Agrupamento de contatos em carteiras
+    description: Agrupamento de contatos
   - name: Webhooks
-    description: Configuração de webhooks para eventos
+    description: Configuração de webhooks
   - name: Arquivos
-    description: Upload e gerenciamento de arquivos
-
-  # CHAT
+    description: Upload de arquivos
   - name: Conversas
-    description: Gerenciamento de conversas/atendimentos
+    description: Gerenciamento de conversas
   - name: Mensagens
     description: Envio e recebimento de mensagens
   - name: Mensagens Agendadas
     description: Agendamento de mensagens
   - name: Templates
-    description: Modelos de mensagens rápidas
+    description: Modelos de mensagens
   - name: Canais
     description: Canais de atendimento (WhatsApp)
   - name: Chatbots
-    description: Fluxos de chatbot automatizados
-
-  # CRM
+    description: Fluxos de chatbot
   - name: Oportunidades
     description: Cards/oportunidades no funil
   - name: Funis
-    description: Painéis e etapas do funil de vendas
+    description: Painéis e etapas do funil
   - name: Tarefas
     description: Tarefas e lembretes
 
 paths:
   # ============================================================================
-  # CORE - USUÁRIOS
+  # USUÁRIOS
   # ============================================================================
   /api-users:
     get:
       tags: [Usuários]
       summary: Listar usuários
-      description: Retorna lista paginada de usuários do sistema.
+      operationId: listarUsuarios
       parameters:
+        - name: id
+          in: query
+          description: ID do usuário (para buscar específico)
+          schema:
+            type: string
+            format: uuid
         - name: page
           in: query
-          description: Número da página
           schema:
             type: integer
             default: 1
         - name: page_size
           in: query
-          description: Itens por página
           schema:
             type: integer
             default: 50
         - name: ativo
           in: query
-          description: Filtrar por status ativo
           schema:
             type: boolean
         - name: disponivel
           in: query
-          description: Filtrar por disponibilidade para atendimento
           schema:
             type: boolean
+        - name: action
+          in: query
+          description: "Ações: equipes (GET)"
+          schema:
+            type: string
+            enum: [equipes]
       responses:
         "200":
-          description: Lista de usuários
+          description: Lista de usuários ou usuário específico
           content:
             application/json:
               schema:
@@ -152,35 +150,16 @@ paths:
                       $ref: "#/components/schemas/Usuario"
                   paginacao:
                     $ref: "#/components/schemas/Paginacao"
-        "401":
-          $ref: "#/components/responses/NaoAutorizado"
 
     post:
       tags: [Usuários]
-      summary: Criar usuário
+      summary: Ações em usuário
+      operationId: acoesUsuario
       description: |
-        ⚠️ A criação de usuários deve ser feita via interface administrativa.
-        Este endpoint retornará erro orientando o uso correto.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                nome:
-                  type: string
-                email:
-                  type: string
-      responses:
-        "400":
-          description: Deve usar interface administrativa
-
-  /api-users?id={id}:
-    get:
-      tags: [Usuários]
-      summary: Buscar usuário
-      description: Retorna detalhes de um usuário específico.
+        Usa o parâmetro `action` para diferentes operações:
+        - `equipes`: Atualizar equipes do usuário
+        - `status`: Alterar status (ativo/inativo)
+        - `disponibilidade`: Alterar disponibilidade
       parameters:
         - name: id
           in: query
@@ -188,19 +167,44 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [equipes, status, disponibilidade]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  properties:
+                    equipes:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          equipe_id:
+                            type: string
+                          supervisor:
+                            type: boolean
+                - type: object
+                  properties:
+                    ativo:
+                      type: boolean
+                - type: object
+                  properties:
+                    disponivel:
+                      type: boolean
       responses:
         "200":
-          description: Dados do usuário
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Usuario"
-        "404":
-          $ref: "#/components/responses/NaoEncontrado"
+          description: Ação executada
 
     put:
       tags: [Usuários]
       summary: Atualizar usuário
+      operationId: atualizarUsuario
       parameters:
         - name: id
           in: query
@@ -209,7 +213,6 @@ paths:
             type: string
             format: uuid
       requestBody:
-        required: true
         content:
           application/json:
             schema:
@@ -221,7 +224,7 @@ paths:
     delete:
       tags: [Usuários]
       summary: Desativar usuário
-      description: Desativa um usuário do sistema.
+      operationId: desativarUsuario
       parameters:
         - name: id
           in: query
@@ -233,114 +236,27 @@ paths:
         "200":
           description: Usuário desativado
 
-  /api-users?id={id}&action=equipes:
-    post:
-      tags: [Usuários]
-      summary: Atualizar equipes do usuário
-      description: Define quais equipes o usuário pertence.
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [equipes]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                equipes:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      equipe_id:
-                        type: string
-                      supervisor:
-                        type: boolean
-      responses:
-        "200":
-          description: Equipes atualizadas
-
-  /api-users?id={id}&action=status:
-    post:
-      tags: [Usuários]
-      summary: Alterar status do usuário
-      description: Ativa ou desativa um usuário.
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [status]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                ativo:
-                  type: boolean
-      responses:
-        "200":
-          description: Status alterado
-
-  /api-users?id={id}&action=disponibilidade:
-    post:
-      tags: [Usuários]
-      summary: Alterar disponibilidade
-      description: Altera a disponibilidade do usuário para receber novos atendimentos.
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [disponibilidade]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                disponivel:
-                  type: boolean
-      responses:
-        "200":
-          description: Disponibilidade alterada
-
   # ============================================================================
-  # CORE - EQUIPES
+  # EQUIPES
   # ============================================================================
   /api-teams:
     get:
       tags: [Equipes]
       summary: Listar equipes
-      description: Retorna lista de equipes de atendimento.
+      operationId: listarEquipes
+      parameters:
+        - name: id
+          in: query
+          description: ID da equipe (para buscar específica)
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          description: "Ações: canais (GET lista canais da equipe)"
+          schema:
+            type: string
+            enum: [canais]
       responses:
         "200":
           description: Lista de equipes
@@ -357,6 +273,7 @@ paths:
     post:
       tags: [Equipes]
       summary: Criar equipe
+      operationId: criarEquipe
       requestBody:
         required: true
         content:
@@ -367,28 +284,14 @@ paths:
         "201":
           description: Equipe criada
 
-  /api-teams?id={id}:
-    get:
-      tags: [Equipes]
-      summary: Buscar equipe
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Dados da equipe
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/EquipeDetalhada"
-
     put:
       tags: [Equipes]
       summary: Atualizar equipe
+      operationId: atualizarEquipe
+      description: |
+        Usa o parâmetro `action` para operações específicas:
+        - Sem action: Atualiza dados da equipe
+        - `usuarios`: Atualiza membros da equipe
       parameters:
         - name: id
           in: query
@@ -396,12 +299,28 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum: [usuarios]
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AtualizarEquipeRequest"
+              oneOf:
+                - $ref: "#/components/schemas/AtualizarEquipeRequest"
+                - type: object
+                  properties:
+                    usuarios:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          usuario_id:
+                            type: string
+                          supervisor:
+                            type: boolean
       responses:
         "200":
           description: Equipe atualizada
@@ -409,6 +328,7 @@ paths:
     delete:
       tags: [Equipes]
       summary: Remover equipe
+      operationId: removerEquipe
       parameters:
         - name: id
           in: query
@@ -420,75 +340,26 @@ paths:
         "200":
           description: Equipe removida
 
-  /api-teams?id={id}&action=usuarios:
-    put:
-      tags: [Equipes]
-      summary: Atualizar membros da equipe
-      description: Define quais usuários pertencem à equipe.
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [usuarios]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                usuarios:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      usuario_id:
-                        type: string
-                      supervisor:
-                        type: boolean
-      responses:
-        "200":
-          description: Membros atualizados
-
-  /api-teams?id={id}&action=canais:
-    get:
-      tags: [Equipes]
-      summary: Listar canais da equipe
-      description: Retorna os canais de atendimento associados à equipe.
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [canais]
-      responses:
-        "200":
-          description: Lista de canais
-
   # ============================================================================
-  # CORE - CONTATOS (LEADS)
+  # CONTATOS (LEADS)
   # ============================================================================
   /api-leads:
     get:
       tags: [Contatos]
-      summary: Listar contatos
-      description: Retorna lista paginada de contatos.
+      summary: Listar/buscar contatos
+      operationId: listarContatos
       parameters:
+        - name: id
+          in: query
+          description: ID do contato (busca específico)
+          schema:
+            type: string
+            format: uuid
+        - name: phone
+          in: query
+          description: Buscar por telefone
+          schema:
+            type: string
         - name: limit
           in: query
           schema:
@@ -515,50 +386,81 @@ paths:
                       $ref: "#/components/schemas/Contato"
                   total:
                     type: integer
-                  limit:
-                    type: integer
-                  offset:
-                    type: integer
 
     post:
       tags: [Contatos]
-      summary: Criar contato
+      summary: Criar contato ou ações
+      operationId: criarContato
+      description: |
+        Sem action: Cria novo contato
+        
+        Com action:
+        - `lote`: Criar múltiplos contatos
+        - `filtro`: Busca avançada com filtros
+        - `etiquetas` (com id): Gerenciar etiquetas do contato
+      parameters:
+        - name: id
+          in: query
+          description: ID do contato (para action=etiquetas)
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum: [lote, filtro, etiquetas]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CriarContatoRequest"
+              oneOf:
+                - $ref: "#/components/schemas/CriarContatoRequest"
+                - $ref: "#/components/schemas/CriarContatosLoteRequest"
+                - $ref: "#/components/schemas/FiltroAvancadoRequest"
+                - $ref: "#/components/schemas/GerenciarEtiquetasRequest"
+            examples:
+              criar_contato:
+                summary: Criar contato
+                value:
+                  name: "Maria Silva"
+                  phone: "11999990001"
+                  email: "maria@email.com"
+                  temperature: "warm"
+              criar_lote:
+                summary: Criar em lote (action=lote)
+                value:
+                  contatos:
+                    - name: "João Santos"
+                      phone: "11999990002"
+                    - name: "Ana Costa"
+                      phone: "11999990003"
+              filtro_avancado:
+                summary: Filtro avançado (action=filtro)
+                value:
+                  etiquetas: ["uuid-etiqueta-1"]
+                  temperatura: "hot"
+                  periodo:
+                    inicio: "2026-01-01"
+                    fim: "2026-01-31"
+                  pagina: 1
+                  por_pagina: 50
+              gerenciar_etiquetas:
+                summary: Etiquetas (action=etiquetas)
+                value:
+                  adicionar: ["uuid-etiqueta-1"]
+                  remover: ["uuid-etiqueta-2"]
       responses:
+        "200":
+          description: Sucesso
         "201":
           description: Contato criado
-        "200":
-          description: Contato já existia (retorna dados existentes com is_duplicate=true)
-
-  /api-leads?id={id}:
-    get:
-      tags: [Contatos]
-      summary: Buscar contato
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Dados do contato
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Contato"
-        "404":
-          $ref: "#/components/responses/NaoEncontrado"
 
     put:
       tags: [Contatos]
       summary: Atualizar contato
+      operationId: atualizarContato
       parameters:
         - name: id
           in: query
@@ -567,7 +469,6 @@ paths:
             type: string
             format: uuid
       requestBody:
-        required: true
         content:
           application/json:
             schema:
@@ -579,6 +480,7 @@ paths:
     delete:
       tags: [Contatos]
       summary: Remover contato
+      operationId: removerContato
       parameters:
         - name: id
           in: query
@@ -590,44 +492,19 @@ paths:
         "200":
           description: Contato removido
 
-  /api-leads?phone={telefone}:
-    get:
-      tags: [Contatos]
-      summary: Buscar contato por telefone
-      parameters:
-        - name: phone
-          in: query
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Contatos encontrados
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Contato"
-
   /api-contatos-lote:
     post:
       tags: [Contatos]
       summary: Criar contatos em lote
-      description: Cria múltiplos contatos de uma vez (máximo 100 por requisição).
+      operationId: criarContatosLote
+      description: Cria múltiplos contatos (máximo 100 por requisição).
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - contatos
+              required: [contatos]
               properties:
                 contatos:
                   type: array
@@ -644,7 +521,7 @@ paths:
                   tipo_beneficio: "BPC Idoso"
       responses:
         "200":
-          description: Resultado do processamento em lote
+          description: Resultado do lote
           content:
             application/json:
               schema:
@@ -680,12 +557,20 @@ paths:
                           type: boolean
 
   # ============================================================================
-  # CORE - ETIQUETAS
+  # ETIQUETAS
   # ============================================================================
   /api-tags:
     get:
       tags: [Etiquetas]
       summary: Listar etiquetas
+      operationId: listarEtiquetas
+      parameters:
+        - name: id
+          in: query
+          description: ID da etiqueta (busca específica)
+          schema:
+            type: string
+            format: uuid
       responses:
         "200":
           description: Lista de etiquetas
@@ -702,6 +587,7 @@ paths:
     post:
       tags: [Etiquetas]
       summary: Criar etiqueta
+      operationId: criarEtiqueta
       requestBody:
         required: true
         content:
@@ -712,24 +598,10 @@ paths:
         "201":
           description: Etiqueta criada
 
-  /api-tags?id={id}:
-    get:
-      tags: [Etiquetas]
-      summary: Buscar etiqueta
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Dados da etiqueta
-
     put:
       tags: [Etiquetas]
       summary: Atualizar etiqueta
+      operationId: atualizarEtiqueta
       parameters:
         - name: id
           in: query
@@ -738,7 +610,6 @@ paths:
             type: string
             format: uuid
       requestBody:
-        required: true
         content:
           application/json:
             schema:
@@ -750,6 +621,7 @@ paths:
     delete:
       tags: [Etiquetas]
       summary: Remover etiqueta
+      operationId: removerEtiqueta
       parameters:
         - name: id
           in: query
@@ -762,13 +634,19 @@ paths:
           description: Etiqueta removida
 
   # ============================================================================
-  # CORE - CAMPOS PERSONALIZADOS
+  # CAMPOS PERSONALIZADOS
   # ============================================================================
   /api-campos-personalizados:
     get:
       tags: [Campos Personalizados]
       summary: Listar campos personalizados
+      operationId: listarCamposPersonalizados
       parameters:
+        - name: id
+          in: query
+          schema:
+            type: string
+            format: uuid
         - name: tenant_id
           in: query
           schema:
@@ -789,7 +667,8 @@ paths:
 
     post:
       tags: [Campos Personalizados]
-      summary: Criar campo personalizado
+      summary: Criar campo
+      operationId: criarCampoPersonalizado
       requestBody:
         required: true
         content:
@@ -805,24 +684,10 @@ paths:
         "201":
           description: Campo criado
 
-  /api-campos-personalizados?id={id}:
-    get:
-      tags: [Campos Personalizados]
-      summary: Buscar campo
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Dados do campo
-
     put:
       tags: [Campos Personalizados]
       summary: Atualizar campo
+      operationId: atualizarCampoPersonalizado
       parameters:
         - name: id
           in: query
@@ -831,7 +696,6 @@ paths:
             type: string
             format: uuid
       requestBody:
-        required: true
         content:
           application/json:
             schema:
@@ -843,6 +707,7 @@ paths:
     delete:
       tags: [Campos Personalizados]
       summary: Remover campo
+      operationId: removerCampoPersonalizado
       parameters:
         - name: id
           in: query
@@ -855,18 +720,40 @@ paths:
           description: Campo removido
 
   # ============================================================================
-  # CORE - CARTEIRAS
+  # CARTEIRAS
   # ============================================================================
   /api-carteiras:
     get:
       tags: [Carteiras]
       summary: Listar carteiras
+      operationId: listarCarteiras
       parameters:
+        - name: id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          description: "contatos: Lista contatos da carteira"
+          schema:
+            type: string
+            enum: [contatos]
         - name: tenant_id
           in: query
           schema:
             type: string
             format: uuid
+        - name: pagina
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: por_pagina
+          in: query
+          schema:
+            type: integer
+            default: 50
       responses:
         "200":
           description: Lista de carteiras
@@ -882,43 +769,55 @@ paths:
 
     post:
       tags: [Carteiras]
-      summary: Criar carteira
+      summary: Criar carteira ou adicionar contato
+      operationId: criarCarteira
+      description: |
+        Sem action: Cria carteira
+        Com action=contatos: Adiciona contato à carteira (requer id)
+      parameters:
+        - name: id
+          in: query
+          description: ID da carteira (para action=contatos)
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum: [contatos]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CriarCarteiraRequest"
-            example:
-              nome: "Clientes BPC"
-              descricao: "Carteira de clientes BPC"
-              cor: "#22c55e"
+              oneOf:
+                - $ref: "#/components/schemas/CriarCarteiraRequest"
+                - type: object
+                  required: [contato_id]
+                  properties:
+                    contato_id:
+                      type: string
+                      format: uuid
+            examples:
+              criar_carteira:
+                summary: Criar carteira
+                value:
+                  nome: "Clientes BPC"
+                  descricao: "Carteira de clientes BPC"
+                  cor: "#22c55e"
+              adicionar_contato:
+                summary: Adicionar contato (action=contatos)
+                value:
+                  contato_id: "uuid-do-contato"
       responses:
         "201":
-          description: Carteira criada
-
-  /api-carteiras?id={id}:
-    get:
-      tags: [Carteiras]
-      summary: Buscar carteira
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Dados da carteira
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Carteira"
+          description: Criado
 
     put:
       tags: [Carteiras]
       summary: Atualizar carteira
+      operationId: atualizarCarteira
       parameters:
         - name: id
           in: query
@@ -927,7 +826,6 @@ paths:
             type: string
             format: uuid
       requestBody:
-        required: true
         content:
           application/json:
             schema:
@@ -938,22 +836,11 @@ paths:
 
     delete:
       tags: [Carteiras]
-      summary: Remover carteira
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Carteira removida
-
-  /api-carteiras?id={id}&action=contatos:
-    get:
-      tags: [Carteiras]
-      summary: Listar contatos da carteira
+      summary: Remover carteira ou contato da carteira
+      operationId: removerCarteira
+      description: |
+        Sem action: Remove a carteira
+        Com action=contatos: Remove contato da carteira
       parameters:
         - name: id
           in: query
@@ -963,90 +850,39 @@ paths:
             format: uuid
         - name: action
           in: query
-          required: true
-          schema:
-            type: string
-            enum: [contatos]
-        - name: pagina
-          in: query
-          schema:
-            type: integer
-            default: 1
-        - name: por_pagina
-          in: query
-          schema:
-            type: integer
-            default: 50
-      responses:
-        "200":
-          description: Lista de contatos
-
-    post:
-      tags: [Carteiras]
-      summary: Adicionar contato à carteira
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [contatos]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - contato_id
-              properties:
-                contato_id:
-                  type: string
-                  format: uuid
-      responses:
-        "201":
-          description: Contato adicionado
-
-  /api-carteiras?id={id}&action=contatos&contato_id={contato_id}:
-    delete:
-      tags: [Carteiras]
-      summary: Remover contato da carteira
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: true
           schema:
             type: string
             enum: [contatos]
         - name: contato_id
           in: query
-          required: true
+          description: ID do contato (quando action=contatos)
           schema:
             type: string
             format: uuid
       responses:
         "200":
-          description: Contato removido
+          description: Removido
 
   # ============================================================================
-  # CORE - WEBHOOKS
+  # WEBHOOKS
   # ============================================================================
   /api-webhooks:
     get:
       tags: [Webhooks]
-      summary: Listar webhooks
+      summary: Listar webhooks ou eventos
+      operationId: listarWebhooks
+      parameters:
+        - name: id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          description: "eventos: Lista eventos disponíveis"
+          schema:
+            type: string
+            enum: [eventos]
       responses:
         "200":
           description: Lista de webhooks
@@ -1063,6 +899,7 @@ paths:
     post:
       tags: [Webhooks]
       summary: Criar webhook
+      operationId: criarWebhook
       requestBody:
         required: true
         content:
@@ -1073,24 +910,10 @@ paths:
         "201":
           description: Webhook criado
 
-  /api-webhooks?id={id}:
-    get:
-      tags: [Webhooks]
-      summary: Buscar webhook
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Dados do webhook
-
     put:
       tags: [Webhooks]
       summary: Atualizar webhook
+      operationId: atualizarWebhook
       parameters:
         - name: id
           in: query
@@ -1099,7 +922,6 @@ paths:
             type: string
             format: uuid
       requestBody:
-        required: true
         content:
           application/json:
             schema:
@@ -1111,6 +933,7 @@ paths:
     delete:
       tags: [Webhooks]
       summary: Remover webhook
+      operationId: removerWebhook
       parameters:
         - name: id
           in: query
@@ -1122,44 +945,14 @@ paths:
         "200":
           description: Webhook removido
 
-  /api-webhooks?action=eventos:
-    get:
-      tags: [Webhooks]
-      summary: Listar eventos disponíveis
-      description: Retorna lista de eventos que podem disparar webhooks.
-      parameters:
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [eventos]
-      responses:
-        "200":
-          description: Lista de eventos
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  eventos:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        evento:
-                          type: string
-                        descricao:
-                          type: string
-
   # ============================================================================
-  # CORE - ARQUIVOS
+  # ARQUIVOS
   # ============================================================================
   /api-arquivos:
     get:
       tags: [Arquivos]
       summary: Obter URL de upload
-      description: Gera uma URL assinada para upload de arquivo.
+      operationId: obterUrlUpload
       parameters:
         - name: nome_arquivo
           in: query
@@ -1173,7 +966,7 @@ paths:
             type: string
       responses:
         "200":
-          description: URL de upload gerada
+          description: URL de upload
           content:
             application/json:
               schema:
@@ -1197,15 +990,14 @@ paths:
     post:
       tags: [Arquivos]
       summary: Confirmar upload
-      description: Confirma que o upload foi concluído e obtém URL permanente.
+      operationId: confirmarUpload
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - path
+              required: [path]
               properties:
                 path:
                   type: string
@@ -1214,27 +1006,11 @@ paths:
       responses:
         "200":
           description: Upload confirmado
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  sucesso:
-                    type: boolean
-                  arquivo:
-                    type: object
-                    properties:
-                      path:
-                        type: string
-                      url:
-                        type: string
-                      nome:
-                        type: string
 
-  /api-arquivos?path={path}:
     delete:
       tags: [Arquivos]
       summary: Remover arquivo
+      operationId: removerArquivo
       parameters:
         - name: path
           in: query
@@ -1246,13 +1022,26 @@ paths:
           description: Arquivo removido
 
   # ============================================================================
-  # CHAT - CONVERSAS
+  # CONVERSAS
   # ============================================================================
   /api-conversations:
     get:
       tags: [Conversas]
       summary: Listar conversas
+      operationId: listarConversas
       parameters:
+        - name: id
+          in: query
+          description: ID da conversa (busca com mensagens)
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          description: "notas: Lista notas da conversa"
+          schema:
+            type: string
+            enum: [notas]
         - name: status
           in: query
           schema:
@@ -1295,58 +1084,61 @@ paths:
 
     post:
       tags: [Conversas]
-      summary: Criar conversa
+      summary: Criar conversa ou adicionar nota
+      operationId: criarConversa
+      description: |
+        Sem action: Cria nova conversa
+        Com action=notas: Adiciona nota interna à conversa
+      parameters:
+        - name: id
+          in: query
+          description: ID da conversa (para action=notas)
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum: [notas]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - lead_id
-              properties:
-                lead_id:
-                  type: string
-                  format: uuid
-                assigned_to:
-                  type: string
-                  format: uuid
-                status:
-                  type: string
-                  enum: [open, pending, resolved]
+              oneOf:
+                - type: object
+                  required: [lead_id]
+                  properties:
+                    lead_id:
+                      type: string
+                      format: uuid
+                    assigned_to:
+                      type: string
+                      format: uuid
+                    status:
+                      type: string
+                      enum: [open, pending, resolved]
+                - type: object
+                  required: [conteudo]
+                  properties:
+                    conteudo:
+                      type: string
       responses:
         "201":
-          description: Conversa criada
-
-  /api-conversations?id={id}:
-    get:
-      tags: [Conversas]
-      summary: Buscar conversa com mensagens
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Conversa com mensagens
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/Conversa"
-                  - type: object
-                    properties:
-                      messages:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/Mensagem"
+          description: Criado
 
     put:
       tags: [Conversas]
       summary: Atualizar conversa
+      operationId: atualizarConversa
+      description: |
+        Usa action para operações específicas:
+        - Sem action: Atualiza dados
+        - `transferir`: Transfere para usuário/equipe
+        - `atribuir`: Atribui a usuário
+        - `finalizar`: Marca como resolvida
+        - `reabrir`: Reabre conversa
       parameters:
         - name: id
           in: query
@@ -1354,19 +1146,33 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum: [transferir, atribuir, finalizar, reabrir]
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                status:
-                  type: string
-                assigned_to:
-                  type: string
-                is_favorite:
-                  type: boolean
+              oneOf:
+                - type: object
+                  properties:
+                    status:
+                      type: string
+                    assigned_to:
+                      type: string
+                    is_favorite:
+                      type: boolean
+                - type: object
+                  properties:
+                    tipo:
+                      type: string
+                      enum: [usuario, equipe]
+                    usuario_id:
+                      type: string
+                    equipe_id:
+                      type: string
       responses:
         "200":
           description: Conversa atualizada
@@ -1374,6 +1180,7 @@ paths:
     delete:
       tags: [Conversas]
       summary: Remover conversa
+      operationId: removerConversa
       parameters:
         - name: id
           in: query
@@ -1385,298 +1192,33 @@ paths:
         "200":
           description: Conversa removida
 
-  /api-conversations?id={id}&action=transferir:
-    put:
-      tags: [Conversas]
-      summary: Transferir conversa
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [transferir]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                tipo:
-                  type: string
-                  enum: [usuario, equipe]
-                usuario_id:
-                  type: string
-                  format: uuid
-                equipe_id:
-                  type: string
-                  format: uuid
-      responses:
-        "200":
-          description: Conversa transferida
-
-  /api-conversations?id={id}&action=atribuir:
-    put:
-      tags: [Conversas]
-      summary: Atribuir conversa
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [atribuir]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - usuario_id
-              properties:
-                usuario_id:
-                  type: string
-                  format: uuid
-      responses:
-        "200":
-          description: Conversa atribuída
-
-  /api-conversations?id={id}&action=finalizar:
-    put:
-      tags: [Conversas]
-      summary: Finalizar conversa
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [finalizar]
-      responses:
-        "200":
-          description: Conversa finalizada
-
-  /api-conversations?id={id}&action=reabrir:
-    put:
-      tags: [Conversas]
-      summary: Reabrir conversa
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [reabrir]
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                responsavel_id:
-                  type: string
-                  format: uuid
-      responses:
-        "200":
-          description: Conversa reaberta
-
-  /api-conversations?id={id}&action=notas:
-    get:
-      tags: [Conversas]
-      summary: Listar notas internas
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [notas]
-      responses:
-        "200":
-          description: Lista de notas
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/NotaInterna"
-
-    post:
-      tags: [Conversas]
-      summary: Adicionar nota interna
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [notas]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - conteudo
-              properties:
-                conteudo:
-                  type: string
-                author_id:
-                  type: string
-                  format: uuid
-      responses:
-        "201":
-          description: Nota adicionada
-
   # ============================================================================
-  # CHAT - MENSAGENS
+  # MENSAGENS
   # ============================================================================
-  /chat-v2-mensagem:
-    post:
-      tags: [Mensagens]
-      summary: Enviar mensagem
-      description: Envia uma mensagem para um contato via WhatsApp.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/EnviarMensagemRequest"
-            example:
-              contato_id: "550e8400-e29b-41d4-a716-446655440000"
-              tipo: "texto"
-              conteudo: "Olá! Como posso ajudá-lo hoje?"
-      responses:
-        "200":
-          description: Mensagem enviada
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  sucesso:
-                    type: boolean
-                  mensagem:
-                    $ref: "#/components/schemas/Mensagem"
-
-  /api-mensagens?id={id}:
+  /api-mensagens:
     get:
       tags: [Mensagens]
-      summary: Buscar mensagem
+      summary: Buscar mensagens
+      operationId: buscarMensagens
       parameters:
         - name: id
           in: query
-          required: true
+          description: ID da mensagem
           schema:
             type: string
             format: uuid
-      responses:
-        "200":
-          description: Dados da mensagem
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MensagemDetalhada"
-
-    delete:
-      tags: [Mensagens]
-      summary: Apagar mensagem
-      description: Marca a mensagem como apagada localmente.
-      parameters:
-        - name: id
+        - name: conversa_id
           in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Mensagem apagada
-
-  /api-mensagens?id={id}&action=status:
-    get:
-      tags: [Mensagens]
-      summary: Status de entrega
-      parameters:
-        - name: id
-          in: query
-          required: true
+          description: ID da conversa
           schema:
             type: string
             format: uuid
         - name: action
           in: query
-          required: true
+          description: "status: Retorna status de entrega"
           schema:
             type: string
             enum: [status]
-      responses:
-        "200":
-          description: Status da mensagem
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                  status:
-                    type: string
-                    enum: [enviada, entregue, lida]
-                  atualizado_em:
-                    type: string
-                    format: date-time
-
-  /api-mensagens?conversa_id={conversa_id}:
-    get:
-      tags: [Mensagens]
-      summary: Listar mensagens da conversa
-      parameters:
-        - name: conversa_id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
         - name: pagina
           in: query
           schema:
@@ -1689,7 +1231,7 @@ paths:
             default: 50
       responses:
         "200":
-          description: Lista de mensagens
+          description: Mensagem(ns) encontrada(s)
           content:
             application/json:
               schema:
@@ -1698,18 +1240,74 @@ paths:
                   dados:
                     type: array
                     items:
-                      $ref: "#/components/schemas/MensagemDetalhada"
+                      $ref: "#/components/schemas/Mensagem"
                   paginacao:
                     $ref: "#/components/schemas/Paginacao"
 
+    delete:
+      tags: [Mensagens]
+      summary: Apagar mensagem
+      operationId: apagarMensagem
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Mensagem apagada
+
+  /chat-v2-mensagem:
+    post:
+      tags: [Mensagens]
+      summary: Enviar mensagem
+      operationId: enviarMensagem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnviarMensagemRequest"
+            example:
+              contato_id: "uuid-do-contato"
+              conteudo: "Olá! Como posso ajudar?"
+              tipo: "texto"
+      responses:
+        "200":
+          description: Mensagem enviada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sucesso:
+                    type: boolean
+                  mensagem_id:
+                    type: string
+                  status:
+                    type: string
+
   # ============================================================================
-  # CHAT - MENSAGENS AGENDADAS
+  # MENSAGENS AGENDADAS
   # ============================================================================
   /api-mensagens-agendadas:
     get:
       tags: [Mensagens Agendadas]
       summary: Listar mensagens agendadas
+      operationId: listarMensagensAgendadas
       parameters:
+        - name: id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: contato_id
+          in: query
+          schema:
+            type: string
+            format: uuid
         - name: status
           in: query
           schema:
@@ -1727,7 +1325,7 @@ paths:
             default: 50
       responses:
         "200":
-          description: Lista de agendamentos
+          description: Lista de mensagens agendadas
           content:
             application/json:
               schema:
@@ -1742,39 +1340,40 @@ paths:
 
     post:
       tags: [Mensagens Agendadas]
-      summary: Agendar mensagem
+      summary: Agendar mensagem ou cancelar
+      operationId: agendarMensagem
+      description: |
+        Sem action: Agenda nova mensagem
+        Com action=cancelar: Cancela mensagem agendada
+      parameters:
+        - name: id
+          in: query
+          description: ID da mensagem (para action=cancelar)
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum: [cancelar]
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/AgendarMensagemRequest"
             example:
-              contato_id: "550e8400-e29b-41d4-a716-446655440000"
-              conteudo: "Lembrete: sua perícia é amanhã às 10h."
-              agendar_para: "2025-01-10T09:00:00-03:00"
+              contato_id: "uuid-do-contato"
+              conteudo: "Lembrete: sua perícia é amanhã!"
+              agendar_para: "2026-01-10T10:00:00Z"
       responses:
         "201":
           description: Mensagem agendada
 
-  /api-mensagens-agendadas?id={id}:
-    get:
-      tags: [Mensagens Agendadas]
-      summary: Buscar agendamento
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Dados do agendamento
-
     put:
       tags: [Mensagens Agendadas]
-      summary: Atualizar agendamento
+      summary: Atualizar mensagem agendada
+      operationId: atualizarMensagemAgendada
       parameters:
         - name: id
           in: query
@@ -1783,7 +1382,6 @@ paths:
             type: string
             format: uuid
       requestBody:
-        required: true
         content:
           application/json:
             schema:
@@ -1796,50 +1394,22 @@ paths:
                   format: date-time
       responses:
         "200":
-          description: Agendamento atualizado
-
-    delete:
-      tags: [Mensagens Agendadas]
-      summary: Remover agendamento
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Agendamento removido
-
-  /api-mensagens-agendadas?id={id}&action=cancelar:
-    post:
-      tags: [Mensagens Agendadas]
-      summary: Cancelar agendamento
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [cancelar]
-      responses:
-        "200":
-          description: Agendamento cancelado
+          description: Mensagem atualizada
 
   # ============================================================================
-  # CHAT - TEMPLATES
+  # TEMPLATES
   # ============================================================================
   /api-templates:
     get:
       tags: [Templates]
       summary: Listar templates
+      operationId: listarTemplates
+      parameters:
+        - name: id
+          in: query
+          schema:
+            type: string
+            format: uuid
       responses:
         "200":
           description: Lista de templates
@@ -1856,6 +1426,7 @@ paths:
     post:
       tags: [Templates]
       summary: Criar template
+      operationId: criarTemplate
       requestBody:
         required: true
         content:
@@ -1866,24 +1437,10 @@ paths:
         "201":
           description: Template criado
 
-  /api-templates?id={id}:
-    get:
-      tags: [Templates]
-      summary: Buscar template
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Dados do template
-
     put:
       tags: [Templates]
       summary: Atualizar template
+      operationId: atualizarTemplate
       parameters:
         - name: id
           in: query
@@ -1892,7 +1449,6 @@ paths:
             type: string
             format: uuid
       requestBody:
-        required: true
         content:
           application/json:
             schema:
@@ -1904,6 +1460,7 @@ paths:
     delete:
       tags: [Templates]
       summary: Remover template
+      operationId: removerTemplate
       parameters:
         - name: id
           in: query
@@ -1916,12 +1473,19 @@ paths:
           description: Template removido
 
   # ============================================================================
-  # CHAT - CANAIS
+  # CANAIS
   # ============================================================================
   /api-whatsapp-instances:
     get:
       tags: [Canais]
       summary: Listar canais WhatsApp
+      operationId: listarCanais
+      parameters:
+        - name: id
+          in: query
+          schema:
+            type: string
+            format: uuid
       responses:
         "200":
           description: Lista de canais
@@ -1935,28 +1499,24 @@ paths:
                     items:
                       $ref: "#/components/schemas/Canal"
 
-  /api-whatsapp-instances?id={id}:
-    get:
-      tags: [Canais]
-      summary: Buscar canal
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Dados do canal
-
   # ============================================================================
-  # CHAT - CHATBOTS
+  # CHATBOTS
   # ============================================================================
   /api-chatbots:
     get:
       tags: [Chatbots]
       summary: Listar chatbots
+      operationId: listarChatbots
+      parameters:
+        - name: id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: ativo
+          in: query
+          schema:
+            type: boolean
       responses:
         "200":
           description: Lista de chatbots
@@ -1972,35 +1532,41 @@ paths:
 
     post:
       tags: [Chatbots]
-      summary: Criar chatbot
+      summary: Criar chatbot ou iniciar fluxo
+      operationId: criarChatbot
+      description: |
+        Sem action: Cria chatbot
+        Com action=enviar: Inicia fluxo para contato
+      parameters:
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum: [enviar]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CriarChatbotRequest"
+              oneOf:
+                - $ref: "#/components/schemas/CriarChatbotRequest"
+                - type: object
+                  required: [chatbot_id, contato_id]
+                  properties:
+                    chatbot_id:
+                      type: string
+                      format: uuid
+                    contato_id:
+                      type: string
+                      format: uuid
       responses:
         "201":
-          description: Chatbot criado
-
-  /api-chatbots?id={id}:
-    get:
-      tags: [Chatbots]
-      summary: Buscar chatbot
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Dados do chatbot
+          description: Criado
 
     put:
       tags: [Chatbots]
       summary: Atualizar chatbot
+      operationId: atualizarChatbot
       parameters:
         - name: id
           in: query
@@ -2009,7 +1575,6 @@ paths:
             type: string
             format: uuid
       requestBody:
-        required: true
         content:
           application/json:
             schema:
@@ -2021,6 +1586,7 @@ paths:
     delete:
       tags: [Chatbots]
       summary: Remover chatbot
+      operationId: removerChatbot
       parameters:
         - name: id
           in: query
@@ -2032,46 +1598,26 @@ paths:
         "200":
           description: Chatbot removido
 
-  /api-chatbots?action=enviar:
-    post:
-      tags: [Chatbots]
-      summary: Iniciar fluxo de chatbot
-      description: Inicia um fluxo de chatbot para um contato específico.
-      parameters:
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [enviar]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - chatbot_id
-                - contato_id
-              properties:
-                chatbot_id:
-                  type: string
-                  format: uuid
-                contato_id:
-                  type: string
-                  format: uuid
-      responses:
-        "200":
-          description: Fluxo iniciado
-
   # ============================================================================
-  # CRM - OPORTUNIDADES
+  # OPORTUNIDADES
   # ============================================================================
   /api-oportunidades:
     get:
       tags: [Oportunidades]
       summary: Listar oportunidades
+      operationId: listarOportunidades
       parameters:
+        - name: id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          description: "notas: Lista notas da oportunidade"
+          schema:
+            type: string
+            enum: [notas]
         - name: etapa_id
           in: query
           schema:
@@ -2082,6 +1628,11 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: temperatura
+          in: query
+          schema:
+            type: string
+            enum: [cold, warm, hot]
         - name: pagina
           in: query
           schema:
@@ -2109,39 +1660,48 @@ paths:
 
     post:
       tags: [Oportunidades]
-      summary: Criar oportunidade
+      summary: Criar oportunidade ou ações
+      operationId: criarOportunidade
+      description: |
+        Sem action: Cria oportunidade
+        Com action:
+        - `duplicar`: Duplica oportunidade
+        - `notas`: Adiciona nota
+      parameters:
+        - name: id
+          in: query
+          description: ID da oportunidade (para duplicar/notas)
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum: [duplicar, notas]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CriarOportunidadeRequest"
+              oneOf:
+                - $ref: "#/components/schemas/CriarOportunidadeRequest"
+                - type: object
+                  required: [conteudo]
+                  properties:
+                    conteudo:
+                      type: string
       responses:
         "201":
-          description: Oportunidade criada
-
-  /api-oportunidades?id={id}:
-    get:
-      tags: [Oportunidades]
-      summary: Buscar oportunidade
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Dados da oportunidade
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Oportunidade"
+          description: Criado
 
     put:
       tags: [Oportunidades]
       summary: Atualizar oportunidade
+      operationId: atualizarOportunidade
+      description: |
+        Sem action: Atualiza dados
+        Com action=mover: Move para outra etapa
       parameters:
         - name: id
           in: query
@@ -2149,19 +1709,33 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum: [mover]
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AtualizarOportunidadeRequest"
+              oneOf:
+                - $ref: "#/components/schemas/AtualizarOportunidadeRequest"
+                - type: object
+                  required: [etapa_id]
+                  properties:
+                    etapa_id:
+                      type: string
+                      format: uuid
+                    ordem:
+                      type: integer
       responses:
         "200":
           description: Oportunidade atualizada
 
     delete:
       tags: [Oportunidades]
-      summary: Arquivar oportunidade
+      summary: Remover oportunidade
+      operationId: removerOportunidade
       parameters:
         - name: id
           in: query
@@ -2171,122 +1745,28 @@ paths:
             format: uuid
       responses:
         "200":
-          description: Oportunidade arquivada
-
-  /api-oportunidades?id={id}&action=duplicar:
-    post:
-      tags: [Oportunidades]
-      summary: Duplicar oportunidade
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [duplicar]
-      responses:
-        "201":
-          description: Oportunidade duplicada
-
-  /api-oportunidades?id={id}&action=mover:
-    put:
-      tags: [Oportunidades]
-      summary: Mover oportunidade de etapa
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [mover]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - etapa_id
-              properties:
-                etapa_id:
-                  type: string
-                  format: uuid
-      responses:
-        "200":
-          description: Oportunidade movida
-
-  /api-oportunidades?id={id}&action=notas:
-    get:
-      tags: [Oportunidades]
-      summary: Listar notas da oportunidade
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [notas]
-      responses:
-        "200":
-          description: Lista de notas
-
-    post:
-      tags: [Oportunidades]
-      summary: Adicionar nota à oportunidade
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [notas]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - conteudo
-              properties:
-                conteudo:
-                  type: string
-      responses:
-        "201":
-          description: Nota adicionada
+          description: Oportunidade removida
 
   # ============================================================================
-  # CRM - FUNIS
+  # FUNIS
   # ============================================================================
   /api-funnels:
     get:
       tags: [Funis]
       summary: Listar funis
+      operationId: listarFunis
       parameters:
+        - name: id
+          in: query
+          description: ID do funil (busca específico)
+          schema:
+            type: string
+        - name: action
+          in: query
+          description: "campos-personalizados: Retorna campos do funil"
+          schema:
+            type: string
+            enum: [campos-personalizados]
         - name: tenant_id
           in: query
           schema:
@@ -2305,32 +1785,20 @@ paths:
                     items:
                       $ref: "#/components/schemas/Funil"
 
-  /api-funnels?id={id}:
-    get:
-      tags: [Funis]
-      summary: Buscar funil
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Dados do funil
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/FunilDetalhado"
-
   # ============================================================================
-  # CRM - TAREFAS
+  # TAREFAS
   # ============================================================================
   /api-tasks:
     get:
       tags: [Tarefas]
       summary: Listar tarefas
+      operationId: listarTarefas
       parameters:
+        - name: id
+          in: query
+          schema:
+            type: string
+            format: uuid
         - name: status
           in: query
           schema:
@@ -2346,12 +1814,12 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: pagina
+        - name: page
           in: query
           schema:
             type: integer
             default: 1
-        - name: por_pagina
+        - name: page_size
           in: query
           schema:
             type: integer
@@ -2373,9 +1841,24 @@ paths:
 
     post:
       tags: [Tarefas]
-      summary: Criar tarefa
+      summary: Criar tarefa ou concluir
+      operationId: criarTarefa
+      description: |
+        Sem action: Cria tarefa
+        Com action=concluir: Marca como concluída
+      parameters:
+        - name: id
+          in: query
+          description: ID da tarefa (para action=concluir)
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum: [concluir]
       requestBody:
-        required: true
         content:
           application/json:
             schema:
@@ -2384,24 +1867,10 @@ paths:
         "201":
           description: Tarefa criada
 
-  /api-tasks?id={id}:
-    get:
-      tags: [Tarefas]
-      summary: Buscar tarefa
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        "200":
-          description: Dados da tarefa
-
     put:
       tags: [Tarefas]
       summary: Atualizar tarefa
+      operationId: atualizarTarefa
       parameters:
         - name: id
           in: query
@@ -2410,7 +1879,6 @@ paths:
             type: string
             format: uuid
       requestBody:
-        required: true
         content:
           application/json:
             schema:
@@ -2422,6 +1890,7 @@ paths:
     delete:
       tags: [Tarefas]
       summary: Remover tarefa
+      operationId: removerTarefa
       parameters:
         - name: id
           in: query
@@ -2433,43 +1902,14 @@ paths:
         "200":
           description: Tarefa removida
 
-  /api-tasks?id={id}&action=concluir:
-    post:
-      tags: [Tarefas]
-      summary: Concluir tarefa
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: action
-          in: query
-          required: true
-          schema:
-            type: string
-            enum: [concluir]
-      responses:
-        "200":
-          description: Tarefa concluída
-
-# ============================================================================
-# COMPONENTS
-# ============================================================================
 components:
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: API Key
-      description: |
-        Use sua API key gerada em Ajustes > Integrações > API.
-
-        Exemplo: `Authorization: Bearer gd_live_abc123...`
+      description: API Key gerada no sistema
 
   schemas:
-    # ------------ Paginação ------------
     Paginacao:
       type: object
       properties:
@@ -2496,14 +1936,12 @@ components:
           type: string
         avatar_url:
           type: string
-        perfil:
+        cargo:
           type: string
           enum: [administrador, gerente, atendente, visualizador]
         ativo:
           type: boolean
         disponivel:
-          type: boolean
-        dono_conta:
           type: boolean
         equipes:
           type: array
@@ -2547,46 +1985,13 @@ components:
           type: boolean
         total_membros:
           type: integer
-        membros_disponiveis:
-          type: integer
         criado_em:
           type: string
           format: date-time
 
-    EquipeDetalhada:
-      allOf:
-        - $ref: "#/components/schemas/Equipe"
-        - type: object
-          properties:
-            membros:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: string
-                  nome:
-                    type: string
-                  supervisor:
-                    type: boolean
-                  disponivel:
-                    type: boolean
-            canais:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: string
-                  nome:
-                    type: string
-                  telefone:
-                    type: string
-
     CriarEquipeRequest:
       type: object
-      required:
-        - nome
+      required: [nome]
       properties:
         nome:
           type: string
@@ -2628,7 +2033,7 @@ components:
           type: string
         temperatura:
           type: string
-          enum: [frio, morno, quente]
+          enum: [cold, warm, hot]
         responsavel_id:
           type: string
         tipo_beneficio:
@@ -2650,9 +2055,7 @@ components:
 
     CriarContatoRequest:
       type: object
-      required:
-        - name
-        - phone
+      required: [name, phone]
       properties:
         name:
           type: string
@@ -2692,11 +2095,83 @@ components:
           type: string
           format: uuid
 
+    CriarContatosLoteRequest:
+      type: object
+      required: [contatos]
+      properties:
+        contatos:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required: [name, phone]
+            properties:
+              name:
+                type: string
+              phone:
+                type: string
+              email:
+                type: string
+              source:
+                type: string
+              temperature:
+                type: string
+                enum: [cold, warm, hot]
+
+    FiltroAvancadoRequest:
+      type: object
+      properties:
+        etiquetas:
+          type: array
+          items:
+            type: string
+            format: uuid
+        campos:
+          type: object
+          description: Filtrar por campos personalizados
+        periodo:
+          type: object
+          properties:
+            inicio:
+              type: string
+              format: date
+            fim:
+              type: string
+              format: date
+        temperatura:
+          type: string
+          enum: [cold, warm, hot]
+        etapa_funil:
+          type: string
+        responsavel:
+          type: string
+        tenant_id:
+          type: string
+          format: uuid
+        pagina:
+          type: integer
+          default: 1
+        por_pagina:
+          type: integer
+          default: 50
+
+    GerenciarEtiquetasRequest:
+      type: object
+      properties:
+        adicionar:
+          type: array
+          items:
+            type: string
+            format: uuid
+        remover:
+          type: array
+          items:
+            type: string
+            format: uuid
+
     CriarContatoLoteItem:
       type: object
-      required:
-        - nome
-        - telefone
+      required: [nome, telefone]
       properties:
         nome:
           type: string
@@ -2708,26 +2183,10 @@ components:
           type: string
         cpf:
           type: string
-        data_nascimento:
-          type: string
-          format: date
         tipo_beneficio:
-          type: string
-        nit_pis:
           type: string
         origem:
           type: string
-        etapa_id:
-          type: string
-          format: uuid
-        responsavel_id:
-          type: string
-          format: uuid
-        temperatura:
-          type: string
-          enum: [frio, morno, quente]
-        campos_personalizados:
-          type: object
         etiquetas:
           type: array
           items:
@@ -2765,12 +2224,11 @@ components:
           type: string
         categoria:
           type: string
-          enum: [origem, interesse, prioridade, status, beneficio, condicao_saude, desqualificacao, situacao, perda]
+          enum: [origem, interesse, prioridade, status, beneficio, condicao_saude, desqualificacao]
 
     CriarEtiquetaRequest:
       type: object
-      required:
-        - nome
+      required: [nome]
       properties:
         nome:
           type: string
@@ -2813,9 +2271,7 @@ components:
 
     CriarCampoRequest:
       type: object
-      required:
-        - nome
-        - rotulo
+      required: [nome, rotulo]
       properties:
         nome:
           type: string
@@ -2871,8 +2327,7 @@ components:
 
     CriarCarteiraRequest:
       type: object
-      required:
-        - nome
+      required: [nome]
       properties:
         nome:
           type: string
@@ -2913,10 +2368,7 @@ components:
 
     CriarWebhookRequest:
       type: object
-      required:
-        - nome
-        - url
-        - eventos
+      required: [nome, url, eventos]
       properties:
         nome:
           type: string
@@ -2980,24 +2432,6 @@ components:
           type: string
           format: date-time
 
-    NotaInterna:
-      type: object
-      properties:
-        id:
-          type: string
-        conteudo:
-          type: string
-        autor:
-          type: object
-          properties:
-            id:
-              type: string
-            nome:
-              type: string
-        criada_em:
-          type: string
-          format: date-time
-
     # ------------ Mensagens ------------
     Mensagem:
       type: object
@@ -3028,44 +2462,9 @@ components:
           type: string
           format: date-time
 
-    MensagemDetalhada:
-      type: object
-      properties:
-        id:
-          type: string
-        conversa_id:
-          type: string
-        tipo:
-          type: string
-          enum: [texto, imagem, audio, video, documento]
-        conteudo:
-          type: string
-        remetente_tipo:
-          type: string
-          enum: [contato, atendente]
-        remetente_id:
-          type: string
-        direcao:
-          type: string
-          enum: [entrada, saida]
-        status:
-          type: string
-          enum: [enviada, entregue, lida]
-        media_url:
-          type: string
-        transcricao:
-          type: string
-        externa_id:
-          type: string
-        enviada_em:
-          type: string
-          format: date-time
-
     EnviarMensagemRequest:
       type: object
-      required:
-        - contato_id
-        - conteudo
+      required: [contato_id, conteudo]
       properties:
         contato_id:
           type: string
@@ -3103,18 +2502,13 @@ components:
         enviado_em:
           type: string
           format: date-time
-        erro:
-          type: string
         criado_em:
           type: string
           format: date-time
 
     AgendarMensagemRequest:
       type: object
-      required:
-        - contato_id
-        - conteudo
-        - agendar_para
+      required: [contato_id, conteudo, agendar_para]
       properties:
         contato_id:
           type: string
@@ -3149,10 +2543,7 @@ components:
 
     CriarTemplateRequest:
       type: object
-      required:
-        - nome
-        - atalho
-        - conteudo
+      required: [nome, atalho, conteudo]
       properties:
         nome:
           type: string
@@ -3216,8 +2607,7 @@ components:
 
     CriarChatbotRequest:
       type: object
-      required:
-        - nome
+      required: [nome]
       properties:
         nome:
           type: string
@@ -3277,14 +2667,12 @@ components:
               type: string
         temperatura:
           type: string
-          enum: [frio, morno, quente]
+          enum: [cold, warm, hot]
         responsavel_id:
           type: string
         valor_estimado:
           type: number
         tipo_beneficio:
-          type: string
-        status_caso:
           type: string
         etiquetas:
           type: array
@@ -3300,15 +2688,10 @@ components:
         criado_em:
           type: string
           format: date-time
-        atualizado_em:
-          type: string
-          format: date-time
 
     CriarOportunidadeRequest:
       type: object
-      required:
-        - nome
-        - telefone
+      required: [nome, telefone]
       properties:
         nome:
           type: string
@@ -3324,7 +2707,7 @@ components:
           format: uuid
         temperatura:
           type: string
-          enum: [frio, morno, quente]
+          enum: [cold, warm, hot]
         valor_estimado:
           type: number
         tipo_beneficio:
@@ -3349,12 +2732,10 @@ components:
           format: uuid
         temperatura:
           type: string
-          enum: [frio, morno, quente]
+          enum: [cold, warm, hot]
         valor_estimado:
           type: number
         tipo_beneficio:
-          type: string
-        status_caso:
           type: string
 
     # ------------ Funis ------------
@@ -3385,29 +2766,6 @@ components:
               total:
                 type: integer
 
-    FunilDetalhado:
-      type: object
-      properties:
-        id:
-          type: string
-        nome:
-          type: string
-        etapas:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: string
-              nome:
-                type: string
-              ordem:
-                type: integer
-              cor:
-                type: string
-              total:
-                type: integer
-
     # ------------ Tarefas ------------
     Tarefa:
       type: object
@@ -3420,10 +2778,10 @@ components:
           type: string
         status:
           type: string
-          enum: [pendente, em_andamento, concluida]
+          enum: [todo, in_progress, done]
         prioridade:
           type: string
-          enum: [urgente, alta, media, baixa]
+          enum: [urgent, high, medium, low]
         responsavel_id:
           type: string
         contato_id:
@@ -3448,9 +2806,7 @@ components:
 
     CriarTarefaRequest:
       type: object
-      required:
-        - titulo
-        - responsavel_id
+      required: [titulo, responsavel_id]
       properties:
         titulo:
           type: string
@@ -3458,7 +2814,7 @@ components:
           type: string
         prioridade:
           type: string
-          enum: [urgente, alta, media, baixa]
+          enum: [urgent, high, medium, low]
         responsavel_id:
           type: string
           format: uuid
@@ -3478,7 +2834,7 @@ components:
           type: string
         status:
           type: string
-          enum: [pendente, em_andamento, concluida]
+          enum: [todo, in_progress, done]
         prioridade:
           type: string
         data_vencimento:
@@ -3487,7 +2843,7 @@ components:
 
   responses:
     NaoAutorizado:
-      description: Token de autenticação inválido ou ausente
+      description: Token inválido ou ausente
       content:
         application/json:
           schema:
@@ -3501,7 +2857,7 @@ components:
                 example: "API key inválida"
 
     RequisicaoInvalida:
-      description: Dados da requisição inválidos
+      description: Dados inválidos
       content:
         application/json:
           schema:
