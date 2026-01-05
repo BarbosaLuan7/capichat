@@ -112,18 +112,18 @@ const Auth = () => {
             </div>
 
             <h1 className="text-4xl xl:text-5xl font-bold leading-tight mb-6">
-              Conquiste seus benefícios previdenciários
+              Área de Atendimento
             </h1>
 
             <p className="text-lg xl:text-xl text-primary-foreground/80 mb-12 max-w-lg">
-              Sistema especializado em Direito Previdenciário para gestão de casos e atendimento via WhatsApp.
+              Sistema interno de gestão de conversas do escritório LB ADV
             </p>
 
             <div className="space-y-4">
               {[
-                'Atendimento humanizado via WhatsApp',
-                'Gestão completa de casos previdenciários',
-                'Acompanhamento de BPC, aposentadorias e mais',
+                'Inbox unificado de WhatsApp',
+                'Gestão de leads e casos',
+                'Distribuição automática entre equipes',
               ].map((feature, index) => (
                 <motion.div
                   key={feature}
