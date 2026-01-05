@@ -6,19 +6,27 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Resultado da busca de foto com motivo de falha
+interface ProfilePictureResult {
+  url: string | null;
+  reason?: string;
+}
+
 // Busca foto de perfil do WhatsApp via WAHA API
 async function getProfilePicture(
   wahaBaseUrl: string,
   apiKey: string,
   sessionName: string,
   contactId: string
-): Promise<string | null> {
+): Promise<ProfilePictureResult> {
   try {
     // Usar apenas o número SEM @c.us, conforme documentação oficial WAHA
     const cleanNumber = contactId.replace('@c.us', '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
     
     // Adicionar refresh=true para forçar buscar do WhatsApp (evita cache vazio de 24h)
     const url = `${wahaBaseUrl}/api/contacts/profile-picture?contactId=${cleanNumber}&session=${sessionName}&refresh=true`;
+    
+    console.log(`[refresh-avatars] 📷 Buscando foto: ${cleanNumber} via ${sessionName}`);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -30,20 +38,26 @@ async function getProfilePicture(
     });
     
     if (!response.ok) {
-      return null;
+      const errorText = await response.text();
+      console.log(`[refresh-avatars] ❌ API retornou ${response.status}: ${errorText.substring(0, 200)}`);
+      return { url: null, reason: `API error ${response.status}` };
     }
     
     const data = await response.json();
+    console.log(`[refresh-avatars] 📥 Resposta API:`, JSON.stringify(data).substring(0, 300));
+    
     const profilePictureUrl = data?.profilePictureURL || data?.profilePicture || data?.url || data?.imgUrl;
     
     if (profilePictureUrl && typeof profilePictureUrl === 'string' && profilePictureUrl.startsWith('http')) {
-      return profilePictureUrl;
+      console.log(`[refresh-avatars] ✅ Foto encontrada!`);
+      return { url: profilePictureUrl };
     }
     
-    return null;
+    console.log(`[refresh-avatars] ⚠️ Sem URL de foto na resposta`);
+    return { url: null, reason: 'No picture URL in response' };
   } catch (error) {
     console.error('[refresh-avatars] Erro ao buscar foto:', error);
-    return null;
+    return { url: null, reason: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
 
@@ -125,7 +139,7 @@ serve(async (req) => {
 
     console.log(`[refresh-avatars] Processando ${leads?.length || 0} leads...`);
 
-    const results: { leadId: string; success: boolean; avatarUrl?: string; instance?: string }[] = [];
+    const results: { leadId: string; success: boolean; avatarUrl?: string; instance?: string; reason?: string; phone?: string }[] = [];
     let successCount = 0;
 
     // Primeira instância como fallback
@@ -151,24 +165,24 @@ serve(async (req) => {
 
         // Usar número com código do país (55) para a API
         const phoneWithCountry = lead.phone.startsWith('55') ? lead.phone : `55${lead.phone}`;
-        const avatarUrl = await getProfilePicture(baseUrl, apiKey, sessionName, phoneWithCountry);
+        const result = await getProfilePicture(baseUrl, apiKey, sessionName, phoneWithCountry);
 
-        if (avatarUrl) {
+        if (result.url) {
           // Atualizar lead com novo avatar
           const { error: updateError } = await supabase
             .from('leads')
             .update({ 
-              avatar_url: avatarUrl,
+              avatar_url: result.url,
               updated_at: new Date().toISOString()
             })
             .eq('id', lead.id);
 
           if (!updateError) {
             successCount++;
-            results.push({ leadId: lead.id, success: true, avatarUrl, instance: sessionName });
-            console.log(`[refresh-avatars] Avatar atualizado para lead ${lead.id} via ${sessionName}`);
+            results.push({ leadId: lead.id, success: true, avatarUrl: result.url, instance: sessionName });
+            console.log(`[refresh-avatars] ✅ Avatar atualizado para lead ${lead.id} via ${sessionName}`);
           } else {
-            results.push({ leadId: lead.id, success: false, instance: sessionName });
+            results.push({ leadId: lead.id, success: false, instance: sessionName, reason: 'DB update failed', phone: phoneWithCountry });
           }
         } else {
           // Se não encontrou foto, marcar como tentativa feita atualizando updated_at
@@ -177,11 +191,11 @@ serve(async (req) => {
             .update({ updated_at: new Date().toISOString() })
             .eq('id', lead.id);
           
-          results.push({ leadId: lead.id, success: false, instance: sessionName });
+          results.push({ leadId: lead.id, success: false, instance: sessionName, reason: result.reason, phone: phoneWithCountry });
         }
       } catch (error) {
         console.error(`[refresh-avatars] Erro ao processar lead ${lead.id}:`, error);
-        results.push({ leadId: lead.id, success: false });
+        results.push({ leadId: lead.id, success: false, reason: error instanceof Error ? error.message : 'Unknown error' });
       }
     }
 
