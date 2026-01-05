@@ -28,6 +28,52 @@ const autoRepairInFlight = new Set<string>();
 const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutos
 const lastAttemptTime = new Map<string, number>();
 const MAX_MESSAGE_LENGTH = 500;
+const MAX_REPAIR_ENTRIES = 500;
+
+// Limpeza periódica para evitar memory leak
+function cleanupAutoRepairEntries() {
+  const now = Date.now();
+  const threshold = now - (10 * 60 * 1000); // 10 minutos
+  
+  for (const [id, time] of lastAttemptTime.entries()) {
+    if (time < threshold) {
+      autoRepairAttempted.delete(id);
+      lastAttemptTime.delete(id);
+    }
+  }
+  
+  // Fallback: se ainda tiver muitas entries, limpar as mais antigas
+  if (autoRepairAttempted.size > MAX_REPAIR_ENTRIES) {
+    const entriesToRemove = [...lastAttemptTime.entries()]
+      .sort((a, b) => a[1] - b[1])
+      .slice(0, 100);
+    
+    for (const [id] of entriesToRemove) {
+      autoRepairAttempted.delete(id);
+      lastAttemptTime.delete(id);
+    }
+  }
+}
+
+// Executar limpeza periodicamente (a cada 5 minutos)
+if (typeof window !== 'undefined') {
+  setInterval(cleanupAutoRepairEntries, 5 * 60 * 1000);
+}
+
+// Constantes estáticas para tipos de mídia (evitar recriação)
+const MEDIA_LABELS: Record<string, string> = {
+  'image': 'Imagem',
+  'video': 'Vídeo',
+  'audio': 'Áudio',
+  'document': 'Documento',
+};
+
+const MEDIA_ICONS_MAP = {
+  'image': ImageOff,
+  'video': VideoOff,
+  'audio': Mic,
+  'document': FileText,
+} as const;
 
 // Placeholder texts to filter out from message content display
 const MEDIA_PLACEHOLDERS = [
@@ -283,24 +329,13 @@ function MessageBubbleComponent({
   const renderMedia = () => {
     // Se é mensagem de mídia mas NÃO tem media_url, mostrar placeholder com botão de recuperar
     if (message.type !== 'text' && !message.media_url) {
-      const mediaLabels: Record<string, string> = {
-        'image': 'Imagem',
-        'video': 'Vídeo',
-        'audio': 'Áudio',
-        'document': 'Documento',
-      };
-      const mediaIcons: Record<string, React.ReactNode> = {
-        'image': <ImageOff className="w-5 h-5" />,
-        'video': <VideoOff className="w-5 h-5" />,
-        'audio': <Mic className="w-5 h-5" />,
-        'document': <FileText className="w-5 h-5" />,
-      };
+      const IconComponent = MEDIA_ICONS_MAP[message.type as keyof typeof MEDIA_ICONS_MAP] || FileText;
       
       return (
         <div className="mb-2 p-3 rounded-lg bg-muted/50 border border-border">
           <div className="flex items-center gap-2 text-muted-foreground mb-2">
-            {mediaIcons[message.type] || <FileText className="w-5 h-5" />}
-            <span className="text-sm">{mediaLabels[message.type] || 'Mídia'} indisponível</span>
+            <IconComponent className="w-5 h-5" />
+            <span className="text-sm">{MEDIA_LABELS[message.type] || 'Mídia'} indisponível</span>
           </div>
           
           {isRepairingMedia ? (

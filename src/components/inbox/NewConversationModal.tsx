@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, forwardRef } from "react";
-import { Loader2, CheckCircle, AlertCircle, ExternalLink, Clock, MessageSquare } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle, ExternalLink, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -282,10 +282,6 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
     }
   };
 
-  // Handle schedule (placeholder for future functionality)
-  const handleSchedule = () => {
-    toast.info("Funcionalidade de agendamento em breve!");
-  };
 
   // Validation state indicator
   const PhoneValidationIndicator = () => {
@@ -434,30 +430,14 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
           </div>
         </div>
 
-        <DialogFooter className="flex items-center justify-between sm:justify-between">
-          {/* Schedule Option */}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="gap-1.5 text-muted-foreground"
-            onClick={handleSchedule}
-            disabled={!canSubmit}
-          >
-            <Clock className="w-4 h-4" />
-            Agendar
+        <DialogFooter className="flex gap-2">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+            Cancelar
           </Button>
-
-          {/* Main Actions */}
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-              Cancelar
-            </Button>
-            <Button type="button" onClick={handleCreate} disabled={!canSubmit}>
-              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-              Iniciar Atendimento
-            </Button>
-          </div>
+          <Button type="button" onClick={handleCreate} disabled={!canSubmit}>
+            {isSubmitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+            Iniciar Atendimento
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -86,6 +86,7 @@ function ConversationStatusTabsComponent({ value, onChange, counts }: Conversati
                   )}
                 >
                   <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <span className="hidden sm:inline text-[10px] font-medium">{tab.shortLabel}</span>
                   <span className="font-semibold tabular-nums">{count}</span>
                 </TabsTrigger>
               </TooltipTrigger>

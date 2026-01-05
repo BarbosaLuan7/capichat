@@ -1,10 +1,10 @@
 import { memo } from 'react';
-import { MessageCircle, Search, Inbox, FileText, Tag, Users } from 'lucide-react';
+import { MessageCircle, Search, Inbox, FileText, Tag, Users, Filter, CheckCircle2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface EmptyStateProps {
-  type: 'conversations' | 'messages' | 'search' | 'notes' | 'labels' | 'team';
+  type: 'conversations' | 'messages' | 'search' | 'notes' | 'labels' | 'team' | 'filtered' | 'no-pending' | 'no-open' | 'no-resolved';
   title?: string;
   description?: string;
   action?: {
@@ -49,6 +49,30 @@ const emptyStateConfig = {
     icon: Users,
     title: 'Nenhum membro na equipe',
     description: 'Adicione membros para colaborar no atendimento',
+    iconColor: 'text-muted-foreground',
+  },
+  filtered: {
+    icon: Filter,
+    title: 'Nenhum resultado',
+    description: 'Tente ajustar seus filtros para encontrar conversas',
+    iconColor: 'text-muted-foreground',
+  },
+  'no-pending': {
+    icon: CheckCircle2,
+    title: 'Nenhuma conversa pendente',
+    description: 'Todas as conversas foram lidas. Bom trabalho!',
+    iconColor: 'text-success',
+  },
+  'no-open': {
+    icon: MessageCircle,
+    title: 'Nenhuma conversa aberta',
+    description: 'Não há conversas em atendimento no momento',
+    iconColor: 'text-muted-foreground',
+  },
+  'no-resolved': {
+    icon: Clock,
+    title: 'Nenhuma conversa resolvida',
+    description: 'Resolva conversas para vê-las aqui',
     iconColor: 'text-muted-foreground',
   },
 };
