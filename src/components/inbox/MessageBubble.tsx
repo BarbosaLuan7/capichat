@@ -22,15 +22,29 @@ import { MessageActions } from '@/components/inbox/MessageActions';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
-// Controle de auto-repair em nível de módulo (sobrevive virtualização)
-const autoRepairAttempted = new Set<string>();
-const autoRepairInFlight = new Set<string>();
-const COOLDOWN_MS = 5 * 60 * 1000; // 5 minutos
-const lastAttemptTime = new Map<string, number>();
+/**
+ * Controle de auto-repair em nível de módulo.
+ * 
+ * Estes Sets/Maps são mantidos fora do componente para sobreviver à virtualização,
+ * evitando tentativas repetidas de repair quando componentes são remontados
+ * durante o scroll.
+ * 
+ * @see cleanupAutoRepairEntries - Limpeza periódica para evitar memory leaks
+ */
+const autoRepairAttempted = new Set<string>();  // IDs já tentados
+const autoRepairInFlight = new Set<string>();   // Repairs em andamento
+const COOLDOWN_MS = 5 * 60 * 1000;              // Cooldown entre tentativas
+const lastAttemptTime = new Map<string, number>(); // Timestamp da última tentativa
 const MAX_MESSAGE_LENGTH = 500;
-const MAX_REPAIR_ENTRIES = 500;
+const MAX_REPAIR_ENTRIES = 500;                 // Limite para evitar crescimento ilimitado
 
-// Limpeza periódica para evitar memory leak
+/**
+ * Limpa entradas antigas dos Sets de controle de auto-repair.
+ * 
+ * Executada periodicamente (5 min) para evitar memory leaks em sessões longas.
+ * Remove entries mais antigas que 10 minutos e, se ainda houver muitas,
+ * remove as 100 mais antigas como fallback.
+ */
 function cleanupAutoRepairEntries() {
   const now = Date.now();
   const threshold = now - (10 * 60 * 1000); // 10 minutos
