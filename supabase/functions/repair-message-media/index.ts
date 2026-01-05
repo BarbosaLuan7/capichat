@@ -97,70 +97,120 @@ serve(async (req) => {
       return jsonResponse({ error: 'No external message ID available' }, 400);
     }
 
-    console.log('[repair-media] Chamando WAHA - chatId:', chatId, 'msgId:', messageIdForApi);
-
-    // 5. Chamar WAHA API
+    // 5. Chamar WAHA API com retry e timeout reduzido
     const baseUrl = whatsappConfig.base_url.replace(/\/$/, '');
     const wahaUrl = `${baseUrl}/api/${whatsappConfig.instance_name}/chats/${chatId}/messages/${messageIdForApi}?downloadMedia=true`;
+    
+    console.log('[repair-media] Chamando WAHA:', { chatId, msgId: messageIdForApi, url: wahaUrl.replace(whatsappConfig.api_key, '***') });
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const TIMEOUT_MS = 15000; // Reduzido de 30s para 15s
+    const MAX_RETRIES = 2;
+    
+    let lastError: Error | null = null;
+    let mediaData: any = null;
+    
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+      const startTime = Date.now();
+      
+      try {
+        console.log(`[repair-media] Tentativa ${attempt}/${MAX_RETRIES}...`);
+        
+        const wahaResponse = await fetch(wahaUrl, {
+          method: 'GET',
+          headers: {
+            'X-Api-Key': whatsappConfig.api_key,
+            'Authorization': `Bearer ${whatsappConfig.api_key}`,
+          },
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        
+        const elapsed = Date.now() - startTime;
+        console.log(`[repair-media] WAHA respondeu em ${elapsed}ms, status: ${wahaResponse.status}`);
 
-    try {
-      const wahaResponse = await fetch(wahaUrl, {
-        method: 'GET',
-        headers: {
-          'X-Api-Key': whatsappConfig.api_key,
-          'Authorization': `Bearer ${whatsappConfig.api_key}`,
-        },
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
+        if (!wahaResponse.ok) {
+          const errorText = await wahaResponse.text().catch(() => '');
+          console.error('[repair-media] WAHA erro:', wahaResponse.status, errorText);
+          
+          // Se for 404 (mensagem não existe mais), não tentar novamente
+          if (wahaResponse.status === 404) {
+            return jsonResponse({ 
+              error: 'Mídia não encontrada no WhatsApp', 
+              code: 'MEDIA_NOT_FOUND',
+              expired: true 
+            }, 404);
+          }
+          
+          lastError = new Error(`WAHA HTTP ${wahaResponse.status}`);
+          continue; // Tentar novamente
+        }
 
-      if (!wahaResponse.ok) {
-        const errorText = await wahaResponse.text().catch(() => '');
-        console.error('[repair-media] WAHA erro:', wahaResponse.status, errorText);
-        return jsonResponse({ error: 'WAHA API error', status: wahaResponse.status }, 502);
+        mediaData = await wahaResponse.json();
+        console.log('[repair-media] Resposta WAHA recebida');
+        break; // Sucesso, sair do loop
+        
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        const elapsed = Date.now() - startTime;
+        
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          console.error(`[repair-media] Timeout após ${elapsed}ms (tentativa ${attempt})`);
+          lastError = new Error('WAHA não respondeu a tempo');
+        } else {
+          console.error(`[repair-media] Erro fetch (tentativa ${attempt}):`, fetchError);
+          lastError = fetchError instanceof Error ? fetchError : new Error('Erro desconhecido');
+        }
+        
+        // Aguardar um pouco antes de retry (backoff exponencial)
+        if (attempt < MAX_RETRIES) {
+          await new Promise(r => setTimeout(r, attempt * 1000));
+        }
       }
-
-      const mediaData = await wahaResponse.json();
-      console.log('[repair-media] Resposta WAHA recebida');
-
-      // 6. Extrair e fazer upload da mídia
-      const storageUrl = await extractAndUploadMedia(supabase, mediaData, message.type, lead.id, {
-        baseUrl, apiKey: whatsappConfig.api_key
-      });
-
-      if (!storageUrl) {
-        return jsonResponse({ error: 'Media not found in WAHA response' }, 404);
-      }
-
-      // 7. Atualizar mensagem
-      const updateData: Record<string, unknown> = { media_url: storageUrl };
-      if (message.content && isBase64Content(message.content)) {
-        updateData.content = '';
-      }
-
-      const { error: updateError } = await supabase
-        .from('messages')
-        .update(updateData)
-        .eq('id', messageId);
-
-      if (updateError) {
-        console.error('[repair-media] Erro ao atualizar:', updateError);
-        return jsonResponse({ error: 'Failed to update message' }, 500);
-      }
-
-      console.log('[repair-media] ✅ Sucesso:', storageUrl);
-      return jsonResponse({ success: true, media_url: storageUrl, message_id: messageId });
-
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-        return jsonResponse({ error: 'WAHA API timeout' }, 504);
-      }
-      throw fetchError;
     }
+    
+    // Se não conseguiu após todas as tentativas
+    if (!mediaData) {
+      const isTimeout = lastError?.message?.includes('tempo') || lastError?.message?.includes('Timeout');
+      return jsonResponse({ 
+        error: isTimeout ? 'Servidor WhatsApp não respondeu' : 'Falha ao recuperar mídia do WhatsApp',
+        code: isTimeout ? 'TIMEOUT' : 'WAHA_ERROR',
+        details: lastError?.message 
+      }, isTimeout ? 504 : 502);
+    }
+
+    // 6. Extrair e fazer upload da mídia
+    const storageUrl = await extractAndUploadMedia(supabase, mediaData, message.type, lead.id, {
+      baseUrl, apiKey: whatsappConfig.api_key
+    });
+
+    if (!storageUrl) {
+      return jsonResponse({ 
+        error: 'Mídia pode ter expirado no WhatsApp', 
+        code: 'MEDIA_EXPIRED',
+        expired: true 
+      }, 404);
+    }
+
+    // 7. Atualizar mensagem
+    const updateData: Record<string, unknown> = { media_url: storageUrl };
+    if (message.content && isBase64Content(message.content)) {
+      updateData.content = '';
+    }
+
+    const { error: updateError } = await supabase
+      .from('messages')
+      .update(updateData)
+      .eq('id', messageId);
+
+    if (updateError) {
+      console.error('[repair-media] Erro ao atualizar:', updateError);
+      return jsonResponse({ error: 'Falha ao salvar mídia' }, 500);
+    }
+
+    console.log('[repair-media] ✅ Sucesso:', storageUrl);
+    return jsonResponse({ success: true, media_url: storageUrl, message_id: messageId });
 
   } catch (error) {
     console.error('[repair-media] Erro:', error);
