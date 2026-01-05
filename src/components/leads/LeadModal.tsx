@@ -57,10 +57,20 @@ import type { Database } from '@/integrations/supabase/types';
 type LeadTemperature = Database['public']['Enums']['lead_temperature'];
 
 const leadSchema = z.object({
-  name: z.string().min(1, 'Nome obrigatório'),
-  phone: z.string().min(1, 'Telefone obrigatório'),
-  email: z.string().email().optional().or(z.literal('')),
-  cpf: z.string().optional(),
+  name: z.string().min(1, 'Nome obrigatório').max(100, 'Nome muito longo'),
+  phone: z.string()
+    .min(1, 'Telefone obrigatório')
+    .refine((val) => {
+      // Remove formatação e verifica se tem entre 10-11 dígitos (telefone BR)
+      const digits = val.replace(/\D/g, '');
+      return digits.length >= 10 && digits.length <= 11;
+    }, 'Telefone inválido (deve ter 10 ou 11 dígitos)'),
+  email: z.string().email('Email inválido').optional().or(z.literal('')),
+  cpf: z.string().optional().refine((val) => {
+    if (!val) return true;
+    const digits = val.replace(/\D/g, '');
+    return digits.length === 0 || digits.length === 11;
+  }, 'CPF deve ter 11 dígitos'),
   source: z.string().min(1, 'Origem obrigatória'),
   stage_id: z.string().optional(),
   temperature: z.enum(['cold', 'warm', 'hot']),
@@ -256,8 +266,8 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
             {/* Lead Header */}
             <div className="flex items-start gap-4">
               <Avatar className="w-16 h-16">
-                <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.name}`} />
-                <AvatarFallback className="text-xl">{lead.name.charAt(0)}</AvatarFallback>
+                <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.name || 'default'}`} />
+                <AvatarFallback className="text-xl">{lead.name?.charAt(0) || '?'}</AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <h3 className="text-xl font-semibold">{lead.name}</h3>
