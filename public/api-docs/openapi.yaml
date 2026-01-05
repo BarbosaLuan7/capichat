@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: LB ADV CRM API
-  version: 2.2.0
+  version: 2.3.0
   description: |
     API RESTful para integração externa com o **LB ADV CRM** (GaranteDireito).
 
@@ -67,6 +67,8 @@ tags:
     description: Gerenciamento de equipes
   - name: Contatos
     description: Gerenciamento de contatos/leads
+  - name: Resumo do Caso
+    description: Resumo de qualificação do caso (case_summary)
   - name: Etiquetas
     description: Gerenciamento de etiquetas
   - name: Campos Personalizados
@@ -1901,6 +1903,157 @@ paths:
       responses:
         "200":
           description: Tarefa removida
+
+  # ============================================================================
+  # RESUMO DO CASO (LEAD SUMMARY)
+  # ============================================================================
+  /api-lead-summary:
+    get:
+      tags: [Resumo do Caso]
+      summary: Obter resumo do caso
+      operationId: obterResumoCaso
+      description: |
+        Retorna o resumo de qualificação do caso (case_summary) armazenado em custom_fields.
+        
+        Identifique o contato por `lead_id` OU `phone`.
+      parameters:
+        - name: lead_id
+          in: query
+          description: ID do contato
+          schema:
+            type: string
+            format: uuid
+        - name: phone
+          in: query
+          description: Telefone do contato (alternativo ao lead_id)
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Resumo do caso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      lead_id:
+                        type: string
+                      lead_name:
+                        type: string
+                      case_summary:
+                        type: string
+                        description: Resumo da qualificação do caso
+              example:
+                success: true
+                data:
+                  lead_id: "8454ff97-627b-4730-901e-b091ed5e5685"
+                  lead_name: "Maria Silva"
+                  case_summary: "🆕 *NOVO LEAD QUALIFICADO*\n\n👤 *Cliente:* Maria Silva\n📱 *WhatsApp:* 5511999990001\n\n📋 *QUALIFICAÇÃO*\n\n- *Condição de saúde:* Diabetes tipo 2\n- *Renda familiar:* R$ 1.200\n- *CadÚnico:* Sim\n\n✅ *Status:* Qualificado"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+
+    put:
+      tags: [Resumo do Caso]
+      summary: Atualizar resumo do caso
+      operationId: atualizarResumoCaso
+      description: |
+        Atualiza o resumo de qualificação do caso.
+        
+        Este endpoint é ideal para integrações com automações (n8n, Make, Zapier) 
+        que processam a qualificação do lead e desejam salvar o resumo estruturado.
+        
+        Identifique o contato por `lead_id` OU `phone`.
+      parameters:
+        - name: lead_id
+          in: query
+          description: ID do contato
+          schema:
+            type: string
+            format: uuid
+        - name: phone
+          in: query
+          description: Telefone do contato (alternativo ao lead_id)
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [summary]
+              properties:
+                summary:
+                  type: string
+                  description: Resumo formatado do caso
+            example:
+              summary: "🆕 *NOVO LEAD QUALIFICADO*\n━━━━━━━━━━━━━━━━━━━━━━━\n\n👤 *Cliente:* João Santos\n📱 *WhatsApp:* 5511999990002\n📅 *Data:* 05/01/2026 às 14:30\n\n━━━━━━━━━━━━━━━━━━━━━━━\n📋 *QUALIFICAÇÃO*\n━━━━━━━━━━━━━━━━━━━━━━━\n\n- *Condição de saúde:* Hérnia inguinal\n- *Renda familiar:* R$ 1.400 (aposentadoria da mãe)\n- *CadÚnico:* Sim\n- *Possui laudo:* Sim\n\n━━━━━━━━━━━━━━━━━━━━━━━\n✅ *Status:* Qualificado\n🔖 *ID:* #1461"
+      responses:
+        "200":
+          description: Resumo atualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      lead_id:
+                        type: string
+                      lead_name:
+                        type: string
+                      case_summary:
+                        type: string
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+
+    delete:
+      tags: [Resumo do Caso]
+      summary: Remover resumo do caso
+      operationId: removerResumoCaso
+      description: |
+        Remove o resumo de qualificação do caso.
+        
+        Identifique o contato por `lead_id` OU `phone`.
+      parameters:
+        - name: lead_id
+          in: query
+          description: ID do contato
+          schema:
+            type: string
+            format: uuid
+        - name: phone
+          in: query
+          description: Telefone do contato (alternativo ao lead_id)
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Resumo removido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      lead_id:
+                        type: string
+                      lead_name:
+                        type: string
 
 components:
   securitySchemes:
