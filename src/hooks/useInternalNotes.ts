@@ -92,7 +92,7 @@ export function useCreateInternalNote() {
         .from('conversations')
         .select('lead_id')
         .eq('id', conversationId)
-        .single();
+        .maybeSingle();
 
       if (conversation?.lead_id) {
         await supabase.from('lead_activities').insert({

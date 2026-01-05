@@ -80,10 +80,10 @@ export function useTeam(id: string | undefined) {
           )
         `)
         .eq('id', id)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
-      return data as unknown as TeamWithRelations;
+      return data as unknown as TeamWithRelations | null;
     },
     enabled: !!id,
     staleTime: 5 * 60 * 1000,
@@ -158,7 +158,7 @@ export function useUpdateTeam() {
           .from('teams')
           .select('tenant_id')
           .eq('id', id)
-          .single();
+          .maybeSingle();
         
         if (team?.tenant_id) {
           await supabase
