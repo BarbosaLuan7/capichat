@@ -729,9 +729,14 @@ export const MessageBubble = memo(MessageBubbleComponent, (prevProps, nextProps)
     prevProps.message.status === nextProps.message.status &&
     prevProps.message.content === nextProps.message.content &&
     prevProps.message.media_url === nextProps.message.media_url &&
+    prevProps.message.is_starred === nextProps.message.is_starred &&
+    (prevProps.message as any).transcription === (nextProps.message as any).transcription &&
+    (prevProps.message as any).isOptimistic === (nextProps.message as any).isOptimistic &&
+    (prevProps.message as any).errorMessage === (nextProps.message as any).errorMessage &&
     prevProps.isAgent === nextProps.isAgent &&
     prevProps.showAvatar === nextProps.showAvatar &&
     prevProps.selectionMode === nextProps.selectionMode &&
-    prevProps.isSelected === nextProps.isSelected
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.resolvedMediaUrl === nextProps.resolvedMediaUrl
   );
 });

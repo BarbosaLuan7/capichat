@@ -64,16 +64,26 @@ const sanitizePreviewContent = (content: string | null | undefined): string => {
 };
 
 // Format conversation date - always show time, with date prefix for older messages
-const formatConversationDate = (date: Date): string => {
-  const now = new Date();
-  
-  if (isSameDay(date, now)) {
-    return format(date, 'HH:mm');
+const formatConversationDate = (dateStr: string): string => {
+  try {
+    const date = new Date(dateStr);
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return '';
+    }
+    
+    const now = new Date();
+    
+    if (isSameDay(date, now)) {
+      return format(date, 'HH:mm');
+    }
+    if (isYesterday(date)) {
+      return `ontem ${format(date, 'HH:mm')}`;
+    }
+    return format(date, 'dd/MM HH:mm');
+  } catch {
+    return '';
   }
-  if (isYesterday(date)) {
-    return `ontem ${format(date, 'HH:mm')}`;
-  }
-  return format(date, 'dd/MM HH:mm');
 };
 
 function ConversationItemComponent({ conversation, isSelected, onClick }: ConversationItemProps) {
@@ -81,9 +91,10 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
   const isFavorite = conversation.is_favorite;
   const whatsappInstance = conversation.whatsapp_config;
   
-  // Determinar melhor nome para exibição
-  const isPhoneAsName = convLead?.name?.startsWith('Lead ') && /^Lead \d+$/.test(convLead?.name);
-  const displayName = convLead?.whatsapp_name || (!isPhoneAsName ? convLead?.name : null) || formatPhoneNumber(convLead?.phone || '');
+  // Determinar melhor nome para exibição (com null checks seguros)
+  const leadName = convLead?.name || '';
+  const isPhoneAsName = leadName.startsWith('Lead ') && /^Lead \d+$/.test(leadName);
+  const displayName = convLead?.whatsapp_name || (!isPhoneAsName ? leadName : null) || formatPhoneNumber(convLead?.phone || '');
   
   // Nome curto da instância WhatsApp (últimos 4 dígitos do telefone ou nome)
   const instanceLabel = whatsappInstance?.phone_number 
@@ -149,7 +160,7 @@ function ConversationItemComponent({ conversation, isSelected, onClick }: Conver
                 </TooltipProvider>
               )}
               <span className="text-xs text-muted-foreground">
-                {formatConversationDate(new Date(conversation.last_message_at))}
+                {formatConversationDate(conversation.last_message_at)}
               </span>
             </div>
           </div>
