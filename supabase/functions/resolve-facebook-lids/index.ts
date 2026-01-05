@@ -97,9 +97,10 @@ serve(async (req) => {
     const sessionName = wahaConfig.instance_name || 'default';
 
     // Buscar leads com LID não resolvido (limitar a 20 por execução para evitar timeout)
+    // Agora phone pode ser "LID_174621106159626" para leads não resolvidos
     const { data: pendingLeads, error: fetchError } = await supabase
       .from('leads')
-      .select('id, name, phone, original_lid, whatsapp_name')
+      .select('id, name, phone, original_lid, whatsapp_name, internal_notes')
       .eq('is_facebook_lid', true)
       .not('original_lid', 'is', null)
       .order('created_at', { ascending: true })
@@ -151,24 +152,37 @@ serve(async (req) => {
             console.log(`[resolve-lids] Lead ${lead.id}: número ${normalizedPhone} já existe em outro lead (${existingLead.id})`);
             results.push({ leadId: lead.id, status: 'duplicate', phone: normalizedPhone });
             
-            // Atualizar o lead atual com nota sobre duplicidade
+            // Atualizar o lead atual com nota sobre duplicidade (preservar notas anteriores)
+            const existingNotes = lead.internal_notes || '';
+            const duplicateNote = `\n\n⚠️ Número resolvido: ${normalizedPhone}\nJá existe lead com este número (ID: ${existingLead.id}).\nVerificar merge manual.`;
+            
             await supabase
               .from('leads')
               .update({
-                internal_notes: `Número real encontrado: ${normalizedPhone}. Já existe lead com este número (ID: ${existingLead.id}). Verificar merge.`
+                internal_notes: existingNotes + duplicateNote
               })
               .eq('id', lead.id);
           } else {
             // Atualizar o lead com o número real
-            const newName = lead.whatsapp_name || lead.name.replace(' (via anúncio)', '').replace(/Lead via anúncio \d+/, `Lead ${normalizedPhone}`);
+            // Limpar nome genérico do LID
+            const cleanName = lead.whatsapp_name || 
+              lead.name.replace(/^Lead Facebook [A-Za-z0-9]+$/, `Lead ${normalizedPhone}`)
+                       .replace(' (via anúncio)', '')
+                       .replace(/Lead via anúncio \d+/, `Lead ${normalizedPhone}`);
+            
+            // Limpar notas internas - remover aviso de LID pendente
+            const cleanNotes = (lead.internal_notes || '')
+              .replace(/⚠️ Número Privado \(Facebook Ads\)[\s\S]*?conversar normalmente com o cliente\./g, '')
+              .trim();
             
             const { error: updateError } = await supabase
               .from('leads')
               .update({
                 phone: normalizedPhone,
                 is_facebook_lid: false,
-                name: newName,
-                source: 'facebook_ads_resolved'
+                name: cleanName,
+                source: 'facebook_ads_resolved',
+                internal_notes: cleanNotes || null, // Limpar notas se ficou vazio
               })
               .eq('id', lead.id);
 

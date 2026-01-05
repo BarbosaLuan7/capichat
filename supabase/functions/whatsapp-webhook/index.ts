@@ -2121,12 +2121,19 @@ serve(async (req) => {
         .limit(1)
         .maybeSingle();
 
-      // Ajustar nome para leads via anúncio
+      // Ajustar nome para leads via anúncio (Facebook LID)
+      // Para LIDs, usamos o whatsapp_name se disponível, senão criamos identificador temporário
       let leadName = senderName || `Lead ${formatPhoneForDisplay(senderPhone)}`;
-      if (isFromFacebookLid && senderName) {
-        leadName = `${senderName} (via anúncio)`;
-      } else if (isFromFacebookLid) {
-        leadName = `Lead via anúncio ${originalLid?.slice(-4) || ''}`;
+      let internalNoteForLid: string | null = null;
+      
+      if (isFromFacebookLid) {
+        if (senderName) {
+          leadName = senderName;  // Usar nome real sem "(via anúncio)" - menos poluição visual
+        } else {
+          leadName = `Lead Facebook ${originalLid?.slice(-6) || Date.now().toString().slice(-6)}`;
+        }
+        // Nota interna explicando situação do LID
+        internalNoteForLid = `⚠️ Número Privado (Facebook Ads)\n\nEste contato veio de um anúncio Click-to-WhatsApp. O número de telefone real ainda não está disponível por questões de privacidade do Facebook.\n\nLID: ${originalLid}\n\nO sistema tentará resolver o número automaticamente. Enquanto isso, você pode conversar normalmente com o cliente.`;
       }
 
       // Buscar foto de perfil para novo lead
@@ -2179,12 +2186,16 @@ serve(async (req) => {
       const phoneData = normalizePhoneForStorage(senderPhone);
       console.log('[whatsapp-webhook] Normalizando telefone para salvar:', senderPhone, '->', phoneData);
       
+      // Para leads LID, usar o original_lid como phone temporário (garantir unicidade)
+      // Isso evita conflitos já que cada LID é único
+      const phoneForDb = isFromFacebookLid ? `LID_${originalLid}` : phoneData.localNumber;
+      
       const { data: upsertedLead, error: upsertError } = await supabase
         .from('leads')
         .upsert({
           name: leadName,
-          phone: phoneData.localNumber, // Número local sem código do país (ex: 45988428644)
-          country_code: phoneData.countryCode, // Código do país (ex: 55, 1, 595)
+          phone: phoneForDb, // Para LID: "LID_174621106159626", para normal: "45988428644"
+          country_code: isFromFacebookLid ? null : phoneData.countryCode, // LIDs não têm código de país
           whatsapp_name: senderName || null,
           source: isFromFacebookLid ? 'facebook_ads' : 'whatsapp',
           temperature: 'warm',
@@ -2194,7 +2205,8 @@ serve(async (req) => {
           is_facebook_lid: isFromFacebookLid,
           original_lid: originalLid,
           avatar_url: avatarUrl,
-          tenant_id: tenantIdForLead, // Propagar tenant_id do whatsapp_config
+          tenant_id: tenantIdForLead,
+          internal_notes: internalNoteForLid, // Nota explicando situação do LID
         }, {
           onConflict: 'phone',
           ignoreDuplicates: false,
