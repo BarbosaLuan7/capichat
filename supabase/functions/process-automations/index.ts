@@ -330,6 +330,135 @@ function mapEventToTrigger(event: string): string | null {
   return mapping[event] || null;
 }
 
+// Busca foto de perfil do WhatsApp via WAHA API
+async function fetchProfilePicture(
+  wahaBaseUrl: string,
+  apiKey: string,
+  sessionName: string,
+  contactId: string
+): Promise<{ url: string | null; reason?: string }> {
+  try {
+    const cleanNumber = contactId.replace('@c.us', '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
+    
+    if (cleanNumber.length < 10) {
+      return { url: null, reason: 'number_too_short' };
+    }
+    
+    const url = `${wahaBaseUrl}/api/contacts/profile-picture?contactId=${cleanNumber}&session=${sessionName}&refresh=true`;
+    
+    console.log(`[avatar-retry] 📷 Buscando foto: ${cleanNumber} via ${sessionName}`);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'X-Api-Key': apiKey,
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log(`[avatar-retry] ❌ API retornou ${response.status}: ${errorText.substring(0, 100)}`);
+      return { url: null, reason: `api_error_${response.status}` };
+    }
+    
+    const data = await response.json();
+    console.log(`[avatar-retry] 📥 Resposta:`, JSON.stringify(data).substring(0, 200));
+    
+    const profilePictureUrl = data?.profilePictureURL || data?.profilePicture || data?.url || data?.imgUrl;
+    
+    if (profilePictureUrl && typeof profilePictureUrl === 'string' && profilePictureUrl.startsWith('http')) {
+      return { url: profilePictureUrl };
+    }
+    
+    return { url: null, reason: 'no_picture_or_private' };
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return { url: null, reason: 'timeout' };
+    }
+    return { url: null, reason: error instanceof Error ? error.message : 'unknown_error' };
+  }
+}
+
+// Processa retry de avatar
+async function processAvatarRetry(
+  supabase: SupabaseClient,
+  payload: Record<string, unknown>
+): Promise<{ success: boolean; avatarUrl?: string; reason?: string }> {
+  const { lead_id, phone, session, instance_id, attempt } = payload as {
+    lead_id: string;
+    phone: string;
+    session: string;
+    instance_id: string;
+    attempt: number;
+  };
+  
+  console.log(`[avatar-retry] 📷 Processando tentativa ${attempt} para lead ${lead_id}`);
+  
+  // Buscar config WAHA pela instância
+  const { data: wahaConfig } = await supabase
+    .from('whatsapp_config')
+    .select('base_url, api_key, instance_name')
+    .eq('id', instance_id)
+    .eq('is_active', true)
+    .maybeSingle();
+  
+  if (!wahaConfig) {
+    console.log('[avatar-retry] ❌ Config WAHA não encontrada para instância:', instance_id);
+    return { success: false, reason: 'config_not_found' };
+  }
+  
+  const baseUrl = wahaConfig.base_url.replace(/\/$/, '');
+  const result = await fetchProfilePicture(baseUrl, wahaConfig.api_key, wahaConfig.instance_name || session, phone);
+  
+  if (result.url) {
+    // Atualizar lead com avatar
+    const { error: updateError } = await supabase
+      .from('leads')
+      .update({ 
+        avatar_url: result.url,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', lead_id);
+    
+    if (updateError) {
+      console.error('[avatar-retry] ❌ Erro ao atualizar lead:', updateError);
+      return { success: false, reason: 'db_update_failed' };
+    }
+    
+    console.log(`[avatar-retry] ✅ Avatar capturado para ${lead_id} na tentativa ${attempt}`);
+    return { success: true, avatarUrl: result.url };
+  }
+  
+  // Se não encontrou e ainda tem tentativas, agendar mais uma
+  const maxAttempts = 3;
+  if (attempt < maxAttempts) {
+    console.log(`[avatar-retry] 📷 Agendando tentativa ${attempt + 1}/${maxAttempts} para lead ${lead_id}`);
+    await supabase.from('automation_queue').insert({
+      event: 'avatar_retry',
+      payload: {
+        lead_id,
+        phone,
+        session,
+        instance_id,
+        attempt: attempt + 1,
+        reason: result.reason,
+      }
+    });
+  } else {
+    console.log(`[avatar-retry] ⚠️ Máximo de tentativas atingido para lead ${lead_id}. Motivo: ${result.reason}`);
+  }
+  
+  return { success: false, reason: result.reason };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -373,6 +502,25 @@ Deno.serve(async (req) => {
       };
 
       console.log('[Automation] Processing event:', payload.event);
+
+      // ========== HANDLER ESPECIAL: Avatar Retry ==========
+      if (payload.event === 'avatar_retry') {
+        console.log('[Automation] Processing avatar_retry event');
+        const avatarResult = await processAvatarRetry(supabase, queueItem.payload);
+        
+        allResults.push({
+          queueId: queueItem.id,
+          event: 'avatar_retry',
+          result: avatarResult,
+        });
+        
+        // Mark as processed
+        await supabase
+          .from('automation_queue')
+          .update({ processed: true, processed_at: new Date().toISOString() })
+          .eq('id', queueItem.id);
+        continue;
+      }
 
       // Map event to trigger
       const trigger = mapEventToTrigger(payload.event);

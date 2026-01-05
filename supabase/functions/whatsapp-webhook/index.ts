@@ -228,13 +228,19 @@ async function getContactInfo(
   }
 }
 
+// Resultado da busca de foto com motivo de falha
+interface ProfilePictureResult {
+  url: string | null;
+  reason?: string;
+}
+
 // Busca foto de perfil do WhatsApp via WAHA API
-async function getProfilePicture(
+async function getProfilePictureWithReason(
   wahaBaseUrl: string,
   apiKey: string,
   sessionName: string,
   contactId: string
-): Promise<string | null> {
+): Promise<ProfilePictureResult> {
   try {
     // Usar apenas o número SEM @c.us, conforme documentação oficial WAHA
     const cleanNumber = contactId.replace('@c.us', '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
@@ -242,7 +248,7 @@ async function getProfilePicture(
     // Ignorar números muito curtos ou inválidos
     if (cleanNumber.length < 10) {
       console.log('[whatsapp-webhook] 📷 Número muito curto para buscar foto:', cleanNumber);
-      return null;
+      return { url: null, reason: 'number_too_short' };
     }
     
     // Adicionar refresh=true para forçar buscar do WhatsApp (evita cache vazio de 24h)
@@ -267,30 +273,44 @@ async function getProfilePicture(
     clearTimeout(timeoutId);
     
     if (!response.ok) {
-      console.log('[whatsapp-webhook] 📷 API foto de perfil retornou status:', response.status);
-      return null;
+      const errorText = await response.text();
+      console.log('[whatsapp-webhook] 📷 API foto de perfil retornou status:', response.status, errorText.substring(0, 100));
+      return { url: null, reason: `api_error_${response.status}` };
     }
     
     const data = await response.json();
+    console.log('[whatsapp-webhook] 📷 Resposta API foto:', JSON.stringify(data).substring(0, 200));
     
     // A resposta pode ter diferentes formatos
     const profilePictureUrl = data?.profilePictureURL || data?.profilePicture || data?.url || data?.imgUrl;
     
     if (profilePictureUrl && typeof profilePictureUrl === 'string' && profilePictureUrl.startsWith('http')) {
       console.log('[whatsapp-webhook] 📷 Foto de perfil encontrada para:', cleanNumber);
-      return profilePictureUrl;
+      return { url: profilePictureUrl };
     }
     
     console.log('[whatsapp-webhook] 📷 Foto não encontrada ou privada para:', cleanNumber);
-    return null;
+    return { url: null, reason: 'no_picture_or_private' };
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       console.log('[whatsapp-webhook] 📷 Timeout ao buscar foto de perfil');
+      return { url: null, reason: 'timeout' };
     } else {
       console.error('[whatsapp-webhook] 📷 Erro ao buscar foto de perfil:', error);
+      return { url: null, reason: error instanceof Error ? error.message : 'unknown_error' };
     }
-    return null;
   }
+}
+
+// Função wrapper para manter compatibilidade
+async function getProfilePicture(
+  wahaBaseUrl: string,
+  apiKey: string,
+  sessionName: string,
+  contactId: string
+): Promise<string | null> {
+  const result = await getProfilePictureWithReason(wahaBaseUrl, apiKey, sessionName, contactId);
+  return result.url;
 }
 
 // Busca configuração do WAHA no banco (genérica - qualquer instância ativa)
@@ -2003,15 +2023,30 @@ serve(async (req) => {
           const phoneWithCountry = getPhoneWithCountryCode(senderPhone, existingLead.country_code);
           console.log('[whatsapp-webhook] 📷 Buscando avatar para:', phoneWithCountry);
           
-          const avatarUrl = await getProfilePicture(
+          const avatarResult = await getProfilePictureWithReason(
             wahaConfig.baseUrl,
             wahaConfig.apiKey,
             wahaConfig.sessionName,
             phoneWithCountry
           );
-          if (avatarUrl) {
-            updateData.avatar_url = avatarUrl;
+          
+          if (avatarResult.url) {
+            updateData.avatar_url = avatarResult.url;
             console.log('[whatsapp-webhook] 📷 Avatar atualizado para lead existente');
+          } else {
+            // Agendar retry se não encontrou foto (pode ser delay do WhatsApp)
+            console.log('[whatsapp-webhook] 📷 Avatar não encontrado, agendando retry...');
+            await supabase.from('automation_queue').insert({
+              event: 'avatar_retry',
+              payload: {
+                lead_id: existingLead.id,
+                phone: phoneWithCountry,
+                session: wahaConfig.sessionName,
+                instance_id: wahaConfig.instanceId,
+                attempt: 1,
+                reason: avatarResult.reason,
+              }
+            });
           }
         }
       }
@@ -2067,18 +2102,34 @@ serve(async (req) => {
 
       // Buscar foto de perfil para novo lead
       let avatarUrl: string | null = null;
+      let shouldScheduleAvatarRetry = false;
+      let avatarRetryData: { phone: string; session: string; instance_id: string; reason?: string } | null = null;
+      
       if (!isFromFacebookLid && wahaConfigForLead) {
         // Usar função correta para montar número com código do país (detecta automaticamente)
         const phoneWithCountry = getPhoneWithCountryCode(senderPhone);
         console.log('[whatsapp-webhook] 📷 Buscando avatar para novo lead:', phoneWithCountry);
-        avatarUrl = await getProfilePicture(
+        
+        const avatarResult = await getProfilePictureWithReason(
           wahaConfigForLead.baseUrl,
           wahaConfigForLead.apiKey,
           wahaConfigForLead.sessionName,
           phoneWithCountry
         );
-        if (avatarUrl) {
-          console.log('[whatsapp-webhook] Avatar encontrado para novo lead');
+        
+        if (avatarResult.url) {
+          avatarUrl = avatarResult.url;
+          console.log('[whatsapp-webhook] ✅ Avatar encontrado para novo lead');
+        } else {
+          // Marcar para agendar retry após criar o lead
+          shouldScheduleAvatarRetry = true;
+          avatarRetryData = {
+            phone: phoneWithCountry,
+            session: wahaConfigForLead.sessionName,
+            instance_id: wahaConfigForLead.instanceId,
+            reason: avatarResult.reason,
+          };
+          console.log('[whatsapp-webhook] 📷 Avatar não encontrado, será agendado retry após criar lead');
         }
       }
 
@@ -2134,6 +2185,22 @@ serve(async (req) => {
       } else {
         lead = upsertedLead;
         console.log('[whatsapp-webhook] Lead criado/atualizado:', lead.id);
+        
+        // Agendar retry de avatar se necessário (após ter o lead_id)
+        if (shouldScheduleAvatarRetry && avatarRetryData && lead.id) {
+          console.log('[whatsapp-webhook] 📷 Agendando retry de avatar para novo lead:', lead.id);
+          await supabase.from('automation_queue').insert({
+            event: 'avatar_retry',
+            payload: {
+              lead_id: lead.id,
+              phone: avatarRetryData.phone,
+              session: avatarRetryData.session,
+              instance_id: avatarRetryData.instance_id,
+              attempt: 1,
+              reason: avatarRetryData.reason,
+            }
+          });
+        }
       }
     }
 
