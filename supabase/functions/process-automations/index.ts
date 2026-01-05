@@ -330,23 +330,36 @@ function mapEventToTrigger(event: string): string | null {
   return mapping[event] || null;
 }
 
-// Busca foto de perfil do WhatsApp via WAHA API
+// Função auxiliar para buscar foto de perfil (retry)
+// Suporta tanto números normais quanto LIDs do Facebook
 async function fetchProfilePicture(
   wahaBaseUrl: string,
   apiKey: string,
   sessionName: string,
-  contactId: string
+  contactId: string,
+  isLid: boolean = false
 ): Promise<{ url: string | null; reason?: string }> {
   try {
-    const cleanNumber = contactId.replace('@c.us', '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
+    let formattedContactId: string;
     
-    if (cleanNumber.length < 10) {
-      return { url: null, reason: 'number_too_short' };
+    if (isLid) {
+      // Para LIDs: garantir que tem @lid no final
+      const cleanLid = contactId.replace('@lid', '').replace(/\D/g, '');
+      formattedContactId = `${cleanLid}@lid`;
+      console.log(`[avatar-retry] 📷 Buscando foto via LID: ${formattedContactId}`);
+    } else {
+      // Para números normais
+      formattedContactId = contactId.replace('@c.us', '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
+      
+      if (formattedContactId.length < 10) {
+        return { url: null, reason: 'number_too_short' };
+      }
+      console.log(`[avatar-retry] 📷 Buscando foto via telefone: ${formattedContactId}`);
     }
     
-    const url = `${wahaBaseUrl}/api/contacts/profile-picture?contactId=${cleanNumber}&session=${sessionName}&refresh=true`;
+    const url = `${wahaBaseUrl}/api/contacts/profile-picture?contactId=${formattedContactId}&session=${sessionName}&refresh=true`;
     
-    console.log(`[avatar-retry] 📷 Buscando foto: ${cleanNumber} via ${sessionName}`);
+    console.log(`[avatar-retry] 📤 Request: ${url}`);
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -375,6 +388,7 @@ async function fetchProfilePicture(
     const profilePictureUrl = data?.profilePictureURL || data?.profilePicture || data?.url || data?.imgUrl;
     
     if (profilePictureUrl && typeof profilePictureUrl === 'string' && profilePictureUrl.startsWith('http')) {
+      console.log(`[avatar-retry] ✅ Foto encontrada!`);
       return { url: profilePictureUrl };
     }
     
@@ -388,19 +402,22 @@ async function fetchProfilePicture(
 }
 
 // Processa retry de avatar
+// Suporta tanto o formato antigo (phone) quanto o novo (contact_id + is_lid)
 async function processAvatarRetry(
   supabase: SupabaseClient,
   payload: Record<string, unknown>
 ): Promise<{ success: boolean; avatarUrl?: string; reason?: string }> {
-  const { lead_id, phone, session, instance_id, attempt } = payload as {
-    lead_id: string;
-    phone: string;
-    session: string;
-    instance_id: string;
-    attempt: number;
-  };
+  // Suportar formato novo (contact_id, is_lid) e antigo (phone)
+  const lead_id = payload.lead_id as string;
+  const session = payload.session as string;
+  const instance_id = payload.instance_id as string;
+  const attempt = (payload.attempt as number) || 1;
   
-  console.log(`[avatar-retry] 📷 Processando tentativa ${attempt} para lead ${lead_id}`);
+  // Formato novo usa contact_id e is_lid, formato antigo usa phone
+  const contact_id = (payload.contact_id as string) || (payload.phone as string);
+  const is_lid = (payload.is_lid as boolean) || false;
+  
+  console.log(`[avatar-retry] 📷 Processando tentativa ${attempt} para lead ${lead_id}, contact_id=${contact_id}, is_lid=${is_lid}`);
   
   // Buscar config WAHA pela instância
   const { data: wahaConfig } = await supabase
@@ -416,7 +433,7 @@ async function processAvatarRetry(
   }
   
   const baseUrl = wahaConfig.base_url.replace(/\/$/, '');
-  const result = await fetchProfilePicture(baseUrl, wahaConfig.api_key, wahaConfig.instance_name || session, phone);
+  const result = await fetchProfilePicture(baseUrl, wahaConfig.api_key, wahaConfig.instance_name || session, contact_id, is_lid);
   
   if (result.url) {
     // Atualizar lead com avatar
@@ -445,7 +462,8 @@ async function processAvatarRetry(
       event: 'avatar_retry',
       payload: {
         lead_id,
-        phone,
+        contact_id,
+        is_lid,
         session,
         instance_id,
         attempt: attempt + 1,

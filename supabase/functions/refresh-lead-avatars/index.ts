@@ -13,20 +13,35 @@ interface ProfilePictureResult {
 }
 
 // Busca foto de perfil do WhatsApp via WAHA API
+// Suporta tanto números normais quanto LIDs do Facebook
 async function getProfilePicture(
   wahaBaseUrl: string,
   apiKey: string,
   sessionName: string,
-  contactId: string
+  contactId: string,
+  isLid: boolean = false
 ): Promise<ProfilePictureResult> {
   try {
-    // Usar apenas o número SEM @c.us, conforme documentação oficial WAHA
-    const cleanNumber = contactId.replace('@c.us', '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
+    let formattedContactId: string;
+    
+    if (isLid) {
+      // Para LIDs: usar o formato com @lid
+      const cleanLid = contactId.replace('@lid', '').replace(/\D/g, '');
+      formattedContactId = `${cleanLid}@lid`;
+      console.log(`[refresh-avatars] 📷 Buscando foto via LID: ${formattedContactId}`);
+    } else {
+      // Para números normais: usar apenas o número limpo
+      formattedContactId = contactId.replace('@c.us', '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
+      console.log(`[refresh-avatars] 📷 Buscando foto via telefone: ${formattedContactId}`);
+    }
     
     // Adicionar refresh=true para forçar buscar do WhatsApp (evita cache vazio de 24h)
-    const url = `${wahaBaseUrl}/api/contacts/profile-picture?contactId=${cleanNumber}&session=${sessionName}&refresh=true`;
+    const url = `${wahaBaseUrl}/api/contacts/profile-picture?contactId=${formattedContactId}&session=${sessionName}&refresh=true`;
     
-    console.log(`[refresh-avatars] 📷 Buscando foto: ${cleanNumber} via ${sessionName}`);
+    console.log(`[refresh-avatars] 📤 Request: ${url}`);
+    
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -35,7 +50,10 @@ async function getProfilePicture(
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeout);
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -56,6 +74,10 @@ async function getProfilePicture(
     console.log(`[refresh-avatars] ⚠️ Sem URL de foto na resposta`);
     return { url: null, reason: 'No picture URL in response' };
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.log(`[refresh-avatars] ⏱️ Timeout na busca de foto`);
+      return { url: null, reason: 'Request timeout' };
+    }
     console.error('[refresh-avatars] Erro ao buscar foto:', error);
     return { url: null, reason: error instanceof Error ? error.message : 'Unknown error' };
   }
@@ -106,14 +128,14 @@ serve(async (req) => {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     // Buscar leads COM suas conversas para identificar a instância correta
+    // Incluir original_lid e is_facebook_lid para usar LID na busca quando disponível
     let query = supabase
       .from('leads')
       .select(`
-        id, phone, name, avatar_url, updated_at,
+        id, phone, name, avatar_url, updated_at, original_lid, is_facebook_lid,
         conversations(whatsapp_instance_id)
       `)
-      .eq('status', 'active')
-      .eq('is_facebook_lid', false);
+      .eq('status', 'active');
 
     if (targetLeadId) {
       // Se foi passado um lead específico, buscar apenas ele (forçar refresh)
@@ -163,9 +185,14 @@ serve(async (req) => {
         const apiKey = wahaConfig.api_key;
         const sessionName = wahaConfig.instance_name || 'default';
 
-        // Usar número com código do país (55) para a API
+        // NOTA: A API WAHA não suporta buscar foto via LID diretamente
+        // Mesmo leads que vieram via anúncio (LID) já tiveram o número resolvido
+        // Então sempre usamos o telefone para buscar a foto
         const phoneWithCountry = lead.phone.startsWith('55') ? lead.phone : `55${lead.phone}`;
-        const result = await getProfilePicture(baseUrl, apiKey, sessionName, phoneWithCountry);
+        
+        console.log(`[refresh-avatars] Lead ${lead.name}: usando telefone = ${phoneWithCountry}${lead.original_lid ? ' (veio via LID)' : ''}`);
+        
+        const result = await getProfilePicture(baseUrl, apiKey, sessionName, phoneWithCountry, false);
 
         if (result.url) {
           // Atualizar lead com novo avatar
