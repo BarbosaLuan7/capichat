@@ -123,6 +123,7 @@ type Message = Database['public']['Tables']['messages']['Row'] & {
   reply_to_external_id?: string | null;
   isOptimistic?: boolean;
   errorMessage?: string;
+  transcription?: string | null;
 };
 
 interface MessageBubbleProps {
@@ -266,13 +267,13 @@ function MessageBubbleComponent({
         setHasAttempted(true);
       } 
       // Then check if message has transcription from DB (loaded via query)
-      else if ((message as any).transcription) {
-        setTranscriptionFromDb(message.id, (message as any).transcription);
-        setTranscription((message as any).transcription);
+      else if (message.transcription) {
+        setTranscriptionFromDb(message.id, message.transcription);
+        setTranscription(message.transcription);
         setHasAttempted(true);
       }
     }
-  }, [message.id, message.type, (message as any).transcription, isAgent, getTranscription, setTranscriptionFromDb]);
+  }, [message.id, message.type, message.transcription, isAgent, getTranscription, setTranscriptionFromDb]);
 
   // Função para reparar mídia faltante (usada por auto-repair e botão manual)
   const handleRepairMedia = async (silent = false) => {
