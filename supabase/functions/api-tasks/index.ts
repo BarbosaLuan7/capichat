@@ -71,12 +71,12 @@ Deno.serve(async (req) => {
       const leadId = url.searchParams.get('lead_id');
       const priority = url.searchParams.get('priority');
 
+      // Use simple join without FK hint - assigned_to references auth.users, not profiles directly
       let query = supabase
         .from('tasks')
         .select(`
           *,
-          lead:leads(id, name, phone),
-          assignee:profiles!tasks_assigned_to_fkey(id, name)
+          lead:leads(id, name, phone)
         `, { count: 'exact' });
 
       if (status) query = query.eq('status', status);
@@ -96,6 +96,15 @@ Deno.serve(async (req) => {
         return safeErrorResponse(error, 'Error listing tasks');
       }
 
+      // Fetch assignee names separately
+      const assigneeIds = [...new Set((data || []).map((t: any) => t.assigned_to).filter(Boolean))];
+      const { data: assigneesData } = assigneeIds.length > 0
+        ? await supabase.from('profiles').select('id, name').in('id', assigneeIds)
+        : { data: [] };
+      
+      const assigneesMap = new Map<string, string>();
+      (assigneesData || []).forEach((p: any) => assigneesMap.set(p.id, p.name));
+
       const transformed = (data || []).map((task: any) => ({
         id: `task_${task.id.slice(0, 8)}`,
         titulo: task.title,
@@ -103,9 +112,9 @@ Deno.serve(async (req) => {
         status: task.status,
         prioridade: task.priority,
         prazo: task.due_date,
-        responsavel: task.assignee ? {
-          id: `usr_${task.assignee.id.slice(0, 8)}`,
-          nome: task.assignee.name
+        responsavel: task.assigned_to ? {
+          id: `usr_${task.assigned_to.slice(0, 8)}`,
+          nome: assigneesMap.get(task.assigned_to) || 'Unknown'
         } : null,
         contato: task.lead ? {
           id: `cnt_${task.lead.id.slice(0, 8)}`,
@@ -138,8 +147,7 @@ Deno.serve(async (req) => {
         .from('tasks')
         .select(`
           *,
-          lead:leads(id, name, phone),
-          assignee:profiles!tasks_assigned_to_fkey(id, name)
+          lead:leads(id, name, phone)
         `)
         .eq('id', id)
         .maybeSingle();
@@ -155,6 +163,17 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Fetch assignee name separately
+      let assigneeName = null;
+      if (task.assigned_to) {
+        const { data: assignee } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', task.assigned_to)
+          .maybeSingle();
+        assigneeName = assignee?.name;
+      }
+
       return new Response(
         JSON.stringify({
           id: `task_${task.id.slice(0, 8)}`,
@@ -164,9 +183,9 @@ Deno.serve(async (req) => {
           prioridade: task.priority,
           prazo: task.due_date,
           subtarefas: task.subtasks,
-          responsavel: task.assignee ? {
-            id: `usr_${task.assignee.id.slice(0, 8)}`,
-            nome: task.assignee.name
+          responsavel: task.assigned_to ? {
+            id: `usr_${task.assigned_to.slice(0, 8)}`,
+            nome: assigneeName || 'Unknown'
           } : null,
           contato: task.lead ? {
             id: `cnt_${task.lead.id.slice(0, 8)}`,
@@ -214,13 +233,23 @@ Deno.serve(async (req) => {
         })
         .select(`
           *,
-          lead:leads(id, name, phone),
-          assignee:profiles!tasks_assigned_to_fkey(id, name)
+          lead:leads(id, name, phone)
         `)
         .single();
 
       if (error) {
         return safeErrorResponse(error, 'Erro ao criar tarefa');
+      }
+
+      // Fetch assignee name separately
+      let assigneeName = null;
+      if (newTask.assigned_to) {
+        const { data: assignee } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', newTask.assigned_to)
+          .maybeSingle();
+        assigneeName = assignee?.name;
       }
 
       console.log('[api-tasks] Tarefa criada:', newTask.id);
@@ -235,9 +264,9 @@ Deno.serve(async (req) => {
             status: newTask.status,
             prioridade: newTask.priority,
             prazo: newTask.due_date,
-            responsavel: newTask.assignee ? {
-              id: `usr_${newTask.assignee.id.slice(0, 8)}`,
-              nome: newTask.assignee.name
+            responsavel: newTask.assigned_to ? {
+              id: `usr_${newTask.assigned_to.slice(0, 8)}`,
+              nome: assigneeName || 'Unknown'
             } : null,
             contato: newTask.lead ? {
               id: `cnt_${newTask.lead.id.slice(0, 8)}`,
