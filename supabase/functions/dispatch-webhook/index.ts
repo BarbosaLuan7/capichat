@@ -15,12 +15,17 @@ function gerarIdLegivel(tipo: string, uuid: string): string {
     lead: 'lead_',
     mensagem: 'msg_',
     conversa: 'conv_',
-    usuario: 'user_',
+    usuario: 'usr_',
     tarefa: 'task_',
-    instancia: 'inst_'
+    instancia: 'inst_',
+    equipe: 'eqp_'
   };
   const hashCurto = uuid.replace(/-/g, '').substring(0, 8);
   return (prefixos[tipo] || '') + hashCurto;
+}
+
+function gerarRequestId(): string {
+  return `req_${crypto.randomUUID().slice(0, 8)}`;
 }
 
 // ============================================
@@ -276,6 +281,53 @@ async function buscarInstanciaDoLead(supabase: any, leadId: string) {
   return await buscarInstanciaWhatsApp(supabase, conv.whatsapp_instance_id);
 }
 
+async function buscarConversaDoLead(supabase: any, leadId: string) {
+  if (!leadId) return null;
+  
+  const { data: conv } = await supabase
+    .from('conversations')
+    .select('id')
+    .eq('lead_id', leadId)
+    .order('last_message_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  
+  if (!conv) return null;
+  return await buscarConversa(supabase, conv.id);
+}
+
+function formatarLeadPayload(lead: any) {
+  if (!lead) return null;
+  return {
+    id: lead.id,
+    nome: lead.nome,
+    whatsapp: lead.whatsapp,
+    email: lead.email,
+    cpf: lead.cpf,
+    temperatura: lead.temperatura,
+    etapa_funil: lead.etapa_funil,
+    tipo_beneficio: lead.beneficio,
+    origem: lead.origem,
+    campanha: lead.campanha,
+    etiquetas: lead.etiquetas,
+    responsavel: lead.responsavel,
+    criado_em: lead.criado_em
+  };
+}
+
+function formatarConversaPayload(conversa: any) {
+  if (!conversa) return null;
+  return {
+    id: conversa.id,
+    status: conversa.status,
+    nao_lidas: conversa.nao_lidas,
+    responsavel: conversa.responsavel,
+    equipe: conversa.equipe,
+    canal: conversa.canal,
+    iniciada_em: conversa.iniciada_em
+  };
+}
+
 // ============================================
 // PAYLOAD BUILDERS - LIMPOS E SIMPLES
 // ============================================
@@ -292,7 +344,7 @@ async function buildMensagemRecebida(supabase: any, eventData: any) {
   return {
     evento: 'mensagem.recebida',
     timestamp: formatTimestamp(),
-    request_id: `req_${crypto.randomUUID().slice(0, 8)}`,
+    request_id: gerarRequestId(),
     instancia_whatsapp: instancia,
     mensagem: {
       id: msg?.id ? gerarIdLegivel('mensagem', msg.id) : null,
@@ -367,7 +419,7 @@ async function buildMensagemEnviada(supabase: any, eventData: any) {
   return {
     evento: 'mensagem.enviada',
     timestamp: formatTimestamp(),
-    request_id: `req_${crypto.randomUUID().slice(0, 8)}`,
+    request_id: gerarRequestId(),
     instancia_whatsapp: instancia,
     mensagem: {
       id: msg?.id ? gerarIdLegivel('mensagem', msg.id) : null,
@@ -408,26 +460,15 @@ async function buildLeadCriado(supabase: any, eventData: any) {
   const leadData = eventData?.lead || eventData;
   const lead = leadData?.id ? await buscarLeadCompleto(supabase, leadData.id) : null;
   const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
+  const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
   
   return {
     evento: 'lead.criado',
     timestamp: formatTimestamp(),
+    request_id: gerarRequestId(),
     instancia_whatsapp: instancia,
-    lead: lead ? {
-      id: lead.id,
-      nome: lead.nome,
-      whatsapp: lead.whatsapp,
-      email: lead.email,
-      cpf: lead.cpf,
-      temperatura: lead.temperatura,
-      etapa_funil: lead.etapa_funil,
-      etiquetas: lead.etiquetas,
-      origem: lead.origem,
-      campanha: lead.campanha,
-      beneficio: lead.beneficio,
-      criado_em: lead.criado_em
-    } : null,
-    responsavel: lead?.responsavel || null
+    lead: formatarLeadPayload(lead),
+    conversa: formatarConversaPayload(conversa)
   };
 }
 
@@ -435,19 +476,15 @@ async function buildLeadAtualizado(supabase: any, eventData: any) {
   const leadData = eventData?.lead || eventData;
   const lead = leadData?.id ? await buscarLeadCompleto(supabase, leadData.id) : null;
   const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
+  const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
   
   return {
     evento: 'lead.atualizado',
     timestamp: formatTimestamp(),
+    request_id: gerarRequestId(),
     instancia_whatsapp: instancia,
-    lead: lead ? {
-      id: lead.id,
-      nome: lead.nome,
-      whatsapp: lead.whatsapp,
-      temperatura: lead.temperatura,
-      etapa_funil: lead.etapa_funil,
-      etiquetas: lead.etiquetas
-    } : null
+    lead: formatarLeadPayload(lead),
+    conversa: formatarConversaPayload(conversa)
   };
 }
 
@@ -456,6 +493,7 @@ async function buildLeadEtapaAlterada(supabase: any, eventData: any) {
   const leadId = leadData?.id || eventData?.lead_id;
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
   const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
+  const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
   
   // Buscar nome da etapa anterior
   let etapaAnterior = null;
@@ -482,17 +520,12 @@ async function buildLeadEtapaAlterada(supabase: any, eventData: any) {
   return {
     evento: 'lead.etapa_alterada',
     timestamp: formatTimestamp(),
+    request_id: gerarRequestId(),
     instancia_whatsapp: instancia,
-    lead: lead ? {
-      id: lead.id,
-      nome: lead.nome,
-      whatsapp: lead.whatsapp,
-      temperatura: lead.temperatura,
-      etiquetas: lead.etiquetas
-    } : null,
+    lead: formatarLeadPayload(lead),
+    conversa: formatarConversaPayload(conversa),
     etapa_anterior: etapaAnterior,
-    etapa_nova: etapaNova || lead?.etapa_funil,
-    alterado_por: lead?.responsavel || null
+    etapa_nova: etapaNova || lead?.etapa_funil
   };
 }
 
@@ -501,21 +534,17 @@ async function buildLeadTemperaturaAlterada(supabase: any, eventData: any) {
   const leadId = leadData?.id || eventData?.lead_id;
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
   const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
+  const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
   
   return {
     evento: 'lead.temperatura_alterada',
     timestamp: formatTimestamp(),
+    request_id: gerarRequestId(),
     instancia_whatsapp: instancia,
-    lead: lead ? {
-      id: lead.id,
-      nome: lead.nome,
-      whatsapp: lead.whatsapp,
-      etapa_funil: lead.etapa_funil,
-      etiquetas: lead.etiquetas
-    } : null,
+    lead: formatarLeadPayload(lead),
+    conversa: formatarConversaPayload(conversa),
     temperatura_anterior: traduzirTemperatura(eventData?.previous_temperature || ''),
-    temperatura_nova: traduzirTemperatura(eventData?.new_temperature || lead?.temperatura || ''),
-    alterado_por: lead?.responsavel || null
+    temperatura_nova: traduzirTemperatura(eventData?.new_temperature || lead?.temperatura || '')
   };
 }
 
@@ -524,21 +553,17 @@ async function buildLeadTransferido(supabase: any, eventData: any) {
   const leadId = leadData?.id || eventData?.lead_id;
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
   const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
+  const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
   const de = eventData?.previous_assigned_to ? await buscarUsuario(supabase, eventData.previous_assigned_to) : null;
   const para = eventData?.new_assigned_to ? await buscarUsuario(supabase, eventData.new_assigned_to) : null;
   
   return {
     evento: 'lead.transferido',
     timestamp: formatTimestamp(),
+    request_id: gerarRequestId(),
     instancia_whatsapp: instancia,
-    lead: lead ? {
-      id: lead.id,
-      nome: lead.nome,
-      whatsapp: lead.whatsapp,
-      temperatura: lead.temperatura,
-      etapa_funil: lead.etapa_funil,
-      etiquetas: lead.etiquetas
-    } : null,
+    lead: formatarLeadPayload(lead),
+    conversa: formatarConversaPayload(conversa),
     de,
     para
   };
@@ -548,19 +573,17 @@ async function buildLeadEtiqueta(supabase: any, eventData: any, adicionada: bool
   const leadId = eventData?.lead_id;
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
   const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
+  const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
   
   return {
     evento: adicionada ? 'lead.etiqueta_adicionada' : 'lead.etiqueta_removida',
     timestamp: formatTimestamp(),
+    request_id: gerarRequestId(),
     instancia_whatsapp: instancia,
-    lead: lead ? {
-      id: lead.id,
-      nome: lead.nome,
-      whatsapp: lead.whatsapp
-    } : null,
+    lead: formatarLeadPayload(lead),
+    conversa: formatarConversaPayload(conversa),
     etiqueta: eventData?.label_name || null,
-    etiquetas_atuais: lead?.etiquetas || [],
-    alterado_por: lead?.responsavel || null
+    etiquetas_atuais: lead?.etiquetas || []
   };
 }
 
@@ -574,17 +597,10 @@ async function buildConversaCriada(supabase: any, eventData: any) {
   return {
     evento: 'conversa.criada',
     timestamp: formatTimestamp(),
+    request_id: gerarRequestId(),
     instancia_whatsapp: instancia,
-    conversa: conversa ? { id: conversa.id, status: conversa.status } : null,
-    lead: lead ? {
-      id: lead.id,
-      nome: lead.nome,
-      whatsapp: lead.whatsapp,
-      temperatura: lead.temperatura,
-      etapa_funil: lead.etapa_funil,
-      etiquetas: lead.etiquetas
-    } : null,
-    responsavel: lead?.responsavel || null
+    lead: formatarLeadPayload(lead),
+    conversa: formatarConversaPayload(conversa)
   };
 }
 
@@ -614,20 +630,14 @@ async function buildConversaResolvida(supabase: any, eventData: any) {
   return {
     evento: 'conversa.resolvida',
     timestamp: formatTimestamp(),
+    request_id: gerarRequestId(),
     instancia_whatsapp: instancia,
+    lead: formatarLeadPayload(lead),
     conversa: conversa ? {
-      id: conversa.id,
+      ...formatarConversaPayload(conversa),
       total_mensagens: conversa.total_mensagens,
       duracao_minutos: duracaoMinutos
-    } : null,
-    lead: lead ? {
-      id: lead.id,
-      nome: lead.nome,
-      whatsapp: lead.whatsapp,
-      etapa_funil: lead.etapa_funil,
-      etiquetas: lead.etiquetas
-    } : null,
-    resolvida_por: lead?.responsavel || null
+    } : null
   };
 }
 
@@ -635,21 +645,26 @@ async function buildTarefaCriada(supabase: any, eventData: any) {
   const taskData = eventData?.task || eventData;
   const leadId = taskData?.lead_id;
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
+  const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
+  const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
   const responsavel = taskData?.assigned_to ? await buscarUsuario(supabase, taskData.assigned_to) : null;
   
   return {
     evento: 'tarefa.criada',
     timestamp: formatTimestamp(),
+    request_id: gerarRequestId(),
+    instancia_whatsapp: instancia,
     tarefa: {
       id: taskData?.id ? gerarIdLegivel('tarefa', taskData.id) : null,
       titulo: taskData?.title || null,
       descricao: taskData?.description || null,
       prioridade: taskData?.priority || 'medium',
       vencimento: taskData?.due_date || null,
-      status: 'pendente'
+      status: 'pendente',
+      responsavel
     },
-    lead: lead ? { id: lead.id, nome: lead.nome, whatsapp: lead.whatsapp } : null,
-    responsavel
+    lead: formatarLeadPayload(lead),
+    conversa: formatarConversaPayload(conversa)
   };
 }
 
@@ -657,18 +672,23 @@ async function buildTarefaConcluida(supabase: any, eventData: any) {
   const taskData = eventData?.task || eventData;
   const leadId = taskData?.lead_id;
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
+  const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
+  const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
   const responsavel = taskData?.assigned_to ? await buscarUsuario(supabase, taskData.assigned_to) : null;
   
   return {
     evento: 'tarefa.concluida',
     timestamp: formatTimestamp(),
+    request_id: gerarRequestId(),
+    instancia_whatsapp: instancia,
     tarefa: {
       id: taskData?.id ? gerarIdLegivel('tarefa', taskData.id) : null,
       titulo: taskData?.title || null,
-      concluida_em: formatTimestamp()
+      concluida_em: formatTimestamp(),
+      concluida_por: responsavel
     },
-    lead: lead ? { id: lead.id, nome: lead.nome, whatsapp: lead.whatsapp } : null,
-    concluida_por: responsavel
+    lead: formatarLeadPayload(lead),
+    conversa: formatarConversaPayload(conversa)
   };
 }
 
