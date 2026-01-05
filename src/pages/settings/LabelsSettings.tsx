@@ -46,7 +46,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 import { LabelModal } from '@/components/labels/LabelModal';
 import { useLabels, useCreateLabel, useUpdateLabel, useDeleteLabel } from '@/hooks/useLabels';
@@ -83,7 +83,6 @@ const LabelsSettings = () => {
   const createLabel = useCreateLabel();
   const updateLabel = useUpdateLabel();
   const deleteLabel = useDeleteLabel();
-  const { toast } = useToast();
 
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -110,13 +109,13 @@ const LabelsSettings = () => {
     try {
       if (selectedLabel) {
         await updateLabel.mutateAsync({ id: selectedLabel.id, ...data });
-        toast({ title: 'Etiqueta atualizada com sucesso!' });
+        toast.success('Etiqueta atualizada com sucesso!');
       } else {
         await createLabel.mutateAsync(data);
-        toast({ title: 'Etiqueta criada com sucesso!' });
+        toast.success('Etiqueta criada com sucesso!');
       }
     } catch (error) {
-      toast({ title: 'Erro ao salvar etiqueta', variant: 'destructive' });
+      toast.error('Erro ao salvar etiqueta');
     }
   };
 
@@ -124,11 +123,11 @@ const LabelsSettings = () => {
     if (!labelToDelete) return;
     try {
       await deleteLabel.mutateAsync(labelToDelete.id);
-      toast({ title: 'Etiqueta excluída' });
+      toast.success('Etiqueta excluída');
       setDeleteDialogOpen(false);
       setLabelToDelete(null);
     } catch (error) {
-      toast({ title: 'Erro ao excluir etiqueta', variant: 'destructive' });
+      toast.error('Erro ao excluir etiqueta');
     }
   };
 

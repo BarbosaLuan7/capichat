@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import type { TeamWithRelations } from '@/hooks/useTeams';
 
 interface TeamDetailsViewProps {
@@ -25,7 +25,6 @@ interface TeamDetailsViewProps {
 }
 
 export function TeamDetailsView({ team, onEdit, onDelete }: TeamDetailsViewProps) {
-  const { toast } = useToast();
 
   const accessLevelLabels = {
     all: 'Todos',
@@ -42,7 +41,7 @@ export function TeamDetailsView({ team, onEdit, onDelete }: TeamDetailsViewProps
   const copyLink = (phoneNumber: string) => {
     const link = `https://wa.me/${phoneNumber.replace(/\D/g, '')}`;
     navigator.clipboard.writeText(link);
-    toast({ title: 'Link copiado!' });
+    toast.success('Link copiado!');
   };
 
   const members = team.team_members || [];

@@ -28,7 +28,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useWhatsAppConfigs } from '@/hooks/useWhatsAppConfig';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import type { TeamWithRelations } from '@/hooks/useTeams';
 
 const teamSchema = z.object({
@@ -62,7 +62,6 @@ export function TeamModal({
 }: TeamModalProps) {
   const { data: profiles } = useProfiles();
   const { data: whatsappConfigs } = useWhatsAppConfigs();
-  const { toast } = useToast();
 
   const form = useForm<TeamFormData>({
     resolver: zodResolver(teamSchema),
@@ -107,7 +106,7 @@ export function TeamModal({
       await onSave({ ...data, id: team?.id });
       onOpenChange(false);
     } catch (error) {
-      toast({ title: 'Erro ao salvar', variant: 'destructive' });
+      toast.error('Erro ao salvar');
     }
   };
 
@@ -406,7 +405,7 @@ export function TeamModal({
                                   navigator.clipboard.writeText(
                                     generateDirectLink(config.phone_number)
                                   );
-                                  toast({ title: 'Link copiado!' });
+                                  toast.success('Link copiado!');
                                 }
                               }}
                             >

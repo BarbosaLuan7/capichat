@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/lib/logger';
 
 const CACHE_KEY_PREFIX = 'lead_avatar_attempt_';
 const CACHE_DURATION_MS = 60 * 60 * 1000; // 1 hora
@@ -41,13 +42,13 @@ export function useLeadAvatarFetch() {
       });
 
       if (error) {
-        console.log('[useLeadAvatarFetch] Erro na função:', error.message);
+        logger.warn('[useLeadAvatarFetch] Erro na função:', error.message);
         return null;
       }
 
       return data?.avatar_url || null;
     } catch (err) {
-      console.log('[useLeadAvatarFetch] Erro ao buscar avatar:', err);
+      logger.warn('[useLeadAvatarFetch] Erro ao buscar avatar:', err);
       return null;
     }
   }, [shouldAttemptFetch, markAttempt]);

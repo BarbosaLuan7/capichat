@@ -71,9 +71,10 @@ export function useAIClassification() {
       
       // Cache the result
       aiCache.set(cacheKey, data);
-    } catch (err: any) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao classificar lead';
       logger.error('Error fetching AI classification:', err);
-      setError(err.message || 'Erro ao classificar lead');
+      setError(message);
       setClassification(null);
     } finally {
       setIsLoading(false);

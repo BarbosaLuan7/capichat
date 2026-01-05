@@ -68,7 +68,7 @@ import { SubtaskList } from '@/components/tasks/SubtaskList';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 import { toast } from 'sonner';
 
-import type { Database } from '@/integrations/supabase/types';
+import type { Database, Json } from '@/integrations/supabase/types';
 
 // Lazy load heavy components
 const TaskModal = lazy(() => import('@/components/tasks/TaskModal').then(m => ({ default: m.TaskModal })));
@@ -358,13 +358,33 @@ const Tasks = () => {
     setTaskToDelete(null);
   };
 
-  const handleSaveTask = async (taskData: any) => {
+  const handleSaveTask = async (taskData: {
+    id?: string;
+    title: string;
+    description?: string;
+    due_date?: string;
+    priority?: TaskPriority;
+    status?: TaskStatus;
+    assigned_to?: string;
+    lead_id?: string;
+    subtasks?: Subtask[];
+  }) => {
     try {
       if (taskData.id) {
-        await updateTask.mutateAsync(taskData);
+        // For update - id is required
+        await updateTask.mutateAsync({
+          id: taskData.id,
+          ...taskData,
+          subtasks: taskData.subtasks as unknown as Json,
+        });
         toast.success('Tarefa atualizada');
       } else {
-        await createTask.mutateAsync(taskData);
+        // For create - assigned_to is required
+        await createTask.mutateAsync({
+          ...taskData,
+          assigned_to: taskData.assigned_to || '',
+          subtasks: taskData.subtasks as unknown as Json,
+        } as Parameters<typeof createTask.mutateAsync>[0]);
         toast.success('Tarefa criada');
       }
       setModalOpen(false);

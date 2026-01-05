@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useTeams } from '@/hooks/useTeams';
 import { useUpdateUserTeams, type ProfileWithRelations } from '@/hooks/useProfiles';
 
@@ -32,7 +32,6 @@ export const UserTeamsModal = ({
   onOpenChange,
   user,
 }: UserTeamsModalProps) => {
-  const { toast } = useToast();
   const { data: teams } = useTeams();
   const updateUserTeams = useUpdateUserTeams();
 
@@ -96,10 +95,10 @@ export const UserTeamsModal = ({
         teams: teamsToSave,
       });
 
-      toast({ title: 'Equipes atualizadas!' });
+      toast.success('Equipes atualizadas!');
       onOpenChange(false);
     } catch (error) {
-      toast({ title: 'Erro ao salvar', variant: 'destructive' });
+      toast.error('Erro ao salvar');
     }
   };
 

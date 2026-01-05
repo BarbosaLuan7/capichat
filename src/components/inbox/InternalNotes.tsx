@@ -167,7 +167,9 @@ function InternalNotesComponent({ conversationId }: InternalNotesProps) {
           </div>
         ) : (
           <div className="space-y-3">
-            {notes?.map((noteItem) => (
+            {notes?.map((noteItem) => {
+              const profile = noteItem.profiles as { name?: string; avatar?: string | null } | null;
+              return (
               <div
                 key={noteItem.id}
                 className="p-3 bg-warning/10 border border-warning/20 rounded-lg group"
@@ -176,16 +178,16 @@ function InternalNotesComponent({ conversationId }: InternalNotesProps) {
                   <Avatar className="w-6 h-6">
                     <AvatarImage
                       src={
-                        (noteItem as any).profiles?.avatar ||
-                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${(noteItem as any).profiles?.name}`
+                        profile?.avatar ||
+                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.name}`
                       }
                     />
                     <AvatarFallback className="text-xs">
-                      {(noteItem as any).profiles?.name?.charAt(0) || 'U'}
+                      {profile?.name?.charAt(0) || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-xs font-medium text-foreground">
-                    {(noteItem as any).profiles?.name || 'Usuário'}
+                    {profile?.name || 'Usuário'}
                   </span>
                   <span className="text-xs text-muted-foreground ml-auto">
                     {format(new Date(noteItem.created_at), "dd/MM 'às' HH:mm", {
@@ -259,7 +261,7 @@ function InternalNotesComponent({ conversationId }: InternalNotesProps) {
                   <p className="text-sm text-foreground">{noteItem.content}</p>
                 )}
               </div>
-            ))}
+            );})}
           </div>
         )}
       </ScrollArea>

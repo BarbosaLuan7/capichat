@@ -28,7 +28,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useUpdateProfile, useUpdateUserRole, type ProfileWithRelations } from '@/hooks/useProfiles';
 import { getRoleLabel, getRoleDescription, SELECTABLE_ROLES } from '@/lib/permissions';
 import type { Database } from '@/integrations/supabase/types';
@@ -58,7 +58,6 @@ export const UserEditModal = ({
   user,
   userRole,
 }: UserEditModalProps) => {
-  const { toast } = useToast();
   const updateProfile = useUpdateProfile();
   const updateUserRole = useUpdateUserRole();
 
@@ -105,10 +104,10 @@ export const UserEditModal = ({
         });
       }
 
-      toast({ title: 'Usuário atualizado!' });
+      toast.success('Usuário atualizado!');
       onOpenChange(false);
     } catch (error) {
-      toast({ title: 'Erro ao salvar', variant: 'destructive' });
+      toast.error('Erro ao salvar');
     }
   };
 

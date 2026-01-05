@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { z } from 'zod';
 
 const loginSchema = z.object({
@@ -29,7 +29,6 @@ const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { signIn, isAuthenticated, loading } = useAuth();
-  const { toast } = useToast();
 
   const from = (location.state as LocationState)?.from?.pathname || '/inbox';
 
@@ -62,23 +61,12 @@ const Auth = () => {
       const { error } = await signIn(email, password);
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
-          toast({
-            title: 'Erro no login',
-            description: 'Email ou senha incorretos.',
-            variant: 'destructive',
-          });
+          toast.error('Erro no login: Email ou senha incorretos.');
         } else {
-          toast({
-            title: 'Erro no login',
-            description: error.message,
-            variant: 'destructive',
-          });
+          toast.error(`Erro no login: ${error.message}`);
         }
       } else {
-        toast({
-          title: 'Bem-vindo ao LB ADV!',
-          description: 'Login realizado com sucesso.',
-        });
+        toast.success('Bem-vindo ao LB ADV!');
         navigate(from, { replace: true });
       }
     } finally {

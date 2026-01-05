@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { logger } from '@/lib/logger';
 
@@ -11,7 +11,6 @@ interface RealtimePayload {
 }
 
 export function useRealtimeNotifications(userId?: string) {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   // NOTE: handleMessageInsert removed - now handled by useInboxRealtime
@@ -21,19 +20,13 @@ export function useRealtimeNotifications(userId?: string) {
     const oldLead = payload.old as { stage_id?: string };
     
     if (payload.eventType === 'INSERT') {
-      toast({
-        title: 'Novo lead cadastrado',
-        description: `${lead.name} foi adicionado ao sistema`,
-      });
+      toast.info(`Novo lead cadastrado: ${lead.name}`);
     } else if (payload.eventType === 'UPDATE' && oldLead?.stage_id !== lead.stage_id) {
-      toast({
-        title: 'Lead atualizado',
-        description: `${lead.name} mudou de etapa`,
-      });
+      toast.info(`Lead atualizado: ${lead.name} mudou de etapa`);
     }
     
     queryClient.invalidateQueries({ queryKey: ['leads'] });
-  }, [toast, queryClient]);
+  }, [queryClient]);
 
   // NOTE: handleConversationChange removed - now handled by useInboxRealtime
 
@@ -47,28 +40,25 @@ export function useRealtimeNotifications(userId?: string) {
     
     // Only show notifications for the current user
     if (notification.user_id === userId) {
-      toast({
-        title: notification.title,
-        description: notification.message,
-        variant: notification.type === 'error' ? 'destructive' : 'default',
-      });
+      if (notification.type === 'error') {
+        toast.error(`${notification.title}: ${notification.message}`);
+      } else {
+        toast.info(`${notification.title}: ${notification.message}`);
+      }
       
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }
-  }, [toast, queryClient, userId]);
+  }, [queryClient, userId]);
 
   const handleTaskChange = useCallback((payload: RealtimePayload) => {
     const task = payload.new as { title: string; status: string; assigned_to: string };
     
     if (payload.eventType === 'INSERT' && task.assigned_to === userId) {
-      toast({
-        title: 'Nova tarefa atribuída',
-        description: task.title,
-      });
+      toast.info(`Nova tarefa atribuída: ${task.title}`);
     }
     
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
-  }, [toast, queryClient, userId]);
+  }, [queryClient, userId]);
 
   useEffect(() => {
     if (!userId) return;

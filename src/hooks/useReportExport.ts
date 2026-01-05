@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { format as formatDate } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Database } from '@/integrations/supabase/types';
@@ -20,7 +20,6 @@ interface ReportFilters {
 
 export function useReportExport() {
   const [isExporting, setIsExporting] = useState(false);
-  const { toast } = useToast();
 
   const exportLeadsReport = async (filters: ReportFilters, format: ReportFormat) => {
     let query = supabase
@@ -210,15 +209,16 @@ export function useReportExport() {
           downloadFile(convertToCSV(convs), `conversas_${dateStr}.csv`, 'text/csv;charset=utf-8');
           downloadFile(convertToCSV(agents), `agentes_${dateStr}.csv`, 'text/csv;charset=utf-8');
           downloadFile(convertToCSV(funnel), `funil_${dateStr}.csv`, 'text/csv;charset=utf-8');
-          toast({ title: 'Relatórios exportados com sucesso' });
+          toast.success('Relatórios exportados com sucesso');
           return;
       }
 
       const filename = `${type}_${dateStr}.csv`;
       downloadFile(convertToCSV(data), filename, 'text/csv;charset=utf-8');
-      toast({ title: 'Relatório exportado com sucesso' });
-    } catch (error: any) {
-      toast({ title: 'Erro ao exportar', description: error.message, variant: 'destructive' });
+      toast.success('Relatório exportado com sucesso');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast.error(`Erro ao exportar: ${message}`);
     } finally {
       setIsExporting(false);
     }
