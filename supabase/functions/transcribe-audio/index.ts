@@ -99,10 +99,28 @@ serve(async (req) => {
     );
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Error in transcribe-audio function:', errorMessage);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    console.error('[transcribe-audio] Error:', {
+      message: errorMessage,
+      stack: errorStack,
+      type: error?.constructor?.name,
+    });
+    
+    // Retornar mensagem amigável baseada no tipo de erro
+    let userMessage = 'Erro ao transcrever áudio';
+    if (errorMessage.includes('fetch audio')) {
+      userMessage = 'Não foi possível acessar o arquivo de áudio';
+    } else if (errorMessage.includes('API')) {
+      userMessage = 'Serviço de transcrição temporariamente indisponível';
+    } else if (errorMessage.includes('LOVABLE_API_KEY')) {
+      userMessage = 'Configuração de API não encontrada';
+    }
+    
     return new Response(
       JSON.stringify({ 
-        error: errorMessage,
+        error: userMessage,
+        details: errorMessage,
         success: false 
       }),
       {
