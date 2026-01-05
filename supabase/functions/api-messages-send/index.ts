@@ -6,6 +6,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// ========== NORMALIZAÇÃO ROBUSTA DE TELEFONE ==========
+interface NormalizedPhone {
+  original: string;
+  withoutCountry: string;
+  last11: string;
+  last10: string;
+  ddd: string;
+}
+
+function normalizePhoneForSearch(phone: string): NormalizedPhone {
+  const digits = phone.replace(/\D/g, '');
+  let withoutCountry = digits;
+  if (digits.startsWith('55') && digits.length >= 12) {
+    withoutCountry = digits.substring(2);
+  }
+  return {
+    original: digits,
+    withoutCountry,
+    last11: digits.slice(-11),
+    last10: digits.slice(-10),
+    ddd: withoutCountry.substring(0, 2)
+  };
+}
+
 // Helper: Validate phone number format
 function validatePhone(phone: string): { valid: boolean; normalized: string; error?: string } {
   const normalized = phone.replace(/\D/g, '');
@@ -519,22 +543,23 @@ serve(async (req) => {
         leadId = lead.id;
       }
     } else if (payload.phone) {
-      // Normalize phone for search
-      const normalizedPhone = payload.phone.replace(/\D/g, '');
-      const phoneWithoutCountry = normalizedPhone.startsWith('55') && normalizedPhone.length >= 12 
-        ? normalizedPhone.substring(2) 
-        : normalizedPhone;
+      // Usar normalização robusta para buscar lead
+      const phone = normalizePhoneForSearch(payload.phone);
+      console.log('[api-messages-send] Buscando lead por telefone:', phone);
       
       const { data: lead } = await supabase
         .from('leads')
         .select('id, name, phone, estimated_value, benefit_type, cpf, email, created_at')
-        .or(`phone.eq.${normalizedPhone},phone.eq.${phoneWithoutCountry}`)
+        .or(`phone.eq.${phone.withoutCountry},phone.eq.${phone.last11},phone.eq.${phone.last10},phone.ilike.%${phone.last10}`)
         .limit(1)
-        .single();
+        .maybeSingle();
       
       if (lead) {
         leadData = lead;
         leadId = lead.id;
+        console.log('[api-messages-send] Lead encontrado:', lead.id, '| stored phone:', lead.phone);
+      } else {
+        console.log('[api-messages-send] Lead não encontrado para telefone:', payload.phone);
       }
     }
 

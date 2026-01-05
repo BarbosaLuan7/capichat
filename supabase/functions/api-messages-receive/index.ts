@@ -58,6 +58,30 @@ function parseInternationalPhone(phone: string): { countryCode: string; localNum
   return { countryCode: '55', localNumber: digits };
 }
 
+// ========== NORMALIZAÇÃO ROBUSTA DE TELEFONE ==========
+interface NormalizedPhone {
+  original: string;
+  withoutCountry: string;
+  last11: string;
+  last10: string;
+  ddd: string;
+}
+
+function normalizePhoneForSearch(phone: string): NormalizedPhone {
+  const digits = phone.replace(/\D/g, '');
+  let withoutCountry = digits;
+  if (digits.startsWith('55') && digits.length >= 12) {
+    withoutCountry = digits.substring(2);
+  }
+  return {
+    original: digits,
+    withoutCountry,
+    last11: digits.slice(-11),
+    last10: digits.slice(-10),
+    ddd: withoutCountry.substring(0, 2)
+  };
+}
+
 // Helper: Validate phone number format
 function validatePhone(phone: string): { valid: boolean; normalized: string; error?: string } {
   const normalized = phone.replace(/\D/g, '');
@@ -149,11 +173,9 @@ Deno.serve(async (req) => {
 
     console.log('Received message from phone');
 
-    // Normalize phone number for search - remove country code (55) if present
-    let normalizedPhone = phoneValidation.normalized;
-    if (normalizedPhone.startsWith('55') && normalizedPhone.length >= 12) {
-      normalizedPhone = normalizedPhone.substring(2);
-    }
+    // Usar normalização robusta para buscar lead
+    const phoneNorm = normalizePhoneForSearch(body.phone);
+    console.log('[api-messages-receive] Buscando lead:', phoneNorm);
     
     // Helper function for display formatting
     const formatPhoneForDisplay = (phone: string): string => {
@@ -166,12 +188,12 @@ Deno.serve(async (req) => {
       return phone;
     };
 
-    // Find or create lead by phone
+    // Find or create lead by phone - buscar com múltiplas variações
     let lead;
     const { data: existingLead } = await supabase
       .from('leads')
       .select('*')
-      .or(`phone.ilike.%${normalizedPhone}%,phone.ilike.%${body.phone}%`)
+      .or(`phone.eq.${phoneNorm.withoutCountry},phone.eq.${phoneNorm.last11},phone.eq.${phoneNorm.last10},phone.ilike.%${phoneNorm.last10}%`)
       .maybeSingle();
 
     if (existingLead) {
@@ -197,7 +219,7 @@ Deno.serve(async (req) => {
     } else {
       // Create new lead - detectar código do país automaticamente
       const phoneData = body.country_code 
-        ? { countryCode: body.country_code, localNumber: normalizedPhone }
+        ? { countryCode: body.country_code, localNumber: phoneNorm.withoutCountry }
         : parseInternationalPhone(phoneValidation.normalized);
       
       const { data: firstStage } = await supabase
