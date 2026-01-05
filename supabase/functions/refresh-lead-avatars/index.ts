@@ -77,23 +77,43 @@ serve(async (req) => {
 
     console.log(`[refresh-avatars] Encontradas ${wahaConfigs.length} instâncias WAHA ativas`);
 
+    // Verificar se foi passado um lead_id específico para forçar refresh
+    let targetLeadId: string | null = null;
+    try {
+      const body = await req.json();
+      targetLeadId = body?.lead_id || null;
+    } catch {
+      // Sem body, continuar normalmente
+    }
+
     // Buscar leads sem avatar_url ou com avatar antigo (mais de 7 dias sem atualização)
     // Limitado a 50 leads por execução para não sobrecarregar a API
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     // Buscar leads COM suas conversas para identificar a instância correta
-    const { data: leads, error: leadsError } = await supabase
+    let query = supabase
       .from('leads')
       .select(`
         id, phone, name, avatar_url, updated_at,
         conversations(whatsapp_instance_id)
       `)
       .eq('status', 'active')
-      .eq('is_facebook_lid', false)
-      .or(`avatar_url.is.null,updated_at.lt.${sevenDaysAgo.toISOString()}`)
+      .eq('is_facebook_lid', false);
+
+    if (targetLeadId) {
+      // Se foi passado um lead específico, buscar apenas ele (forçar refresh)
+      console.log(`[refresh-avatars] Forçando refresh para lead específico: ${targetLeadId}`);
+      query = query.eq('id', targetLeadId);
+    } else {
+      // Busca normal: leads SEM avatar OU leads COM avatar antigo (updated_at > 7 dias)
+      // Corrigido: avatar_url.is.null captura leads sem foto independente de updated_at
+      query = query.or(`avatar_url.is.null,and(avatar_url.neq.null,updated_at.lt.${sevenDaysAgo.toISOString()})`);
+    }
+
+    const { data: leads, error: leadsError } = await query
       .order('last_interaction_at', { ascending: false })
-      .limit(50);
+      .limit(targetLeadId ? 1 : 50);
 
     if (leadsError) {
       console.error('[refresh-avatars] Erro ao buscar leads:', leadsError);
