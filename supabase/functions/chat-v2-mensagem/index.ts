@@ -54,54 +54,96 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { telefone, tipo, conteudo, midia_url, instancia_id } = body;
+    const { telefone, tipo, conteudo, midia_url, instancia_id, contato_id } = body;
+
+    // Resolve phone from contato_id if provided
+    let phoneToUse = telefone;
+    let lead = null;
+
+    if (contato_id && !telefone) {
+      console.log(`[chat-v2] Buscando lead por contato_id: ${contato_id}`);
+      const { data: leadData, error: leadError } = await supabase
+        .from("leads")
+        .select("*")
+        .eq("id", contato_id)
+        .maybeSingle();
+
+      if (leadError || !leadData) {
+        return new Response(
+          JSON.stringify({
+            erro: "Contato não encontrado",
+            codigo: "LEAD_NOT_FOUND",
+          }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      lead = leadData;
+      phoneToUse = `${lead.country_code || "55"}${lead.phone}`;
+      console.log(`[chat-v2] Telefone resolvido do contato: ${phoneToUse}`);
+    }
 
     // Validação de campos obrigatórios
-    if (!telefone || !conteudo) {
+    if (!phoneToUse && !contato_id) {
       return new Response(
         JSON.stringify({
-          erro: "Campos obrigatórios: telefone, conteudo",
+          erro: "Campo obrigatório: telefone ou contato_id",
           codigo: "VALIDATION_ERROR",
-          campos: ["telefone", "conteudo"],
+          campos: ["telefone", "contato_id"],
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!conteudo) {
+      return new Response(
+        JSON.stringify({
+          erro: "Campo obrigatório: conteudo",
+          codigo: "VALIDATION_ERROR",
+          campos: ["conteudo"],
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Normalizar telefone
-    const phoneClean = telefone.replace(/\D/g, "");
+    const phoneClean = phoneToUse.replace(/\D/g, "");
     const countryCode = phoneClean.length > 11 ? phoneClean.slice(0, 2) : "55";
     const localNumber = phoneClean.length > 11 ? phoneClean.slice(2) : phoneClean;
 
-    console.log(`Enviando mensagem para: ${phoneClean}`);
+    console.log(`[chat-v2] Enviando mensagem para: ${phoneClean}`);
 
-    // Buscar ou criar lead
-    let { data: lead } = await supabase
-      .from("leads")
-      .select("*")
-      .eq("phone", localNumber)
-      .maybeSingle();
-
+    // Buscar ou criar lead (se não foi resolvido do contato_id)
     if (!lead) {
-      console.log("Lead não encontrado, criando novo...");
-      const { data: newLead, error: leadError } = await supabase
+      const { data: existingLead } = await supabase
         .from("leads")
-        .insert({
-          phone: localNumber,
-          country_code: countryCode,
-          name: "Novo Contato",
-          source: "api",
-          temperature: "cold",
-          status: "active",
-        })
-        .select()
-        .single();
+        .select("*")
+        .eq("phone", localNumber)
+        .maybeSingle();
 
-      if (leadError) {
-        console.error("Erro ao criar lead:", leadError);
-        throw leadError;
+      if (!existingLead) {
+        console.log("[chat-v2] Lead não encontrado, criando novo...");
+        const { data: newLead, error: leadError } = await supabase
+          .from("leads")
+          .insert({
+            phone: localNumber,
+            country_code: countryCode,
+            name: "Novo Contato",
+            source: "api",
+            temperature: "cold",
+            status: "active",
+          })
+          .select()
+          .single();
+
+        if (leadError) {
+          console.error("[chat-v2] Erro ao criar lead:", leadError);
+          throw leadError;
+        }
+        lead = newLead;
+      } else {
+        lead = existingLead;
       }
-      lead = newLead;
     }
 
     // Buscar ou criar conversa
@@ -115,7 +157,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (!conversa) {
-      console.log("Conversa não encontrada, criando nova...");
+      console.log("[chat-v2] Conversa não encontrada, criando nova...");
       const { data: newConversa, error: convError } = await supabase
         .from("conversations")
         .insert({
@@ -127,7 +169,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (convError) {
-        console.error("Erro ao criar conversa:", convError);
+        console.error("[chat-v2] Erro ao criar conversa:", convError);
         throw convError;
       }
       conversa = newConversa;
@@ -181,11 +223,11 @@ Deno.serve(async (req) => {
       .single();
 
     if (msgError) {
-      console.error("Erro ao criar mensagem:", msgError);
+      console.error("[chat-v2] Erro ao criar mensagem:", msgError);
       throw msgError;
     }
 
-    console.log(`Mensagem criada: ${mensagem.id}`);
+    console.log(`[chat-v2] Mensagem criada: ${mensagem.id}`);
 
     // Buscar etiquetas do lead
     const { data: leadLabels } = await supabase
@@ -228,6 +270,7 @@ Deno.serve(async (req) => {
     const response = {
       sucesso: true,
       request_id: `req_${crypto.randomUUID().slice(0, 8)}`,
+      mensagem_id: `msg_${mensagem.id.slice(0, 8)}`,
 
       instancia_whatsapp: whatsappConfig
         ? {

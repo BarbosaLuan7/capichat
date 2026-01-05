@@ -1075,11 +1075,11 @@ paths:
               schema:
                 type: object
                 properties:
-                  data:
+                  dados:
                     type: array
                     items:
                       $ref: "#/components/schemas/Conversa"
-                  pagination:
+                  paginacao:
                     $ref: "#/components/schemas/Paginacao"
 
     post:
@@ -2464,22 +2464,29 @@ components:
 
     EnviarMensagemRequest:
       type: object
-      required: [contato_id, conteudo]
+      required: [conteudo]
+      description: |
+        Enviar mensagem. Use `contato_id` OU `telefone` para identificar o destinatário.
       properties:
         contato_id:
           type: string
           format: uuid
+          description: ID do contato (alternativo ao telefone)
+        telefone:
+          type: string
+          description: Número de telefone (alternativo ao contato_id)
         tipo:
           type: string
           enum: [texto, imagem, audio, video, documento]
           default: texto
         conteudo:
           type: string
-        media_url:
+        midia_url:
           type: string
-        template_id:
+        instancia_id:
           type: string
           format: uuid
+          description: ID da instância WhatsApp a usar
 
     # ------------ Mensagens Agendadas ------------
     MensagemAgendada:
