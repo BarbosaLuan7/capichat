@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { LeadAvatar } from '@/components/ui/lead-avatar';
 import { cn } from '@/lib/utils';
 import { formatPhoneNumber } from '@/lib/masks';
 import { toast } from 'sonner';
@@ -29,7 +29,7 @@ import { ConversationStatusActions } from '@/components/inbox/ConversationStatus
 import { ScrollToBottomButton } from '@/components/inbox/ScrollToBottomButton';
 import { SelectionBar } from '@/components/inbox/SelectionBar';
 import { DeleteMessagesModal } from '@/components/inbox/DeleteMessagesModal';
-import { VirtualizedMessageList } from '@/components/inbox/VirtualizedMessageList';
+import { VirtualizedMessageList, VirtualizedMessageListRef } from '@/components/inbox/VirtualizedMessageList';
 
 // Lazy loaded components - loaded on demand
 const EmojiPicker = React.lazy(() => import('@/components/inbox/EmojiPicker').then(m => ({ default: m.EmojiPicker })));
@@ -202,9 +202,12 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
     hasStartedTypingRef.current = false;
   }, [conversation?.id]);
 
+  // Ref to access virtualizer from VirtualizedMessageList
+  const virtualizerRef = useRef<VirtualizedMessageListRef>(null);
+  
   // Scroll to bottom (used by ScrollToBottomButton)
   const scrollToBottom = useCallback(() => {
-    // TODO: Integrate with VirtualizedMessageList scrollToIndex when exposed
+    virtualizerRef.current?.scrollToBottom();
     setShowScrollButton(false);
   }, []);
 
@@ -542,10 +545,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
         )}
         
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <Avatar className="w-10 h-10 shrink-0">
-            <AvatarImage src={lead.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.name}`} />
-            <AvatarFallback>{chatDisplayName.charAt(0)}</AvatarFallback>
-          </Avatar>
+          <LeadAvatar lead={lead} size="md" className="shrink-0" />
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-foreground truncate">{chatDisplayName}</p>
             <div className="flex items-center gap-1">
@@ -626,6 +626,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
       {/* Messages - Virtualized */}
       <div className="flex-1 relative overflow-hidden">
         <VirtualizedMessageList
+          ref={virtualizerRef}
           messages={messages || []}
           internalNotes={internalNotes}
           initialUnreadCount={initialUnreadCountRef.current ?? 0}
