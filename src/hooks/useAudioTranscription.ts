@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
+import { toast } from 'sonner';
 
 interface TranscriptionResult {
   text: string;
@@ -62,7 +63,8 @@ export function useAudioTranscription() {
           .eq('id', messageId);
 
         if (updateError) {
-          logger.warn('Could not save transcription to DB:', updateError);
+          logger.error('Could not save transcription to DB:', updateError);
+          toast.error('Transcrição salva apenas localmente (erro ao persistir)');
         }
 
         // 5. Update memory cache
