@@ -2648,6 +2648,33 @@ serve(async (req) => {
       message = insertedMessage;
     }
 
+    // BUG FIX: message pode ser null/undefined quando upsert ignora duplicata
+    // Nesse caso, buscar a mensagem existente para retornar o ID correto
+    if (!message && wahaMessageId) {
+      console.log('[whatsapp-webhook] ⚠️ Upsert retornou null, buscando mensagem existente...');
+      const { data: existingMsg } = await supabase
+        .from('messages')
+        .select('id')
+        .eq('waha_message_id', wahaMessageId)
+        .maybeSingle();
+      
+      if (existingMsg) {
+        console.log('[whatsapp-webhook] ✅ Mensagem existente encontrada:', existingMsg.id);
+        return new Response(
+          JSON.stringify({
+            success: true,
+            duplicate: true,
+            data: {
+              message_id: existingMsg.id,
+              conversation_id: conversation.id,
+              lead_id: lead.id,
+            },
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     console.log('[whatsapp-webhook] ✅ Mensagem criada:', message?.id, 'waha_message_id:', wahaMessageId);
 
     // Notificações de mensagens removidas - o sino é reservado para eventos importantes
@@ -2657,7 +2684,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         data: {
-          message_id: message.id,
+          message_id: message?.id || null,
           conversation_id: conversation.id,
           lead_id: lead.id,
           provider,
