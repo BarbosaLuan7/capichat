@@ -62,9 +62,34 @@ function safeErrorResponse(
 ): Response {
   console.error('[api-messages-send] Internal error:', internalError);
   return new Response(
-    JSON.stringify({ success: false, error: publicMessage }),
+    JSON.stringify({ success: false, sucesso: false, error: publicMessage, erro: publicMessage }),
     { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
+}
+
+// Format phone for display
+function formatTelefone(phone: string | null): string | null {
+  if (!phone) return null;
+  const clean = phone.replace(/\D/g, "");
+  if (clean.length >= 12) {
+    return `+${clean.slice(0, 2)} (${clean.slice(2, 4)}) ${clean.slice(4, 9)}-${clean.slice(9)}`;
+  }
+  if (clean.length >= 10) {
+    return `+55 (${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
+  }
+  return phone;
+}
+
+// Map temperature
+function mapTemperature(temp: string): string {
+  const map: Record<string, string> = { cold: "frio", warm: "morno", hot: "quente" };
+  return map[temp] || temp;
+}
+
+// Map conversation status
+function mapConversationStatus(status: string): string {
+  const map: Record<string, string> = { open: "aberta", pending: "pendente", resolved: "finalizada" };
+  return map[status] || status;
 }
 
 interface SendMessagePayload {
@@ -74,25 +99,33 @@ interface SendMessagePayload {
   media_url?: string;
   lead_id?: string;
   conversation_id?: string;
-  whatsapp_instance_id?: string; // ID da instância WhatsApp específica a usar
+  whatsapp_instance_id?: string;
 }
 
 interface WhatsAppConfig {
   id: string;
+  name: string;
   provider: 'waha' | 'evolution' | 'z-api' | 'custom';
   base_url: string;
   api_key: string;
   instance_name: string | null;
+  phone_number: string | null;
 }
 
 interface LeadData {
+  id?: string;
   name?: string;
   phone?: string;
+  country_code?: string;
   estimated_value?: number | null;
   benefit_type?: string | null;
   cpf?: string | null;
   email?: string | null;
   created_at?: string | null;
+  temperature?: string;
+  stage_id?: string | null;
+  assigned_to?: string | null;
+  source?: string | null;
 }
 
 /**
@@ -125,11 +158,9 @@ function formatDateBR(dateStr: string | null | undefined): string {
 function formatPhoneNumber(phone: string | null | undefined): string {
   if (!phone) return '';
   let numbers = phone.replace(/\D/g, '');
-  // Remove country code if present
   if (numbers.startsWith('55') && numbers.length >= 12) {
     numbers = numbers.substring(2);
   }
-  // Format as (XX) 9XXXX-XXXX
   if (numbers.length === 11) {
     return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
   }
@@ -151,7 +182,6 @@ function formatCPF(cpf: string | null | undefined): string {
 
 /**
  * Replaces template variables in message content
- * Supports both {{variable}} and {variable} formats
  */
 function replaceTemplateVariables(content: string, lead: LeadData | null, agentName?: string): string {
   let result = content;
@@ -159,7 +189,6 @@ function replaceTemplateVariables(content: string, lead: LeadData | null, agentN
   const firstName = lead?.name ? lead.name.split(' ')[0] : '';
   const now = new Date();
   
-  // Build replacements map
   const replacements: Record<string, string> = {
     'nome': lead?.name || '',
     'primeiro_nome': firstName,
@@ -175,7 +204,6 @@ function replaceTemplateVariables(content: string, lead: LeadData | null, agentN
     'email': lead?.email || '',
   };
   
-  // Replace {{variable}} and {variable} patterns
   for (const [key, value] of Object.entries(replacements)) {
     const doublePattern = new RegExp(`\\{\\{${key}\\}\\}`, 'gi');
     const singlePattern = new RegExp(`\\{${key}\\}`, 'gi');
@@ -184,13 +212,11 @@ function replaceTemplateVariables(content: string, lead: LeadData | null, agentN
       result = result.replace(doublePattern, value);
       result = result.replace(singlePattern, value);
     } else {
-      // Remove unmatched variables
       result = result.replace(doublePattern, '');
       result = result.replace(singlePattern, '');
     }
   }
   
-  // Remove any remaining unmatched variables
   result = result.replace(/\{\{(\w+)\}\}/g, '');
   result = result.replace(/\{(\w+)\}/g, '');
   
@@ -233,7 +259,6 @@ async function wahaFetch(
 
       console.log(`[WAHA] ${authFormat.name} - Status: ${response.status}`);
 
-      // Se deu certo ou não é erro de auth, retorna
       if (response.ok || response.status !== 401) {
         return response;
       }
@@ -247,7 +272,6 @@ async function wahaFetch(
     }
   }
 
-  // Se chegou aqui, nenhum formato funcionou
   if (lastResponse) {
     return lastResponse;
   }
@@ -479,6 +503,84 @@ async function sendCustom(config: WhatsAppConfig, payload: SendMessagePayload): 
   }
 }
 
+// Get full lead data with labels, funnel stage, and assigned user
+async function getLeadFullData(supabase: any, leadId: string) {
+  const { data: lead } = await supabase
+    .from('leads')
+    .select('*')
+    .eq('id', leadId)
+    .single();
+  
+  if (!lead) return null;
+  
+  // Get labels
+  const { data: leadLabels } = await supabase
+    .from('lead_labels')
+    .select('labels(id, name, color, category)')
+    .eq('lead_id', leadId);
+  
+  const etiquetas = (leadLabels || []).map((ll: any) => ({
+    id: ll.labels?.id,
+    nome: ll.labels?.name,
+    name: ll.labels?.name,
+    cor: ll.labels?.color,
+    color: ll.labels?.color,
+    categoria: ll.labels?.category,
+    category: ll.labels?.category
+  })).filter((e: any) => e.id);
+  
+  // Get funnel stage
+  let etapaFunil = null;
+  if (lead.stage_id) {
+    const { data: stage } = await supabase
+      .from('funnel_stages')
+      .select('id, name, color')
+      .eq('id', lead.stage_id)
+      .single();
+    if (stage) {
+      etapaFunil = { id: stage.id, nome: stage.name, name: stage.name, cor: stage.color, color: stage.color };
+    }
+  }
+  
+  // Get assigned user
+  let responsavel = null;
+  if (lead.assigned_to) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, name, email')
+      .eq('id', lead.assigned_to)
+      .single();
+    if (profile) {
+      responsavel = { id: profile.id, nome: profile.name, name: profile.name, email: profile.email };
+    }
+  }
+  
+  return {
+    id: lead.id,
+    nome: lead.name,
+    name: lead.name,
+    telefone: formatTelefone(`${lead.country_code || '55'}${lead.phone}`),
+    phone: lead.phone,
+    email: lead.email,
+    cpf: lead.cpf,
+    temperatura: mapTemperature(lead.temperature),
+    temperature: lead.temperature,
+    etapa_funil: etapaFunil,
+    funnel_stage: etapaFunil,
+    etiquetas,
+    labels: etiquetas,
+    responsavel,
+    assigned_to: responsavel,
+    origem: lead.source,
+    source: lead.source,
+    tipo_beneficio: lead.benefit_type,
+    benefit_type: lead.benefit_type,
+    avatar_url: lead.avatar_url,
+    criado_em: lead.created_at,
+    created_at: lead.created_at
+  };
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -487,7 +589,7 @@ serve(async (req) => {
 
   if (req.method !== 'POST') {
     return new Response(
-      JSON.stringify({ error: 'Method not allowed' }),
+      JSON.stringify({ error: 'Method not allowed', erro: 'Método não permitido' }),
       { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -501,7 +603,7 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
-        JSON.stringify({ error: 'Authorization header required' }),
+        JSON.stringify({ error: 'Authorization header required', erro: 'Header de autorização obrigatório' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -512,7 +614,7 @@ serve(async (req) => {
     if (apiKeyError || !apiKeyId) {
       console.error('[api-messages-send] API key inválida:', apiKeyError);
       return new Response(
-        JSON.stringify({ error: 'API key inválida ou inativa' }),
+        JSON.stringify({ error: 'Invalid or inactive API key', erro: 'API key inválida ou inativa' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -525,14 +627,14 @@ serve(async (req) => {
     const phoneValidation = validatePhone(payload.phone);
     if (!phoneValidation.valid) {
       return new Response(
-        JSON.stringify({ success: false, error: phoneValidation.error }),
+        JSON.stringify({ success: false, sucesso: false, error: phoneValidation.error, erro: phoneValidation.error }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     if (!payload.message) {
       return new Response(
-        JSON.stringify({ success: false, error: 'message is required' }),
+        JSON.stringify({ success: false, sucesso: false, error: 'message is required', erro: 'Mensagem é obrigatória' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -544,14 +646,14 @@ serve(async (req) => {
     
     // Try to find lead by ID or phone
     if (payload.lead_id) {
-      // Auto-detect: se lead_id parece um telefone (não é UUID), tratar como busca por telefone
+      // Auto-detect: if lead_id looks like a phone (not UUID), treat as phone search
       if (!isValidUUID(payload.lead_id) && looksLikePhone(payload.lead_id)) {
         console.log('[api-messages-send] lead_id looks like a phone number, treating as phone search:', payload.lead_id);
         
         const phone = normalizePhoneForSearch(payload.lead_id);
         const { data: lead } = await supabase
           .from('leads')
-          .select('id, name, phone, estimated_value, benefit_type, cpf, email, created_at')
+          .select('*')
           .or(`phone.eq.${phone.withoutCountry},phone.eq.${phone.last11},phone.eq.${phone.last10},phone.ilike.%${phone.last10}`)
           .limit(1)
           .maybeSingle();
@@ -559,20 +661,13 @@ serve(async (req) => {
         if (lead) {
           leadData = lead;
           leadId = lead.id;
-          console.log('[api-messages-send] Lead encontrado por telefone (auto-detected):', lead.id, '| stored phone:', lead.phone);
-        } else {
-          console.log('[api-messages-send] Lead não encontrado para telefone (em lead_id):', payload.lead_id);
+          console.log('[api-messages-send] Lead encontrado por telefone (auto-detected):', lead.id);
         }
         
-      } else if (!isValidUUID(payload.lead_id)) {
-        // Não é UUID válido nem parece telefone - tentar buscar mesmo assim
-        console.warn('[api-messages-send] lead_id não é UUID válido nem parece telefone:', payload.lead_id);
-        
-      } else {
-        // É UUID válido - buscar normalmente
+      } else if (isValidUUID(payload.lead_id)) {
         const { data: lead } = await supabase
           .from('leads')
-          .select('id, name, phone, estimated_value, benefit_type, cpf, email, created_at')
+          .select('*')
           .eq('id', payload.lead_id)
           .single();
         
@@ -582,13 +677,12 @@ serve(async (req) => {
         }
       }
     } else if (payload.phone) {
-      // Usar normalização robusta para buscar lead
       const phone = normalizePhoneForSearch(payload.phone);
       console.log('[api-messages-send] Buscando lead por telefone:', phone);
       
       const { data: lead } = await supabase
         .from('leads')
-        .select('id, name, phone, estimated_value, benefit_type, cpf, email, created_at')
+        .select('*')
         .or(`phone.eq.${phone.withoutCountry},phone.eq.${phone.last11},phone.eq.${phone.last10},phone.ilike.%${phone.last10}`)
         .limit(1)
         .maybeSingle();
@@ -596,9 +690,7 @@ serve(async (req) => {
       if (lead) {
         leadData = lead;
         leadId = lead.id;
-        console.log('[api-messages-send] Lead encontrado:', lead.id, '| stored phone:', lead.phone);
-      } else {
-        console.log('[api-messages-send] Lead não encontrado para telefone:', payload.phone);
+        console.log('[api-messages-send] Lead encontrado:', lead.id);
       }
     }
 
@@ -606,11 +698,10 @@ serve(async (req) => {
     const processedMessage = replaceTemplateVariables(payload.message, leadData);
     console.log('[api-messages-send] Mensagem processada:', processedMessage.substring(0, 50) + '...');
 
-    // Get WhatsApp config - prioritize specific instance if provided
+    // Get WhatsApp config
     let config: WhatsAppConfig | null = null;
     
     if (payload.whatsapp_instance_id) {
-      // Use specific instance if provided
       const { data: specificConfig, error: specificError } = await supabase
         .from('whatsapp_config')
         .select('*')
@@ -621,38 +712,29 @@ serve(async (req) => {
       if (specificError || !specificConfig) {
         console.error('[api-messages-send] Instância específica não encontrada:', payload.whatsapp_instance_id);
         return new Response(
-          JSON.stringify({ error: 'Instância WhatsApp não encontrada ou inativa' }),
+          JSON.stringify({ error: 'WhatsApp instance not found or inactive', erro: 'Instância WhatsApp não encontrada ou inativa' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
       config = specificConfig as WhatsAppConfig;
-      console.log('[api-messages-send] Usando instância específica:', config.instance_name);
     } else {
-      // Fallback: use first active instance
       const { data: configs, error: configError } = await supabase
         .from('whatsapp_config')
         .select('*')
         .eq('is_active', true)
         .limit(1);
 
-      if (configError) {
-        console.error('[api-messages-send] Erro ao buscar config:', configError);
+      if (configError || !configs || configs.length === 0) {
         return new Response(
-          JSON.stringify({ error: 'Erro ao buscar configuração do WhatsApp' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      if (!configs || configs.length === 0) {
-        return new Response(
-          JSON.stringify({ error: 'Nenhum gateway WhatsApp ativo configurado' }),
+          JSON.stringify({ error: 'No active WhatsApp gateway configured', erro: 'Nenhum gateway WhatsApp ativo configurado' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       config = configs[0] as WhatsAppConfig;
     }
+    
     console.log('[api-messages-send] Provider:', config.provider, 'Instance:', config.instance_name);
 
     // Create payload with processed message
@@ -678,29 +760,28 @@ serve(async (req) => {
         result = await sendCustom(config, processedPayload);
         break;
       default:
-        result = { success: false, error: 'Provider desconhecido' };
+        result = { success: false, error: 'Unknown provider' };
     }
 
     if (!result.success) {
       console.error('[api-messages-send] Falha ao enviar:', result.error);
       return new Response(
-        JSON.stringify({ error: result.error, provider: config.provider }),
+        JSON.stringify({ success: false, sucesso: false, error: result.error, erro: result.error, provider: config.provider }),
         { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Find existing conversation if we have a lead - filter by whatsapp_instance_id
+    // Find existing conversation if we have a lead
     if (!conversationId && leadId) {
-      let convQuery = supabase
+      const { data: conversation } = await supabase
         .from('conversations')
         .select('id')
         .eq('lead_id', leadId)
-        .eq('whatsapp_instance_id', config.id) // Filter by instance to separate conversations
+        .eq('whatsapp_instance_id', config.id)
         .in('status', ['open', 'pending'])
         .order('last_message_at', { ascending: false })
-        .limit(1);
-
-      const { data: conversation } = await convQuery.single();
+        .limit(1)
+        .single();
 
       if (conversation) {
         conversationId = conversation.id;
@@ -708,8 +789,9 @@ serve(async (req) => {
     }
 
     // Save message to database if we have a conversation
+    let messageId = null;
     if (conversationId) {
-      const { error: messageError } = await supabase
+      const { data: msgData, error: messageError } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversationId,
@@ -721,10 +803,12 @@ serve(async (req) => {
           sender_id: apiKeyId,
           direction: 'outbound',
           status: 'sent',
-        });
+        })
+        .select()
+        .single();
 
-      if (messageError) {
-        console.error('[api-messages-send] Erro ao salvar mensagem:', messageError);
+      if (!messageError && msgData) {
+        messageId = msgData.id;
       }
 
       // Update conversation last_message_at
@@ -736,14 +820,93 @@ serve(async (req) => {
 
     console.log('[api-messages-send] Mensagem enviada:', result.messageId);
 
+    // Get full lead data for response
+    const leadFullData = leadId ? await getLeadFullData(supabase, leadId) : null;
+
+    // Get conversation data
+    let conversationData = null;
+    if (conversationId) {
+      const { data: conv } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('id', conversationId)
+        .single();
+      
+      if (conv) {
+        conversationData = {
+          id: conv.id,
+          status: conv.status,
+          status_pt: mapConversationStatus(conv.status),
+          nao_lidas: conv.unread_count,
+          unread_count: conv.unread_count,
+          ultima_mensagem_em: conv.last_message_at,
+          last_message_at: conv.last_message_at,
+          criada_em: conv.created_at,
+          created_at: conv.created_at
+        };
+      }
+    }
+
+    // Build rich response (following chat-v2-mensagem pattern)
+    const response = {
+      sucesso: true,
+      success: true,
+      request_id: `req_${crypto.randomUUID().slice(0, 8)}`,
+      mensagem_id: messageId,
+      message_id: messageId,
+      external_message_id: result.messageId,
+
+      instancia_whatsapp: {
+        id: config.id,
+        nome: config.name,
+        name: config.name,
+        telefone: formatTelefone(config.phone_number),
+        phone_number: config.phone_number,
+        identificador: config.instance_name,
+        instance_name: config.instance_name,
+        provider: config.provider
+      },
+      whatsapp_instance: {
+        id: config.id,
+        name: config.name,
+        phone_number: config.phone_number,
+        instance_name: config.instance_name,
+        provider: config.provider
+      },
+
+      mensagem: {
+        id: messageId,
+        tipo: payload.type || 'text',
+        type: payload.type || 'text',
+        conteudo: processedMessage,
+        content: processedMessage,
+        midia_url: payload.media_url,
+        media_url: payload.media_url,
+        enviada_em: new Date().toISOString(),
+        sent_at: new Date().toISOString(),
+        status: 'enviada',
+        direcao: 'saida',
+        direction: 'outbound'
+      },
+      message: {
+        id: messageId,
+        type: payload.type || 'text',
+        content: processedMessage,
+        media_url: payload.media_url,
+        sent_at: new Date().toISOString(),
+        status: 'sent',
+        direction: 'outbound'
+      },
+
+      lead: leadFullData,
+      contato: leadFullData,
+
+      conversa: conversationData,
+      conversation: conversationData
+    };
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        messageId: result.messageId,
-        provider: config.provider,
-        conversation_id: conversationId,
-        lead_id: leadId,
-      }),
+      JSON.stringify(response),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
