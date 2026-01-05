@@ -838,6 +838,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(
                   }
                 }
               }}
+              aria-label="Escrever mensagem"
               placeholder="Digite / para atalhos... (Shift+Enter para nova linha)"
               className="pr-12 resize-none min-h-[40px] max-h-[120px] overflow-y-auto py-2"
               rows={1}
