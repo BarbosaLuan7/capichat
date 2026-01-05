@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
@@ -26,11 +26,21 @@ export function useAuth() {
   const [sessionLoading, setSessionLoading] = useState(true);
   const [userDataLoading, setUserDataLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // BUG FIX: AbortController to cancel pending fetches on logout/login race conditions
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Loading is true until BOTH session AND user data are loaded
   const loading = sessionLoading || userDataLoading;
 
   const fetchUserData = useCallback(async (userId: string) => {
+    // Cancel any pending fetch to avoid race conditions
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
+    
     setUserDataLoading(true);
     try {
       // Fetch profile
@@ -39,6 +49,9 @@ export function useAuth() {
         .select('*')
         .eq('id', userId)
         .maybeSingle();
+
+      // Check if aborted before updating state
+      if (signal.aborted) return;
 
       if (profileError) throw profileError;
       setProfile(profileData);
@@ -50,13 +63,21 @@ export function useAuth() {
         .eq('user_id', userId)
         .maybeSingle();
 
+      // Check if aborted before updating state
+      if (signal.aborted) return;
+
       if (roleError) throw roleError;
       setRole(roleData?.role || 'agent');
-    } catch (err) {
+    } catch (err: any) {
+      // Ignore abort errors
+      if (err?.name === 'AbortError' || signal.aborted) return;
       logger.error('Error fetching user data:', err);
       setError('Erro ao carregar dados do usuário');
     } finally {
-      setUserDataLoading(false);
+      // Only update loading if not aborted
+      if (!signal.aborted) {
+        setUserDataLoading(false);
+      }
     }
   }, []);
 

@@ -345,6 +345,10 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
       if (disconnectTimeoutRef.current) {
         clearTimeout(disconnectTimeoutRef.current);
       }
+      // BUG FIX: Clear mark as read timeout to prevent memory leak
+      if (markAsReadTimeoutRef.current) {
+        clearTimeout(markAsReadTimeoutRef.current);
+      }
       supabase.removeChannel(channel);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps

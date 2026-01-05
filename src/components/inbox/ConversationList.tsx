@@ -189,7 +189,7 @@ export function ConversationList({
     }
     return inboxFilteredConversations.filter((conv) =>
       filters.labelIds.some((labelId) =>
-        conv.leads?.lead_labels?.some((ll: any) => ll.labels?.id === labelId)
+        (conv.leads?.lead_labels || []).some((ll: any) => ll.labels?.id === labelId)
       )
     );
   }, [inboxFilteredConversations, filters.labelIds]);
