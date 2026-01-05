@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useCreateUser } from '@/hooks/useProfiles';
 import { getRoleLabel, getRoleDescription, SELECTABLE_ROLES } from '@/lib/permissions';
 import type { Database } from '@/integrations/supabase/types';
@@ -62,7 +62,6 @@ function generatePassword(length = 12): string {
 }
 
 export const CreateUserModal = ({ open, onOpenChange }: CreateUserModalProps) => {
-  const { toast } = useToast();
   const createUser = useCreateUser();
   const [showPassword, setShowPassword] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -91,7 +90,7 @@ export const CreateUserModal = ({ open, onOpenChange }: CreateUserModalProps) =>
       await navigator.clipboard.writeText(password);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast({ title: 'Senha copiada!' });
+      toast.success('Senha copiada!');
     }
   };
 
@@ -104,19 +103,12 @@ export const CreateUserModal = ({ open, onOpenChange }: CreateUserModalProps) =>
         role: data.role as AppRole,
       });
 
-      toast({
-        title: 'Usuário criado!',
-        description: `${data.name} foi adicionado ao sistema. Informe as credenciais de acesso.`,
-      });
-
+      toast.success(`Usuário criado! ${data.name} foi adicionado ao sistema.`);
       form.reset();
       onOpenChange(false);
-    } catch (error: any) {
-      toast({
-        title: 'Erro ao criar usuário',
-        description: error.message || 'Tente novamente.',
-        variant: 'destructive',
-      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Tente novamente.';
+      toast.error(`Erro ao criar usuário: ${message}`);
     }
   };
 

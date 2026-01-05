@@ -30,7 +30,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { 
   useTeams, 
   useCreateTeam, 
@@ -55,7 +55,6 @@ const TeamsSettings = () => {
   const updateTeamMembers = useUpdateTeamMembers();
   const updateWhatsAppConfigs = useUpdateTeamWhatsAppConfigs();
   const { currentTenant } = useTenant();
-  const { toast } = useToast();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -114,12 +113,12 @@ const TeamsSettings = () => {
         configIds: data.whatsappConfigIds,
       });
 
-      toast({ title: data.id ? 'Equipe atualizada!' : 'Equipe criada!' });
+      toast.success(data.id ? 'Equipe atualizada!' : 'Equipe criada!');
       setModalOpen(false);
       setSelectedTeam(null);
     } catch (error) {
       logger.error('Erro ao salvar equipe:', error);
-      toast({ title: 'Erro ao salvar equipe', variant: 'destructive' });
+      toast.error('Erro ao salvar equipe');
     } finally {
       setIsSaving(false);
     }
@@ -134,12 +133,12 @@ const TeamsSettings = () => {
     if (teamToDelete) {
       try {
         await deleteTeamMutation.mutateAsync(teamToDelete.id);
-        toast({ title: 'Equipe excluída' });
+        toast.success('Equipe excluída');
         setDeleteDialogOpen(false);
         setTeamToDelete(null);
         setDetailsOpen(false);
       } catch (error) {
-        toast({ title: 'Erro ao excluir equipe', variant: 'destructive' });
+        toast.error('Erro ao excluir equipe');
       }
     }
   };

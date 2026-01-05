@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 // Safe version from whatsapp_config_safe VIEW (masks sensitive data)
 export interface WhatsAppConfig {
@@ -75,7 +75,6 @@ export function useWhatsAppConfigs() {
 // For creating configs, we still use the real table (admin only)
 export function useCreateWhatsAppConfig() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (config: WhatsAppConfigInsert) => {
@@ -90,14 +89,10 @@ export function useCreateWhatsAppConfig() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['whatsapp-configs'] });
-      toast({ title: 'Gateway WhatsApp criado com sucesso' });
+      toast.success('Gateway WhatsApp criado com sucesso');
     },
     onError: (error: Error) => {
-      toast({ 
-        title: 'Erro ao criar gateway', 
-        description: error.message, 
-        variant: 'destructive' 
-      });
+      toast.error(`Erro ao criar gateway: ${error.message}`);
     },
   });
 }
@@ -105,7 +100,6 @@ export function useCreateWhatsAppConfig() {
 // For updating configs - only update fields that are provided
 export function useUpdateWhatsAppConfig() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({ id, ...config }: Partial<WhatsAppConfigInsert> & { id: string }) => {
@@ -129,21 +123,16 @@ export function useUpdateWhatsAppConfig() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['whatsapp-configs'] });
-      toast({ title: 'Gateway WhatsApp atualizado' });
+      toast.success('Gateway WhatsApp atualizado');
     },
     onError: (error: Error) => {
-      toast({ 
-        title: 'Erro ao atualizar gateway', 
-        description: error.message, 
-        variant: 'destructive' 
-      });
+      toast.error(`Erro ao atualizar gateway: ${error.message}`);
     },
   });
 }
 
 export function useDeleteWhatsAppConfig() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (id: string) => {
@@ -156,21 +145,15 @@ export function useDeleteWhatsAppConfig() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['whatsapp-configs'] });
-      toast({ title: 'Gateway WhatsApp removido' });
+      toast.success('Gateway WhatsApp removido');
     },
     onError: (error: Error) => {
-      toast({ 
-        title: 'Erro ao remover gateway', 
-        description: error.message, 
-        variant: 'destructive' 
-      });
+      toast.error(`Erro ao remover gateway: ${error.message}`);
     },
   });
 }
 
 export function useTestWhatsAppConnection() {
-  const { toast } = useToast();
-
   return useMutation({
     mutationFn: async (config: { 
       provider: string; 
@@ -194,25 +177,16 @@ export function useTestWhatsAppConnection() {
           : '',
       ].filter(Boolean);
 
-      toast({ 
-        title: 'Conexão bem sucedida!', 
-        description: parts.join(' • '),
-      });
+      toast.success(`Conexão bem sucedida! ${parts.join(' • ')}`);
     },
     onError: (error: Error) => {
-      toast({ 
-        title: 'Falha na conexão', 
-        description: error.message, 
-        variant: 'destructive' 
-      });
+      toast.error(`Falha na conexão: ${error.message}`);
     },
   });
 }
 
 // Hook para enviar mensagem de teste
 export function useTestWhatsAppMessage() {
-  const { toast } = useToast();
-
   return useMutation({
     mutationFn: async (payload: { 
       whatsapp_instance_id: string; 
@@ -227,17 +201,10 @@ export function useTestWhatsAppMessage() {
       return data as { success: boolean; messageId?: string; instance?: string; phone?: string };
     },
     onSuccess: (data) => {
-      toast({ 
-        title: 'Mensagem enviada!', 
-        description: `Teste enviado para ${data.phone} via ${data.instance}`,
-      });
+      toast.success(`Mensagem enviada! Teste enviado para ${data.phone} via ${data.instance}`);
     },
     onError: (error: Error) => {
-      toast({ 
-        title: 'Falha ao enviar mensagem', 
-        description: error.message, 
-        variant: 'destructive' 
-      });
+      toast.error(`Falha ao enviar mensagem: ${error.message}`);
     },
   });
 }

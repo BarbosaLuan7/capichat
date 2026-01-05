@@ -47,7 +47,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -72,7 +72,6 @@ async function hashKey(key: string): Promise<string> {
 }
 
 const ApiSettings = () => {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
@@ -122,7 +121,7 @@ const ApiSettings = () => {
       setNewKeyName('');
     },
     onError: (error: Error) => {
-      toast({ title: 'Erro ao criar API Key', description: error.message, variant: 'destructive' });
+      toast.error(`Erro ao criar API Key: ${error.message}`);
     },
   });
 
@@ -150,10 +149,10 @@ const ApiSettings = () => {
       queryClient.invalidateQueries({ queryKey: ['api-keys'] });
       setIsDeleteDialogOpen(false);
       setSelectedKeyId(null);
-      toast({ title: 'API Key excluída com sucesso' });
+      toast.success('API Key excluída com sucesso');
     },
     onError: (error: Error) => {
-      toast({ title: 'Erro ao excluir API Key', description: error.message, variant: 'destructive' });
+      toast.error(`Erro ao excluir API Key: ${error.message}`);
     },
   });
 
@@ -161,7 +160,7 @@ const ApiSettings = () => {
     await navigator.clipboard.writeText(text);
     setKeyCopied(true);
     setTimeout(() => setKeyCopied(false), 2000);
-    toast({ title: 'Copiado para a área de transferência' });
+    toast.success('Copiado para a área de transferência');
   };
 
   const handleDelete = (id: string) => {

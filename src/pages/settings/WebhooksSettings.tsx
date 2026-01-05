@@ -43,7 +43,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -229,7 +229,6 @@ app.post('/webhook', (req, res) => {
 });`;
 
 const WebhooksSettings = () => {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
@@ -293,10 +292,10 @@ const WebhooksSettings = () => {
       queryClient.invalidateQueries({ queryKey: ['webhooks'] });
       setIsModalOpen(false);
       resetForm();
-      toast({ title: 'Webhook criado com sucesso' });
+      toast.success('Webhook criado com sucesso');
     },
     onError: (error: Error) => {
-      toast({ title: 'Erro ao criar webhook', description: error.message, variant: 'destructive' });
+      toast.error(`Erro ao criar webhook: ${error.message}`);
     },
   });
 
@@ -320,10 +319,10 @@ const WebhooksSettings = () => {
       setIsModalOpen(false);
       setEditingWebhook(null);
       resetForm();
-      toast({ title: 'Webhook atualizado com sucesso' });
+      toast.success('Webhook atualizado com sucesso');
     },
     onError: (error: Error) => {
-      toast({ title: 'Erro ao atualizar webhook', description: error.message, variant: 'destructive' });
+      toast.error(`Erro ao atualizar webhook: ${error.message}`);
     },
   });
 
@@ -335,10 +334,10 @@ const WebhooksSettings = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['webhooks'] });
-      toast({ title: 'Webhook excluído com sucesso' });
+      toast.success('Webhook excluído com sucesso');
     },
     onError: (error: Error) => {
-      toast({ title: 'Erro ao excluir webhook', description: error.message, variant: 'destructive' });
+      toast.error(`Erro ao excluir webhook: ${error.message}`);
     },
   });
 
@@ -390,14 +389,11 @@ const WebhooksSettings = () => {
       return response.data;
     },
     onSuccess: () => {
-      toast({ 
-        title: 'Webhook de teste enviado', 
-        description: 'Payload em PT-BR com fuso GMT-3 enviado. Verifique os logs.' 
-      });
+      toast.success('Webhook de teste enviado - Payload em PT-BR com fuso GMT-3 enviado. Verifique os logs.');
       queryClient.invalidateQueries({ queryKey: ['webhook-logs'] });
     },
     onError: (error: Error) => {
-      toast({ title: 'Erro ao testar webhook', description: error.message, variant: 'destructive' });
+      toast.error(`Erro ao testar webhook: ${error.message}`);
     },
   });
 
@@ -453,7 +449,7 @@ const WebhooksSettings = () => {
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: `${label} copiado!` });
+    toast.success(`${label} copiado!`);
   };
 
   const getStatusIcon = (status: string) => {

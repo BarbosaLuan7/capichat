@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 export interface FlowNode {
   id: string;
@@ -39,8 +39,8 @@ export function useChatbotFlows() {
       if (error) throw error;
       return (data || []).map(flow => ({
         ...flow,
-        nodes: (flow.nodes as any) || [],
-        connections: (flow.connections as any) || [],
+        nodes: (flow.nodes as unknown as FlowNode[]) || [],
+        connections: (flow.connections as unknown as FlowConnection[]) || [],
       })) as ChatbotFlow[];
     },
   });
@@ -61,8 +61,8 @@ export function useChatbotFlow(id: string | null) {
       if (!data) return null;
       return {
         ...data,
-        nodes: (data.nodes as any) || [],
-        connections: (data.connections as any) || [],
+        nodes: (data.nodes as unknown as FlowNode[]) || [],
+        connections: (data.connections as unknown as FlowConnection[]) || [],
       } as ChatbotFlow;
     },
     enabled: !!id,
@@ -71,20 +71,19 @@ export function useChatbotFlow(id: string | null) {
 
 export function useCreateChatbotFlow() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (flow: { name: string; description?: string; nodes: FlowNode[]; connections: FlowConnection[] }) => {
       const { data: user } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('chatbot_flows')
-        .insert({
+        .insert([{
           name: flow.name,
           description: flow.description,
-          nodes: flow.nodes as any,
-          connections: flow.connections as any,
+          nodes: JSON.parse(JSON.stringify(flow.nodes)),
+          connections: JSON.parse(JSON.stringify(flow.connections)),
           created_by: user.user?.id,
-        })
+        }])
         .select()
         .single();
 
@@ -93,21 +92,20 @@ export function useCreateChatbotFlow() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chatbot-flows'] });
-      toast({ title: 'Fluxo criado com sucesso' });
+      toast.success('Fluxo criado com sucesso');
     },
     onError: (error: Error) => {
-      toast({ title: 'Erro ao criar fluxo', description: error.message, variant: 'destructive' });
+      toast.error(`Erro ao criar fluxo: ${error.message}`);
     },
   });
 }
 
 export function useUpdateChatbotFlow() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({ id, ...flow }: Partial<ChatbotFlow> & { id: string }) => {
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       if (flow.name !== undefined) updateData.name = flow.name;
       if (flow.description !== undefined) updateData.description = flow.description;
       if (flow.nodes !== undefined) updateData.nodes = flow.nodes;
@@ -127,17 +125,16 @@ export function useUpdateChatbotFlow() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['chatbot-flows'] });
       queryClient.invalidateQueries({ queryKey: ['chatbot-flow', variables.id] });
-      toast({ title: 'Fluxo atualizado' });
+      toast.success('Fluxo atualizado');
     },
     onError: (error: Error) => {
-      toast({ title: 'Erro ao atualizar fluxo', description: error.message, variant: 'destructive' });
+      toast.error(`Erro ao atualizar fluxo: ${error.message}`);
     },
   });
 }
 
 export function useDeleteChatbotFlow() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (id: string) => {
@@ -150,17 +147,16 @@ export function useDeleteChatbotFlow() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chatbot-flows'] });
-      toast({ title: 'Fluxo removido' });
+      toast.success('Fluxo removido');
     },
     onError: (error: Error) => {
-      toast({ title: 'Erro ao remover fluxo', description: error.message, variant: 'destructive' });
+      toast.error(`Erro ao remover fluxo: ${error.message}`);
     },
   });
 }
 
 export function useToggleChatbotFlowActive() {
   const queryClient = useQueryClient();
-  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
@@ -176,10 +172,10 @@ export function useToggleChatbotFlowActive() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['chatbot-flows'] });
-      toast({ title: data.is_active ? 'Fluxo ativado' : 'Fluxo desativado' });
+      toast.success(data.is_active ? 'Fluxo ativado' : 'Fluxo desativado');
     },
     onError: (error: Error) => {
-      toast({ title: 'Erro ao alterar status', description: error.message, variant: 'destructive' });
+      toast.error(`Erro ao alterar status: ${error.message}`);
     },
   });
 }

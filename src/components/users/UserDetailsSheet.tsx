@@ -22,7 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useToggleUserBlock, useUpdateAvailability, type ProfileWithRelations } from '@/hooks/useProfiles';
 import { getRoleLabel, getRoleColor } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
@@ -47,7 +47,6 @@ export const UserDetailsSheet = ({
   onEdit,
   onEditTeams,
 }: UserDetailsSheetProps) => {
-  const { toast } = useToast();
   const toggleBlock = useToggleUserBlock();
   const updateAvailability = useUpdateAvailability();
 
@@ -59,11 +58,9 @@ export const UserDetailsSheet = ({
         id: user.id, 
         isActive: !user.is_active 
       });
-      toast({ 
-        title: user.is_active ? 'Usuário bloqueado' : 'Usuário desbloqueado' 
-      });
+      toast.success(user.is_active ? 'Usuário bloqueado' : 'Usuário desbloqueado');
     } catch (error) {
-      toast({ title: 'Erro ao alterar status', variant: 'destructive' });
+      toast.error('Erro ao alterar status');
     }
   };
 
@@ -73,9 +70,9 @@ export const UserDetailsSheet = ({
         id: user.id,
         isAvailable: !user.is_available,
       });
-      toast({ title: 'Disponibilidade atualizada' });
+      toast.success('Disponibilidade atualizada');
     } catch (error) {
-      toast({ title: 'Erro ao atualizar', variant: 'destructive' });
+      toast.error('Erro ao atualizar');
     }
   };
 
