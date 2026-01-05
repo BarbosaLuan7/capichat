@@ -88,6 +88,30 @@ function normalizePhoneNumber(phone: string, providedCountryCode?: string): { lo
   return parseInternationalPhone(phone);
 }
 
+// ========== NORMALIZAÇÃO ROBUSTA DE TELEFONE ==========
+interface NormalizedPhone {
+  original: string;
+  withoutCountry: string;
+  last11: string;
+  last10: string;
+  ddd: string;
+}
+
+function normalizePhoneForSearch(phone: string): NormalizedPhone {
+  const digits = phone.replace(/\D/g, '');
+  let withoutCountry = digits;
+  if (digits.startsWith('55') && digits.length >= 12) {
+    withoutCountry = digits.substring(2);
+  }
+  return {
+    original: digits,
+    withoutCountry,
+    last11: digits.slice(-11),
+    last10: digits.slice(-10),
+    ddd: withoutCountry.substring(0, 2)
+  };
+}
+
 // Helper: Validate phone number format
 function validatePhone(phone: string): { valid: boolean; normalized: string; error?: string } {
   const normalized = phone.replace(/\D/g, '');
@@ -199,12 +223,14 @@ Deno.serve(async (req) => {
           );
         }
         
-        const normalizedPhone = phoneValidation.normalized;
+        // Usar normalização robusta para buscar
+        const phoneNorm = normalizePhoneForSearch(phone);
+        console.log('[api-leads] Buscando por telefone:', phoneNorm);
         
         const { data, error } = await supabase
           .from('leads')
           .select('*, funnel_stages(*), lead_labels(*, labels(*))')
-          .or(`phone.ilike.%${normalizedPhone}%,phone.ilike.%${phone}%`)
+          .or(`phone.eq.${phoneNorm.withoutCountry},phone.eq.${phoneNorm.last11},phone.eq.${phoneNorm.last10},phone.ilike.%${phoneNorm.last10}%`)
           .limit(10);
 
         if (error) {
@@ -272,13 +298,15 @@ Deno.serve(async (req) => {
         );
       }
 
-      const normalizedPhone = phoneValidation.normalized;
+      // Usar normalização robusta para verificar duplicidade
+      const phoneNorm = normalizePhoneForSearch(body.phone);
+      console.log('[api-leads] Verificando duplicidade:', phoneNorm);
 
       // Check if lead already exists with same phone
       const { data: existingLead } = await supabase
         .from('leads')
         .select('id, name, phone')
-        .or(`phone.ilike.%${normalizedPhone}%,phone.ilike.%${body.phone}%`)
+        .or(`phone.eq.${phoneNorm.withoutCountry},phone.eq.${phoneNorm.last11},phone.eq.${phoneNorm.last10},phone.ilike.%${phoneNorm.last10}%`)
         .maybeSingle();
 
       if (existingLead) {
@@ -728,13 +756,14 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const normalizedPhone = phoneValidation.normalized;
+        // Usar normalização robusta para verificar duplicidade no batch
+        const phoneNorm = normalizePhoneForSearch(contato.phone);
         
         // Check for duplicate
         const { data: existing } = await supabase
           .from('leads')
           .select('id')
-          .or(`phone.ilike.%${normalizedPhone}%`)
+          .or(`phone.eq.${phoneNorm.withoutCountry},phone.eq.${phoneNorm.last11},phone.eq.${phoneNorm.last10},phone.ilike.%${phoneNorm.last10}%`)
           .maybeSingle();
 
         if (existing) {

@@ -5,13 +5,42 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// ========== NORMALIZAÇÃO ROBUSTA DE TELEFONE ==========
+// Função centralizada para normalizar telefone para busca
+// Suporta múltiplos formatos: com/sem código do país, DDD, etc.
+interface NormalizedPhone {
+  original: string;       // Número original apenas dígitos
+  withoutCountry: string; // Sem código 55
+  last11: string;         // Últimos 11 dígitos (DDD + 9 dígitos)
+  last10: string;         // Últimos 10 dígitos (DDD + 8 dígitos)
+  ddd: string;            // DDD extraído (2 dígitos)
+}
+
+function normalizePhoneForSearch(phone: string): NormalizedPhone {
+  const digits = phone.replace(/\D/g, '');
+  
+  // Remover código 55 se presente (número com 12+ dígitos começando com 55)
+  let withoutCountry = digits;
+  if (digits.startsWith('55') && digits.length >= 12) {
+    withoutCountry = digits.substring(2);
+  }
+  
+  return {
+    original: digits,
+    withoutCountry,
+    last11: digits.slice(-11),
+    last10: digits.slice(-10),
+    ddd: withoutCountry.substring(0, 2)
+  };
+}
+
 // Helper: Return safe error response
 function safeErrorResponse(
   internalError: unknown, 
   publicMessage: string, 
   status: number = 500
 ): Response {
-  console.error('Internal error:', internalError);
+  console.error('[api-lead-summary] Internal error:', internalError);
   return new Response(
     JSON.stringify({ success: false, error: publicMessage }),
     { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -72,35 +101,21 @@ Deno.serve(async (req) => {
     // Resolve lead_id from phone if needed
     let leadId = leadIdParam;
     if (phoneParam && !leadIdParam) {
-      // Normalize phone - remove all non-digits
-      const normalizedPhone = phoneParam.replace(/\D/g, '');
+      // Usar normalização robusta
+      const phone = normalizePhoneForSearch(phoneParam);
       
-      console.log('[api-lead-summary] Searching lead by phone:', normalizedPhone);
+      console.log('[api-lead-summary] Searching lead by phone:', {
+        input: phoneParam,
+        normalized: phone
+      });
       
-      // Try exact match first
-      let { data: leadByPhone, error: phoneError } = await supabase
+      // Buscar com múltiplas variações para máxima compatibilidade
+      const { data: leadByPhone, error: phoneError } = await supabase
         .from('leads')
-        .select('id')
-        .eq('phone', normalizedPhone)
+        .select('id, phone')
+        .or(`phone.eq.${phone.withoutCountry},phone.eq.${phone.last11},phone.eq.${phone.last10},phone.ilike.%${phone.last10}`)
+        .limit(1)
         .maybeSingle();
-
-      // If not found, try with common variations (with/without country code)
-      if (!leadByPhone && normalizedPhone.length >= 10) {
-        // Try without country code (last 10-11 digits)
-        const phoneWithoutCountry = normalizedPhone.slice(-11);
-        const phoneShort = normalizedPhone.slice(-10);
-        
-        const { data: altLead } = await supabase
-          .from('leads')
-          .select('id')
-          .or(`phone.eq.${phoneWithoutCountry},phone.eq.${phoneShort},phone.ilike.%${phoneShort}`)
-          .limit(1)
-          .maybeSingle();
-        
-        if (altLead) {
-          leadByPhone = altLead;
-        }
-      }
 
       if (phoneError) {
         console.error('[api-lead-summary] Error searching by phone:', phoneError);
@@ -109,13 +124,20 @@ Deno.serve(async (req) => {
 
       if (!leadByPhone) {
         return new Response(
-          JSON.stringify({ success: false, error: 'Lead not found with this phone number' }),
+          JSON.stringify({ 
+            success: false, 
+            error: 'Lead not found with this phone number',
+            searched: {
+              input: phoneParam,
+              variations_tried: [phone.withoutCountry, phone.last11, phone.last10]
+            }
+          }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       leadId = leadByPhone.id;
-      console.log('[api-lead-summary] Found lead by phone:', leadId);
+      console.log('[api-lead-summary] Found lead by phone:', leadId, '| stored phone:', leadByPhone.phone);
     }
 
     // GET /api-lead-summary?lead_id=xxx - Get case summary
