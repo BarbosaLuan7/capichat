@@ -82,6 +82,31 @@ function formatTimestamp(): string {
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${ms}-03:00`;
 }
 
+// Converter data do banco (UTC) para GMT-3
+function formatDateToGMT3(dateString: string | null | undefined): string | null {
+  if (!dateString) return null;
+  
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    
+    // Subtrair 3 horas para GMT-3
+    const brasiliaOffset = -3 * 60 * 60 * 1000;
+    const brasiliaTime = new Date(date.getTime() + brasiliaOffset);
+    
+    const year = brasiliaTime.getUTCFullYear();
+    const month = String(brasiliaTime.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(brasiliaTime.getUTCDate()).padStart(2, '0');
+    const hours = String(brasiliaTime.getUTCHours()).padStart(2, '0');
+    const minutes = String(brasiliaTime.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(brasiliaTime.getUTCSeconds()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}-03:00`;
+  } catch {
+    return dateString;
+  }
+}
+
 function traduzirTemperatura(temp: string): string {
   const map: Record<string, string> = { 'cold': 'frio', 'warm': 'morno', 'hot': 'quente' };
   return map[temp] || temp;
@@ -158,7 +183,7 @@ async function buscarLeadCompleto(supabase: any, leadId: string) {
     origem: lead.source || null,
     campanha: lead.utm_medium || null,
     beneficio: lead.benefit_type || null,
-    criado_em: lead.created_at,
+    criado_em: formatDateToGMT3(lead.created_at),
     responsavel,
     raw: lead
   };
@@ -244,7 +269,7 @@ async function buscarConversa(supabase: any, conversationId: string) {
     responsavel,
     equipe,
     canal,
-    iniciada_em: conv.created_at
+    iniciada_em: formatDateToGMT3(conv.created_at)
   };
 }
 
@@ -366,7 +391,7 @@ async function buildMensagemRecebida(supabase: any, eventData: any) {
       tipo: traduzirTipoMensagem(msg?.type || 'text'),
       conteudo: msg?.content || null,
       midia_url: msg?.media_url || null,
-      recebida_em: msg?.created_at || formatTimestamp(),
+      recebida_em: formatDateToGMT3(msg?.created_at) || formatTimestamp(),
       direcao: 'entrada',
       remetente: {
         tipo: 'contato',
@@ -441,7 +466,7 @@ async function buildMensagemEnviada(supabase: any, eventData: any) {
       tipo: traduzirTipoMensagem(msg?.type || 'text'),
       conteudo: msg?.content || null,
       midia_url: msg?.media_url || null,
-      enviada_em: msg?.created_at || formatTimestamp(),
+      enviada_em: formatDateToGMT3(msg?.created_at) || formatTimestamp(),
       status: traduzirStatusMensagem(msg?.status || 'sent'),
       direcao,
       remetente
