@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useUpdateProfile, useUpdateAvailability } from '@/hooks/useProfiles';
+import { useUpdateProfile } from '@/hooks/useProfiles';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 import { useChangePassword } from '@/hooks/useChangePassword';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
@@ -18,13 +18,11 @@ import { toast } from 'sonner';
 interface NotificationPreferences {
   browserNotifications: boolean;
   messageSound: boolean;
-  dailyEmail: boolean;
 }
 
 const MyAccountPage = () => {
   const { authUser } = useAuth();
   const updateProfile = useUpdateProfile();
-  const updateAvailability = useUpdateAvailability();
   const { uploadAvatar, removeAvatar, uploading, progress } = useAvatarUpload();
   const { changePassword, isLoading: isChangingPassword } = useChangePassword();
 
@@ -35,7 +33,6 @@ const MyAccountPage = () => {
   const [nickname, setNickname] = useState('');
   const [phone, setPhone] = useState('');
   const [avatarUrl, setAvatarUrl] = useState(authUser?.avatar || '');
-  const [isAvailable, setIsAvailable] = useState(true);
 
   // Password form state
   const [newPassword, setNewPassword] = useState('');
@@ -44,10 +41,16 @@ const MyAccountPage = () => {
   // Notification preferences
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>(() => {
     const saved = localStorage.getItem('notificationPreferences');
-    return saved ? JSON.parse(saved) : {
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        browserNotifications: parsed.browserNotifications ?? true,
+        messageSound: parsed.messageSound ?? true,
+      };
+    }
+    return {
       browserNotifications: true,
       messageSound: true,
-      dailyEmail: false,
     };
   });
 
@@ -117,20 +120,6 @@ const MyAccountPage = () => {
     if (result.success) {
       setNewPassword('');
       setConfirmPassword('');
-    }
-  };
-
-  const handleAvailabilityChange = async (checked: boolean) => {
-    if (!authUser?.id) return;
-    setIsAvailable(checked);
-    try {
-      await updateAvailability.mutateAsync({
-        id: authUser.id,
-        isAvailable: checked,
-      });
-    } catch (error) {
-      setIsAvailable(!checked);
-      toast.error('Erro ao atualizar disponibilidade');
     }
   };
 
@@ -375,47 +364,6 @@ const MyAccountPage = () => {
             <Switch
               checked={notificationPrefs.messageSound}
               onCheckedChange={() => handleNotificationToggle('messageSound')}
-            />
-          </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Resumo diário por email</Label>
-              <p className="text-sm text-muted-foreground">
-                Receber um resumo das atividades do dia
-              </p>
-            </div>
-            <Switch
-              checked={notificationPrefs.dailyEmail}
-              onCheckedChange={() => handleNotificationToggle('dailyEmail')}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Availability */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Disponibilidade</CardTitle>
-          <CardDescription>
-            Defina se você está disponível para atendimento
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`w-3 h-3 rounded-full ${isAvailable ? 'bg-green-500' : 'bg-muted-foreground'}`} />
-              <div className="space-y-0.5">
-                <Label>Estou disponível para atender</Label>
-                <p className="text-sm text-muted-foreground">
-                  Quando indisponível, novos leads não serão distribuídos para você
-                </p>
-              </div>
-            </div>
-            <Switch
-              checked={isAvailable}
-              onCheckedChange={handleAvailabilityChange}
-              disabled={updateAvailability.isPending}
             />
           </div>
         </CardContent>
