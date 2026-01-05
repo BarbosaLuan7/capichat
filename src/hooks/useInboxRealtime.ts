@@ -254,14 +254,13 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
     logger.log('[InboxRealtime] Lead labels change:', payload.eventType, { leadId });
     
     if (leadId) {
-      // Only invalidate the labels query for this specific lead
-      queryClient.invalidateQueries({ queryKey: ['lead-labels', leadId] });
+      // Invalidate the labels query for this specific lead (matches useLeadLabels queryKey)
+      queryClient.invalidateQueries({ queryKey: ['lead_labels', leadId] });
       // Also invalidate single lead query if loaded
       queryClient.invalidateQueries({ queryKey: ['lead', leadId] });
+      // Invalidate conversations to update labels in list
+      queryClient.invalidateQueries({ queryKey: ['conversations-infinite'] });
     }
-    
-    // DO NOT invalidate ['conversations-infinite'] - causes excessive re-renders
-    // Labels will be updated on next natural refetch or when user opens the conversation
   }, [queryClient]);
 
   // Setup subscription with reconnect capability
