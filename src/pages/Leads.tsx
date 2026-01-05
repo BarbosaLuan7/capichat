@@ -1,6 +1,5 @@
-import { useState, useMemo, useCallback, memo, lazy, Suspense } from 'react';
+import { useState, useMemo, useCallback, lazy, Suspense } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
-import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -8,38 +7,20 @@ import { logger } from '@/lib/logger';
 import {
   Search,
   Plus,
-  MoreVertical,
-  Phone,
-  Mail,
-  Calendar,
   ArrowUpDown,
-  Eye,
-  Pencil,
-  Trash2,
-  MessageSquare,
   Upload,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,10 +38,9 @@ import { useLabels } from '@/hooks/useLabels';
 import { useProfiles } from '@/hooks/useProfiles';
 import { BulkActionsBar } from '@/components/leads/BulkActionsBar';
 import { LeadFilters, LeadFiltersState } from '@/components/leads/LeadFilters';
+import { LeadTableRow } from '@/components/leads/LeadTableRow';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
-import { cn, getContrastColor } from '@/lib/utils';
-import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import {
   Pagination,
@@ -158,44 +138,44 @@ const Leads = () => {
     return leadLabels.map((ll: any) => ll.labels).filter(Boolean);
   };
 
-  const toggleSelectAll = () => {
+  const toggleSelectAll = useCallback(() => {
     if (selectedLeads.length === filteredLeads.length) {
       setSelectedLeads([]);
     } else {
       setSelectedLeads(filteredLeads.map((l) => l.id));
     }
-  };
+  }, [selectedLeads.length, filteredLeads]);
 
-  const toggleSelect = (leadId: string) => {
-    if (selectedLeads.includes(leadId)) {
-      setSelectedLeads(selectedLeads.filter((id) => id !== leadId));
-    } else {
-      setSelectedLeads([...selectedLeads, leadId]);
-    }
-  };
+  const handleToggleSelect = useCallback((leadId: string) => {
+    setSelectedLeads(prev => 
+      prev.includes(leadId) 
+        ? prev.filter((id) => id !== leadId)
+        : [...prev, leadId]
+    );
+  }, []);
 
-  const handleViewLead = (leadId: string) => {
+  const handleViewLead = useCallback((leadId: string) => {
     setSelectedLeadId(leadId);
     setModalMode('view');
     setModalOpen(true);
-  };
+  }, []);
 
-  const handleEditLead = (leadId: string) => {
+  const handleEditLead = useCallback((leadId: string) => {
     setSelectedLeadId(leadId);
     setModalMode('edit');
     setModalOpen(true);
-  };
+  }, []);
 
-  const handleNewLead = () => {
+  const handleNewLead = useCallback(() => {
     setSelectedLeadId(null);
     setModalMode('create');
     setModalOpen(true);
-  };
+  }, []);
 
-  const handleDeleteClick = (leadId: string) => {
+  const handleDeleteClick = useCallback((leadId: string) => {
     setLeadToDelete(leadId);
     setDeleteDialogOpen(true);
-  };
+  }, []);
 
   const handleConfirmDelete = async () => {
     if (leadToDelete) {
@@ -328,128 +308,19 @@ const Leads = () => {
               const labels = getLabels((lead as any).lead_labels);
 
               return (
-                <motion.tr
+                <LeadTableRow
                   key={lead.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2, delay: index * 0.05 }}
-                  className="group"
-                >
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedLeads.includes(lead.id)}
-                      onCheckedChange={() => toggleSelect(lead.id)}
-                      aria-label={`Selecionar lead ${lead.name}`}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage src={(lead as any).avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.name}`} />
-                        <AvatarFallback>{lead.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium text-foreground">{lead.name}</p>
-                        <div className="flex items-center gap-1 mt-1">
-                          {labels.slice(0, 2).map((label) => (
-                            <Badge
-                              key={label.id}
-                              className="text-xs h-5 border-0"
-                              style={{ backgroundColor: label.color, color: getContrastColor(label.color) }}
-                            >
-                              {label.name}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Phone className="w-3.5 h-3.5" />
-                        {lead.phone}
-                      </div>
-                      {lead.email && (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Mail className="w-3.5 h-3.5" />
-                          <span className="truncate max-w-[150px]">{lead.email}</span>
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className="font-medium"
-                      style={{ borderColor: stage?.color, color: stage?.color }}
-                    >
-                      {stage?.name}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      className={cn(
-                        lead.temperature === 'hot' && 'bg-destructive/10 text-destructive',
-                        lead.temperature === 'warm' && 'bg-warning/10 text-warning',
-                        lead.temperature === 'cold' && 'bg-primary/10 text-primary'
-                      )}
-                    >
-                      {lead.temperature === 'hot' ? '🔥 Quente' : lead.temperature === 'warm' ? '🌡️ Morno' : '❄️ Frio'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {lead.estimated_value ? (
-                      <span className="font-semibold text-success">
-                        R$ {lead.estimated_value.toLocaleString('pt-BR')}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-muted-foreground">{lead.source}</span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {format(new Date(lead.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="opacity-0 group-hover:opacity-100"
-                          aria-label="Mais opções"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem className="gap-2" onClick={() => handleViewLead(lead.id)}>
-                          <Eye className="w-4 h-4" />
-                          Ver detalhes
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2" onClick={() => handleOpenConversation(lead.id)}>
-                          <MessageSquare className="w-4 h-4" />
-                          Abrir conversa
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2" onClick={() => handleEditLead(lead.id)}>
-                          <Pencil className="w-4 h-4" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="gap-2 text-destructive" onClick={() => handleDeleteClick(lead.id)}>
-                          <Trash2 className="w-4 h-4" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </motion.tr>
+                  lead={lead as any}
+                  index={index}
+                  isSelected={selectedLeads.includes(lead.id)}
+                  stage={stage}
+                  labels={labels}
+                  onSelect={handleToggleSelect}
+                  onView={handleViewLead}
+                  onEdit={handleEditLead}
+                  onDelete={handleDeleteClick}
+                  onOpenConversation={handleOpenConversation}
+                />
               );
             })}
           </TableBody>

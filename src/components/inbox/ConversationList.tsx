@@ -145,17 +145,20 @@ export function ConversationList({
   // Fetch all WhatsApp configs (inboxes)
   const { data: whatsAppConfigs } = useWhatsAppConfigs();
 
-  // Build available inboxes from whatsapp_config table with conversation counts
-  const availableInboxes = useMemo(() => {
-    if (!whatsAppConfigs) return [];
-    
-    // Count conversations per inbox
+  // Extract only inbox IDs from conversations to avoid full array dependency
+  const inboxIdCounts = useMemo(() => {
     const countMap = new Map<string, number>();
     conversations?.forEach((conv) => {
       if (conv.whatsapp_config?.id) {
         countMap.set(conv.whatsapp_config.id, (countMap.get(conv.whatsapp_config.id) || 0) + 1);
       }
     });
+    return countMap;
+  }, [conversations]);
+
+  // Build available inboxes from whatsapp_config table with conversation counts
+  const availableInboxes = useMemo(() => {
+    if (!whatsAppConfigs) return [];
     
     // Return all active configs with their counts
     return whatsAppConfigs
@@ -164,10 +167,10 @@ export function ConversationList({
         id: config.id,
         name: config.name,
         phone_number: config.phone_number,
-        conversationCount: countMap.get(config.id) || 0,
+        conversationCount: inboxIdCounts.get(config.id) || 0,
       }))
       .sort((a, b) => (a.phone_number || a.name).localeCompare(b.phone_number || b.name));
-  }, [whatsAppConfigs, conversations]);
+  }, [whatsAppConfigs, inboxIdCounts]);
 
   // Filter conversations by inbox (WhatsApp number) first
   // Now using EXCLUSION logic: empty excludedInboxIds = show all

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useShallow } from 'zustand/react/shallow';
 
 interface ConversationFilters {
   // excludedInboxIds: inboxes the user explicitly EXCLUDED (deselected)
@@ -38,7 +39,8 @@ interface ConversationFiltersStore {
   getActiveFiltersCount: () => number;
 }
 
-export const useConversationFilters = create<ConversationFiltersStore>()(
+// Store base
+const useConversationFiltersStore = create<ConversationFiltersStore>()(
   persist(
     (set, get) => ({
       filters: {
@@ -157,3 +159,24 @@ export const useConversationFilters = create<ConversationFiltersStore>()(
     }
   )
 );
+
+// Hook otimizado que usa useShallow para evitar re-renders desnecessários
+export const useConversationFilters = () => {
+  return useConversationFiltersStore(
+    useShallow((state) => ({
+      filters: state.filters,
+      toggleInboxExclusion: state.toggleInboxExclusion,
+      excludeAllInboxes: state.excludeAllInboxes,
+      includeAllInboxes: state.includeAllInboxes,
+      isInboxIncluded: state.isInboxIncluded,
+      toggleLabel: state.toggleLabel,
+      clearLabels: state.clearLabels,
+      toggleUser: state.toggleUser,
+      clearUsers: state.clearUsers,
+      toggleTenant: state.toggleTenant,
+      clearTenants: state.clearTenants,
+      clearAllFilters: state.clearAllFilters,
+      getActiveFiltersCount: state.getActiveFiltersCount,
+    }))
+  );
+};
