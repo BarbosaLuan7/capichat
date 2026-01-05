@@ -33,6 +33,12 @@ function safeErrorResponse(internalError: unknown, publicMessage: string, status
   );
 }
 
+// Helper to prefix IDs
+function prefixId(id: string | null, prefix: string): string | null {
+  if (!id) return null;
+  return `${prefix}_${id.slice(0, 8)}`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -89,7 +95,7 @@ Deno.serve(async (req) => {
       }
 
       const transformed = (webhooks || []).map((w: any) => ({
-        id: w.id,
+        id: `wh_${w.id.slice(0, 8)}`,
         nome: w.name,
         url: w.url,
         eventos: w.events,
@@ -126,7 +132,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({
-          id: webhook.id,
+          id: `wh_${webhook.id.slice(0, 8)}`,
           nome: webhook.name,
           url: webhook.url,
           eventos: webhook.events,
@@ -190,7 +196,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({
-          id: newWebhook.id,
+          id: `wh_${newWebhook.id.slice(0, 8)}`,
           nome: newWebhook.name,
           url: newWebhook.url,
           eventos: newWebhook.events,
@@ -241,7 +247,7 @@ Deno.serve(async (req) => {
         JSON.stringify({
           sucesso: true,
           webhook: {
-            id: updatedWebhook.id,
+            id: `wh_${updatedWebhook.id.slice(0, 8)}`,
             nome: updatedWebhook.name,
             url: updatedWebhook.url,
             eventos: updatedWebhook.events,
