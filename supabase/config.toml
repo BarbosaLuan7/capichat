@@ -74,3 +74,18 @@ verify_jwt = false
 
 [functions.seed-teams-users]
 verify_jwt = true
+
+[functions.api-users]
+verify_jwt = false
+
+[functions.api-teams]
+verify_jwt = false
+
+[functions.api-webhooks]
+verify_jwt = false
+
+[functions.api-funnels]
+verify_jwt = false
+
+[functions.api-tasks]
+verify_jwt = false

@@ -153,6 +153,8 @@ Deno.serve(async (req) => {
 
     const url = new URL(req.url);
     const method = req.method;
+    const id = url.searchParams.get('id');
+    const action = url.searchParams.get('action');
 
     // GET /api-leads - List leads or get by phone
     if (method === 'GET') {
@@ -524,6 +526,136 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ success: true, message: 'Lead deleted' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // POST /api-leads?id=xxx&action=etiquetas - Update lead labels
+    if (method === 'POST' && id && url.searchParams.get('action') === 'etiquetas') {
+      const body = await req.json();
+      const adicionar = body.adicionar || body.add || [];
+      const remover = body.remover || body.remove || [];
+
+      // Add labels
+      if (adicionar.length > 0) {
+        const inserts = adicionar.map((labelId: string) => ({
+          lead_id: id,
+          label_id: labelId
+        }));
+        
+        await supabase
+          .from('lead_labels')
+          .upsert(inserts, { onConflict: 'lead_id,label_id' });
+      }
+
+      // Remove labels
+      if (remover.length > 0) {
+        await supabase
+          .from('lead_labels')
+          .delete()
+          .eq('lead_id', id)
+          .in('label_id', remover);
+      }
+
+      console.log('Lead labels updated:', id);
+
+      return new Response(
+        JSON.stringify({ success: true, message: 'Labels updated' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // POST /api-leads?action=lote - Batch create leads
+    if (method === 'POST' && url.searchParams.get('action') === 'lote') {
+      const body = await req.json();
+      const contatos = body.contatos || body.leads || [];
+
+      if (!Array.isArray(contatos) || contatos.length === 0) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'contatos array is required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Limit batch size
+      if (contatos.length > 100) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Maximum 100 leads per batch' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Get first funnel stage
+      const { data: firstStage } = await supabase
+        .from('funnel_stages')
+        .select('id')
+        .order('order', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      const results = {
+        criados: 0,
+        duplicados: 0,
+        erros: [] as { phone: string; error: string }[]
+      };
+
+      for (const contato of contatos) {
+        if (!contato.name || !contato.phone) {
+          results.erros.push({ phone: contato.phone || 'N/A', error: 'name and phone required' });
+          continue;
+        }
+
+        const phoneValidation = validatePhone(contato.phone);
+        if (!phoneValidation.valid) {
+          results.erros.push({ phone: contato.phone, error: phoneValidation.error || 'Invalid phone' });
+          continue;
+        }
+
+        const normalizedPhone = phoneValidation.normalized;
+        
+        // Check for duplicate
+        const { data: existing } = await supabase
+          .from('leads')
+          .select('id')
+          .or(`phone.ilike.%${normalizedPhone}%`)
+          .maybeSingle();
+
+        if (existing) {
+          results.duplicados++;
+          continue;
+        }
+
+        const phoneData = normalizePhoneNumber(contato.phone, contato.country_code);
+        
+        const { error: insertError } = await supabase
+          .from('leads')
+          .insert({
+            name: contato.name.trim(),
+            phone: phoneData.localNumber,
+            country_code: phoneData.countryCode,
+            email: contato.email,
+            source: contato.source || 'api_batch',
+            temperature: contato.temperature || 'cold',
+            stage_id: firstStage?.id,
+            status: 'active'
+          });
+
+        if (insertError) {
+          results.erros.push({ phone: contato.phone, error: 'Insert error' });
+        } else {
+          results.criados++;
+        }
+      }
+
+      console.log('Batch create completed:', results);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          criados: results.criados,
+          duplicados: results.duplicados,
+          erros: results.erros
+        }),
+        { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

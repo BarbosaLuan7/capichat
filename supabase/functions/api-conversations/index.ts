@@ -160,7 +160,119 @@ serve(async (req) => {
         );
       }
 
-      const body = await req.json();
+      const action = url.searchParams.get('action');
+      const body = await req.json().catch(() => ({}));
+
+      // PUT /api-conversations?id=xxx&action=transferir
+      if (action === 'transferir') {
+        const updateData: Record<string, unknown> = {};
+        
+        if (body.tipo === 'usuario' && body.usuario_id) {
+          updateData.assigned_to = body.usuario_id;
+        } else if (body.tipo === 'equipe' && body.equipe_id) {
+          // For team transfer, we can optionally assign to first available member
+          updateData.assigned_to = null; // Unassign for team distribution
+        }
+
+        const { data, error } = await supabase
+          .from('conversations')
+          .update(updateData)
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (error) {
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            sucesso: true,
+            conversa: { id: data.id, status: data.status },
+            transferido_para: body.tipo === 'usuario' 
+              ? { tipo: 'usuario', id: body.usuario_id }
+              : { tipo: 'equipe', id: body.equipe_id },
+            transferido_em: new Date().toISOString()
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // PUT /api-conversations?id=xxx&action=atribuir
+      if (action === 'atribuir') {
+        const { data, error } = await supabase
+          .from('conversations')
+          .update({ assigned_to: body.usuario_id })
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (error) {
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ sucesso: true, conversa: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // PUT /api-conversations?id=xxx&action=finalizar
+      if (action === 'finalizar') {
+        const { data, error } = await supabase
+          .from('conversations')
+          .update({ status: 'resolved' })
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (error) {
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ sucesso: true, conversa: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // PUT /api-conversations?id=xxx&action=reabrir
+      if (action === 'reabrir') {
+        const updateData: Record<string, unknown> = { status: 'open' };
+        if (body.responsavel_id) {
+          updateData.assigned_to = body.responsavel_id;
+        }
+
+        const { data, error } = await supabase
+          .from('conversations')
+          .update(updateData)
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (error) {
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ sucesso: true, conversa: data }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Default PUT - update conversation fields
       const updateData: Record<string, unknown> = {};
 
       if (body.status !== undefined) updateData.status = body.status;
@@ -185,6 +297,81 @@ serve(async (req) => {
         JSON.stringify(data),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // GET/POST for notes: /api-conversations?id=xxx&action=notas
+    if (id && url.searchParams.get('action') === 'notas') {
+      if (req.method === 'GET') {
+        const { data, error } = await supabase
+          .from('internal_notes')
+          .select(`
+            *,
+            author:profiles!internal_notes_author_id_fkey(id, name)
+          `)
+          .eq('conversation_id', id)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const notes = (data || []).map((n: any) => ({
+          id: n.id,
+          conteudo: n.content,
+          autor: n.author ? { id: n.author.id, nome: n.author.name } : null,
+          criada_em: n.created_at
+        }));
+
+        return new Response(
+          JSON.stringify(notes),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (req.method === 'POST') {
+        const body = await req.json();
+        
+        if (!body.conteudo) {
+          return new Response(
+            JSON.stringify({ error: 'conteudo is required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Note: author_id would need to be resolved from the API key owner
+        // For now, we require it in the body or skip it
+        const { data, error } = await supabase
+          .from('internal_notes')
+          .insert({
+            conversation_id: id,
+            content: body.conteudo,
+            author_id: body.author_id || null
+          })
+          .select()
+          .single();
+
+        if (error) {
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            sucesso: true,
+            nota: {
+              id: data.id,
+              conteudo: data.content,
+              criada_em: data.created_at
+            }
+          }),
+          { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // DELETE - Delete conversation
