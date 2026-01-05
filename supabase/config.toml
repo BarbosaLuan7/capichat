@@ -92,3 +92,27 @@ verify_jwt = false
 
 [functions.chat-v2-mensagem]
 verify_jwt = false
+
+[functions.api-contatos-lote]
+verify_jwt = false
+
+[functions.api-campos-personalizados]
+verify_jwt = false
+
+[functions.api-carteiras]
+verify_jwt = false
+
+[functions.api-arquivos]
+verify_jwt = false
+
+[functions.api-mensagens-agendadas]
+verify_jwt = false
+
+[functions.api-chatbots]
+verify_jwt = false
+
+[functions.api-oportunidades]
+verify_jwt = false
+
+[functions.api-mensagens]
+verify_jwt = false
