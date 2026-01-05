@@ -89,3 +89,6 @@ verify_jwt = false
 
 [functions.api-tasks]
 verify_jwt = false
+
+[functions.chat-v2-mensagem]
+verify_jwt = false

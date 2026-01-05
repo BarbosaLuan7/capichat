@@ -161,12 +161,27 @@ export default function ApiDocs() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Endpoints Disponíveis</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-wrap gap-1">
-            <Badge variant="secondary">Leads</Badge>
-            <Badge variant="secondary">Mensagens</Badge>
-            <Badge variant="secondary">Conversas</Badge>
-            <Badge variant="secondary">Tags</Badge>
-            <Badge variant="secondary">Templates</Badge>
+          <CardContent className="space-y-2">
+            <div className="flex flex-wrap gap-1">
+              <Badge variant="outline" className="text-xs">CORE</Badge>
+              <Badge variant="secondary">Usuários</Badge>
+              <Badge variant="secondary">Equipes</Badge>
+              <Badge variant="secondary">Contatos</Badge>
+              <Badge variant="secondary">Etiquetas</Badge>
+              <Badge variant="secondary">Webhooks</Badge>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              <Badge variant="outline" className="text-xs">CHAT</Badge>
+              <Badge variant="secondary">Conversas</Badge>
+              <Badge variant="secondary">Mensagens</Badge>
+              <Badge variant="secondary">Templates</Badge>
+              <Badge variant="secondary">Canais</Badge>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              <Badge variant="outline" className="text-xs">CRM</Badge>
+              <Badge variant="secondary">Funis</Badge>
+              <Badge variant="secondary">Tarefas</Badge>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -179,29 +194,32 @@ export default function ApiDocs() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <p className="text-sm font-medium mb-2">Enviar mensagem (cURL)</p>
+            <p className="text-sm font-medium mb-2">Enviar mensagem avulsa (cURL)</p>
             <pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">
-{`curl -X POST "${baseUrl}/api-messages-send" \\
+{`curl -X POST "${baseUrl}/chat-v2-mensagem" \\
   -H "Authorization: Bearer SUA_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"phone": "5545999957851", "message": "Olá!"}'`}
+  -d '{
+    "telefone": "5521967200464",
+    "tipo": "texto",
+    "conteudo": "Olá! Como posso ajudar?"
+  }'`}
             </pre>
           </div>
 
           <div>
-            <p className="text-sm font-medium mb-2">Listar leads (JavaScript)</p>
+            <p className="text-sm font-medium mb-2">Listar usuários (JavaScript)</p>
             <pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">
-{`const response = await fetch("${baseUrl}/api-leads?page=1&page_size=50", {
-  headers: {
-    "Authorization": "Bearer SUA_API_KEY"
-  }
+{`const response = await fetch("${baseUrl}/api-users?page=1&page_size=50", {
+  headers: { "Authorization": "Bearer SUA_API_KEY" }
 });
-const { data, pagination } = await response.json();`}
+const { data, total } = await response.json();
+// Retorna: { data: [{ id, name, email, role, is_active, ... }], total: 15 }`}
             </pre>
           </div>
 
           <div>
-            <p className="text-sm font-medium mb-2">Criar lead (Python)</p>
+            <p className="text-sm font-medium mb-2">Criar contato com etiquetas (Python)</p>
             <pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">
 {`import requests
 
@@ -212,10 +230,40 @@ response = requests.post(
         "name": "Maria Silva",
         "phone": "5545999957851",
         "source": "api",
-        "temperature": "warm"
+        "temperature": "warm",
+        "benefit_type": "BPC/LOAS"
     }
 )
-lead = response.json()`}
+lead = response.json()
+# Retorna: { success: true, lead: { id, name, phone, ... } }`}
+            </pre>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium mb-2">Listar conversas abertas (cURL)</p>
+            <pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">
+{`curl -X GET "${baseUrl}/api-conversations?status=open&page=1" \\
+  -H "Authorization: Bearer SUA_API_KEY"`}
+            </pre>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium mb-2">Criar tarefa (JavaScript)</p>
+            <pre className="bg-muted p-3 rounded-lg text-xs overflow-x-auto">
+{`const response = await fetch("${baseUrl}/api-tasks", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer SUA_API_KEY",
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    title: "Ligar para cliente",
+    assigned_to: "usr_abc123",
+    lead_id: "lead_xyz789",
+    priority: "high",
+    due_date: "2026-01-10"
+  })
+});`}
             </pre>
           </div>
         </CardContent>
