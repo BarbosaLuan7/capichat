@@ -105,14 +105,45 @@ serve(async (req) => {
       );
     }
 
-    // Buscar configuração WAHA ativa (preferencialmente do mesmo tenant)
-    const { data: wahaConfig, error: configError } = await supabase
-      .from('whatsapp_config')
-      .select('id, base_url, api_key, instance_name')
-      .eq('is_active', true)
-      .eq('provider', 'waha')
-      .limit(1)
-      .maybeSingle();
+    // Buscar configuração WAHA ativa, preferencialmente do tenant do lead
+    let wahaConfig = null;
+    let configError = null;
+
+    // Se lead tem tenant, buscar config desse tenant primeiro
+    if (leadData.tenant_id) {
+      const { data: tenantConfig, error: tenantErr } = await supabase
+        .from('whatsapp_config')
+        .select('id, base_url, api_key, instance_name')
+        .eq('is_active', true)
+        .eq('provider', 'waha')
+        .eq('tenant_id', leadData.tenant_id)
+        .limit(1)
+        .maybeSingle();
+      
+      if (!tenantErr && tenantConfig) {
+        wahaConfig = tenantConfig;
+        console.log(`[get-whatsapp-avatar] Usando config do tenant ${leadData.tenant_id}`);
+      }
+      configError = tenantErr;
+    }
+
+    // Fallback: pegar qualquer config ativa (mais recente)
+    if (!wahaConfig) {
+      const { data: anyConfig, error: anyErr } = await supabase
+        .from('whatsapp_config')
+        .select('id, base_url, api_key, instance_name')
+        .eq('is_active', true)
+        .eq('provider', 'waha')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      wahaConfig = anyConfig;
+      configError = anyErr;
+      if (wahaConfig) {
+        console.log(`[get-whatsapp-avatar] Usando config fallback: ${wahaConfig.instance_name}`);
+      }
+    }
 
     if (configError || !wahaConfig) {
       console.log('[get-whatsapp-avatar] Nenhuma config WAHA ativa');
