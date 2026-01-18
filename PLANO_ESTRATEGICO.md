@@ -220,12 +220,78 @@ supabase/functions/process-automations/index.ts   # Processador
 
 ---
 
+## 🔍 ANÁLISE TÉCNICA DA INTEGRAÇÃO WAHA
+
+> Análise realizada em Janeiro 2026
+
+### Estado do Código
+
+O código da integração WhatsApp é **bem estruturado e completo** (2300+ linhas), mas a complexidade pode causar problemas.
+
+### Pontos Positivos ✅
+1. **Deduplicação implementada** - Usa `waha_message_id` como chave única
+2. **Multi-provedor** - Suporta WAHA, Evolution, Z-API
+3. **Tratamento de LID** - Resolve números do Facebook Ads
+4. **Upload de mídia** - Baixa e salva no Storage
+5. **Status de mensagens** - Tracked (sent → delivered → read)
+
+### Possíveis Causas dos Problemas ⚠️
+
+#### 1. Mensagens Não Chegam
+| Causa Provável | Verificação |
+|----------------|-------------|
+| Webhook URL incorreta | Conferir URL no painel do WAHA |
+| Session/Instance name errado | `instance_name` no banco ≠ session no WAHA |
+| Webhook não configurado no WAHA | Verificar se events estão habilitados |
+| Firewall/CORS bloqueando | Verificar logs do Supabase |
+
+#### 2. Mensagens Não Enviam
+| Causa Provável | Verificação |
+|----------------|-------------|
+| API Key incorreta | Testar conexão nas configurações |
+| Formato de telefone | Código 55 + DDD + número |
+| Sessão desconectada | QR Code precisa ser re-escaneado |
+| Erro silencioso no código | Verificar logs da Edge Function |
+
+#### 3. Duplicação de Mensagens
+| Causa Provável | Verificação |
+|----------------|-------------|
+| WAHA envia `message` e `message.any` | Configurar apenas UM evento |
+| `message.ack` cria mensagem se não existe | Pode criar duplicata |
+| Race condition | Webhook chamado 2x rápido |
+| `waha_message_id` não sendo extraído | Log mostra ID null |
+
+#### 4. Atraso/Demora
+| Causa Provável | Verificação |
+|----------------|-------------|
+| Cold start do Supabase | Primeira requisição demora |
+| Download de mídia lento | URL do WAHA pode estar lenta |
+| Muitos fallbacks no código | Várias tentativas de busca de lead |
+
+### Configuração Crítica do WAHA
+
+No painel do WAHA, configurar webhook assim:
+```
+URL: https://[projeto].supabase.co/functions/v1/whatsapp-webhook
+Events: message, message.ack (NÃO usar message.any junto com message)
+```
+
+### Logs para Verificar
+
+No Supabase Dashboard > Edge Functions > Logs:
+- `[whatsapp-webhook] Recebido:` - Confirma que chegou
+- `[whatsapp-webhook] ⏭️ Mensagem já processada` - Duplicata detectada
+- `[whatsapp-webhook] Lead encontrado:` - Lead vinculado
+- `[send-whatsapp-message] Enviando mensagem:` - Enviando
+
+---
+
 ## Anotações e Bugs Encontrados
 
 ### Fase 1 - WhatsApp
 | Data | Problema | Status | Solução |
 |------|----------|--------|---------|
-| | | | |
+| 18/01 | Sincronia geral | Investigando | Ver análise acima |
 
 ### Fase 2 - Atendimento
 | Data | Problema | Status | Solução |
