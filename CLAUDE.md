@@ -17,9 +17,31 @@ npm run build
 # Lint
 npm run lint
 
+# Lint com correção automática
+npm run lint:fix
+
+# Formatar código com Prettier
+npm run format
+
+# Verificar formatação
+npm run format:check
+
 # Preview do build
 npm run preview
 ```
+
+## Tooling & CI/CD
+
+### Code Quality
+- **ESLint**: Linting com regras para React e TypeScript
+- **Prettier**: Formatação automática com plugin Tailwind CSS (ordena classes)
+- **Husky**: Pre-commit hooks para lint-staged
+- **lint-staged**: Roda ESLint e Prettier em arquivos staged
+
+### GitHub Actions
+- CI workflow em `.github/workflows/ci.yml`
+- Roda em push/PR para main, master, develop
+- Jobs: lint, format check, type check, build
 
 ## Arquitetura
 
@@ -34,7 +56,7 @@ npm run preview
 
 ```
 /components
-  /ui          → Primitivos shadcn-ui
+  /ui          → Primitivos shadcn-ui (49 componentes)
   /inbox       → Tela principal de conversas
   /leads       → Componentes de leads
   /dashboard   → Métricas e charts
@@ -42,9 +64,20 @@ npm run preview
 /contexts      → AuthContext, TenantContext
 /hooks         → 46+ custom hooks (useAuth, useConversations, useLeads, etc.)
 /pages         → Páginas lazy-loaded
+/tokens        → Design tokens em formato W3C DTCG
 /integrations/supabase → Cliente e tipos gerados
 /lib           → Utilities (logger, permissions, aiCache)
 ```
+
+### Design Tokens
+
+Tokens em `/src/tokens/` seguem o formato W3C Design Token Community Group:
+- `colors.json` - Cores primitivas, semânticas e de domínio
+- `spacing.json` - Escala de espaçamento e border radius
+- `typography.json` - Tipografia (fontes, tamanhos, pesos)
+- `effects.json` - Sombras, gradientes e animações
+
+CSS custom properties em `index.css` são derivados destes tokens.
 
 ### Padrões Importantes
 

@@ -9,17 +9,37 @@
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Linting */
+    /* Strict Type-Checking - Incremental Migration
+     * Phase 1 (current): Enable safer checks
+     * Phase 2: Enable noImplicitAny
+     * Phase 3: Enable strictNullChecks
+     * Phase 4: Enable full strict mode
+     */
     "strict": false,
-    "noUnusedLocals": false,
+    "noUnusedLocals": true,
     "noUnusedParameters": false,
     "noImplicitAny": false,
-    "noFallthroughCasesInSwitch": false,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "exactOptionalPropertyTypes": false,
+
+    /* Future strict flags to enable:
+     * "strict": true,
+     * "strictNullChecks": true,
+     * "noImplicitAny": true,
+     * "strictFunctionTypes": true,
+     * "strictBindCallApply": true,
+     * "strictPropertyInitialization": true,
+     * "noImplicitThis": true,
+     * "useUnknownInCatchVariables": true,
+     * "alwaysStrict": true
+     */
 
     "baseUrl": ".",
     "paths": {

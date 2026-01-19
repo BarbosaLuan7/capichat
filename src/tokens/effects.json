@@ -1,0 +1,84 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "shadow": {
+    "$description": "Box shadow tokens",
+    "sm": {
+      "light": {
+        "$value": "0 1px 2px 0 hsl(220 13% 91% / 0.5)",
+        "$type": "shadow"
+      },
+      "dark": {
+        "$value": "0 1px 2px 0 hsl(0 0% 0% / 0.3)",
+        "$type": "shadow"
+      }
+    },
+    "md": {
+      "light": {
+        "$value": "0 4px 6px -1px hsl(220 13% 91% / 0.5), 0 2px 4px -2px hsl(220 13% 91% / 0.5)",
+        "$type": "shadow"
+      },
+      "dark": {
+        "$value": "0 4px 6px -1px hsl(0 0% 0% / 0.3), 0 2px 4px -2px hsl(0 0% 0% / 0.3)",
+        "$type": "shadow"
+      }
+    },
+    "lg": {
+      "light": {
+        "$value": "0 10px 15px -3px hsl(220 13% 91% / 0.5), 0 4px 6px -4px hsl(220 13% 91% / 0.5)",
+        "$type": "shadow"
+      },
+      "dark": {
+        "$value": "0 10px 15px -3px hsl(0 0% 0% / 0.3), 0 4px 6px -4px hsl(0 0% 0% / 0.3)",
+        "$type": "shadow"
+      }
+    },
+    "glow": {
+      "$value": "0 0 20px hsl(212 84% 20% / 0.3)",
+      "$type": "shadow"
+    },
+    "card": {
+      "$value": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+      "$type": "shadow"
+    },
+    "cardHover": {
+      "$value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+      "$type": "shadow"
+    }
+  },
+  "gradient": {
+    "$description": "Gradient tokens",
+    "primary": {
+      "$value": "linear-gradient(135deg, hsl(212 84% 20%) 0%, hsl(212 75% 28%) 100%)",
+      "$type": "gradient"
+    },
+    "accent": {
+      "$value": "linear-gradient(135deg, hsl(205 68% 51%) 0%, hsl(200 74% 55%) 100%)",
+      "$type": "gradient"
+    },
+    "hero": {
+      "$value": "linear-gradient(135deg, hsl(212 84% 20%) 0%, hsl(212 70% 28%) 50%, hsl(205 68% 51%) 100%)",
+      "$type": "gradient"
+    },
+    "sidebar": {
+      "$value": "linear-gradient(180deg, hsl(212 70% 12%) 0%, hsl(212 84% 10%) 100%)",
+      "$type": "gradient"
+    }
+  },
+  "animation": {
+    "$description": "Animation timing tokens",
+    "duration": {
+      "fast": { "$value": "100ms", "$type": "duration" },
+      "normal": { "$value": "150ms", "$type": "duration" },
+      "slow": { "$value": "200ms", "$type": "duration" },
+      "slower": { "$value": "300ms", "$type": "duration" },
+      "slowest": { "$value": "500ms", "$type": "duration" }
+    },
+    "easing": {
+      "default": { "$value": "cubic-bezier(0.4, 0, 0.2, 1)", "$type": "cubicBezier" },
+      "linear": { "$value": "linear", "$type": "cubicBezier" },
+      "in": { "$value": "cubic-bezier(0.4, 0, 1, 1)", "$type": "cubicBezier" },
+      "out": { "$value": "cubic-bezier(0, 0, 0.2, 1)", "$type": "cubicBezier" },
+      "inOut": { "$value": "cubic-bezier(0.4, 0, 0.2, 1)", "$type": "cubicBezier" }
+    }
+  }
+}

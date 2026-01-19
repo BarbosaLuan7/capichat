@@ -6,11 +6,14 @@
     "paths": {
       "@/*": ["./src/*"]
     },
+    /* Strict mode migration in progress - see tsconfig.app.json for details */
     "noImplicitAny": false,
     "noUnusedParameters": false,
     "skipLibCheck": true,
     "allowJs": true,
-    "noUnusedLocals": false,
-    "strictNullChecks": false
+    "noUnusedLocals": true,
+    "strictNullChecks": false,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
   }
 }

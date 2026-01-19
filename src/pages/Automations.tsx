@@ -51,7 +51,7 @@ import { ptBR } from 'date-fns/locale';
 // Lazy load heavy modal
 const AutomationModal = lazy(() => import('@/components/automations/AutomationModal').then(m => ({ default: m.AutomationModal })));
 import { AutomationExecutionLogs } from '@/components/automations/AutomationExecutionLogs';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
 type AutomationTrigger = Database['public']['Enums']['automation_trigger'];
@@ -189,15 +189,12 @@ const Automations = () => {
     if (automationToDelete) {
       try {
         await deleteAutomation.mutateAsync(automationToDelete.id);
-        toast({
-          title: 'Automação excluída',
+        toast.success('Automação excluída', {
           description: 'A automação foi removida com sucesso.',
         });
       } catch {
-        toast({
-          title: 'Erro ao excluir',
+        toast.error('Erro ao excluir', {
           description: 'Não foi possível excluir a automação.',
-          variant: 'destructive',
         });
       }
     }
@@ -225,8 +222,7 @@ const Automations = () => {
           actions: automationData.actions as unknown as Database['public']['Tables']['automations']['Update']['actions'],
           is_active: automationData.is_active,
         });
-        toast({
-          title: 'Automação atualizada',
+        toast.success('Automação atualizada', {
           description: 'As alterações foram salvas.',
         });
       } else {
@@ -238,17 +234,14 @@ const Automations = () => {
           actions: automationData.actions as unknown as Database['public']['Tables']['automations']['Insert']['actions'],
           is_active: automationData.is_active,
         });
-        toast({
-          title: 'Automação criada',
+        toast.success('Automação criada', {
           description: 'Nova automação adicionada com sucesso.',
         });
       }
       setModalOpen(false);
     } catch {
-      toast({
-        title: 'Erro ao salvar',
+      toast.error('Erro ao salvar', {
         description: 'Não foi possível salvar a automação.',
-        variant: 'destructive',
       });
     }
   };
@@ -256,17 +249,14 @@ const Automations = () => {
   const handleToggleStatus = async (automation: AutomationRow) => {
     try {
       await toggleAutomation.mutateAsync({ id: automation.id, isActive: !automation.is_active });
-      toast({
-        title: automation.is_active ? 'Automação desativada' : 'Automação ativada',
+      toast.success(automation.is_active ? 'Automação desativada' : 'Automação ativada', {
         description: automation.is_active
           ? 'A automação foi pausada.'
           : 'A automação está ativa agora.',
       });
     } catch {
-      toast({
-        title: 'Erro ao alterar status',
+      toast.error('Erro ao alterar status', {
         description: 'Não foi possível alterar o status da automação.',
-        variant: 'destructive',
       });
     }
   };
@@ -542,16 +532,13 @@ const Automations = () => {
             onDelete={async (id) => {
               try {
                 await deleteAutomation.mutateAsync(id);
-                toast({
-                  title: 'Automação excluída',
+                toast.success('Automação excluída', {
                   description: 'A automação foi removida com sucesso.',
                 });
                 setModalOpen(false);
               } catch {
-                toast({
-                  title: 'Erro ao excluir',
+                toast.error('Erro ao excluir', {
                   description: 'Não foi possível excluir a automação.',
-                  variant: 'destructive',
                 });
               }
             }}

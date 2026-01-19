@@ -50,7 +50,7 @@ import {
 } from '@/components/ui/accordion';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { 
   useWhatsAppConfigs, 
   useCreateWhatsAppConfig, 
@@ -90,7 +90,6 @@ const PROVIDERS = [
 ] as const;
 
 const WhatsAppSettings = () => {
-  const { toast } = useToast();
   const { data: configs, isLoading } = useWhatsAppConfigs();
   const createMutation = useCreateWhatsAppConfig();
   const updateMutation = useUpdateWhatsAppConfig();
@@ -152,7 +151,7 @@ const WhatsAppSettings = () => {
     // For new configs, api_key is required. For edits, it's optional (only update if provided)
     const isNewConfig = !editingConfig;
     if (!formData.name || !formData.base_url || (isNewConfig && !formData.api_key)) {
-      toast({ title: 'Preencha todos os campos obrigatórios', variant: 'destructive' });
+      toast.error('Preencha todos os campos obrigatórios');
       return;
     }
 
@@ -189,7 +188,7 @@ const WhatsAppSettings = () => {
 
   const submitTestMessage = () => {
     if (!testPhone.trim()) {
-      toast({ title: 'Digite um número de telefone', variant: 'destructive' });
+      toast.error('Digite um número de telefone');
       return;
     }
     testMessageMutation.mutate({
@@ -205,7 +204,7 @@ const WhatsAppSettings = () => {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: 'Copiado para área de transferência' });
+    toast.success('Copiado para área de transferência');
   };
 
   const providerInfo = PROVIDERS.find(p => p.value === formData.provider);

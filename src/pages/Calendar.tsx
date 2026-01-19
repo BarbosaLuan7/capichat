@@ -32,7 +32,7 @@ import type { Database } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
 import { TaskModal } from '@/components/tasks/TaskModal';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 type DbTask = Database['public']['Tables']['tasks']['Row'];
 type TaskPriority = Database['public']['Enums']['task_priority'];
@@ -129,8 +129,7 @@ const Calendar = () => {
           status: taskData.status,
           subtasks: taskData.subtasks || [],
         });
-        toast({
-          title: 'Tarefa atualizada',
+        toast.success('Tarefa atualizada', {
           description: 'As alterações foram salvas.',
         });
       } else {
@@ -144,17 +143,14 @@ const Calendar = () => {
           status: taskData.status,
           subtasks: taskData.subtasks || [],
         });
-        toast({
-          title: 'Tarefa criada',
+        toast.success('Tarefa criada', {
           description: 'Nova tarefa adicionada com sucesso.',
         });
       }
       setModalOpen(false);
     } catch (error) {
-      toast({
-        title: 'Erro',
+      toast.error('Erro', {
         description: 'Não foi possível salvar a tarefa.',
-        variant: 'destructive',
       });
     }
   };
@@ -162,16 +158,13 @@ const Calendar = () => {
   const handleDeleteTask = async (taskId: string) => {
     try {
       await deleteTask.mutateAsync(taskId);
-      toast({
-        title: 'Tarefa excluída',
+      toast.success('Tarefa excluída', {
         description: 'A tarefa foi removida com sucesso.',
       });
       setModalOpen(false);
     } catch (error) {
-      toast({
-        title: 'Erro',
+      toast.error('Erro', {
         description: 'Não foi possível excluir a tarefa.',
-        variant: 'destructive',
       });
     }
   };

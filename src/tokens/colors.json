@@ -1,0 +1,231 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "color": {
+    "$description": "Color tokens for Capichat design system",
+    "primitive": {
+      "$description": "Base color palette - HSL values",
+      "blue": {
+        "100": { "$value": "hsl(212 84% 95%)", "$type": "color" },
+        "200": { "$value": "hsl(212 84% 85%)", "$type": "color" },
+        "300": { "$value": "hsl(212 84% 70%)", "$type": "color" },
+        "400": { "$value": "hsl(212 84% 55%)", "$type": "color" },
+        "500": { "$value": "hsl(212 84% 35%)", "$type": "color" },
+        "600": { "$value": "hsl(212 84% 20%)", "$type": "color" },
+        "700": { "$value": "hsl(212 70% 12%)", "$type": "color" },
+        "800": { "$value": "hsl(212 45% 8%)", "$type": "color" },
+        "900": { "$value": "hsl(212 45% 6%)", "$type": "color" }
+      },
+      "cyan": {
+        "100": { "$value": "hsl(205 68% 95%)", "$type": "color" },
+        "200": { "$value": "hsl(205 68% 80%)", "$type": "color" },
+        "300": { "$value": "hsl(205 68% 65%)", "$type": "color" },
+        "400": { "$value": "hsl(205 68% 55%)", "$type": "color" },
+        "500": { "$value": "hsl(205 68% 51%)", "$type": "color" }
+      },
+      "green": {
+        "100": { "$value": "hsl(142 71% 95%)", "$type": "color" },
+        "200": { "$value": "hsl(142 71% 80%)", "$type": "color" },
+        "300": { "$value": "hsl(142 71% 65%)", "$type": "color" },
+        "400": { "$value": "hsl(142 71% 55%)", "$type": "color" },
+        "500": { "$value": "hsl(142 71% 45%)", "$type": "color" }
+      },
+      "yellow": {
+        "100": { "$value": "hsl(38 92% 95%)", "$type": "color" },
+        "200": { "$value": "hsl(38 92% 80%)", "$type": "color" },
+        "300": { "$value": "hsl(38 92% 65%)", "$type": "color" },
+        "400": { "$value": "hsl(38 92% 60%)", "$type": "color" },
+        "500": { "$value": "hsl(38 92% 50%)", "$type": "color" }
+      },
+      "red": {
+        "100": { "$value": "hsl(0 84% 95%)", "$type": "color" },
+        "200": { "$value": "hsl(0 84% 80%)", "$type": "color" },
+        "300": { "$value": "hsl(0 84% 70%)", "$type": "color" },
+        "400": { "$value": "hsl(0 84% 65%)", "$type": "color" },
+        "500": { "$value": "hsl(0 84% 60%)", "$type": "color" }
+      },
+      "purple": {
+        "100": { "$value": "hsl(280 84% 95%)", "$type": "color" },
+        "200": { "$value": "hsl(280 84% 80%)", "$type": "color" },
+        "300": { "$value": "hsl(280 84% 70%)", "$type": "color" },
+        "400": { "$value": "hsl(280 84% 60%)", "$type": "color" }
+      },
+      "pink": {
+        "100": { "$value": "hsl(330 81% 95%)", "$type": "color" },
+        "200": { "$value": "hsl(330 81% 80%)", "$type": "color" },
+        "300": { "$value": "hsl(330 81% 70%)", "$type": "color" },
+        "400": { "$value": "hsl(330 81% 60%)", "$type": "color" }
+      },
+      "neutral": {
+        "0": { "$value": "hsl(0 0% 100%)", "$type": "color" },
+        "50": { "$value": "hsl(220 20% 97%)", "$type": "color" },
+        "100": { "$value": "hsl(220 14% 96%)", "$type": "color" },
+        "200": { "$value": "hsl(220 13% 91%)", "$type": "color" },
+        "300": { "$value": "hsl(220 9% 60%)", "$type": "color" },
+        "400": { "$value": "hsl(220 9% 46%)", "$type": "color" },
+        "500": { "$value": "hsl(222 47% 30%)", "$type": "color" },
+        "600": { "$value": "hsl(222 47% 20%)", "$type": "color" },
+        "700": { "$value": "hsl(222 47% 11%)", "$type": "color" }
+      }
+    },
+    "semantic": {
+      "$description": "Semantic color tokens - reference primitives",
+      "light": {
+        "background": { "$value": "{color.primitive.neutral.50}", "$type": "color" },
+        "foreground": { "$value": "{color.primitive.neutral.700}", "$type": "color" },
+        "card": { "$value": "{color.primitive.neutral.0}", "$type": "color" },
+        "cardForeground": { "$value": "{color.primitive.neutral.700}", "$type": "color" },
+        "popover": { "$value": "{color.primitive.neutral.0}", "$type": "color" },
+        "popoverForeground": { "$value": "{color.primitive.neutral.700}", "$type": "color" },
+        "primary": { "$value": "{color.primitive.blue.600}", "$type": "color" },
+        "primaryForeground": { "$value": "{color.primitive.neutral.0}", "$type": "color" },
+        "secondary": { "$value": "{color.primitive.neutral.100}", "$type": "color" },
+        "secondaryForeground": { "$value": "{color.primitive.neutral.700}", "$type": "color" },
+        "muted": { "$value": "{color.primitive.neutral.100}", "$type": "color" },
+        "mutedForeground": { "$value": "{color.primitive.neutral.400}", "$type": "color" },
+        "accent": { "$value": "{color.primitive.cyan.500}", "$type": "color" },
+        "accentForeground": { "$value": "{color.primitive.neutral.0}", "$type": "color" },
+        "success": { "$value": "{color.primitive.green.500}", "$type": "color" },
+        "successForeground": { "$value": "{color.primitive.neutral.0}", "$type": "color" },
+        "warning": { "$value": "{color.primitive.yellow.500}", "$type": "color" },
+        "warningForeground": { "$value": "{color.primitive.neutral.0}", "$type": "color" },
+        "info": { "$value": "hsl(199 89% 48%)", "$type": "color" },
+        "infoForeground": { "$value": "{color.primitive.neutral.0}", "$type": "color" },
+        "destructive": { "$value": "{color.primitive.red.500}", "$type": "color" },
+        "destructiveForeground": { "$value": "{color.primitive.neutral.0}", "$type": "color" },
+        "border": { "$value": "{color.primitive.neutral.200}", "$type": "color" },
+        "input": { "$value": "{color.primitive.neutral.200}", "$type": "color" },
+        "ring": { "$value": "{color.primitive.blue.600}", "$type": "color" }
+      },
+      "dark": {
+        "background": { "$value": "{color.primitive.blue.800}", "$type": "color" },
+        "foreground": { "$value": "{color.primitive.neutral.100}", "$type": "color" },
+        "card": { "$value": "hsl(212 40% 12%)", "$type": "color" },
+        "cardForeground": { "$value": "{color.primitive.neutral.100}", "$type": "color" },
+        "popover": { "$value": "hsl(212 40% 12%)", "$type": "color" },
+        "popoverForeground": { "$value": "{color.primitive.neutral.100}", "$type": "color" },
+        "primary": { "$value": "{color.primitive.blue.500}", "$type": "color" },
+        "primaryForeground": { "$value": "{color.primitive.neutral.0}", "$type": "color" },
+        "secondary": { "$value": "hsl(212 30% 18%)", "$type": "color" },
+        "secondaryForeground": { "$value": "{color.primitive.neutral.100}", "$type": "color" },
+        "muted": { "$value": "hsl(212 30% 18%)", "$type": "color" },
+        "mutedForeground": { "$value": "{color.primitive.neutral.300}", "$type": "color" },
+        "accent": { "$value": "{color.primitive.cyan.400}", "$type": "color" },
+        "accentForeground": { "$value": "{color.primitive.neutral.0}", "$type": "color" },
+        "success": { "$value": "{color.primitive.green.400}", "$type": "color" },
+        "successForeground": { "$value": "{color.primitive.neutral.0}", "$type": "color" },
+        "warning": { "$value": "{color.primitive.yellow.400}", "$type": "color" },
+        "warningForeground": { "$value": "{color.primitive.neutral.0}", "$type": "color" },
+        "info": { "$value": "hsl(199 89% 60%)", "$type": "color" },
+        "infoForeground": { "$value": "{color.primitive.neutral.0}", "$type": "color" },
+        "destructive": { "$value": "{color.primitive.red.400}", "$type": "color" },
+        "destructiveForeground": { "$value": "{color.primitive.neutral.0}", "$type": "color" },
+        "border": { "$value": "hsl(212 30% 22%)", "$type": "color" },
+        "input": { "$value": "hsl(212 30% 22%)", "$type": "color" },
+        "ring": { "$value": "{color.primitive.blue.500}", "$type": "color" }
+      }
+    },
+    "domain": {
+      "$description": "Domain-specific color tokens for CRM features",
+      "temperature": {
+        "$description": "Lead temperature indicators",
+        "cold": {
+          "light": { "$value": "hsl(199 89% 48%)", "$type": "color" },
+          "dark": { "$value": "hsl(199 89% 55%)", "$type": "color" }
+        },
+        "warm": {
+          "light": { "$value": "{color.primitive.yellow.500}", "$type": "color" },
+          "dark": { "$value": "{color.primitive.yellow.400}", "$type": "color" }
+        },
+        "hot": {
+          "light": { "$value": "{color.primitive.red.500}", "$type": "color" },
+          "dark": { "$value": "{color.primitive.red.300}", "$type": "color" }
+        }
+      },
+      "funnel": {
+        "$description": "Sales funnel stage colors",
+        "new": {
+          "light": { "$value": "{color.primitive.blue.600}", "$type": "color" },
+          "dark": { "$value": "hsl(212 84% 40%)", "$type": "color" }
+        },
+        "contact": {
+          "light": { "$value": "hsl(212 70% 35%)", "$type": "color" },
+          "dark": { "$value": "hsl(212 70% 50%)", "$type": "color" }
+        },
+        "qualify": {
+          "light": { "$value": "{color.primitive.cyan.500}", "$type": "color" },
+          "dark": { "$value": "{color.primitive.cyan.400}", "$type": "color" }
+        },
+        "proposal": {
+          "light": { "$value": "{color.primitive.yellow.500}", "$type": "color" },
+          "dark": { "$value": "{color.primitive.yellow.400}", "$type": "color" }
+        },
+        "negotiation": {
+          "light": { "$value": "{color.primitive.purple.400}", "$type": "color" },
+          "dark": { "$value": "{color.primitive.purple.300}", "$type": "color" }
+        },
+        "won": {
+          "light": { "$value": "{color.primitive.green.500}", "$type": "color" },
+          "dark": { "$value": "{color.primitive.green.400}", "$type": "color" }
+        },
+        "lost": {
+          "light": { "$value": "{color.primitive.red.500}", "$type": "color" },
+          "dark": { "$value": "{color.primitive.red.300}", "$type": "color" }
+        }
+      },
+      "activity": {
+        "$description": "Activity log event colors",
+        "create": {
+          "light": { "$value": "{color.primitive.green.500}", "$type": "color" },
+          "dark": { "$value": "{color.primitive.green.400}", "$type": "color" }
+        },
+        "update": {
+          "light": { "$value": "{color.primitive.blue.600}", "$type": "color" },
+          "dark": { "$value": "hsl(212 84% 45%)", "$type": "color" }
+        },
+        "assign": {
+          "light": { "$value": "{color.primitive.purple.400}", "$type": "color" },
+          "dark": { "$value": "{color.primitive.purple.300}", "$type": "color" }
+        },
+        "label": {
+          "light": { "$value": "{color.primitive.pink.400}", "$type": "color" },
+          "dark": { "$value": "{color.primitive.pink.300}", "$type": "color" }
+        },
+        "stage": {
+          "light": { "$value": "hsl(199 89% 48%)", "$type": "color" },
+          "dark": { "$value": "hsl(199 89% 60%)", "$type": "color" }
+        },
+        "temp": {
+          "light": { "$value": "{color.primitive.yellow.500}", "$type": "color" },
+          "dark": { "$value": "{color.primitive.yellow.400}", "$type": "color" }
+        },
+        "default": {
+          "light": { "$value": "{color.primitive.neutral.400}", "$type": "color" },
+          "dark": { "$value": "{color.primitive.neutral.300}", "$type": "color" }
+        }
+      },
+      "sidebar": {
+        "$description": "Sidebar-specific colors",
+        "background": {
+          "light": { "$value": "{color.primitive.blue.700}", "$type": "color" },
+          "dark": { "$value": "{color.primitive.blue.900}", "$type": "color" }
+        },
+        "foreground": {
+          "light": { "$value": "{color.primitive.neutral.100}", "$type": "color" },
+          "dark": { "$value": "{color.primitive.neutral.100}", "$type": "color" }
+        },
+        "primary": {
+          "light": { "$value": "{color.primitive.blue.600}", "$type": "color" },
+          "dark": { "$value": "{color.primitive.blue.600}", "$type": "color" }
+        },
+        "accent": {
+          "light": { "$value": "hsl(212 60% 18%)", "$type": "color" },
+          "dark": { "$value": "hsl(212 30% 15%)", "$type": "color" }
+        },
+        "border": {
+          "light": { "$value": "hsl(212 50% 18%)", "$type": "color" },
+          "dark": { "$value": "hsl(212 30% 15%)", "$type": "color" }
+        }
+      }
+    }
+  }
+}

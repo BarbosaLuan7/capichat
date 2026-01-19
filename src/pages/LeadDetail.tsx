@@ -41,7 +41,7 @@ import { useProfiles } from '@/hooks/useProfiles';
 import { LeadTimeline } from '@/components/leads/LeadTimeline';
 import { LeadActivityTimeline } from '@/components/leads/LeadActivityTimeline';
 import { cn, getContrastTextColor } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
 type LeadTemperature = Database['public']['Enums']['lead_temperature'];
@@ -49,7 +49,6 @@ type LeadTemperature = Database['public']['Enums']['lead_temperature'];
 const LeadDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
   
   const { data: lead, isLoading: leadLoading } = useLead(id);
   const { data: stages } = useFunnelStages();
@@ -116,18 +115,18 @@ const LeadDetail = () => {
   const handleStageChange = async (stageId: string) => {
     try {
       await updateLead.mutateAsync({ id: lead.id, stage_id: stageId });
-      toast({ title: 'Etapa atualizada!' });
+      toast.success('Etapa atualizada!');
     } catch (error) {
-      toast({ title: 'Erro ao atualizar etapa', variant: 'destructive' });
+      toast.error('Erro ao atualizar etapa');
     }
   };
 
   const handleTemperatureChange = async (temp: LeadTemperature) => {
     try {
       await updateLead.mutateAsync({ id: lead.id, temperature: temp });
-      toast({ title: 'Temperatura atualizada!' });
+      toast.success('Temperatura atualizada!');
     } catch (error) {
-      toast({ title: 'Erro ao atualizar temperatura', variant: 'destructive' });
+      toast.error('Erro ao atualizar temperatura');
     }
   };
 
