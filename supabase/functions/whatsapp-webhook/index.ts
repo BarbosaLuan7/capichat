@@ -351,9 +351,7 @@ async function getProfilePicture(
 }
 
 // Busca configuração do WAHA no banco (genérica - qualquer instância ativa)
-async function getWAHAConfig(
-  supabase: any
-): Promise<{
+async function getWAHAConfig(supabase: any): Promise<{
   baseUrl: string;
   apiKey: string;
   sessionName: string;

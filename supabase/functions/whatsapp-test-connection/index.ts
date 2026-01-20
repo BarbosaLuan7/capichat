@@ -19,9 +19,7 @@ function normalizeUrl(url: string): string {
 }
 
 // Tenta WAHA com múltiplos formatos de autenticação
-async function testWAHA(
-  config: TestConnectionPayload
-): Promise<{
+async function testWAHA(config: TestConnectionPayload): Promise<{
   success: boolean;
   status?: string;
   phone?: string;
