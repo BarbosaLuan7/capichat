@@ -145,6 +145,18 @@ function mapTypeToTipo(type: string): string {
   return map[type] || type;
 }
 
+// Gera preview do conteúdo da mensagem para exibição na lista
+function getMessagePreview(content: string, type: string): string {
+  switch (type) {
+    case 'image': return '📷 Imagem';
+    case 'audio': return '🎵 Áudio';
+    case 'video': return '🎬 Vídeo';
+    case 'document': return '📄 Documento';
+    case 'sticker': return '🏷️ Figurinha';
+    default: return content?.substring(0, 100) || '';
+  }
+}
+
 // Get full lead data with labels, funnel stage, and assigned user
 async function getLeadFullData(supabase: any, leadId: string) {
   const { data: lead } = await supabase.from('leads').select('*').eq('id', leadId).single();
@@ -426,16 +438,19 @@ Deno.serve(async (req) => {
       conversation = existingConversation;
       console.log('Found existing conversation');
 
+      const messageType = body.type || 'text';
       await supabase
         .from('conversations')
         .update({
           last_message_at: new Date().toISOString(),
+          last_message_content: getMessagePreview(body.message, messageType),
           unread_count: (conversation.unread_count || 0) + 1,
           status: 'open',
         })
         .eq('id', conversation.id);
     } else {
       isNewConversation = true;
+      const messageType = body.type || 'text';
       const { data: newConversation, error: createConvError } = await supabase
         .from('conversations')
         .insert({
@@ -443,6 +458,7 @@ Deno.serve(async (req) => {
           status: 'open',
           assigned_to: lead.assigned_to,
           last_message_at: new Date().toISOString(),
+          last_message_content: getMessagePreview(body.message, messageType),
           unread_count: 1,
           whatsapp_instance_id: body.whatsapp_instance_id || null,
         })
