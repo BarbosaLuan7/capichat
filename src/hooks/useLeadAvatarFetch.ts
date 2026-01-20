@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 
 const CACHE_KEY_PREFIX = 'lead_avatar_attempt_';
-const CACHE_DURATION_MS = 60 * 60 * 1000; // 1 hora
+const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutos
 
 export function useLeadAvatarFetch() {
   const shouldAttemptFetch = useCallback((leadId: string): boolean => {
@@ -23,6 +23,14 @@ export function useLeadAvatarFetch() {
       sessionStorage.setItem(`${CACHE_KEY_PREFIX}${leadId}`, Date.now().toString());
     } catch {
       // sessionStorage pode estar cheio ou desabilitado
+    }
+  }, []);
+
+  const clearAttemptCache = useCallback((leadId: string) => {
+    try {
+      sessionStorage.removeItem(`${CACHE_KEY_PREFIX}${leadId}`);
+    } catch {
+      // sessionStorage pode estar desabilitado
     }
   }, []);
 
@@ -53,5 +61,5 @@ export function useLeadAvatarFetch() {
     [shouldAttemptFetch, markAttempt]
   );
 
-  return { fetchAvatar };
+  return { fetchAvatar, clearAttemptCache };
 }

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
+import { getErrorWithFallback } from '@/lib/errorMessages';
 
 // Hooks
 import {
@@ -268,8 +269,9 @@ const Inbox = () => {
             const statusLabels = { open: 'Aberta', pending: 'Pendente', resolved: 'Resolvida' };
             toast.success(`Conversa marcada como ${statusLabels[status]}`);
           },
-          onError: () => {
-            toast.error('Erro ao atualizar status');
+          onError: (error) => {
+            const message = getErrorWithFallback(error, 'Erro ao atualizar status');
+            toast.error(message);
           },
         }
       );
@@ -300,7 +302,8 @@ const Inbox = () => {
         });
         toast.success('Lead transferido com sucesso');
       } catch (error) {
-        toast.error('Erro ao transferir lead');
+        const message = getErrorWithFallback(error, 'Erro ao transferir lead');
+        toast.error(message);
       }
     },
     [selectedConversationId, leadData, updateAssignee, updateLead]

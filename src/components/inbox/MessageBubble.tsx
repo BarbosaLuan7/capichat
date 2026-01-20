@@ -848,17 +848,24 @@ function MessageBubbleComponent({
           </div>
 
           {/* Retry button for failed messages */}
-          {(message.status as string) === 'failed' && isAgent && onRetry && (
+          {(message.status as string) === 'failed' && isAgent && (
             <div className="mt-2 border-t border-destructive/30 pt-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
-                onClick={() => onRetry(message)}
-              >
-                <RotateCcw className="mr-1 h-3 w-3" />
-                Reenviar
-              </Button>
+              {message.errorMessage && (
+                <p className="mb-1 text-xs text-primary-foreground/80">
+                  {message.errorMessage}
+                </p>
+              )}
+              {onRetry && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                  onClick={() => onRetry(message)}
+                >
+                  <RotateCcw className="mr-1 h-3 w-3" />
+                  Reenviar
+                </Button>
+              )}
             </div>
           )}
         </div>

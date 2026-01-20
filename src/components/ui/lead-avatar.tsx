@@ -25,12 +25,14 @@ const sizeClasses = {
 
 function LeadAvatarComponent({ lead, className, size = 'md' }: LeadAvatarProps) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(lead.avatar_url || null);
-  const { fetchAvatar } = useLeadAvatarFetch();
+  const [imageError, setImageError] = useState(false);
+  const { fetchAvatar, clearAttemptCache } = useLeadAvatarFetch();
 
   // Sincronizar com props quando lead muda
   useEffect(() => {
     if (lead.avatar_url) {
       setAvatarUrl(lead.avatar_url);
+      setImageError(false);
     }
   }, [lead.avatar_url]);
 
@@ -43,12 +45,23 @@ function LeadAvatarComponent({ lead, className, size = 'md' }: LeadAvatarProps) 
     }
   }, [lead.id, lead.phone, avatarUrl, fetchAvatar]);
 
+  // Handler para quando a imagem falha ao carregar
+  const handleImageError = () => {
+    if (avatarUrl && !imageError) {
+      setImageError(true);
+      // Limpar cache para permitir nova tentativa na próxima vez
+      clearAttemptCache(lead.id);
+      // Usar fallback (DiceBear)
+      setAvatarUrl(null);
+    }
+  };
+
   const displayUrl = avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.name}`;
   const initial = lead.name?.charAt(0)?.toUpperCase() || '?';
 
   return (
     <Avatar className={cn(sizeClasses[size], className)}>
-      <AvatarImage src={displayUrl} alt={lead.name} />
+      <AvatarImage src={displayUrl} alt={lead.name} onError={handleImageError} />
       <AvatarFallback>{initial}</AvatarFallback>
     </Avatar>
   );
