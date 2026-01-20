@@ -12,7 +12,7 @@ interface GetAvatarPayload {
 }
 
 // Busca foto de perfil do WhatsApp via WAHA API
-async function getProfilePicture(
+async function getProfilePictureUrl(
   baseUrl: string,
   apiKey: string,
   sessionName: string,
@@ -59,7 +59,7 @@ async function getProfilePicture(
       typeof profilePictureUrl === 'string' &&
       profilePictureUrl.startsWith('http')
     ) {
-      console.log(`[get-whatsapp-avatar] Foto encontrada!`);
+      console.log(`[get-whatsapp-avatar] URL da foto encontrada!`);
       return profilePictureUrl;
     }
 
@@ -70,6 +70,48 @@ async function getProfilePicture(
       console.log(`[get-whatsapp-avatar] Timeout`);
     } else {
       console.error('[get-whatsapp-avatar] Erro:', error);
+    }
+    return null;
+  }
+}
+
+// Faz download da imagem e retorna como ArrayBuffer
+async function downloadImage(
+  imageUrl: string,
+  apiKey: string
+): Promise<{ data: ArrayBuffer; contentType: string } | null> {
+  try {
+    console.log(`[get-whatsapp-avatar] Baixando imagem...`);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    const response = await fetch(imageUrl, {
+      method: 'GET',
+      headers: {
+        'X-Api-Key': apiKey,
+        Authorization: `Bearer ${apiKey}`,
+      },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      console.log(`[get-whatsapp-avatar] Download falhou: ${response.status}`);
+      return null;
+    }
+
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    const data = await response.arrayBuffer();
+
+    console.log(`[get-whatsapp-avatar] Imagem baixada: ${data.byteLength} bytes`);
+    return { data, contentType };
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.log(`[get-whatsapp-avatar] Timeout no download`);
+    } else {
+      console.error('[get-whatsapp-avatar] Erro no download:', error);
     }
     return null;
   }
@@ -100,7 +142,7 @@ serve(async (req) => {
     // Validar que o lead existe antes de prosseguir
     const { data: leadData, error: leadError } = await supabase
       .from('leads')
-      .select('id, phone, tenant_id')
+      .select('id, phone, tenant_id, avatar_url')
       .eq('id', lead_id)
       .single();
 
@@ -110,6 +152,15 @@ serve(async (req) => {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    // Se já tem avatar no Storage, retornar
+    if (leadData.avatar_url && leadData.avatar_url.includes('supabase')) {
+      console.log('[get-whatsapp-avatar] Lead já tem avatar no Storage');
+      return new Response(
+        JSON.stringify({ success: true, avatar_url: leadData.avatar_url, cached: true }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Buscar configuração WAHA ativa, preferencialmente do tenant do lead
@@ -163,35 +214,98 @@ serve(async (req) => {
     const baseUrl = wahaConfig.base_url.replace(/\/$/, '');
     const sessionName = wahaConfig.instance_name || 'default';
 
-    const avatarUrl = await getProfilePicture(baseUrl, wahaConfig.api_key, sessionName, phone);
+    // 1. Buscar URL da foto do WhatsApp
+    const whatsappImageUrl = await getProfilePictureUrl(
+      baseUrl,
+      wahaConfig.api_key,
+      sessionName,
+      phone
+    );
 
-    if (!avatarUrl) {
+    if (!whatsappImageUrl) {
       return new Response(
         JSON.stringify({ success: true, avatar_url: null, reason: 'not_available' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Salvar no lead
+    // 2. Fazer download da imagem
+    const imageData = await downloadImage(whatsappImageUrl, wahaConfig.api_key);
+
+    if (!imageData) {
+      console.log('[get-whatsapp-avatar] Falha no download, salvando URL direta como fallback');
+      // Fallback: salvar URL direta (pode não funcionar no browser)
+      await supabase.from('leads').update({ avatar_url: whatsappImageUrl }).eq('id', lead_id);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          avatar_url: whatsappImageUrl,
+          saved: true,
+          storage: false,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 3. Determinar extensão do arquivo
+    const ext = imageData.contentType.includes('png') ? 'png' : 'jpg';
+    const fileName = `avatars/${lead_id}.${ext}`;
+
+    // 4. Upload para Supabase Storage
+    console.log(`[get-whatsapp-avatar] Fazendo upload para Storage: ${fileName}`);
+
+    const { error: uploadError } = await supabase.storage
+      .from('lead-avatars')
+      .upload(fileName, imageData.data, {
+        contentType: imageData.contentType,
+        upsert: true, // Sobrescrever se existir
+      });
+
+    if (uploadError) {
+      console.error('[get-whatsapp-avatar] Erro no upload:', uploadError);
+      // Fallback: salvar URL direta
+      await supabase.from('leads').update({ avatar_url: whatsappImageUrl }).eq('id', lead_id);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          avatar_url: whatsappImageUrl,
+          saved: true,
+          storage: false,
+          upload_error: uploadError.message,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 5. Gerar URL pública do Storage
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from('lead-avatars').getPublicUrl(fileName);
+
+    // Adicionar timestamp para cache busting
+    const avatarUrl = `${publicUrl}?t=${Date.now()}`;
+
+    console.log(`[get-whatsapp-avatar] Avatar salvo no Storage: ${avatarUrl}`);
+
+    // 6. Salvar URL no lead
     const { error: updateError } = await supabase
       .from('leads')
       .update({ avatar_url: avatarUrl })
       .eq('id', lead_id);
 
     if (updateError) {
-      console.error('[get-whatsapp-avatar] Erro ao salvar:', updateError);
-      return new Response(JSON.stringify({ success: true, avatar_url: avatarUrl, saved: false }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      console.error('[get-whatsapp-avatar] Erro ao salvar URL no lead:', updateError);
     }
 
-    console.log('[get-whatsapp-avatar] Avatar salvo para lead:', lead_id);
-
-    return new Response(JSON.stringify({ success: true, avatar_url: avatarUrl, saved: true }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        avatar_url: avatarUrl,
+        saved: !updateError,
+        storage: true,
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error: unknown) {
     console.error('[get-whatsapp-avatar] Erro:', error);
     return new Response(JSON.stringify({ success: false, error: 'internal_error' }), {
