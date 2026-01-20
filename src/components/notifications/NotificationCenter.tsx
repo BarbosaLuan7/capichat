@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { Bell, CheckCheck, User, ClipboardList, Info, AlertTriangle, AlertCircle, CheckCircle, FileText } from 'lucide-react';
+import {
+  Bell,
+  CheckCheck,
+  User,
+  ClipboardList,
+  Info,
+  AlertTriangle,
+  AlertCircle,
+  CheckCircle,
+  FileText,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -8,12 +18,12 @@ import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
-import { 
-  useNotifications, 
-  useUnreadNotificationsCount, 
+import {
+  useNotifications,
+  useUnreadNotificationsCount,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
-  type Notification 
+  type Notification,
 } from '@/hooks/useNotifications';
 import { cn } from '@/lib/utils';
 
@@ -47,7 +57,7 @@ const typeColors: Record<string, string> = {
 export function NotificationCenter({ userId }: NotificationCenterProps) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-  
+
   const { data: notifications = [], isLoading } = useNotifications(userId);
   const { data: unreadCount = 0 } = useUnreadNotificationsCount(userId);
   const markRead = useMarkNotificationRead();
@@ -57,7 +67,7 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
     if (!notification.read) {
       markRead.mutate(notification.id);
     }
-    
+
     if (notification.link) {
       navigate(notification.link);
       setOpen(false);
@@ -79,9 +89,9 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                  <Badge
+                    variant="destructive"
+                    className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center p-0 text-xs"
                   >
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </Badge>
@@ -90,81 +100,81 @@ export function NotificationCenter({ userId }: NotificationCenterProps) {
             </PopoverTrigger>
           </TooltipTrigger>
           <TooltipContent>Notificações</TooltipContent>
-      <PopoverContent className="w-80 p-0" align="end">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h4 className="font-semibold">Notificações</h4>
-          {unreadCount > 0 && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleMarkAllRead}
-              disabled={markAllRead.isPending}
-            >
-              <CheckCheck className="h-4 w-4 mr-1" />
-              Marcar todas como lidas
-            </Button>
-          )}
-        </div>
-        
-        <ScrollArea className="h-[400px]">
-          {isLoading ? (
-            <div className="p-4 text-center text-muted-foreground">
-              Carregando...
+          <PopoverContent className="w-80 p-0" align="end">
+            <div className="flex items-center justify-between border-b p-4">
+              <h4 className="font-semibold">Notificações</h4>
+              {unreadCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleMarkAllRead}
+                  disabled={markAllRead.isPending}
+                >
+                  <CheckCheck className="mr-1 h-4 w-4" />
+                  Marcar todas como lidas
+                </Button>
+              )}
             </div>
-          ) : notifications.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">
-              <Bell className="h-10 w-10 mx-auto mb-2 opacity-50" />
-              <p>Nenhuma notificação</p>
-            </div>
-          ) : (
-            <div className="divide-y">
-              {notifications.map((notification) => {
-                const Icon = typeIcons[notification.type] || Info;
-                const colorClass = typeColors[notification.type] || 'text-muted-foreground';
-                
-                return (
-                  <button
-                    key={notification.id}
-                    onClick={() => handleNotificationClick(notification)}
-                    className={cn(
-                      'w-full text-left p-4 hover:bg-muted/50 transition-colors',
-                      !notification.read && 'bg-muted/30'
-                    )}
-                  >
-                    <div className="flex gap-3">
-                      <div className={cn('mt-0.5', colorClass)}>
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className={cn(
-                            'font-medium text-sm',
-                            !notification.read && 'text-foreground',
-                            notification.read && 'text-muted-foreground'
-                          )}>
-                            {notification.title}
-                          </p>
-                          {!notification.read && (
-                            <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-1.5" />
-                          )}
+
+            <ScrollArea className="h-[400px]">
+              {isLoading ? (
+                <div className="p-4 text-center text-muted-foreground">Carregando...</div>
+              ) : notifications.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  <Bell className="mx-auto mb-2 h-10 w-10 opacity-50" />
+                  <p>Nenhuma notificação</p>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {notifications.map((notification) => {
+                    const Icon = typeIcons[notification.type] || Info;
+                    const colorClass = typeColors[notification.type] || 'text-muted-foreground';
+
+                    return (
+                      <button
+                        key={notification.id}
+                        onClick={() => handleNotificationClick(notification)}
+                        className={cn(
+                          'w-full p-4 text-left transition-colors hover:bg-muted/50',
+                          !notification.read && 'bg-muted/30'
+                        )}
+                      >
+                        <div className="flex gap-3">
+                          <div className={cn('mt-0.5', colorClass)}>
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <p
+                                className={cn(
+                                  'text-sm font-medium',
+                                  !notification.read && 'text-foreground',
+                                  notification.read && 'text-muted-foreground'
+                                )}
+                              >
+                                {notification.title}
+                              </p>
+                              {!notification.read && (
+                                <div className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-primary" />
+                              )}
+                            </div>
+                            <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
+                              {notification.message}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(notification.created_at), {
+                                addSuffix: true,
+                                locale: ptBR,
+                              })}
+                            </p>
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
-                          {notification.message}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {formatDistanceToNow(new Date(notification.created_at), {
-                            addSuffix: true,
-                            locale: ptBR,
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </ScrollArea>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
           </PopoverContent>
         </Popover>
       </Tooltip>

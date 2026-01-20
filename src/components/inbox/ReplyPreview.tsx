@@ -18,47 +18,49 @@ interface ReplyPreviewProps {
   onCancel: () => void;
 }
 
-export function ReplyPreview({ message, leadName, agentName = 'Você', onCancel }: ReplyPreviewProps) {
+export function ReplyPreview({
+  message,
+  leadName,
+  agentName = 'Você',
+  onCancel,
+}: ReplyPreviewProps) {
   const senderName = message.sender_type === 'lead' ? leadName : agentName;
-  
+
   // Truncar conteúdo
-  const truncatedContent = message.content.length > 50 
-    ? message.content.substring(0, 50) + '...' 
-    : message.content;
-  
+  const truncatedContent =
+    message.content.length > 50 ? message.content.substring(0, 50) + '...' : message.content;
+
   // Ícone baseado no tipo
   const getTypeIcon = () => {
     switch (message.type) {
       case 'image':
-        return <Image className="w-3.5 h-3.5 text-muted-foreground" />;
+        return <Image className="h-3.5 w-3.5 text-muted-foreground" />;
       case 'audio':
-        return <Mic className="w-3.5 h-3.5 text-muted-foreground" />;
+        return <Mic className="h-3.5 w-3.5 text-muted-foreground" />;
       case 'video':
-        return <Video className="w-3.5 h-3.5 text-muted-foreground" />;
+        return <Video className="h-3.5 w-3.5 text-muted-foreground" />;
       case 'document':
-        return <FileText className="w-3.5 h-3.5 text-muted-foreground" />;
+        return <FileText className="h-3.5 w-3.5 text-muted-foreground" />;
       default:
         return null;
     }
   };
 
   return (
-    <div className="px-4 py-2 bg-muted/50 border-t border-border">
-      <div className="flex items-center gap-2 max-w-3xl mx-auto">
+    <div className="border-t border-border bg-muted/50 px-4 py-2">
+      <div className="mx-auto flex max-w-3xl items-center gap-2">
         <div className="flex items-center gap-2 text-primary">
-          <CornerUpLeft className="w-4 h-4" />
+          <CornerUpLeft className="h-4 w-4" />
         </div>
-        
-        <div className="flex-1 min-w-0 border-l-2 border-primary/50 pl-3">
+
+        <div className="min-w-0 flex-1 border-l-2 border-primary/50 pl-3">
           <div className="flex items-center gap-1.5 text-xs font-medium text-foreground/80">
             {getTypeIcon()}
             <span>Respondendo a {senderName}</span>
           </div>
-          <p className="text-xs text-muted-foreground truncate">
-            {truncatedContent}
-          </p>
+          <p className="truncate text-xs text-muted-foreground">{truncatedContent}</p>
         </div>
-        
+
         <Button
           variant="ghost"
           size="icon"
@@ -66,7 +68,7 @@ export function ReplyPreview({ message, leadName, agentName = 'Você', onCancel 
           onClick={onCancel}
           aria-label="Cancelar resposta"
         >
-          <X className="w-4 h-4" />
+          <X className="h-4 w-4" />
         </Button>
       </div>
     </div>

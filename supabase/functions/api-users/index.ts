@@ -7,21 +7,21 @@ const corsHeaders = {
 
 // Role mapping between API (Portuguese) and database (English)
 const roleMap: Record<string, string> = {
-  'administrador': 'admin',
-  'gerente': 'manager',
-  'atendente': 'agent',
-  'visualizador': 'viewer',
-  'admin': 'admin',
-  'manager': 'manager',
-  'agent': 'agent',
-  'viewer': 'viewer'
+  administrador: 'admin',
+  gerente: 'manager',
+  atendente: 'agent',
+  visualizador: 'viewer',
+  admin: 'admin',
+  manager: 'manager',
+  agent: 'agent',
+  viewer: 'viewer',
 };
 
 const roleMapReverse: Record<string, string> = {
-  'admin': 'administrador',
-  'manager': 'gerente',
-  'agent': 'atendente',
-  'viewer': 'visualizador'
+  admin: 'administrador',
+  manager: 'gerente',
+  agent: 'atendente',
+  viewer: 'visualizador',
 };
 
 // Helper to format phone numbers
@@ -37,12 +37,16 @@ function formatTelefone(phone: string | null): string | null {
   return phone;
 }
 
-function safeErrorResponse(internalError: unknown, publicMessage: string, status: number = 500): Response {
+function safeErrorResponse(
+  internalError: unknown,
+  publicMessage: string,
+  status: number = 500
+): Response {
   console.error('Internal error:', internalError);
-  return new Response(
-    JSON.stringify({ success: false, error: publicMessage }),
-    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return new Response(JSON.stringify({ success: false, error: publicMessage }), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }
 
 Deno.serve(async (req) => {
@@ -65,13 +69,15 @@ Deno.serve(async (req) => {
     }
 
     const apiKey = authHeader.replace('Bearer ', '');
-    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', { key_value: apiKey });
+    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', {
+      key_value: apiKey,
+    });
 
     if (apiKeyError || !apiKeyId) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Invalid API key' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ success: false, error: 'Invalid API key' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log('[api-users] API key validated');
@@ -81,7 +87,9 @@ Deno.serve(async (req) => {
     const id = url.searchParams.get('id');
     const action = url.searchParams.get('action');
     const page = parseInt(url.searchParams.get('pagina') || url.searchParams.get('page') || '1');
-    const pageSize = parseInt(url.searchParams.get('por_pagina') || url.searchParams.get('page_size') || '50');
+    const pageSize = parseInt(
+      url.searchParams.get('por_pagina') || url.searchParams.get('page_size') || '50'
+    );
 
     // GET /api-users - List users
     if (method === 'GET' && !id) {
@@ -91,12 +99,13 @@ Deno.serve(async (req) => {
       const perfil = url.searchParams.get('perfil');
 
       // First get profiles, then fetch roles separately to avoid FK relationship issues
-      let query = supabase
-        .from('profiles')
-        .select(`
+      let query = supabase.from('profiles').select(
+        `
           *,
           team_members(team_id, is_supervisor, teams(id, name))
-        `, { count: 'exact' });
+        `,
+        { count: 'exact' }
+      );
 
       if (ativo !== null) {
         query = query.eq('is_active', ativo === 'true');
@@ -121,10 +130,11 @@ Deno.serve(async (req) => {
 
       // Fetch roles separately for all users
       const userIds = (data || []).map((u: any) => u.id);
-      const { data: rolesData } = userIds.length > 0 
-        ? await supabase.from('user_roles').select('user_id, role').in('user_id', userIds)
-        : { data: [] };
-      
+      const { data: rolesData } =
+        userIds.length > 0
+          ? await supabase.from('user_roles').select('user_id, role').in('user_id', userIds)
+          : { data: [] };
+
       const rolesMap = new Map<string, string>();
       (rolesData || []).forEach((r: any) => rolesMap.set(r.user_id, r.role));
 
@@ -146,12 +156,14 @@ Deno.serve(async (req) => {
         ativo: user.is_active,
         disponivel: user.is_available,
         dono_conta: user.is_account_owner,
-        equipes: (user.team_members || []).map((tm: any) => ({
-          id: tm.teams?.id ? `eqp_${tm.teams.id.slice(0, 8)}` : null,
-          nome: tm.teams?.name,
-          supervisor: tm.is_supervisor
-        })).filter((e: any) => e.id),
-        criado_em: user.created_at
+        equipes: (user.team_members || [])
+          .map((tm: any) => ({
+            id: tm.teams?.id ? `eqp_${tm.teams.id.slice(0, 8)}` : null,
+            nome: tm.teams?.name,
+            supervisor: tm.is_supervisor,
+          }))
+          .filter((e: any) => e.id),
+        criado_em: user.created_at,
       }));
 
       console.log('[api-users] Listed', transformed.length, 'users');
@@ -163,8 +175,8 @@ Deno.serve(async (req) => {
             pagina: page,
             por_pagina: pageSize,
             total: count || 0,
-            total_paginas: Math.ceil((count || 0) / pageSize)
-          }
+            total_paginas: Math.ceil((count || 0) / pageSize),
+          },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -174,10 +186,12 @@ Deno.serve(async (req) => {
     if (method === 'GET' && id && !action) {
       const { data: user, error } = await supabase
         .from('profiles')
-        .select(`
+        .select(
+          `
           *,
           team_members(team_id, is_supervisor, teams(id, name))
-        `)
+        `
+        )
         .eq('id', id)
         .maybeSingle();
 
@@ -186,10 +200,10 @@ Deno.serve(async (req) => {
       }
 
       if (!user) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'User not found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ success: false, error: 'User not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // Fetch role separately
@@ -209,18 +223,19 @@ Deno.serve(async (req) => {
         ativo: user.is_active,
         disponivel: user.is_available,
         dono_conta: user.is_account_owner,
-        equipes: (user.team_members || []).map((tm: any) => ({
-          id: tm.teams?.id ? `eqp_${tm.teams.id.slice(0, 8)}` : null,
-          nome: tm.teams?.name,
-          supervisor: tm.is_supervisor
-        })).filter((e: any) => e.id),
-        criado_em: user.created_at
+        equipes: (user.team_members || [])
+          .map((tm: any) => ({
+            id: tm.teams?.id ? `eqp_${tm.teams.id.slice(0, 8)}` : null,
+            nome: tm.teams?.name,
+            supervisor: tm.is_supervisor,
+          }))
+          .filter((e: any) => e.id),
+        criado_em: user.created_at,
       };
 
-      return new Response(
-        JSON.stringify(transformed),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify(transformed), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // PUT /api-users?id=xxx - Update user
@@ -246,19 +261,15 @@ Deno.serve(async (req) => {
 
       console.log('[api-users] User updated:', id);
 
-      return new Response(
-        JSON.stringify({ sucesso: true, usuario: updatedUser }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: true, usuario: updatedUser }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // DELETE /api-users?id=xxx - Remove user
     if (method === 'DELETE' && id) {
       // Deactivate user instead of deleting
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_active: false })
-        .eq('id', id);
+      const { error } = await supabase.from('profiles').update({ is_active: false }).eq('id', id);
 
       if (error) {
         return safeErrorResponse(error, 'Error removing user');
@@ -278,22 +289,17 @@ Deno.serve(async (req) => {
       const equipes = body.equipes || [];
 
       // Delete existing team memberships
-      await supabase
-        .from('team_members')
-        .delete()
-        .eq('user_id', id);
+      await supabase.from('team_members').delete().eq('user_id', id);
 
       // Insert new memberships
       if (equipes.length > 0) {
         const memberships = equipes.map((e: any) => ({
           user_id: id,
           team_id: e.equipe_id,
-          is_supervisor: e.supervisor || false
+          is_supervisor: e.supervisor || false,
         }));
 
-        const { error: insertError } = await supabase
-          .from('team_members')
-          .insert(memberships);
+        const { error: insertError } = await supabase.from('team_members').insert(memberships);
 
         if (insertError) {
           return safeErrorResponse(insertError, 'Error updating user teams');
@@ -324,7 +330,10 @@ Deno.serve(async (req) => {
       console.log('[api-users] Status updated for user:', id, '->', body.ativo);
 
       return new Response(
-        JSON.stringify({ sucesso: true, mensagem: body.ativo ? 'Usuário ativado' : 'Usuário desativado' }),
+        JSON.stringify({
+          sucesso: true,
+          mensagem: body.ativo ? 'Usuário ativado' : 'Usuário desativado',
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -352,8 +361,8 @@ Deno.serve(async (req) => {
           usuario: {
             id: updatedUser.id,
             nome: updatedUser.name,
-            disponivel: updatedUser.is_available
-          }
+            disponivel: updatedUser.is_available,
+          },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -373,19 +382,18 @@ Deno.serve(async (req) => {
       // Note: Full user creation with auth should use admin-create-user function
       // This endpoint creates a basic profile entry only
       return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'User creation via API requires authentication. Use the admin interface.' 
+        JSON.stringify({
+          success: false,
+          error: 'User creation via API requires authentication. Use the admin interface.',
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed or invalid action' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
+    return new Response(JSON.stringify({ error: 'Method not allowed or invalid action' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('[api-users] Error:', error);
     return safeErrorResponse(error, 'Internal server error');

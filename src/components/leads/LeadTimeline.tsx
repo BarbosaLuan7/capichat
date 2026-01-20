@@ -66,7 +66,7 @@ export const LeadTimeline = ({ events }: LeadTimelineProps) => {
   return (
     <div className="relative space-y-4">
       {/* Timeline line */}
-      <div className="absolute left-4 top-2 bottom-2 w-px bg-border" />
+      <div className="absolute bottom-2 left-4 top-2 w-px bg-border" />
 
       {events.map((event, index) => {
         const Icon = getEventIcon(event.type);
@@ -75,26 +75,28 @@ export const LeadTimeline = ({ events }: LeadTimelineProps) => {
         return (
           <div key={event.id} className="relative flex gap-4 pl-1">
             {/* Icon */}
-            <div className={cn(
-              'relative z-10 w-8 h-8 rounded-full flex items-center justify-center shrink-0',
-              colorClass
-            )}>
-              <Icon className="w-4 h-4" />
+            <div
+              className={cn(
+                'relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+                colorClass
+              )}
+            >
+              <Icon className="h-4 w-4" />
             </div>
 
             {/* Content */}
-            <div className="flex-1 min-w-0 pb-4">
+            <div className="min-w-0 flex-1 pb-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-sm font-medium text-foreground">{event.title}</p>
                   {event.description && (
-                    <p className="text-sm text-muted-foreground mt-0.5">{event.description}</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">{event.description}</p>
                   )}
                   {event.user && (
-                    <p className="text-xs text-muted-foreground mt-1">por {event.user}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">por {event.user}</p>
                   )}
                 </div>
-                <time className="text-xs text-muted-foreground whitespace-nowrap">
+                <time className="whitespace-nowrap text-xs text-muted-foreground">
                   {format(event.createdAt, "dd/MM 'às' HH:mm", { locale: ptBR })}
                 </time>
               </div>
@@ -104,8 +106,8 @@ export const LeadTimeline = ({ events }: LeadTimelineProps) => {
       })}
 
       {events.length === 0 && (
-        <div className="text-center py-8 text-muted-foreground">
-          <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
+        <div className="py-8 text-center text-muted-foreground">
+          <Clock className="mx-auto mb-2 h-12 w-12 opacity-50" />
           <p>Nenhuma atividade registrada</p>
         </div>
       )}

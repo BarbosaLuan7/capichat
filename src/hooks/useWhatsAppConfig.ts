@@ -42,21 +42,20 @@ export function useWhatsAppConfigs() {
       // Fallback to original table if RPC doesn't exist
       // Error 42883 = Postgres function not found
       // Error PGRST202 = PostgREST function not found (HTTP 404)
-      const isFunctionNotFound = error && (
-        error.code === '42883' || 
-        error.code === 'PGRST202'
-      );
-      
+      const isFunctionNotFound = error && (error.code === '42883' || error.code === 'PGRST202');
+
       if (isFunctionNotFound) {
         const { data: fallbackData, error: fallbackError } = await supabase
           .from('whatsapp_config')
-          .select('id, name, provider, base_url, instance_name, phone_number, is_active, created_by, created_at, updated_at, tenant_id')
+          .select(
+            'id, name, provider, base_url, instance_name, phone_number, is_active, created_by, created_at, updated_at, tenant_id'
+          )
           .order('created_at', { ascending: false });
-        
+
         if (fallbackError) throw fallbackError;
-        
+
         // Mask the api_key in the response
-        return (fallbackData || []).map(config => ({
+        return (fallbackData || []).map((config) => ({
           ...config,
           api_key_masked: null,
           has_webhook_secret: false,
@@ -136,10 +135,7 @@ export function useDeleteWhatsAppConfig() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('whatsapp_config')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('whatsapp_config').delete().eq('id', id);
 
       if (error) throw error;
     },
@@ -155,10 +151,10 @@ export function useDeleteWhatsAppConfig() {
 
 export function useTestWhatsAppConnection() {
   return useMutation({
-    mutationFn: async (config: { 
-      provider: string; 
-      base_url: string; 
-      api_key: string; 
+    mutationFn: async (config: {
+      provider: string;
+      base_url: string;
+      api_key: string;
       instance_name?: string;
     }) => {
       const { data, error } = await supabase.functions.invoke('whatsapp-test-connection', {
@@ -171,9 +167,13 @@ export function useTestWhatsAppConnection() {
     },
     onSuccess: (data) => {
       const parts = [
-        data.phone ? `Conectado ao número: ${data.phone}` : (data.status ? `Status: ${data.status}` : ''),
-        data.engine 
-          ? `Engine: ${typeof data.engine === 'string' ? data.engine.toUpperCase() : JSON.stringify(data.engine)}` 
+        data.phone
+          ? `Conectado ao número: ${data.phone}`
+          : data.status
+            ? `Status: ${data.status}`
+            : '',
+        data.engine
+          ? `Engine: ${typeof data.engine === 'string' ? data.engine.toUpperCase() : JSON.stringify(data.engine)}`
           : '',
       ].filter(Boolean);
 
@@ -188,10 +188,7 @@ export function useTestWhatsAppConnection() {
 // Hook para enviar mensagem de teste
 export function useTestWhatsAppMessage() {
   return useMutation({
-    mutationFn: async (payload: { 
-      whatsapp_instance_id: string; 
-      phone: string; 
-    }) => {
+    mutationFn: async (payload: { whatsapp_instance_id: string; phone: string }) => {
       const { data, error } = await supabase.functions.invoke('whatsapp-test-message', {
         body: payload,
       });

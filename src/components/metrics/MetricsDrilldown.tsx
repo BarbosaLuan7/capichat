@@ -19,10 +19,10 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 
-type DrilldownType = 
-  | 'funnel_stage' 
-  | 'lead_source' 
-  | 'temperature' 
+type DrilldownType =
+  | 'funnel_stage'
+  | 'lead_source'
+  | 'temperature'
   | 'conversation_status'
   | 'agent';
 
@@ -65,11 +65,7 @@ const temperatureColors: Record<string, string> = {
   hot: 'bg-temp-hot',
 };
 
-export function MetricsDrilldown({
-  open,
-  onOpenChange,
-  config,
-}: MetricsDrilldownProps) {
+export function MetricsDrilldown({ open, onOpenChange, config }: MetricsDrilldownProps) {
   const navigate = useNavigate();
   const [leads, setLeads] = useState<LeadItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -82,12 +78,13 @@ export function MetricsDrilldown({
 
   const fetchLeads = async () => {
     if (!config) return;
-    
+
     setIsLoading(true);
     try {
       let query = supabase
         .from('leads')
-        .select(`
+        .select(
+          `
           id,
           name,
           phone,
@@ -96,7 +93,8 @@ export function MetricsDrilldown({
           source,
           created_at,
           funnel_stages (name, color)
-        `)
+        `
+        )
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -130,8 +128,8 @@ export function MetricsDrilldown({
               .from('conversations')
               .select('lead_id')
               .eq('status', config.value as 'open' | 'pending' | 'resolved');
-            
-            const leadIds = convData?.map(c => c.lead_id) || [];
+
+            const leadIds = convData?.map((c) => c.lead_id) || [];
             if (leadIds.length > 0) {
               query = query.in('id', leadIds);
             } else {
@@ -170,10 +168,10 @@ export function MetricsDrilldown({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh]">
+      <DialogContent className="max-h-[80vh] sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Icon className="w-5 h-5 text-primary" />
+            <Icon className="h-5 w-5 text-primary" />
             {config.title}
           </DialogTitle>
           <DialogDescription>
@@ -183,7 +181,8 @@ export function MetricsDrilldown({
               </Badge>
             )}
             <span className="ml-2">
-              {leads.length} lead{leads.length !== 1 ? 's' : ''} encontrado{leads.length !== 1 ? 's' : ''}
+              {leads.length} lead{leads.length !== 1 ? 's' : ''} encontrado
+              {leads.length !== 1 ? 's' : ''}
             </span>
           </DialogDescription>
         </DialogHeader>
@@ -197,7 +196,7 @@ export function MetricsDrilldown({
             </div>
           ) : leads.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground">
-              <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <Users className="mx-auto mb-4 h-12 w-12 opacity-50" />
               <p>Nenhum lead encontrado</p>
             </div>
           ) : (
@@ -205,21 +204,19 @@ export function MetricsDrilldown({
               {leads.map((lead) => (
                 <div
                   key={lead.id}
-                  className="flex items-center gap-4 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                  className="flex items-center gap-4 rounded-lg border bg-card p-3 transition-colors hover:bg-muted/50"
                 >
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={lead.avatar_url || undefined} />
-                    <AvatarFallback>
-                      {lead.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
+                    <AvatarFallback>{lead.name.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
 
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium truncate">{lead.name}</span>
+                      <span className="truncate font-medium">{lead.name}</span>
                       <span
                         className={cn(
-                          'w-2 h-2 rounded-full',
+                          'h-2 w-2 rounded-full',
                           temperatureColors[lead.temperature] || 'bg-gray-400'
                         )}
                       />
@@ -238,10 +235,7 @@ export function MetricsDrilldown({
 
                   <div className="flex items-center gap-2">
                     {lead.funnel_stages && (
-                      <Badge
-                        variant="outline"
-                        style={{ borderColor: lead.funnel_stages.color }}
-                      >
+                      <Badge variant="outline" style={{ borderColor: lead.funnel_stages.color }}>
                         {lead.funnel_stages.name}
                       </Badge>
                     )}
@@ -251,19 +245,11 @@ export function MetricsDrilldown({
                   </div>
 
                   <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleOpenInbox(lead.id)}
-                    >
-                      <MessageSquare className="w-4 h-4" />
+                    <Button variant="ghost" size="sm" onClick={() => handleOpenInbox(lead.id)}>
+                      <MessageSquare className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleViewLead(lead.id)}
-                    >
-                      <ExternalLink className="w-4 h-4" />
+                    <Button variant="ghost" size="sm" onClick={() => handleViewLead(lead.id)}>
+                      <ExternalLink className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>

@@ -19,7 +19,10 @@ interface ConversationStatusActionsProps {
   isLoading?: boolean;
 }
 
-const statusConfig: Record<ConversationStatus, { label: string; icon: typeof MessageCircle; className: string }> = {
+const statusConfig: Record<
+  ConversationStatus,
+  { label: string; icon: typeof MessageCircle; className: string }
+> = {
   open: {
     label: 'Aberta',
     icon: MessageCircle,
@@ -37,7 +40,11 @@ const statusConfig: Record<ConversationStatus, { label: string; icon: typeof Mes
   },
 };
 
-function ConversationStatusActionsComponent({ currentStatus, onStatusChange, isLoading }: ConversationStatusActionsProps) {
+function ConversationStatusActionsComponent({
+  currentStatus,
+  onStatusChange,
+  isLoading,
+}: ConversationStatusActionsProps) {
   const current = statusConfig[currentStatus];
   const StatusIcon = current.icon;
 
@@ -47,16 +54,16 @@ function ConversationStatusActionsComponent({ currentStatus, onStatusChange, isL
         <Button
           variant="outline"
           size="sm"
-          className={cn('gap-1.5 h-8', current.className)}
+          className={cn('h-8 gap-1.5', current.className)}
           disabled={isLoading}
         >
           {isLoading ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
-            <StatusIcon className="w-3.5 h-3.5" />
+            <StatusIcon className="h-3.5 w-3.5" />
           )}
           {current.label}
-          <ChevronDown className="w-3 h-3 opacity-50" />
+          <ChevronDown className="h-3 w-3 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
@@ -64,28 +71,24 @@ function ConversationStatusActionsComponent({ currentStatus, onStatusChange, isL
           onClick={() => onStatusChange('open')}
           className={cn(currentStatus === 'open' && 'bg-muted')}
         >
-          <MessageCircle className="w-4 h-4 mr-2 text-success" />
+          <MessageCircle className="mr-2 h-4 w-4 text-success" />
           <span>Aberta</span>
-          {currentStatus === 'open' && (
-            <CheckCircle2 className="w-4 h-4 ml-auto text-success" />
-          )}
+          {currentStatus === 'open' && <CheckCircle2 className="ml-auto h-4 w-4 text-success" />}
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onStatusChange('pending')}
           className={cn(currentStatus === 'pending' && 'bg-muted')}
         >
-          <Clock className="w-4 h-4 mr-2 text-warning" />
+          <Clock className="mr-2 h-4 w-4 text-warning" />
           <span>Pendente</span>
-          {currentStatus === 'pending' && (
-            <CheckCircle2 className="w-4 h-4 ml-auto text-warning" />
-          )}
+          {currentStatus === 'pending' && <CheckCircle2 className="ml-auto h-4 w-4 text-warning" />}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => onStatusChange('resolved')}
           className={cn(currentStatus === 'resolved' && 'bg-muted')}
         >
-          <CheckCircle2 className="w-4 h-4 mr-2 text-muted-foreground" />
+          <CheckCircle2 className="mr-2 h-4 w-4 text-muted-foreground" />
           <span>Marcar como Resolvida</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -93,7 +96,7 @@ function ConversationStatusActionsComponent({ currentStatus, onStatusChange, isL
   );
 }
 
-export const ConversationStatusActions = memo(ConversationStatusActionsComponent, (prev, next) =>
-  prev.currentStatus === next.currentStatus &&
-  prev.isLoading === next.isLoading
+export const ConversationStatusActions = memo(
+  ConversationStatusActionsComponent,
+  (prev, next) => prev.currentStatus === next.currentStatus && prev.isLoading === next.isLoading
 );

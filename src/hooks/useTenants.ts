@@ -12,10 +12,7 @@ export function useAllTenants() {
   return useQuery({
     queryKey: ['tenants'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('tenants')
-        .select('*')
-        .order('name');
+      const { data, error } = await supabase.from('tenants').select('*').order('name');
 
       if (error) throw error;
       return data as Tenant[];
@@ -30,11 +27,7 @@ export function useTenantById(id: string | undefined) {
     queryKey: ['tenants', id],
     queryFn: async () => {
       if (!id) return null;
-      const { data, error } = await supabase
-        .from('tenants')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
+      const { data, error } = await supabase.from('tenants').select('*').eq('id', id).maybeSingle();
 
       if (error) throw error;
       return data as Tenant | null;
@@ -53,11 +46,7 @@ export function useCreateTenant() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (tenant: { 
-      name: string; 
-      slug: string; 
-      logo_url?: string;
-    }) => {
+    mutationFn: async (tenant: { name: string; slug: string; logo_url?: string }) => {
       const { data, error } = await supabase
         .from('tenants')
         .insert({
@@ -86,14 +75,14 @@ export function useUpdateTenant() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ 
-      id, 
+    mutationFn: async ({
+      id,
       name,
       logo_url,
       is_active,
-    }: { 
-      id: string; 
-      name?: string; 
+    }: {
+      id: string;
+      name?: string;
       logo_url?: string | null;
       is_active?: boolean;
     }) => {
@@ -129,10 +118,7 @@ export function useDeleteTenant() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('tenants')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('tenants').delete().eq('id', id);
 
       if (error) throw error;
     },
@@ -156,13 +142,15 @@ export function useTenantUsers(tenantId: string | undefined) {
     queryKey: ['tenant_users', tenantId],
     queryFn: async () => {
       if (!tenantId) return [];
-      
+
       const { data, error } = await supabase
         .from('user_tenants')
-        .select(`
+        .select(
+          `
           *,
           profile:profiles!user_tenants_user_id_fkey(*)
-        `)
+        `
+        )
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
 
@@ -180,13 +168,15 @@ export function useUserTenantAssociations(userId: string | undefined) {
     queryKey: ['user_tenant_associations', userId],
     queryFn: async () => {
       if (!userId) return [];
-      
+
       const { data, error } = await supabase
         .from('user_tenants')
-        .select(`
+        .select(
+          `
           *,
           tenant:tenants(*)
-        `)
+        `
+        )
         .eq('user_id', userId);
 
       if (error) throw error;
@@ -206,13 +196,13 @@ export function useAddUserToTenant() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ 
-      userId, 
-      tenantId, 
-      role = 'agent' 
-    }: { 
-      userId: string; 
-      tenantId: string; 
+    mutationFn: async ({
+      userId,
+      tenantId,
+      role = 'agent',
+    }: {
+      userId: string;
+      tenantId: string;
       role?: 'admin' | 'manager' | 'agent' | 'viewer';
     }) => {
       const { data, error } = await supabase
@@ -248,11 +238,11 @@ export function useUpdateUserTenant() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ 
-      id, 
-      role, 
-      is_active 
-    }: { 
+    mutationFn: async ({
+      id,
+      role,
+      is_active,
+    }: {
       id: string;
       role?: 'admin' | 'manager' | 'agent' | 'viewer';
       is_active?: boolean;
@@ -316,10 +306,7 @@ export function useTenantWhatsAppConfigs(tenantId: string | null | undefined) {
   return useQuery({
     queryKey: ['whatsapp_configs_by_tenant', tenantId],
     queryFn: async () => {
-      let query = supabase
-        .from('whatsapp_config')
-        .select('*')
-        .order('name');
+      let query = supabase.from('whatsapp_config').select('*').order('name');
 
       if (tenantId) {
         query = query.eq('tenant_id', tenantId);

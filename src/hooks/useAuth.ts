@@ -26,7 +26,7 @@ export function useAuth() {
   const [sessionLoading, setSessionLoading] = useState(true);
   const [userDataLoading, setUserDataLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // BUG FIX: AbortController to cancel pending fetches on logout/login race conditions
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -40,7 +40,7 @@ export function useAuth() {
     }
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
-    
+
     setUserDataLoading(true);
     try {
       // Fetch profile
@@ -85,33 +85,33 @@ export function useAuth() {
     let isMounted = true;
 
     // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (!isMounted) return;
-        
-        setSession(session);
-        setUser(session?.user ?? null);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
 
-        // Defer Supabase calls with setTimeout
-        if (session?.user) {
-          setTimeout(() => {
-            if (isMounted) {
-              fetchUserData(session.user.id);
-            }
-          }, 0);
-        } else {
-          setProfile(null);
-          setRole(null);
-          setUserDataLoading(false);
-        }
-        setSessionLoading(false);
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      // Defer Supabase calls with setTimeout
+      if (session?.user) {
+        setTimeout(() => {
+          if (isMounted) {
+            fetchUserData(session.user.id);
+          }
+        }, 0);
+      } else {
+        setProfile(null);
+        setRole(null);
+        setUserDataLoading(false);
       }
-    );
+      setSessionLoading(false);
+    });
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!isMounted) return;
-      
+
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -142,7 +142,7 @@ export function useAuth() {
   const signUp = async (email: string, password: string, name: string) => {
     setError(null);
     const redirectUrl = `${window.location.origin}/`;
-    
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -169,16 +169,19 @@ export function useAuth() {
     setRole(null);
   };
 
-  const authUser: AuthUser | null = user && profile ? {
-    id: user.id,
-    email: user.email || profile.email,
-    name: profile.name,
-    avatar: profile.avatar,
-    teamId: profile.team_id,
-    isActive: profile.is_active,
-    role: role || 'agent',
-    isAccountOwner: profile.is_account_owner ?? false,
-  } : null;
+  const authUser: AuthUser | null =
+    user && profile
+      ? {
+          id: user.id,
+          email: user.email || profile.email,
+          name: profile.name,
+          avatar: profile.avatar,
+          teamId: profile.team_id,
+          isActive: profile.is_active,
+          role: role || 'agent',
+          isAccountOwner: profile.is_account_owner ?? false,
+        }
+      : null;
 
   return {
     user,

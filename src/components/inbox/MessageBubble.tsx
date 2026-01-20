@@ -2,7 +2,28 @@ import React, { useState, useEffect, memo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Check, CheckCheck, Image, FileText, Video, Mic, Sparkles, Loader2, Copy, Clock, AlertCircle, ImageOff, VideoOff, ExternalLink, ChevronDown, ChevronUp, RotateCcw, Square, CheckSquare, RefreshCw } from 'lucide-react';
+import {
+  Check,
+  CheckCheck,
+  Image,
+  FileText,
+  Video,
+  Mic,
+  Sparkles,
+  Loader2,
+  Copy,
+  Clock,
+  AlertCircle,
+  ImageOff,
+  VideoOff,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  RotateCcw,
+  Square,
+  CheckSquare,
+  RefreshCw,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -24,44 +45,44 @@ import type { Database } from '@/integrations/supabase/types';
 
 /**
  * Controle de auto-repair em nível de módulo.
- * 
+ *
  * Estes Sets/Maps são mantidos fora do componente para sobreviver à virtualização,
  * evitando tentativas repetidas de repair quando componentes são remontados
  * durante o scroll.
- * 
+ *
  * @see cleanupAutoRepairEntries - Limpeza periódica para evitar memory leaks
  */
-const autoRepairAttempted = new Set<string>();  // IDs já tentados
-const autoRepairInFlight = new Set<string>();   // Repairs em andamento
-const COOLDOWN_MS = 5 * 60 * 1000;              // Cooldown entre tentativas
+const autoRepairAttempted = new Set<string>(); // IDs já tentados
+const autoRepairInFlight = new Set<string>(); // Repairs em andamento
+const COOLDOWN_MS = 5 * 60 * 1000; // Cooldown entre tentativas
 const lastAttemptTime = new Map<string, number>(); // Timestamp da última tentativa
 const MAX_MESSAGE_LENGTH = 500;
-const MAX_REPAIR_ENTRIES = 500;                 // Limite para evitar crescimento ilimitado
+const MAX_REPAIR_ENTRIES = 500; // Limite para evitar crescimento ilimitado
 
 /**
  * Limpa entradas antigas dos Sets de controle de auto-repair.
- * 
+ *
  * Executada periodicamente (5 min) para evitar memory leaks em sessões longas.
  * Remove entries mais antigas que 10 minutos e, se ainda houver muitas,
  * remove as 100 mais antigas como fallback.
  */
 function cleanupAutoRepairEntries() {
   const now = Date.now();
-  const threshold = now - (10 * 60 * 1000); // 10 minutos
-  
+  const threshold = now - 10 * 60 * 1000; // 10 minutos
+
   for (const [id, time] of lastAttemptTime.entries()) {
     if (time < threshold) {
       autoRepairAttempted.delete(id);
       lastAttemptTime.delete(id);
     }
   }
-  
+
   // Fallback: se ainda tiver muitas entries, limpar as mais antigas
   if (autoRepairAttempted.size > MAX_REPAIR_ENTRIES) {
     const entriesToRemove = [...lastAttemptTime.entries()]
       .sort((a, b) => a[1] - b[1])
       .slice(0, 100);
-    
+
     for (const [id] of entriesToRemove) {
       autoRepairAttempted.delete(id);
       lastAttemptTime.delete(id);
@@ -76,36 +97,63 @@ if (typeof window !== 'undefined') {
 
 // Constantes estáticas para tipos de mídia (evitar recriação)
 const MEDIA_LABELS: Record<string, string> = {
-  'image': 'Imagem',
-  'video': 'Vídeo',
-  'audio': 'Áudio',
-  'document': 'Documento',
+  image: 'Imagem',
+  video: 'Vídeo',
+  audio: 'Áudio',
+  document: 'Documento',
 };
 
 const MEDIA_ICONS_MAP = {
-  'image': ImageOff,
-  'video': VideoOff,
-  'audio': Mic,
-  'document': FileText,
+  image: ImageOff,
+  video: VideoOff,
+  audio: Mic,
+  document: FileText,
 } as const;
 
 // Placeholder texts to filter out from message content display
 const MEDIA_PLACEHOLDERS = [
-  '[Áudio]', '[audio]', '[Audio]',
-  '[Imagem]', '[imagem]', '[Image]', '[image]',
-  '[Video]', '[video]', '[Vídeo]', '[vídeo]',
-  '[Documento]', '[documento]', '[Document]', '[document]',
-  '[text]', '[Text]', '[TEXT]',
-  '[media]', '[Media]', '[MEDIA]',
-  '[Mídia]', '[mídia]',
+  '[Áudio]',
+  '[audio]',
+  '[Audio]',
+  '[Imagem]',
+  '[imagem]',
+  '[Image]',
+  '[image]',
+  '[Video]',
+  '[video]',
+  '[Vídeo]',
+  '[vídeo]',
+  '[Documento]',
+  '[documento]',
+  '[Document]',
+  '[document]',
+  '[text]',
+  '[Text]',
+  '[TEXT]',
+  '[media]',
+  '[Media]',
+  '[MEDIA]',
+  '[Mídia]',
+  '[mídia]',
 ];
 
 // Detect if content looks like base64 (common in media messages)
 const isBase64Content = (str: string): boolean => {
   if (!str || str.length < 100) return false;
-  const base64Patterns = ['/9j/', 'iVBOR', 'R0lGOD', 'UklGR', 'AAAA', 'data:image', 'data:audio', 'data:video'];
-  return base64Patterns.some(pattern => str.startsWith(pattern)) || 
-         (str.length > 500 && !str.includes(' ') && /^[A-Za-z0-9+/=]+$/.test(str.substring(0, 100)));
+  const base64Patterns = [
+    '/9j/',
+    'iVBOR',
+    'R0lGOD',
+    'UklGR',
+    'AAAA',
+    'data:image',
+    'data:audio',
+    'data:video',
+  ];
+  return (
+    base64Patterns.some((pattern) => str.startsWith(pattern)) ||
+    (str.length > 500 && !str.includes(' ') && /^[A-Za-z0-9+/=]+$/.test(str.substring(0, 100)))
+  );
 };
 
 // Extended status type including client-only statuses
@@ -201,7 +249,8 @@ function MessageBubbleComponent({
   onToggleSelect,
 }: MessageBubbleProps) {
   const queryClient = useQueryClient();
-  const { transcribeAudio, getTranscription, setTranscriptionFromDb, isLoading } = useAudioTranscription();
+  const { transcribeAudio, getTranscription, setTranscriptionFromDb, isLoading } =
+    useAudioTranscription();
   const [transcription, setTranscription] = useState<string | null>(null);
   const [hasAttempted, setHasAttempted] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -222,25 +271,24 @@ function MessageBubbleComponent({
 
   // Verificar se a mensagem pode ser selecionada (não permitir mensagens otimistas)
   const canSelect = !message.isOptimistic && !message.id.startsWith('temp_');
-  
+
   const handleToggleSelect = () => {
     if (onToggleSelect && canSelect) {
       onToggleSelect(message.id);
     }
   };
-  
+
   // Usar URL resolvida da prop se disponível, senão fallback para hook individual
   // Importante: só desativar o hook se propResolvedUrl é uma URL válida (não storage://)
   const shouldUseHook = !propResolvedUrl || propResolvedUrl.startsWith('storage://');
   const { signedUrl: hookSignedUrl, isLoading: isLoadingUrl } = useSignedUrl(
     shouldUseHook ? message.media_url : null
   );
-  
+
   // URL final resolvida - priorizar prop se for URL válida
-  const resolvedMediaUrl = (propResolvedUrl && !propResolvedUrl.startsWith('storage://')) 
-    ? propResolvedUrl 
-    : hookSignedUrl;
-  
+  const resolvedMediaUrl =
+    propResolvedUrl && !propResolvedUrl.startsWith('storage://') ? propResolvedUrl : hookSignedUrl;
+
   // Reset error states when media_url OR resolvedMediaUrl changes
   useEffect(() => {
     setImageError(false);
@@ -265,7 +313,7 @@ function MessageBubbleComponent({
       if (cached) {
         setTranscription(cached);
         setHasAttempted(true);
-      } 
+      }
       // Then check if message has transcription from DB (loaded via query)
       else if (message.transcription) {
         setTranscriptionFromDb(message.id, message.transcription);
@@ -273,39 +321,46 @@ function MessageBubbleComponent({
         setHasAttempted(true);
       }
     }
-  }, [message.id, message.type, message.transcription, isAgent, getTranscription, setTranscriptionFromDb]);
+  }, [
+    message.id,
+    message.type,
+    message.transcription,
+    isAgent,
+    getTranscription,
+    setTranscriptionFromDb,
+  ]);
 
   // Mensagem de erro detalhada para exibir ao usuário
   const [repairErrorMessage, setRepairErrorMessage] = useState<string | null>(null);
   const [mediaExpired, setMediaExpired] = useState(false);
-  
+
   // Função para reparar mídia faltante (usada por auto-repair e botão manual)
   const handleRepairMedia = async (silent = false) => {
     if (isRepairingMedia || autoRepairInFlight.has(message.id)) return false;
-    
+
     setIsRepairingMedia(true);
     setRepairErrorMessage(null);
     autoRepairInFlight.add(message.id);
-    
+
     // Timeout do cliente (20s) - fallback se a edge function não responder
     const clientTimeout = new Promise<{ error: string; code: string }>((resolve) => {
       setTimeout(() => resolve({ error: 'Tempo limite excedido', code: 'CLIENT_TIMEOUT' }), 20000);
     });
-    
+
     try {
       const invokePromise = supabase.functions.invoke('repair-message-media', {
-        body: { messageId: message.id }
+        body: { messageId: message.id },
       });
-      
+
       const result = await Promise.race([
         invokePromise,
-        clientTimeout.then(timeoutResult => ({ data: timeoutResult, error: null }))
+        clientTimeout.then((timeoutResult) => ({ data: timeoutResult, error: null })),
       ]);
-      
+
       const { data, error } = result;
-      
+
       if (error) throw error;
-      
+
       if (data?.success || data?.already_repaired) {
         // Atualizar cache sem reload da página
         queryClient.invalidateQueries({ queryKey: ['messages-infinite', message.conversation_id] });
@@ -325,9 +380,11 @@ function MessageBubbleComponent({
         } else {
           setRepairErrorMessage(data?.error || 'Não foi possível recuperar');
         }
-        
+
         if (!silent) {
-          const msg = data?.expired ? 'Mídia pode ter expirado' : (data?.error || 'Não foi possível recuperar a mídia');
+          const msg = data?.expired
+            ? 'Mídia pode ter expirado'
+            : data?.error || 'Não foi possível recuperar a mídia';
           toast.error(msg);
         }
         return false;
@@ -352,18 +409,24 @@ function MessageBubbleComponent({
     const isOptimistic = message.isOptimistic || message.id.startsWith('temp_');
     const alreadyAttempted = autoRepairAttempted.has(message.id);
     const inCooldown = (lastAttemptTime.get(message.id) || 0) + COOLDOWN_MS > Date.now();
-    
-    if (!needsRepair || isOptimistic || alreadyAttempted || inCooldown || autoRepairTriggered.current) {
+
+    if (
+      !needsRepair ||
+      isOptimistic ||
+      alreadyAttempted ||
+      inCooldown ||
+      autoRepairTriggered.current
+    ) {
       return;
     }
-    
+
     // Marcar como tentado e disparar
     autoRepairTriggered.current = true;
     autoRepairAttempted.add(message.id);
     lastAttemptTime.set(message.id, Date.now());
-    
+
     logger.info('[MessageBubble] Auto-repair iniciado para:', message.id);
-    
+
     handleRepairMedia(true).then((success) => {
       if (!success) {
         setAutoRepairFailed(true);
@@ -375,23 +438,23 @@ function MessageBubbleComponent({
   const renderMedia = () => {
     // Se é mensagem de mídia mas NÃO tem media_url, mostrar placeholder com botão de recuperar
     if (message.type !== 'text' && !message.media_url) {
-      const IconComponent = MEDIA_ICONS_MAP[message.type as keyof typeof MEDIA_ICONS_MAP] || FileText;
-      
+      const IconComponent =
+        MEDIA_ICONS_MAP[message.type as keyof typeof MEDIA_ICONS_MAP] || FileText;
+
       return (
-        <div className="mb-2 p-3 rounded-lg bg-muted/50 border border-border">
-          <div className="flex items-center gap-2 text-muted-foreground mb-2">
-            <IconComponent className="w-5 h-5" />
+        <div className="mb-2 rounded-lg border border-border bg-muted/50 p-3">
+          <div className="mb-2 flex items-center gap-2 text-muted-foreground">
+            <IconComponent className="h-5 w-5" />
             <span className="text-sm">
-              {mediaExpired 
-                ? `${MEDIA_LABELS[message.type] || 'Mídia'} expirou` 
-                : `${MEDIA_LABELS[message.type] || 'Mídia'} indisponível`
-              }
+              {mediaExpired
+                ? `${MEDIA_LABELS[message.type] || 'Mídia'} expirou`
+                : `${MEDIA_LABELS[message.type] || 'Mídia'} indisponível`}
             </span>
           </div>
-          
+
           {isRepairingMedia ? (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Loader2 className="w-3 h-3 animate-spin" />
+              <Loader2 className="h-3 w-3 animate-spin" />
               <span>Recuperando...</span>
             </div>
           ) : mediaExpired ? (
@@ -401,9 +464,9 @@ function MessageBubbleComponent({
                 variant="ghost"
                 size="sm"
                 onClick={() => handleRepairMedia(false)}
-                className="text-xs h-6 px-2"
+                className="h-6 px-2 text-xs"
               >
-                <RefreshCw className="w-3 h-3 mr-1" />
+                <RefreshCw className="mr-1 h-3 w-3" />
                 Tentar novamente
               </Button>
             </div>
@@ -418,39 +481,43 @@ function MessageBubbleComponent({
                 onClick={() => handleRepairMedia(false)}
                 className="text-xs"
               >
-                <RefreshCw className="w-3 h-3 mr-1.5" />
+                <RefreshCw className="mr-1.5 h-3 w-3" />
                 Tentar recuperar
               </Button>
             </div>
           ) : (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Loader2 className="w-3 h-3 animate-spin" />
+              <Loader2 className="h-3 w-3 animate-spin" />
               <span>Recuperando...</span>
             </div>
           )}
         </div>
       );
     }
-    
+
     if (!message.media_url) return null;
-    
+
     // Mostrar loading apenas se não temos URL resolvida e está carregando
     if (!resolvedMediaUrl && isLoadingUrl) {
       return (
         <div className="mb-2 flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="w-4 h-4 animate-spin" />
+          <Loader2 className="h-4 w-4 animate-spin" />
           <span className="text-sm">Carregando mídia...</span>
         </div>
       );
     }
-    
+
     // Se ainda não tem URL, aguardar
     if (!resolvedMediaUrl) return null;
 
     // Helper to extract filename from content or URL
     const getFileName = (): string => {
       // If content looks like a filename (has file extension)
-      if (message.content && /\.\w{2,5}$/.test(message.content) && !MEDIA_PLACEHOLDERS.includes(message.content)) {
+      if (
+        message.content &&
+        /\.\w{2,5}$/.test(message.content) &&
+        !MEDIA_PLACEHOLDERS.includes(message.content)
+      ) {
         return message.content;
       }
       // Fallback: extract from URL path
@@ -467,18 +534,18 @@ function MessageBubbleComponent({
       case 'image':
         if (imageError) {
           return (
-            <div className="mb-2 p-3 rounded-lg bg-muted/50 border border-border">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <ImageOff className="w-5 h-5" />
+            <div className="mb-2 rounded-lg border border-border bg-muted/50 p-3">
+              <div className="mb-2 flex items-center gap-2 text-muted-foreground">
+                <ImageOff className="h-5 w-5" />
                 <span className="text-sm">Erro ao carregar imagem</span>
               </div>
-              <a 
-                href={resolvedMediaUrl} 
-                target="_blank" 
+              <a
+                href={resolvedMediaUrl}
+                target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-primary hover:underline flex items-center gap-1"
+                className="flex items-center gap-1 text-xs text-primary hover:underline"
               >
-                <ExternalLink className="w-3 h-3" />
+                <ExternalLink className="h-3 w-3" />
                 Abrir em nova aba
               </a>
             </div>
@@ -486,11 +553,14 @@ function MessageBubbleComponent({
         }
         return (
           <div className="mb-2">
-            <ImageLightbox src={resolvedMediaUrl} alt={`Imagem ${isAgent ? 'enviada pelo atendente' : `de ${leadName}`}`}>
+            <ImageLightbox
+              src={resolvedMediaUrl}
+              alt={`Imagem ${isAgent ? 'enviada pelo atendente' : `de ${leadName}`}`}
+            >
               <img
                 src={resolvedMediaUrl}
                 alt={`Imagem ${isAgent ? 'enviada pelo atendente' : `enviada por ${leadName}`}`}
-                className="max-w-full rounded-lg max-h-64 object-cover cursor-pointer hover:brightness-95 transition-all"
+                className="max-h-64 max-w-full cursor-pointer rounded-lg object-cover transition-all hover:brightness-95"
                 loading="lazy"
                 decoding="async"
                 onError={() => {
@@ -504,18 +574,18 @@ function MessageBubbleComponent({
       case 'video':
         if (videoError) {
           return (
-            <div className="mb-2 p-3 rounded-lg bg-muted/50 border border-border">
-              <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                <VideoOff className="w-5 h-5" />
+            <div className="mb-2 rounded-lg border border-border bg-muted/50 p-3">
+              <div className="mb-2 flex items-center gap-2 text-muted-foreground">
+                <VideoOff className="h-5 w-5" />
                 <span className="text-sm">Erro ao carregar vídeo</span>
               </div>
-              <a 
-                href={resolvedMediaUrl} 
-                target="_blank" 
+              <a
+                href={resolvedMediaUrl}
+                target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-primary hover:underline flex items-center gap-1"
+                className="flex items-center gap-1 text-xs text-primary hover:underline"
               >
-                <ExternalLink className="w-3 h-3" />
+                <ExternalLink className="h-3 w-3" />
                 Abrir em nova aba
               </a>
             </div>
@@ -527,7 +597,7 @@ function MessageBubbleComponent({
               src={resolvedMediaUrl}
               controls
               aria-label={`Vídeo ${isAgent ? 'enviado pelo atendente' : `de ${leadName}`}`}
-              className="max-w-full rounded-lg max-h-64"
+              className="max-h-64 max-w-full rounded-lg"
               onError={() => {
                 logger.error('[MessageBubble] Erro ao carregar vídeo:', message.media_url);
                 setVideoError(true);
@@ -538,24 +608,27 @@ function MessageBubbleComponent({
       case 'audio':
         return (
           <div className="mb-2 space-y-2">
-            <AudioPlayer src={resolvedMediaUrl} aria-label={`Áudio ${isAgent ? 'enviado pelo atendente' : `de ${leadName}`}`} />
-            
+            <AudioPlayer
+              src={resolvedMediaUrl}
+              aria-label={`Áudio ${isAgent ? 'enviado pelo atendente' : `de ${leadName}`}`}
+            />
+
             {/* Transcription section */}
             {!isAgent && (
               <div className="text-xs">
                 {isLoading(message.id) && (
                   <div className="flex items-center gap-1.5 text-muted-foreground">
-                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <Loader2 className="h-3 w-3 animate-spin" />
                     <span>Transcrevendo...</span>
                   </div>
                 )}
-                
+
                 {transcription && (
-                  <div className="p-2 rounded-md bg-muted/80 border border-border/50">
-                    <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="rounded-md border border-border/50 bg-muted/80 p-2">
+                    <div className="mb-1 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1 text-success">
-                        <Check className="w-3 h-3" />
-                        <span className="font-medium text-xs">Transcrito</span>
+                        <Check className="h-3 w-3" />
+                        <span className="text-xs font-medium">Transcrito</span>
                       </div>
                       <Button
                         variant="ghost"
@@ -564,16 +637,20 @@ function MessageBubbleComponent({
                         onClick={handleCopyTranscription}
                         title={copied ? 'Copiado!' : 'Copiar transcrição'}
                       >
-                        {copied ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3" />}
+                        {copied ? (
+                          <Check className="h-3 w-3 text-success" />
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
                       </Button>
                     </div>
-                    <p className="text-foreground/80 italic text-xs">"{transcription}"</p>
+                    <p className="text-xs italic text-foreground/80">"{transcription}"</p>
                   </div>
                 )}
-                
+
                 {!isLoading(message.id) && !transcription && (
                   <button
-                    className="text-primary hover:text-primary/80 text-xs underline flex items-center gap-1"
+                    className="flex items-center gap-1 text-xs text-primary underline hover:text-primary/80"
                     onClick={() => {
                       if (resolvedMediaUrl) {
                         setHasAttempted(true);
@@ -582,9 +659,11 @@ function MessageBubbleComponent({
                         });
                       }
                     }}
-                    aria-label={hasAttempted ? 'Tentar transcrever novamente' : 'Transcrever áudio com IA'}
+                    aria-label={
+                      hasAttempted ? 'Tentar transcrever novamente' : 'Transcrever áudio com IA'
+                    }
                   >
-                    <Sparkles className="w-3 h-3" />
+                    <Sparkles className="h-3 w-3" />
                     {hasAttempted ? 'Tentar novamente' : 'Transcrever áudio'}
                   </button>
                 )}
@@ -595,11 +674,7 @@ function MessageBubbleComponent({
       case 'document':
         return (
           <div className="mb-2">
-            <DocumentPreview 
-              url={resolvedMediaUrl} 
-              fileName={getFileName()}
-              isAgent={isAgent}
-            />
+            <DocumentPreview url={resolvedMediaUrl} fileName={getFileName()} isAgent={isAgent} />
           </div>
         );
       default:
@@ -610,38 +685,37 @@ function MessageBubbleComponent({
   const getTypeIcon = () => {
     switch (message.type) {
       case 'image':
-        return <Image className="w-3 h-3" />;
+        return <Image className="h-3 w-3" />;
       case 'video':
-        return <Video className="w-3 h-3" />;
+        return <Video className="h-3 w-3" />;
       case 'audio':
-        return <Mic className="w-3 h-3" />;
+        return <Mic className="h-3 w-3" />;
       case 'document':
-        return <FileText className="w-3 h-3" />;
+        return <FileText className="h-3 w-3" />;
       default:
         return null;
     }
   };
 
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={cn('flex gap-2 group', isAgent && 'flex-row-reverse')}
+      className={cn('group flex gap-2', isAgent && 'flex-row-reverse')}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
       {showAvatar ? (
-        <Avatar className="w-8 h-8">
+        <Avatar className="h-8 w-8">
           <AvatarImage
             src={
               isAgent
                 ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${agentName}`
-                : (leadAvatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${leadName}`)
+                : leadAvatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${leadName}`
             }
           />
           <AvatarFallback>
-            {isAgent ? (agentName?.charAt(0) || 'A') : (leadName?.charAt(0) || '?')}
+            {isAgent ? agentName?.charAt(0) || 'A' : leadName?.charAt(0) || '?'}
           </AvatarFallback>
         </Avatar>
       ) : (
@@ -659,15 +733,17 @@ function MessageBubbleComponent({
           onReply={handleReply}
           onToggleSelect={handleToggleSelect}
         />
-        
+
         <div
           className={cn(
             'rounded-2xl px-4 py-2.5 transition-all',
             isAgent
-              ? 'bg-primary text-primary-foreground rounded-tr-sm'
-              : 'bg-card border border-border rounded-tl-sm',
+              ? 'rounded-tr-sm bg-primary text-primary-foreground'
+              : 'rounded-tl-sm border border-border bg-card',
             // Failed message styling - use string comparison for extended statuses
-            (message.status as string) === 'failed' && isAgent && 'bg-destructive/80 border border-destructive',
+            (message.status as string) === 'failed' &&
+              isAgent &&
+              'border border-destructive bg-destructive/80',
             // Selected message styling
             isSelected && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
           )}
@@ -682,44 +758,49 @@ function MessageBubbleComponent({
               agentName={agentName}
             />
           )}
-          
+
           {renderMedia()}
-          
-          {message.content && !MEDIA_PLACEHOLDERS.includes(message.content) && !isBase64Content(message.content) && !/\.\w{2,5}$/.test(message.content) && (
-            <>
-              {message.content.length > MAX_MESSAGE_LENGTH && !isExpanded ? (
-                <div>
-                  <div className="text-sm whitespace-pre-wrap">
-                    {parseWhatsAppMarkdown(message.content.slice(0, MAX_MESSAGE_LENGTH))}...
-                  </div>
-                  <button
-                    onClick={() => setIsExpanded(true)}
-                    aria-expanded="false"
-                    className="text-xs text-primary hover:text-primary/80 mt-1 flex items-center gap-0.5 underline"
-                  >
-                    <ChevronDown className="w-3 h-3" aria-hidden="true" />
-                    Ver mais
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  <div className="text-sm whitespace-pre-wrap">{parseWhatsAppMarkdown(message.content)}</div>
-                  {message.content.length > MAX_MESSAGE_LENGTH && isExpanded && (
+
+          {message.content &&
+            !MEDIA_PLACEHOLDERS.includes(message.content) &&
+            !isBase64Content(message.content) &&
+            !/\.\w{2,5}$/.test(message.content) && (
+              <>
+                {message.content.length > MAX_MESSAGE_LENGTH && !isExpanded ? (
+                  <div>
+                    <div className="whitespace-pre-wrap text-sm">
+                      {parseWhatsAppMarkdown(message.content.slice(0, MAX_MESSAGE_LENGTH))}...
+                    </div>
                     <button
-                      onClick={() => setIsExpanded(false)}
-                      aria-expanded="true"
-                      className="text-xs text-primary hover:text-primary/80 mt-1 flex items-center gap-0.5 underline"
+                      onClick={() => setIsExpanded(true)}
+                      aria-expanded="false"
+                      className="mt-1 flex items-center gap-0.5 text-xs text-primary underline hover:text-primary/80"
                     >
-                      <ChevronUp className="w-3 h-3" aria-hidden="true" />
-                      Ver menos
+                      <ChevronDown className="h-3 w-3" aria-hidden="true" />
+                      Ver mais
                     </button>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-          
-          <div className={cn('flex items-center gap-1 mt-1', isAgent && 'justify-end')}>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="whitespace-pre-wrap text-sm">
+                      {parseWhatsAppMarkdown(message.content)}
+                    </div>
+                    {message.content.length > MAX_MESSAGE_LENGTH && isExpanded && (
+                      <button
+                        onClick={() => setIsExpanded(false)}
+                        aria-expanded="true"
+                        className="mt-1 flex items-center gap-0.5 text-xs text-primary underline hover:text-primary/80"
+                      >
+                        <ChevronUp className="h-3 w-3" aria-hidden="true" />
+                        Ver menos
+                      </button>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+          <div className={cn('mt-1 flex items-center gap-1', isAgent && 'justify-end')}>
             {getTypeIcon()}
             <span
               className={cn(
@@ -729,24 +810,25 @@ function MessageBubbleComponent({
             >
               {format(new Date(message.created_at), 'HH:mm', { locale: ptBR })}
             </span>
-            {isAgent && (() => {
-              const statusConfig = getStatusConfig(message.status as MessageStatus);
-              const StatusIcon = statusConfig.icon;
-              return (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className={statusConfig.className}>
-                        <StatusIcon className="w-3.5 h-3.5" aria-label={statusConfig.label} />
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="text-xs">
-                      {statusConfig.label}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              );
-            })()}
+            {isAgent &&
+              (() => {
+                const statusConfig = getStatusConfig(message.status as MessageStatus);
+                const StatusIcon = statusConfig.icon;
+                return (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className={statusConfig.className}>
+                          <StatusIcon className="h-3.5 w-3.5" aria-label={statusConfig.label} />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs">
+                        {statusConfig.label}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                );
+              })()}
             <MessageDetailsPopover
               source={message.source}
               status={message.status}
@@ -754,17 +836,17 @@ function MessageBubbleComponent({
               isAgent={isAgent}
             />
           </div>
-          
+
           {/* Retry button for failed messages */}
           {(message.status as string) === 'failed' && isAgent && onRetry && (
-            <div className="mt-2 pt-2 border-t border-destructive/30">
+            <div className="mt-2 border-t border-destructive/30 pt-2">
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 px-2 text-xs text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
+                className="h-6 px-2 text-xs text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
                 onClick={() => onRetry(message)}
               >
-                <RotateCcw className="w-3 h-3 mr-1" />
+                <RotateCcw className="mr-1 h-3 w-3" />
                 Reenviar
               </Button>
             </div>

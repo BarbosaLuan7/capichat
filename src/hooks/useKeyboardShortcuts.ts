@@ -29,7 +29,8 @@ export function useKeyboardShortcuts({
 
       // Don't trigger shortcuts when typing in inputs
       const target = event.target as HTMLElement;
-      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+      const isInput =
+        target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 
       // Cmd+K / Ctrl+K - Command palette (works even in inputs)
       if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
@@ -89,7 +90,17 @@ export function useKeyboardShortcuts({
         return;
       }
     },
-    [enabled, onCommandK, onNewLead, onNewTask, onEscape, onSearch, onHelp, onNavigateInbox, onNavigateDashboard]
+    [
+      enabled,
+      onCommandK,
+      onNewLead,
+      onNewTask,
+      onEscape,
+      onSearch,
+      onHelp,
+      onNavigateInbox,
+      onNavigateDashboard,
+    ]
   );
 
   useEffect(() => {
@@ -109,4 +120,3 @@ export const KEYBOARD_SHORTCUTS = [
   { keys: ['Shift', 'D'], description: 'Ir para Dashboard' },
   { keys: ['Esc'], description: 'Fechar modal' },
 ];
-

@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,40 +22,45 @@ async function getProfilePicture(
     // Formatar telefone: remover tudo que não é número, adicionar 55 se necessário
     const cleanPhone = phone.replace(/\D/g, '');
     const phoneWithCountry = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
-    
+
     console.log(`[get-whatsapp-avatar] Buscando foto para: ${phoneWithCountry}`);
-    
+
     // Usar endpoint padrão do WAHA
     const url = `${baseUrl}/api/contacts/profile-picture?contactId=${phoneWithCountry}&session=${sessionName}`;
-    
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
-    
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
         'X-Api-Key': apiKey,
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       signal: controller.signal,
     });
-    
+
     clearTimeout(timeout);
-    
+
     if (!response.ok) {
       console.log(`[get-whatsapp-avatar] API retornou ${response.status}`);
       return null;
     }
-    
+
     const data = await response.json();
-    const profilePictureUrl = data?.profilePictureURL || data?.profilePicture || data?.url || data?.imgUrl;
-    
-    if (profilePictureUrl && typeof profilePictureUrl === 'string' && profilePictureUrl.startsWith('http')) {
+    const profilePictureUrl =
+      data?.profilePictureURL || data?.profilePicture || data?.url || data?.imgUrl;
+
+    if (
+      profilePictureUrl &&
+      typeof profilePictureUrl === 'string' &&
+      profilePictureUrl.startsWith('http')
+    ) {
       console.log(`[get-whatsapp-avatar] Foto encontrada!`);
       return profilePictureUrl;
     }
-    
+
     console.log(`[get-whatsapp-avatar] Sem URL de foto na resposta`);
     return null;
   } catch (error) {
@@ -82,10 +87,10 @@ serve(async (req) => {
     const { lead_id, phone } = payload;
 
     if (!lead_id || !phone) {
-      return new Response(
-        JSON.stringify({ error: 'lead_id e phone são obrigatórios' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'lead_id e phone são obrigatórios' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log('[get-whatsapp-avatar] Buscando avatar para lead:', lead_id);
@@ -99,10 +104,10 @@ serve(async (req) => {
 
     if (leadError || !leadData) {
       console.log('[get-whatsapp-avatar] Lead não encontrado:', lead_id);
-      return new Response(
-        JSON.stringify({ success: false, error: 'lead_not_found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ success: false, error: 'lead_not_found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Buscar configuração WAHA ativa, preferencialmente do tenant do lead
@@ -119,7 +124,7 @@ serve(async (req) => {
         .eq('tenant_id', leadData.tenant_id)
         .limit(1)
         .maybeSingle();
-      
+
       if (!tenantErr && tenantConfig) {
         wahaConfig = tenantConfig;
         console.log(`[get-whatsapp-avatar] Usando config do tenant ${leadData.tenant_id}`);
@@ -137,7 +142,7 @@ serve(async (req) => {
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
-      
+
       wahaConfig = anyConfig;
       configError = anyErr;
       if (wahaConfig) {
@@ -173,24 +178,23 @@ serve(async (req) => {
 
     if (updateError) {
       console.error('[get-whatsapp-avatar] Erro ao salvar:', updateError);
-      return new Response(
-        JSON.stringify({ success: true, avatar_url: avatarUrl, saved: false }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ success: true, avatar_url: avatarUrl, saved: false }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log('[get-whatsapp-avatar] Avatar salvo para lead:', lead_id);
 
-    return new Response(
-      JSON.stringify({ success: true, avatar_url: avatarUrl, saved: true }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
+    return new Response(JSON.stringify({ success: true, avatar_url: avatarUrl, saved: true }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error: unknown) {
     console.error('[get-whatsapp-avatar] Erro:', error);
-    return new Response(
-      JSON.stringify({ success: false, error: 'internal_error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ success: false, error: 'internal_error' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

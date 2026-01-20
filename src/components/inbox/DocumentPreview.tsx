@@ -33,42 +33,50 @@ function DocumentPreviewComponent({ url, fileName, isAgent = false }: DocumentPr
 
   if (isPdf && !previewError) {
     return (
-      <div className={cn(
-        "rounded-lg overflow-hidden border max-w-[280px]",
-        isAgent ? "border-primary-foreground/20 bg-primary-foreground/10" : "border-border bg-background/50"
-      )}>
+      <div
+        className={cn(
+          'max-w-[280px] overflow-hidden rounded-lg border',
+          isAgent
+            ? 'border-primary-foreground/20 bg-primary-foreground/10'
+            : 'border-border bg-background/50'
+        )}
+      >
         {/* Mini PDF Preview */}
-        <div className="relative w-full h-[100px] bg-muted/30 overflow-hidden">
+        <div className="relative h-[100px] w-full overflow-hidden bg-muted/30">
           <iframe
             src={`${url}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
-            className="w-full h-[200px] scale-50 origin-top-left pointer-events-none"
+            className="pointer-events-none h-[200px] w-full origin-top-left scale-50"
             style={{ width: '200%' }}
             title={fileName}
             onError={() => setPreviewError(true)}
           />
           {/* Overlay to prevent interaction */}
-          <div 
+          <div
             className="absolute inset-0 cursor-pointer"
             onClick={() => window.open(url, '_blank')}
           />
         </div>
 
         {/* File info and actions */}
-        <div className={cn(
-          "flex items-center gap-2 p-2",
-          isAgent ? "bg-primary-foreground/5" : "bg-muted/30"
-        )}>
-        <FileText className={cn(
-          "w-4 h-4 flex-shrink-0",
-          isPdf ? "text-destructive" : "text-muted-foreground"
-        )} />
+        <div
+          className={cn(
+            'flex items-center gap-2 p-2',
+            isAgent ? 'bg-primary-foreground/5' : 'bg-muted/30'
+          )}
+        >
+          <FileText
+            className={cn(
+              'h-4 w-4 flex-shrink-0',
+              isPdf ? 'text-destructive' : 'text-muted-foreground'
+            )}
+          />
           <a
             href={url}
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
-              "text-sm flex-1 truncate underline hover:no-underline",
-              isAgent ? "text-primary-foreground" : "text-foreground"
+              'flex-1 truncate text-sm underline hover:no-underline',
+              isAgent ? 'text-primary-foreground' : 'text-foreground'
             )}
             title={fileName}
           >
@@ -81,10 +89,12 @@ function DocumentPreviewComponent({ url, fileName, isAgent = false }: DocumentPr
             onClick={handleDownload}
             title="Baixar"
           >
-            <Download className={cn(
-              "w-3.5 h-3.5",
-              isAgent ? "text-primary-foreground/70" : "text-muted-foreground"
-            )} />
+            <Download
+              className={cn(
+                'h-3.5 w-3.5',
+                isAgent ? 'text-primary-foreground/70' : 'text-muted-foreground'
+              )}
+            />
           </Button>
         </div>
       </div>
@@ -93,42 +103,52 @@ function DocumentPreviewComponent({ url, fileName, isAgent = false }: DocumentPr
 
   // Fallback for non-PDF or if preview failed
   return (
-    <div className={cn(
-      "flex items-center gap-2 p-2.5 rounded-lg max-w-[280px]",
-      isAgent 
-        ? "bg-primary-foreground/10 border border-primary-foreground/20" 
-        : "bg-background/50 border border-border"
-    )}>
-      <FileText className={cn(
-        "w-5 h-5 flex-shrink-0",
-        isPdf ? "text-destructive" : isAgent ? "text-primary-foreground/70" : "text-muted-foreground"
-      )} />
-      
-      <div className="flex-1 min-w-0">
+    <div
+      className={cn(
+        'flex max-w-[280px] items-center gap-2 rounded-lg p-2.5',
+        isAgent
+          ? 'border border-primary-foreground/20 bg-primary-foreground/10'
+          : 'border border-border bg-background/50'
+      )}
+    >
+      <FileText
+        className={cn(
+          'h-5 w-5 flex-shrink-0',
+          isPdf
+            ? 'text-destructive'
+            : isAgent
+              ? 'text-primary-foreground/70'
+              : 'text-muted-foreground'
+        )}
+      />
+
+      <div className="min-w-0 flex-1">
         <a
           href={url}
           target="_blank"
           rel="noopener noreferrer"
           className={cn(
-            "text-sm font-medium truncate block underline hover:no-underline",
-            isAgent ? "text-primary-foreground" : "text-foreground"
+            'block truncate text-sm font-medium underline hover:no-underline',
+            isAgent ? 'text-primary-foreground' : 'text-foreground'
           )}
           title={fileName}
         >
           {fileName}
         </a>
         {previewError && (
-          <span className={cn(
-            "text-xs flex items-center gap-1",
-            isAgent ? "text-primary-foreground/60" : "text-muted-foreground"
-          )}>
-            <AlertCircle className="w-3 h-3" />
+          <span
+            className={cn(
+              'flex items-center gap-1 text-xs',
+              isAgent ? 'text-primary-foreground/60' : 'text-muted-foreground'
+            )}
+          >
+            <AlertCircle className="h-3 w-3" />
             Preview indisponível
           </span>
         )}
       </div>
 
-      <div className="flex items-center gap-1 flex-shrink-0">
+      <div className="flex flex-shrink-0 items-center gap-1">
         <Button
           variant="ghost"
           size="icon"
@@ -136,10 +156,12 @@ function DocumentPreviewComponent({ url, fileName, isAgent = false }: DocumentPr
           onClick={handleDownload}
           title="Baixar"
         >
-          <Download className={cn(
-            "w-4 h-4",
-            isAgent ? "text-primary-foreground/70" : "text-muted-foreground"
-          )} />
+          <Download
+            className={cn(
+              'h-4 w-4',
+              isAgent ? 'text-primary-foreground/70' : 'text-muted-foreground'
+            )}
+          />
         </Button>
         <Button
           variant="ghost"
@@ -148,16 +170,20 @@ function DocumentPreviewComponent({ url, fileName, isAgent = false }: DocumentPr
           onClick={() => window.open(url, '_blank')}
           title="Abrir em nova aba"
         >
-          <ExternalLink className={cn(
-            "w-4 h-4",
-            isAgent ? "text-primary-foreground/70" : "text-muted-foreground"
-          )} />
+          <ExternalLink
+            className={cn(
+              'h-4 w-4',
+              isAgent ? 'text-primary-foreground/70' : 'text-muted-foreground'
+            )}
+          />
         </Button>
       </div>
     </div>
   );
 }
 
-export const DocumentPreview = memo(DocumentPreviewComponent, (prev, next) =>
-  prev.url === next.url && prev.fileName === next.fileName && prev.isAgent === next.isAgent
+export const DocumentPreview = memo(
+  DocumentPreviewComponent,
+  (prev, next) =>
+    prev.url === next.url && prev.fileName === next.fileName && prev.isAgent === next.isAgent
 );

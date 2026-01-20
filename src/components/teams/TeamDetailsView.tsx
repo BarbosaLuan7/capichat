@@ -1,15 +1,15 @@
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { 
-  Users, 
-  Phone, 
-  MessageSquare, 
-  Link2, 
+import {
+  Users,
+  Phone,
+  MessageSquare,
+  Link2,
   Edit,
   Trash2,
   Star,
   Shuffle,
-  Copy
+  Copy,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +25,6 @@ interface TeamDetailsViewProps {
 }
 
 export function TeamDetailsView({ team, onEdit, onDelete }: TeamDetailsViewProps) {
-
   const accessLevelLabels = {
     all: 'Todos',
     team: 'Equipe',
@@ -46,16 +45,21 @@ export function TeamDetailsView({ team, onEdit, onDelete }: TeamDetailsViewProps
 
   const members = team.team_members || [];
   const channels = team.team_whatsapp_configs || [];
-  const supervisors = members.filter(m => m.is_supervisor);
+  const supervisors = members.filter((m) => m.is_supervisor);
 
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-xl gradient-primary flex items-center justify-center">
+          <div className="gradient-primary flex h-16 w-16 items-center justify-center rounded-xl">
             <span className="text-xl font-bold text-primary-foreground">
-              {team.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+              {team.name
+                .split(' ')
+                .map((w) => w[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase()}
             </span>
           </div>
 
@@ -64,27 +68,31 @@ export function TeamDetailsView({ team, onEdit, onDelete }: TeamDetailsViewProps
               <h2 className="text-xl font-semibold text-foreground">{team.name}</h2>
               {team.is_default && (
                 <Badge variant="secondary" className="gap-1">
-                  <Star className="w-3 h-3" />
+                  <Star className="h-3 w-3" />
                   Padrão
                 </Badge>
               )}
             </div>
-            <p className="text-xs text-muted-foreground font-mono">
-              Id: {team.id}
-            </p>
+            <p className="font-mono text-xs text-muted-foreground">Id: {team.id}</p>
             <p className="text-xs text-muted-foreground">
-              Criada em: {format(new Date(team.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              Criada em:{' '}
+              {format(new Date(team.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onDelete} className="text-destructive hover:bg-destructive/10">
-            <Trash2 className="w-4 h-4 mr-1" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onDelete}
+            className="text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 className="mr-1 h-4 w-4" />
             Excluir
           </Button>
           <Button size="sm" onClick={onEdit} className="gradient-primary text-primary-foreground">
-            <Edit className="w-4 h-4 mr-1" />
+            <Edit className="mr-1 h-4 w-4" />
             Alterar
           </Button>
         </div>
@@ -107,7 +115,11 @@ export function TeamDetailsView({ team, onEdit, onDelete }: TeamDetailsViewProps
             {accessLevelLabels[(team.access_level as keyof typeof accessLevelLabels) || 'team']}
           </p>
           <p className="text-xs text-muted-foreground">
-            {accessLevelDescriptions[(team.access_level as keyof typeof accessLevelDescriptions) || 'team']}
+            {
+              accessLevelDescriptions[
+                (team.access_level as keyof typeof accessLevelDescriptions) || 'team'
+              ]
+            }
           </p>
         </div>
       </div>
@@ -117,13 +129,13 @@ export function TeamDetailsView({ team, onEdit, onDelete }: TeamDetailsViewProps
       {/* Canais Associados */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <Phone className="w-4 h-4 text-muted-foreground" />
+          <Phone className="h-4 w-4 text-muted-foreground" />
           <p className="font-medium text-foreground">Canais associados</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {channels.map(c => (
+          {channels.map((c) => (
             <Badge key={c.id} variant="secondary" className="gap-1">
-              <Phone className="w-3 h-3" />
+              <Phone className="h-3 w-3" />
               {c.whatsapp_config?.phone_number || c.whatsapp_config?.name || 'Canal'}
             </Badge>
           ))}
@@ -140,17 +152,17 @@ export function TeamDetailsView({ team, onEdit, onDelete }: TeamDetailsViewProps
         <>
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Link2 className="w-4 h-4 text-muted-foreground" />
+              <Link2 className="h-4 w-4 text-muted-foreground" />
               <p className="font-medium text-foreground">Link para atendimento direto</p>
             </div>
             <div className="space-y-2">
-              {channels.map(c => (
+              {channels.map((c) => (
                 <div
                   key={c.id}
-                  className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
+                  className="flex items-center justify-between rounded-lg border bg-muted/30 p-3"
                 >
                   <div className="flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm">
                       {c.whatsapp_config?.phone_number || c.whatsapp_config?.name}
                     </span>
@@ -158,9 +170,11 @@ export function TeamDetailsView({ team, onEdit, onDelete }: TeamDetailsViewProps
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => c.whatsapp_config?.phone_number && copyLink(c.whatsapp_config.phone_number)}
+                    onClick={() =>
+                      c.whatsapp_config?.phone_number && copyLink(c.whatsapp_config.phone_number)
+                    }
                   >
-                    <Copy className="w-4 h-4 mr-1" />
+                    <Copy className="mr-1 h-4 w-4" />
                     Copiar link
                   </Button>
                 </div>
@@ -174,7 +188,7 @@ export function TeamDetailsView({ team, onEdit, onDelete }: TeamDetailsViewProps
       {/* Distribuição */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <Shuffle className="w-4 h-4 text-muted-foreground" />
+          <Shuffle className="h-4 w-4 text-muted-foreground" />
           <p className="font-medium text-foreground">Distribuição de atendimentos</p>
         </div>
         <Badge variant={team.auto_distribution ? 'default' : 'secondary'}>
@@ -187,10 +201,8 @@ export function TeamDetailsView({ team, onEdit, onDelete }: TeamDetailsViewProps
       {/* Usuários */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-muted-foreground" />
-          <p className="font-medium text-foreground">
-            Usuários ({members.length})
-          </p>
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <p className="font-medium text-foreground">Usuários ({members.length})</p>
           {supervisors.length > 0 && (
             <Badge variant="outline" className="text-xs">
               {supervisors.length} supervisor{supervisors.length !== 1 ? 'es' : ''}
@@ -198,10 +210,10 @@ export function TeamDetailsView({ team, onEdit, onDelete }: TeamDetailsViewProps
           )}
         </div>
         <div className="space-y-2">
-          {members.map(m => (
+          {members.map((m) => (
             <div
               key={m.id}
-              className="flex items-center justify-between p-3 rounded-lg border bg-card"
+              className="flex items-center justify-between rounded-lg border bg-card p-3"
             >
               <div className="flex items-center gap-3">
                 <Avatar className="h-8 w-8">
@@ -210,7 +222,7 @@ export function TeamDetailsView({ team, onEdit, onDelete }: TeamDetailsViewProps
                     {m.user?.name?.charAt(0) || '?'}
                   </AvatarFallback>
                 </Avatar>
-                <span className="font-medium text-sm">{m.user?.name}</span>
+                <span className="text-sm font-medium">{m.user?.name}</span>
               </div>
 
               <div className="flex items-center gap-2">
@@ -226,7 +238,7 @@ export function TeamDetailsView({ team, onEdit, onDelete }: TeamDetailsViewProps
             </div>
           ))}
           {members.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">
+            <p className="py-4 text-center text-sm text-muted-foreground">
               Nenhum usuário na equipe
             </p>
           )}

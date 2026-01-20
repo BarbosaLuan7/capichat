@@ -11,11 +11,11 @@ type TeamWhatsAppConfig = Database['public']['Tables']['team_whatsapp_configs'][
 // Interface completa da equipe com relações
 export interface TeamWithRelations extends Team {
   supervisor?: { id: string; name: string; email: string; avatar: string | null } | null;
-  team_members?: (TeamMember & { 
-    user: { id: string; name: string; email: string; avatar: string | null } 
+  team_members?: (TeamMember & {
+    user: { id: string; name: string; email: string; avatar: string | null };
   })[];
   team_whatsapp_configs?: (TeamWhatsAppConfig & {
-    whatsapp_config: { id: string; name: string; phone_number: string | null }
+    whatsapp_config: { id: string; name: string; phone_number: string | null };
   })[];
 }
 
@@ -26,7 +26,8 @@ export function useTeams() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('teams')
-        .select(`
+        .select(
+          `
           *,
           supervisor:supervisor_id (id, name, email, avatar),
           team_members (
@@ -42,9 +43,10 @@ export function useTeams() {
             created_at,
             whatsapp_config:whatsapp_config_id (id, name, phone_number)
           )
-        `)
+        `
+        )
         .order('name');
-      
+
       if (error) throw error;
       return data as unknown as TeamWithRelations[];
     },
@@ -62,7 +64,8 @@ export function useTeam(id: string | undefined) {
       if (!id) return null;
       const { data, error } = await supabase
         .from('teams')
-        .select(`
+        .select(
+          `
           *,
           supervisor:supervisor_id (id, name, email, avatar),
           team_members (
@@ -78,10 +81,11 @@ export function useTeam(id: string | undefined) {
             created_at,
             whatsapp_config:whatsapp_config_id (id, name, phone_number)
           )
-        `)
+        `
+        )
         .eq('id', id)
         .maybeSingle();
-      
+
       if (error) throw error;
       return data as unknown as TeamWithRelations | null;
     },
@@ -99,15 +103,17 @@ export function useTeamMembers(teamId: string | undefined) {
       if (!teamId) return [];
       const { data, error } = await supabase
         .from('team_members')
-        .select(`
+        .select(
+          `
           id,
           user_id,
           is_supervisor,
           created_at,
           user:user_id (id, name, email, avatar)
-        `)
+        `
+        )
         .eq('team_id', teamId);
-      
+
       if (error) throw error;
       return data;
     },
@@ -130,13 +136,9 @@ export function useCreateTeam() {
           .eq('tenant_id', team.tenant_id)
           .eq('is_default', true);
       }
-      
-      const { data, error } = await supabase
-        .from('teams')
-        .insert(team)
-        .select()
-        .single();
-      
+
+      const { data, error } = await supabase.from('teams').insert(team).select().single();
+
       if (error) throw error;
       return data;
     },
@@ -159,7 +161,7 @@ export function useUpdateTeam() {
           .select('tenant_id')
           .eq('id', id)
           .maybeSingle();
-        
+
         if (team?.tenant_id) {
           await supabase
             .from('teams')
@@ -169,14 +171,14 @@ export function useUpdateTeam() {
             .neq('id', id);
         }
       }
-      
+
       const { data, error } = await supabase
         .from('teams')
         .update(updates)
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -193,11 +195,8 @@ export function useDeleteTeam() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('teams')
-        .delete()
-        .eq('id', id);
-      
+      const { error } = await supabase.from('teams').delete().eq('id', id);
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -213,31 +212,26 @@ export function useUpdateTeamMembers() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ 
-      teamId, 
-      members 
-    }: { 
-      teamId: string; 
-      members: { userId: string; isSupervisor: boolean }[] 
+    mutationFn: async ({
+      teamId,
+      members,
+    }: {
+      teamId: string;
+      members: { userId: string; isSupervisor: boolean }[];
     }) => {
       // 1. Remover todos os membros atuais
-      await supabase
-        .from('team_members')
-        .delete()
-        .eq('team_id', teamId);
+      await supabase.from('team_members').delete().eq('team_id', teamId);
 
       // 2. Inserir novos membros
       if (members.length > 0) {
-        const { error } = await supabase
-          .from('team_members')
-          .insert(
-            members.map(m => ({
-              team_id: teamId,
-              user_id: m.userId,
-              is_supervisor: m.isSupervisor,
-            }))
-          );
-        
+        const { error } = await supabase.from('team_members').insert(
+          members.map((m) => ({
+            team_id: teamId,
+            user_id: m.userId,
+            is_supervisor: m.isSupervisor,
+          }))
+        );
+
         if (error) throw error;
       }
 
@@ -258,30 +252,19 @@ export function useUpdateTeamWhatsAppConfigs() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ 
-      teamId, 
-      configIds 
-    }: { 
-      teamId: string; 
-      configIds: string[] 
-    }) => {
+    mutationFn: async ({ teamId, configIds }: { teamId: string; configIds: string[] }) => {
       // 1. Remover todos os canais atuais
-      await supabase
-        .from('team_whatsapp_configs')
-        .delete()
-        .eq('team_id', teamId);
+      await supabase.from('team_whatsapp_configs').delete().eq('team_id', teamId);
 
       // 2. Inserir novos canais
       if (configIds.length > 0) {
-        const { error } = await supabase
-          .from('team_whatsapp_configs')
-          .insert(
-            configIds.map(configId => ({
-              team_id: teamId,
-              whatsapp_config_id: configId,
-            }))
-          );
-        
+        const { error } = await supabase.from('team_whatsapp_configs').insert(
+          configIds.map((configId) => ({
+            team_id: teamId,
+            whatsapp_config_id: configId,
+          }))
+        );
+
         if (error) throw error;
       }
 

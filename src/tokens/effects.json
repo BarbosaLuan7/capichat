@@ -3,25 +3,56 @@
   "shadow": {
     "sm": {
       "$type": "shadow",
-      "$value": { "color": "rgba(0, 0, 0, 0.05)", "offsetX": "0", "offsetY": "1px", "blur": "2px", "spread": "0" }
+      "$value": {
+        "color": "rgba(0, 0, 0, 0.05)",
+        "offsetX": "0",
+        "offsetY": "1px",
+        "blur": "2px",
+        "spread": "0"
+      }
     },
     "default": {
       "$type": "shadow",
-      "$value": { "color": "rgba(0, 0, 0, 0.1)", "offsetX": "0", "offsetY": "1px", "blur": "3px", "spread": "0" }
+      "$value": {
+        "color": "rgba(0, 0, 0, 0.1)",
+        "offsetX": "0",
+        "offsetY": "1px",
+        "blur": "3px",
+        "spread": "0"
+      }
     },
     "md": {
       "$type": "shadow",
-      "$value": { "color": "rgba(0, 0, 0, 0.1)", "offsetX": "0", "offsetY": "4px", "blur": "6px", "spread": "-1px" }
+      "$value": {
+        "color": "rgba(0, 0, 0, 0.1)",
+        "offsetX": "0",
+        "offsetY": "4px",
+        "blur": "6px",
+        "spread": "-1px"
+      }
     },
     "lg": {
       "$type": "shadow",
-      "$value": { "color": "rgba(0, 0, 0, 0.1)", "offsetX": "0", "offsetY": "10px", "blur": "15px", "spread": "-3px" }
+      "$value": {
+        "color": "rgba(0, 0, 0, 0.1)",
+        "offsetX": "0",
+        "offsetY": "10px",
+        "blur": "15px",
+        "spread": "-3px"
+      }
     }
   },
   "gradient": {
     "primary": {
       "$type": "gradient",
-      "$value": { "type": "linear", "angle": "to right", "stops": [{ "color": "#3b82f6", "position": "0%" }, { "color": "#2563eb", "position": "100%" }] }
+      "$value": {
+        "type": "linear",
+        "angle": "to right",
+        "stops": [
+          { "color": "#3b82f6", "position": "0%" },
+          { "color": "#2563eb", "position": "100%" }
+        ]
+      }
     }
   },
   "animation": {

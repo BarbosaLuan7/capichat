@@ -68,7 +68,7 @@ import { TenantIndicatorCard } from '@/components/dashboard/TenantIndicatorCard'
 const CustomTooltip = memo(({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+      <div className="rounded-lg border border-border bg-card p-3 shadow-lg">
         <p className="font-medium text-foreground">{label}</p>
         {payload.map((entry: any, index: number) => (
           <p key={index} className="text-sm text-muted-foreground">
@@ -95,17 +95,37 @@ const Dashboard = () => {
   const { tenants, currentTenant, setCurrentTenant, hasMultipleTenants } = useTenant();
 
   // Tenant stats
-  const tenantIds = tenants.map(t => t.id);
+  const tenantIds = tenants.map((t) => t.id);
   const { data: tenantStats, isLoading: loadingTenantStats } = useTenantStats(tenantIds);
 
   const tenantId = currentTenant?.id || null;
 
   // Data hooks with refetch
-  const { data: leadMetrics, isLoading: loadingLeads, refetch: refetchLeads } = useLeadMetrics(period, tenantId);
-  const { data: funnelMetrics, isLoading: loadingFunnel, refetch: refetchFunnel } = useFunnelMetrics(period, tenantId);
-  const { data: agentPerformance, isLoading: loadingAgents, refetch: refetchAgents } = useAgentPerformance(period, tenantId);
-  const { data: dailyEvolution, isLoading: loadingDaily, refetch: refetchDaily } = useDailyEvolution(period, tenantId);
-  const { data: conversationMetrics, isLoading: loadingConversations, refetch: refetchConversations } = useConversationMetrics(period, tenantId);
+  const {
+    data: leadMetrics,
+    isLoading: loadingLeads,
+    refetch: refetchLeads,
+  } = useLeadMetrics(period, tenantId);
+  const {
+    data: funnelMetrics,
+    isLoading: loadingFunnel,
+    refetch: refetchFunnel,
+  } = useFunnelMetrics(period, tenantId);
+  const {
+    data: agentPerformance,
+    isLoading: loadingAgents,
+    refetch: refetchAgents,
+  } = useAgentPerformance(period, tenantId);
+  const {
+    data: dailyEvolution,
+    isLoading: loadingDaily,
+    refetch: refetchDaily,
+  } = useDailyEvolution(period, tenantId);
+  const {
+    data: conversationMetrics,
+    isLoading: loadingConversations,
+    refetch: refetchConversations,
+  } = useConversationMetrics(period, tenantId);
 
   const handleRefresh = () => {
     refetchLeads();
@@ -116,55 +136,60 @@ const Dashboard = () => {
   };
 
   // KPI stats
-  const stats = useMemo(() => [
-    {
-      title: 'Total de Leads',
-      value: leadMetrics?.totalLeads || 0,
-      change: leadMetrics?.changePercent !== undefined 
-        ? `${leadMetrics.changePercent >= 0 ? '+' : ''}${leadMetrics.changePercent}%`
-        : 'N/A',
-      isPositive: (leadMetrics?.changePercent || 0) >= 0,
-      icon: Users,
-      color: 'text-primary',
-      bgColor: 'bg-primary/10',
-    },
-    {
-      title: 'Conversas Abertas',
-      value: conversationMetrics?.open || 0,
-      change: `${conversationMetrics?.total || 0} total`,
-      isPositive: true,
-      icon: MessageSquare,
-      color: 'text-accent',
-      bgColor: 'bg-accent/10',
-    },
-    {
-      title: 'Taxa de Resolução',
-      value: `${conversationMetrics?.resolutionRate || 0}%`,
-      change: `${conversationMetrics?.resolved || 0} resolvidas`,
-      isPositive: true,
-      icon: CheckCircle2,
-      color: 'text-success',
-      bgColor: 'bg-success/10',
-    },
-    {
-      title: 'Leads Quentes',
-      value: leadMetrics?.leadsByTemperature.hot || 0,
-      change: 'prontos para fechar',
-      isPositive: true,
-      icon: Zap,
-      color: 'text-warning',
-      bgColor: 'bg-warning/10',
-    },
-  ], [leadMetrics, conversationMetrics]);
+  const stats = useMemo(
+    () => [
+      {
+        title: 'Total de Leads',
+        value: leadMetrics?.totalLeads || 0,
+        change:
+          leadMetrics?.changePercent !== undefined
+            ? `${leadMetrics.changePercent >= 0 ? '+' : ''}${leadMetrics.changePercent}%`
+            : 'N/A',
+        isPositive: (leadMetrics?.changePercent || 0) >= 0,
+        icon: Users,
+        color: 'text-primary',
+        bgColor: 'bg-primary/10',
+      },
+      {
+        title: 'Conversas Abertas',
+        value: conversationMetrics?.open || 0,
+        change: `${conversationMetrics?.total || 0} total`,
+        isPositive: true,
+        icon: MessageSquare,
+        color: 'text-accent',
+        bgColor: 'bg-accent/10',
+      },
+      {
+        title: 'Taxa de Resolução',
+        value: `${conversationMetrics?.resolutionRate || 0}%`,
+        change: `${conversationMetrics?.resolved || 0} resolvidas`,
+        isPositive: true,
+        icon: CheckCircle2,
+        color: 'text-success',
+        bgColor: 'bg-success/10',
+      },
+      {
+        title: 'Leads Quentes',
+        value: leadMetrics?.leadsByTemperature.hot || 0,
+        change: 'prontos para fechar',
+        isPositive: true,
+        icon: Zap,
+        color: 'text-warning',
+        bgColor: 'bg-warning/10',
+      },
+    ],
+    [leadMetrics, conversationMetrics]
+  );
 
-  const isLoading = loadingLeads || loadingFunnel || loadingAgents || loadingDaily || loadingConversations;
+  const isLoading =
+    loadingLeads || loadingFunnel || loadingAgents || loadingDaily || loadingConversations;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-6">
       <PageBreadcrumb items={[{ label: 'Dashboard' }]} />
-      
+
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground">
@@ -175,19 +200,19 @@ const Dashboard = () => {
         <div className="flex flex-wrap items-center gap-3">
           {/* Tenant Filter */}
           {hasMultipleTenants && (
-            <Select 
-              value={currentTenant?.id || 'all'} 
+            <Select
+              value={currentTenant?.id || 'all'}
               onValueChange={(v) => {
                 if (v === 'all') {
                   setCurrentTenant(null);
                 } else {
-                  const tenant = tenants.find(t => t.id === v);
+                  const tenant = tenants.find((t) => t.id === v);
                   setCurrentTenant(tenant || null);
                 }
               }}
             >
               <SelectTrigger className="w-[180px]">
-                <Building2 className="w-4 h-4 mr-2" />
+                <Building2 className="mr-2 h-4 w-4" />
                 <SelectValue placeholder="Todas empresas" />
               </SelectTrigger>
               <SelectContent>
@@ -203,7 +228,7 @@ const Dashboard = () => {
 
           <Select value={period} onValueChange={(v) => setPeriod(v as PeriodFilter)}>
             <SelectTrigger className="w-[180px]">
-              <Calendar className="w-4 h-4 mr-2" />
+              <Calendar className="mr-2 h-4 w-4" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -217,7 +242,7 @@ const Dashboard = () => {
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isLoading}>
-                <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
+                <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Atualizar dados</TooltipContent>
@@ -226,7 +251,7 @@ const Dashboard = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="gap-2" disabled={isExporting}>
-                <Download className={cn("w-4 h-4", isExporting && "animate-pulse")} />
+                <Download className={cn('h-4 w-4', isExporting && 'animate-pulse')} />
                 Exportar
               </Button>
             </DropdownMenuTrigger>
@@ -250,7 +275,7 @@ const Dashboard = () => {
           </DropdownMenu>
 
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Clock className="w-4 h-4" />
+            <Clock className="h-4 w-4" />
             <span className="hidden sm:inline">Tempo real</span>
           </div>
         </div>
@@ -268,7 +293,7 @@ const Dashboard = () => {
       )}
 
       {/* KPIs Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, index) => (
           <motion.div
             key={stat.title}
@@ -276,7 +301,7 @@ const Dashboard = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: index * 0.1 }}
           >
-            <Card className="hover:shadow-card-hover transition-shadow">
+            <Card className="transition-shadow hover:shadow-card-hover">
               <CardContent className="p-6">
                 {isLoading ? (
                   <div className="space-y-3">
@@ -287,8 +312,13 @@ const Dashboard = () => {
                 ) : (
                   <>
                     <div className="flex items-center justify-between">
-                      <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center', stat.bgColor)}>
-                        <stat.icon className={cn('w-6 h-6', stat.color)} />
+                      <div
+                        className={cn(
+                          'flex h-12 w-12 items-center justify-center rounded-xl',
+                          stat.bgColor
+                        )}
+                      >
+                        <stat.icon className={cn('h-6 w-6', stat.color)} />
                       </div>
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
                         {stat.change}
@@ -296,7 +326,7 @@ const Dashboard = () => {
                     </div>
                     <div className="mt-4">
                       <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{stat.title}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{stat.title}</p>
                     </div>
                   </>
                 )}
@@ -317,17 +347,15 @@ const Dashboard = () => {
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Funnel Chart */}
             <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Target className="w-5 h-5 text-primary" />
+                  <Target className="h-5 w-5 text-primary" />
                   Funil de Conversão
                 </CardTitle>
-                <CardDescription>
-                  Taxa de conversão entre etapas
-                </CardDescription>
+                <CardDescription>Taxa de conversão entre etapas</CardDescription>
               </CardHeader>
               <CardContent>
                 {loadingFunnel ? (
@@ -342,7 +370,11 @@ const Dashboard = () => {
                           margin={{ top: 5, right: 30, left: 120, bottom: 5 }}
                         >
                           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                          <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                          <XAxis
+                            type="number"
+                            stroke="hsl(var(--muted-foreground))"
+                            fontSize={12}
+                          />
                           <YAxis
                             type="category"
                             dataKey="stage"
@@ -359,7 +391,7 @@ const Dashboard = () => {
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="flex flex-wrap gap-2 mt-4">
+                    <div className="mt-4 flex flex-wrap gap-2">
                       {funnelMetrics.stages.slice(1).map((stage) => (
                         <Badge key={stage.id} variant="outline" className="text-xs">
                           {stage.stage}: {stage.conversionRate}%
@@ -368,7 +400,7 @@ const Dashboard = () => {
                     </div>
                   </>
                 ) : (
-                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                  <div className="flex h-[300px] items-center justify-center text-muted-foreground">
                     <p className="text-sm">Configure as etapas do funil</p>
                   </div>
                 )}
@@ -379,7 +411,7 @@ const Dashboard = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-primary" />
+                  <Users className="h-5 w-5 text-primary" />
                   Origem dos Leads
                 </CardTitle>
               </CardHeader>
@@ -408,20 +440,22 @@ const Dashboard = () => {
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="flex flex-wrap gap-2 mt-2 justify-center">
+                    <div className="mt-2 flex flex-wrap justify-center gap-2">
                       {leadMetrics.leadsBySource.map((source) => (
                         <div key={source.name} className="flex items-center gap-2 text-xs">
                           <div
-                            className="w-3 h-3 rounded-full"
+                            className="h-3 w-3 rounded-full"
                             style={{ backgroundColor: source.color }}
                           />
-                          <span className="text-muted-foreground">{source.name} ({source.value})</span>
+                          <span className="text-muted-foreground">
+                            {source.name} ({source.value})
+                          </span>
                         </div>
                       ))}
                     </div>
                   </>
                 ) : (
-                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                  <div className="flex h-[300px] items-center justify-center text-muted-foreground">
                     <p className="text-sm">Adicione etiquetas de origem aos leads</p>
                   </div>
                 )}
@@ -432,17 +466,15 @@ const Dashboard = () => {
 
         {/* Evolution Tab */}
         <TabsContent value="evolution" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Daily Evolution */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-primary" />
+                  <TrendingUp className="h-5 w-5 text-primary" />
                   Evolução de Leads
                 </CardTitle>
-                <CardDescription>
-                  Novos leads por dia no período
-                </CardDescription>
+                <CardDescription>Novos leads por dia no período</CardDescription>
               </CardHeader>
               <CardContent>
                 {loadingDaily ? (
@@ -450,7 +482,10 @@ const Dashboard = () => {
                 ) : dailyEvolution && dailyEvolution.length > 0 ? (
                   <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={dailyEvolution} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                      <AreaChart
+                        data={dailyEvolution}
+                        margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                      >
                         <defs>
                           <linearGradient id="colorLeadsDash" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
@@ -474,7 +509,7 @@ const Dashboard = () => {
                     </ResponsiveContainer>
                   </div>
                 ) : (
-                  <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                  <div className="flex h-[300px] items-center justify-center text-muted-foreground">
                     <p className="text-sm">Sem dados para o período selecionado</p>
                   </div>
                 )}
@@ -485,12 +520,10 @@ const Dashboard = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-primary" />
+                  <Zap className="h-5 w-5 text-primary" />
                   Temperatura dos Leads
                 </CardTitle>
-                <CardDescription>
-                  Distribuição por nível de interesse
-                </CardDescription>
+                <CardDescription>Distribuição por nível de interesse</CardDescription>
               </CardHeader>
               <CardContent>
                 {loadingLeads ? (
@@ -498,15 +531,33 @@ const Dashboard = () => {
                 ) : (
                   <div className="space-y-6 py-4">
                     {[
-                      { label: 'Frios', value: leadMetrics?.leadsByTemperature.cold || 0, color: 'bg-temp-cold', textColor: 'text-temp-cold', description: 'Sem interação recente' },
-                      { label: 'Mornos', value: leadMetrics?.leadsByTemperature.warm || 0, color: 'bg-temp-warm', textColor: 'text-temp-warm', description: 'Demonstrando interesse' },
-                      { label: 'Quentes', value: leadMetrics?.leadsByTemperature.hot || 0, color: 'bg-temp-hot', textColor: 'text-temp-hot', description: 'Prontos para fechar' },
+                      {
+                        label: 'Frios',
+                        value: leadMetrics?.leadsByTemperature.cold || 0,
+                        color: 'bg-temp-cold',
+                        textColor: 'text-temp-cold',
+                        description: 'Sem interação recente',
+                      },
+                      {
+                        label: 'Mornos',
+                        value: leadMetrics?.leadsByTemperature.warm || 0,
+                        color: 'bg-temp-warm',
+                        textColor: 'text-temp-warm',
+                        description: 'Demonstrando interesse',
+                      },
+                      {
+                        label: 'Quentes',
+                        value: leadMetrics?.leadsByTemperature.hot || 0,
+                        color: 'bg-temp-hot',
+                        textColor: 'text-temp-hot',
+                        description: 'Prontos para fechar',
+                      },
                     ].map((temp, index) => {
                       const total = leadMetrics?.totalLeads || 1;
                       const percentage = total > 0 ? (temp.value / total) * 100 : 0;
                       return (
-                        <motion.div 
-                          key={temp.label} 
+                        <motion.div
+                          key={temp.label}
                           className="space-y-2"
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
@@ -521,7 +572,7 @@ const Dashboard = () => {
                               {temp.value} ({percentage.toFixed(0)}%)
                             </span>
                           </div>
-                          <div className="h-3 bg-muted rounded-full overflow-hidden">
+                          <div className="h-3 overflow-hidden rounded-full bg-muted">
                             <motion.div
                               className={cn('h-full rounded-full', temp.color)}
                               initial={{ width: 0 }}
@@ -544,12 +595,10 @@ const Dashboard = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-primary" />
+                <Users className="h-5 w-5 text-primary" />
                 Performance da Equipe
               </CardTitle>
-              <CardDescription>
-                Métricas por atendente no período
-              </CardDescription>
+              <CardDescription>Métricas por atendente no período</CardDescription>
             </CardHeader>
             <CardContent>
               {loadingAgents ? (
@@ -566,27 +615,33 @@ const Dashboard = () => {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="flex items-center gap-4 p-3 rounded-lg bg-muted/50"
+                      className="flex items-center gap-4 rounded-lg bg-muted/50 p-3"
                     >
-                      <div className={cn(
-                        'w-8 h-8 rounded-full flex items-center justify-center text-primary-foreground font-bold text-sm',
-                        index === 0 ? 'bg-warning' : index === 1 ? 'bg-muted-foreground' : 'bg-muted-foreground/60'
-                      )}>
+                      <div
+                        className={cn(
+                          'flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-primary-foreground',
+                          index === 0
+                            ? 'bg-warning'
+                            : index === 1
+                              ? 'bg-muted-foreground'
+                              : 'bg-muted-foreground/60'
+                        )}
+                      >
                         {index + 1}
                       </div>
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={agent.avatar || undefined} />
                         <AvatarFallback>{agent.name.charAt(0)}</AvatarFallback>
                       </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground truncate">{agent.name}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-foreground">{agent.name}</p>
                         <p className="text-sm text-muted-foreground">
                           {agent.leads} leads · {agent.resolved} resolvidos
                         </p>
                       </div>
                       <div className="text-right">
                         <div className="flex items-center gap-1 text-sm">
-                          <Timer className="w-3 h-3 text-muted-foreground" />
+                          <Timer className="h-3 w-3 text-muted-foreground" />
                           <span className="font-medium">{agent.avgResponseTimeFormatted}</span>
                         </div>
                         <p className="text-xs text-muted-foreground">tempo médio</p>
@@ -596,11 +651,11 @@ const Dashboard = () => {
                 </div>
               ) : (
                 <div className="py-8 text-center">
-                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                    <Users className="w-8 h-8 text-muted-foreground" />
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                    <Users className="h-8 w-8 text-muted-foreground" />
                   </div>
-                  <h4 className="font-medium text-foreground mb-1">Nenhuma atividade registrada</h4>
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <h4 className="mb-1 font-medium text-foreground">Nenhuma atividade registrada</h4>
+                  <p className="mb-4 text-sm text-muted-foreground">
                     Não há dados de atendimento no período selecionado
                   </p>
                   <Button variant="outline" size="sm" onClick={() => setPeriod('month')}>
@@ -617,12 +672,10 @@ const Dashboard = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-primary" />
+                <MessageSquare className="h-5 w-5 text-primary" />
                 Status das Conversas
               </CardTitle>
-              <CardDescription>
-                Distribuição por status no período
-              </CardDescription>
+              <CardDescription>Distribuição por status no período</CardDescription>
             </CardHeader>
             <CardContent>
               {loadingConversations ? (
@@ -630,9 +683,24 @@ const Dashboard = () => {
               ) : (
                 <div className="space-y-6 py-4">
                   {[
-                    { label: 'Abertas', value: conversationMetrics?.open || 0, color: 'bg-primary', icon: MessageSquare },
-                    { label: 'Pendentes', value: conversationMetrics?.pending || 0, color: 'bg-warning', icon: AlertCircle },
-                    { label: 'Resolvidas', value: conversationMetrics?.resolved || 0, color: 'bg-success', icon: CheckCircle2 },
+                    {
+                      label: 'Abertas',
+                      value: conversationMetrics?.open || 0,
+                      color: 'bg-primary',
+                      icon: MessageSquare,
+                    },
+                    {
+                      label: 'Pendentes',
+                      value: conversationMetrics?.pending || 0,
+                      color: 'bg-warning',
+                      icon: AlertCircle,
+                    },
+                    {
+                      label: 'Resolvidas',
+                      value: conversationMetrics?.resolved || 0,
+                      color: 'bg-success',
+                      icon: CheckCircle2,
+                    },
                   ].map((status, index) => {
                     const total = conversationMetrics?.total || 1;
                     const percentage = total > 0 ? (status.value / total) * 100 : 0;
@@ -644,15 +712,22 @@ const Dashboard = () => {
                         transition={{ delay: index * 0.1 }}
                         className="flex items-center gap-4"
                       >
-                        <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', status.color.replace('bg-', 'bg-') + '/10')}>
-                          <status.icon className={cn('w-5 h-5', status.color.replace('bg-', 'text-'))} />
+                        <div
+                          className={cn(
+                            'flex h-10 w-10 items-center justify-center rounded-lg',
+                            status.color.replace('bg-', 'bg-') + '/10'
+                          )}
+                        >
+                          <status.icon
+                            className={cn('h-5 w-5', status.color.replace('bg-', 'text-'))}
+                          />
                         </div>
                         <div className="flex-1">
-                          <div className="flex items-center justify-between mb-1">
+                          <div className="mb-1 flex items-center justify-between">
                             <span className="text-sm font-medium">{status.label}</span>
                             <span className="text-sm font-bold">{status.value}</span>
                           </div>
-                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <div className="h-2 overflow-hidden rounded-full bg-muted">
                             <motion.div
                               className={cn('h-full rounded-full', status.color)}
                               initial={{ width: 0 }}
@@ -664,9 +739,9 @@ const Dashboard = () => {
                       </motion.div>
                     );
                   })}
-                  
+
                   {/* Summary */}
-                  <div className="pt-4 border-t border-border">
+                  <div className="border-t border-border pt-4">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Total de Conversas</span>
                       <span className="text-lg font-bold">{conversationMetrics?.total || 0}</span>

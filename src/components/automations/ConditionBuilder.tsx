@@ -30,7 +30,9 @@ interface ConditionBuilderProps {
 }
 
 // Fields available based on trigger type
-const getConditionFieldsForTrigger = (trigger: AutomationTrigger | ''): { value: string; label: string; type: 'select' | 'text' | 'number' }[] => {
+const getConditionFieldsForTrigger = (
+  trigger: AutomationTrigger | ''
+): { value: string; label: string; type: 'select' | 'text' | 'number' }[] => {
   const commonFields = [
     { value: 'source', label: 'Origem do lead', type: 'text' as const },
     { value: 'utm_medium', label: 'UTM Medium', type: 'text' as const },
@@ -56,10 +58,7 @@ const getConditionFieldsForTrigger = (trigger: AutomationTrigger | ''): { value:
         ...commonFields,
       ];
     case 'lead_label_added':
-      return [
-        { value: 'label_id', label: 'Etiqueta adicionada', type: 'select' },
-        ...commonFields,
-      ];
+      return [{ value: 'label_id', label: 'Etiqueta adicionada', type: 'select' }, ...commonFields];
     case 'lead_no_response':
     case 'conversation_no_response':
       return [
@@ -107,7 +106,7 @@ export const ConditionBuilder = ({
   const { data: profiles = [] } = useProfiles();
 
   const conditionFields = getConditionFieldsForTrigger(trigger);
-  const selectedField = conditionFields.find(f => f.value === condition.field);
+  const selectedField = conditionFields.find((f) => f.value === condition.field);
 
   const renderValueInput = () => {
     const field = condition.field;
@@ -115,10 +114,7 @@ export const ConditionBuilder = ({
     // Stage selectors
     if (field === 'stage_id' || field === 'previous_stage_id' || field === 'new_stage_id') {
       return (
-        <Select
-          value={condition.value}
-          onValueChange={(v) => onUpdate(index, { value: v })}
-        >
+        <Select value={condition.value} onValueChange={(v) => onUpdate(index, { value: v })}>
           <SelectTrigger className="flex-1">
             <SelectValue placeholder="Selecionar etapa" />
           </SelectTrigger>
@@ -126,10 +122,7 @@ export const ConditionBuilder = ({
             {funnelStages.map((stage) => (
               <SelectItem key={stage.id} value={stage.id}>
                 <div className="flex items-center gap-2">
-                  <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: stage.color }}
-                  />
+                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: stage.color }} />
                   {stage.name}
                 </div>
               </SelectItem>
@@ -140,12 +133,13 @@ export const ConditionBuilder = ({
     }
 
     // Temperature selector
-    if (field === 'temperature' || field === 'previous_temperature' || field === 'new_temperature') {
+    if (
+      field === 'temperature' ||
+      field === 'previous_temperature' ||
+      field === 'new_temperature'
+    ) {
       return (
-        <Select
-          value={condition.value}
-          onValueChange={(v) => onUpdate(index, { value: v })}
-        >
+        <Select value={condition.value} onValueChange={(v) => onUpdate(index, { value: v })}>
           <SelectTrigger className="flex-1">
             <SelectValue placeholder="Selecionar temperatura" />
           </SelectTrigger>
@@ -161,10 +155,7 @@ export const ConditionBuilder = ({
     // Label selector
     if (field === 'label_id') {
       return (
-        <Select
-          value={condition.value}
-          onValueChange={(v) => onUpdate(index, { value: v })}
-        >
+        <Select value={condition.value} onValueChange={(v) => onUpdate(index, { value: v })}>
           <SelectTrigger className="flex-1">
             <SelectValue placeholder="Selecionar etiqueta" />
           </SelectTrigger>
@@ -172,10 +163,7 @@ export const ConditionBuilder = ({
             {labels.map((label) => (
               <SelectItem key={label.id} value={label.id}>
                 <div className="flex items-center gap-2">
-                  <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: label.color }}
-                  />
+                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: label.color }} />
                   {label.name}
                 </div>
               </SelectItem>
@@ -188,20 +176,19 @@ export const ConditionBuilder = ({
     // User selector
     if (field === 'assigned_to') {
       return (
-        <Select
-          value={condition.value}
-          onValueChange={(v) => onUpdate(index, { value: v })}
-        >
+        <Select value={condition.value} onValueChange={(v) => onUpdate(index, { value: v })}>
           <SelectTrigger className="flex-1">
             <SelectValue placeholder="Selecionar usuário" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="null">Não atribuído</SelectItem>
-            {profiles.filter(p => p.is_active).map((profile) => (
-              <SelectItem key={profile.id} value={profile.id}>
-                {profile.name}
-              </SelectItem>
-            ))}
+            {profiles
+              .filter((p) => p.is_active)
+              .map((profile) => (
+                <SelectItem key={profile.id} value={profile.id}>
+                  {profile.name}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
       );
@@ -210,10 +197,7 @@ export const ConditionBuilder = ({
     // Priority selector
     if (field === 'task_priority') {
       return (
-        <Select
-          value={condition.value}
-          onValueChange={(v) => onUpdate(index, { value: v })}
-        >
+        <Select value={condition.value} onValueChange={(v) => onUpdate(index, { value: v })}>
           <SelectTrigger className="flex-1">
             <SelectValue placeholder="Selecionar prioridade" />
           </SelectTrigger>
@@ -252,7 +236,7 @@ export const ConditionBuilder = ({
   };
 
   return (
-    <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+    <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-3">
       <Select
         value={condition.field}
         onValueChange={(v) => onUpdate(index, { field: v, value: '' })}
@@ -269,10 +253,7 @@ export const ConditionBuilder = ({
         </SelectContent>
       </Select>
 
-      <Select
-        value={condition.operator}
-        onValueChange={(v) => onUpdate(index, { operator: v })}
-      >
+      <Select value={condition.operator} onValueChange={(v) => onUpdate(index, { operator: v })}>
         <SelectTrigger className="w-[140px]">
           <SelectValue />
         </SelectTrigger>
@@ -294,7 +275,7 @@ export const ConditionBuilder = ({
         onClick={() => onRemove(index)}
         className="shrink-0"
       >
-        <X className="w-4 h-4" />
+        <X className="h-4 w-4" />
       </Button>
     </div>
   );

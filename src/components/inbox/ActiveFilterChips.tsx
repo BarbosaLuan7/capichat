@@ -17,7 +17,8 @@ interface ActiveFilterChipsProps {
 }
 
 export function ActiveFilterChips({ availableInboxes }: ActiveFilterChipsProps) {
-  const { filters, toggleInboxExclusion, toggleLabel, toggleUser, toggleTenant } = useConversationFilters();
+  const { filters, toggleInboxExclusion, toggleLabel, toggleUser, toggleTenant } =
+    useConversationFilters();
   const { data: allLabels } = useLabels();
   const { data: profiles } = useProfiles();
   const { userTenants } = useTenant();
@@ -34,7 +35,7 @@ export function ActiveFilterChips({ availableInboxes }: ActiveFilterChipsProps) 
   };
 
   // Active filters: excluded inboxes, labels, users, tenants
-  const hasActiveFilters = 
+  const hasActiveFilters =
     filters.excludedInboxIds.length > 0 ||
     filters.labelIds.length > 0 ||
     filters.userIds.length > 0 ||
@@ -47,7 +48,7 @@ export function ActiveFilterChips({ availableInboxes }: ActiveFilterChipsProps) 
 
   // Excluded inbox chips (show which inboxes are EXCLUDED/hidden)
   filters.excludedInboxIds.forEach((inboxId) => {
-    const inbox = availableInboxes.find(i => i.id === inboxId);
+    const inbox = availableInboxes.find((i) => i.id === inboxId);
     if (inbox) {
       chips.push({
         key: `inbox-excluded-${inboxId}`,
@@ -59,7 +60,7 @@ export function ActiveFilterChips({ availableInboxes }: ActiveFilterChipsProps) 
 
   // Label chips
   filters.labelIds.forEach((labelId) => {
-    const label = allLabels?.find(l => l.id === labelId);
+    const label = allLabels?.find((l) => l.id === labelId);
     if (label) {
       chips.push({
         key: `label-${labelId}`,
@@ -79,7 +80,7 @@ export function ActiveFilterChips({ availableInboxes }: ActiveFilterChipsProps) 
         onRemove: () => toggleUser('unassigned'),
       });
     } else {
-      const profile = profiles?.find(p => p.id === userId);
+      const profile = profiles?.find((p) => p.id === userId);
       if (profile) {
         chips.push({
           key: `user-${userId}`,
@@ -92,7 +93,7 @@ export function ActiveFilterChips({ availableInboxes }: ActiveFilterChipsProps) 
 
   // Tenant chips
   filters.tenantIds.forEach((tenantId) => {
-    const ut = userTenants?.find(t => t.tenant.id === tenantId);
+    const ut = userTenants?.find((t) => t.tenant.id === tenantId);
     if (ut) {
       chips.push({
         key: `tenant-${tenantId}`,
@@ -106,11 +107,15 @@ export function ActiveFilterChips({ availableInboxes }: ActiveFilterChipsProps) 
   const hiddenCount = chips.length - 3;
 
   return (
-    <div className="flex items-center gap-1 flex-wrap px-2 pb-1" role="group" aria-label="Filtros ativos">
+    <div
+      className="flex flex-wrap items-center gap-1 px-2 pb-1"
+      role="group"
+      aria-label="Filtros ativos"
+    >
       {visibleChips.map((chip) => (
         <button
           key={chip.key}
-          className="inline-flex items-center text-2xs px-2 py-0 gap-1 cursor-pointer h-5 rounded-full transition-colors hover:opacity-80"
+          className="text-2xs inline-flex h-5 cursor-pointer items-center gap-1 rounded-full px-2 py-0 transition-colors hover:opacity-80"
           style={{
             backgroundColor: chip.color || 'hsl(var(--muted))',
             color: chip.color ? 'white' : 'hsl(var(--muted-foreground))',
@@ -119,11 +124,11 @@ export function ActiveFilterChips({ availableInboxes }: ActiveFilterChipsProps) 
           aria-label={`Remover filtro ${chip.label}`}
         >
           {chip.label}
-          <X className="w-3 h-3" aria-hidden="true" />
+          <X className="h-3 w-3" aria-hidden="true" />
         </button>
       ))}
       {hiddenCount > 0 && (
-        <Badge variant="secondary" className="text-2xs px-2 py-0 h-5">
+        <Badge variant="secondary" className="text-2xs h-5 px-2 py-0">
           +{hiddenCount}
         </Badge>
       )}

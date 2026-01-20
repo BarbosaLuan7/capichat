@@ -27,21 +27,20 @@ export function DeleteMessagesModal({
 }: DeleteMessagesModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md overflow-hidden">
+      <DialogContent className="overflow-hidden sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-warning" />
+            <AlertTriangle className="h-5 w-5 text-warning" />
             Apagar mensagem
           </DialogTitle>
           <DialogDescription>
-            {selectedCount === 1 
+            {selectedCount === 1
               ? 'A mensagem será apagada para você e para o contato. Esta ação não pode ser desfeita.'
-              : `As ${selectedCount} mensagens serão apagadas para você e para o contato. Esta ação não pode ser desfeita.`
-            }
+              : `As ${selectedCount} mensagens serão apagadas para você e para o contato. Esta ação não pode ser desfeita.`}
           </DialogDescription>
         </DialogHeader>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-2">
+        <DialogFooter className="flex-col gap-2 sm:flex-row sm:gap-2">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
@@ -58,7 +57,7 @@ export function DeleteMessagesModal({
           >
             {isDeletingForEveryone ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Apagando...
               </>
             ) : (

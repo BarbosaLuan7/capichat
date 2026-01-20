@@ -52,13 +52,9 @@ function UserTableRowComponent({
         </div>
       </TableCell>
       <TableCell>
-        <Badge className={cn('text-xs', getRoleBadgeColor(role))}>
-          {getRoleLabel(role)}
-        </Badge>
+        <Badge className={cn('text-xs', getRoleBadgeColor(role))}>{getRoleLabel(role)}</Badge>
       </TableCell>
-      <TableCell className="text-muted-foreground">
-        {teamName}
-      </TableCell>
+      <TableCell className="text-muted-foreground">{teamName}</TableCell>
       <TableCell>
         <Switch
           checked={user.is_active}
@@ -71,13 +67,11 @@ function UserTableRowComponent({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" aria-label="Opções">
-              <MoreVertical className="w-4 h-4" />
+              <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onEdit(user)}>
-              Editar
-            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onEdit(user)}>Editar</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </TableCell>

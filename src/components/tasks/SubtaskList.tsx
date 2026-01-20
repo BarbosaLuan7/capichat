@@ -26,7 +26,7 @@ export function SubtaskList({ subtasks, onToggle, compact = false }: SubtaskList
     return (
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <div className="flex items-center gap-1">
-          <Check className="w-3 h-3" />
+          <Check className="h-3 w-3" />
           <span>
             {completedCount}/{totalCount}
           </span>
@@ -38,7 +38,7 @@ export function SubtaskList({ subtasks, onToggle, compact = false }: SubtaskList
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+      <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
         <span>
           {completedCount}/{totalCount} concluídas
         </span>
@@ -49,7 +49,7 @@ export function SubtaskList({ subtasks, onToggle, compact = false }: SubtaskList
           <label
             key={subtask.id}
             className={cn(
-              'flex items-center gap-2 text-sm cursor-pointer p-1.5 rounded hover:bg-muted/50',
+              'flex cursor-pointer items-center gap-2 rounded p-1.5 text-sm hover:bg-muted/50',
               subtask.completed && 'text-muted-foreground line-through'
             )}
             onClick={(e) => e.stopPropagation()}

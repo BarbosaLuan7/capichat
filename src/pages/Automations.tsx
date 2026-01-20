@@ -43,13 +43,21 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useAutomations, useCreateAutomation, useUpdateAutomation, useDeleteAutomation, useToggleAutomation } from '@/hooks/useAutomations';
+import {
+  useAutomations,
+  useCreateAutomation,
+  useUpdateAutomation,
+  useDeleteAutomation,
+  useToggleAutomation,
+} from '@/hooks/useAutomations';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 // Lazy load heavy modal
-const AutomationModal = lazy(() => import('@/components/automations/AutomationModal').then(m => ({ default: m.AutomationModal })));
+const AutomationModal = lazy(() =>
+  import('@/components/automations/AutomationModal').then((m) => ({ default: m.AutomationModal }))
+);
 import { AutomationExecutionLogs } from '@/components/automations/AutomationExecutionLogs';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
@@ -115,7 +123,7 @@ const AutomationSkeleton = () => (
   <Card>
     <CardContent className="p-5">
       <div className="flex items-start gap-4">
-        <Skeleton className="w-10 h-10 rounded-lg" />
+        <Skeleton className="h-10 w-10 rounded-lg" />
         <div className="flex-1 space-y-2">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-2">
@@ -163,10 +171,15 @@ const Automations = () => {
   const [automationToDelete, setAutomationToDelete] = useState<AutomationRow | null>(null);
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-  const filteredAutomations = useMemo(() => automations.filter((auto) =>
-    auto.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-    auto.description?.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
-  ), [automations, debouncedSearchQuery]);
+  const filteredAutomations = useMemo(
+    () =>
+      automations.filter(
+        (auto) =>
+          auto.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+          auto.description?.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
+      ),
+    [automations, debouncedSearchQuery]
+  );
 
   const activeCount = automations.filter((a) => a.is_active).length;
 
@@ -218,8 +231,10 @@ const Automations = () => {
           name: automationData.name,
           description: automationData.description,
           trigger: automationData.trigger,
-          conditions: automationData.conditions as unknown as Database['public']['Tables']['automations']['Update']['conditions'],
-          actions: automationData.actions as unknown as Database['public']['Tables']['automations']['Update']['actions'],
+          conditions:
+            automationData.conditions as unknown as Database['public']['Tables']['automations']['Update']['conditions'],
+          actions:
+            automationData.actions as unknown as Database['public']['Tables']['automations']['Update']['actions'],
           is_active: automationData.is_active,
         });
         toast.success('Automação atualizada', {
@@ -230,8 +245,10 @@ const Automations = () => {
           name: automationData.name,
           description: automationData.description,
           trigger: automationData.trigger,
-          conditions: automationData.conditions as unknown as Database['public']['Tables']['automations']['Insert']['conditions'],
-          actions: automationData.actions as unknown as Database['public']['Tables']['automations']['Insert']['actions'],
+          conditions:
+            automationData.conditions as unknown as Database['public']['Tables']['automations']['Insert']['conditions'],
+          actions:
+            automationData.actions as unknown as Database['public']['Tables']['automations']['Insert']['actions'],
           is_active: automationData.is_active,
         });
         toast.success('Automação criada', {
@@ -266,10 +283,10 @@ const Automations = () => {
       <div className="p-6">
         <Card className="p-12">
           <div className="text-center">
-            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
-              <Zap className="w-8 h-8 text-destructive" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+              <Zap className="h-8 w-8 text-destructive" />
             </div>
-            <h3 className="font-semibold text-foreground mb-2">Erro ao carregar automações</h3>
+            <h3 className="mb-2 font-semibold text-foreground">Erro ao carregar automações</h3>
             <p className="text-muted-foreground">
               Ocorreu um erro ao carregar as automações. Tente novamente.
             </p>
@@ -280,39 +297,41 @@ const Automations = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Automações</h1>
           <p className="text-muted-foreground">
             {isLoading ? (
-              <Skeleton className="h-4 w-32 inline-block" />
+              <Skeleton className="inline-block h-4 w-32" />
             ) : (
-              <>{automations.length} automações · {activeCount} ativas</>
+              <>
+                {automations.length} automações · {activeCount} ativas
+              </>
             )}
           </p>
         </div>
-        <Button 
-          onClick={handleNewAutomation} 
-          className="gradient-primary text-primary-foreground gap-2"
+        <Button
+          onClick={handleNewAutomation}
+          className="gradient-primary gap-2 text-primary-foreground"
           disabled={createAutomation.isPending}
         >
           {createAutomation.isPending ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
           )}
           Nova Automação
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Zap className="w-6 h-6 text-primary" />
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+              <Zap className="h-6 w-6 text-primary" />
             </div>
             <div>
               {isLoading ? (
@@ -325,9 +344,9 @@ const Automations = () => {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
-              <Play className="w-6 h-6 text-success" />
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/10">
+              <Play className="h-6 w-6 text-success" />
             </div>
             <div>
               {isLoading ? (
@@ -340,15 +359,17 @@ const Automations = () => {
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
-              <Pause className="w-6 h-6 text-muted-foreground" />
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
+              <Pause className="h-6 w-6 text-muted-foreground" />
             </div>
             <div>
               {isLoading ? (
                 <Skeleton className="h-8 w-12" />
               ) : (
-                <p className="text-2xl font-bold text-foreground">{automations.length - activeCount}</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {automations.length - activeCount}
+                </p>
               )}
               <p className="text-sm text-muted-foreground">Automações pausadas</p>
             </div>
@@ -358,7 +379,7 @@ const Automations = () => {
 
       {/* Search */}
       <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Buscar automações..."
           className="pl-9"
@@ -371,149 +392,162 @@ const Automations = () => {
       <Tabs defaultValue="automations" className="space-y-4">
         <TabsList>
           <TabsTrigger value="automations" className="gap-2">
-            <Zap className="w-4 h-4" />
+            <Zap className="h-4 w-4" />
             Automações
           </TabsTrigger>
           <TabsTrigger value="logs" className="gap-2">
-            <Activity className="w-4 h-4" />
+            <Activity className="h-4 w-4" />
             Execuções
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="automations" className="space-y-4">
-        {isLoading ? (
-          <>
-            <AutomationSkeleton />
-            <AutomationSkeleton />
-            <AutomationSkeleton />
-          </>
-        ) : filteredAutomations.length > 0 ? (
-          filteredAutomations.map((automation, index) => {
-            const actions = parseActions(automation.actions);
-            const conditions = parseConditions(automation.conditions);
-            
-            return (
-              <motion.div
-                key={automation.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <Card className={cn(
-                  'hover:shadow-md transition-all',
-                  !automation.is_active && 'opacity-60'
-                )}>
-                  <CardContent className="p-5">
-                    <div className="flex items-start gap-4">
-                      <div className={cn(
-                        'w-10 h-10 rounded-lg flex items-center justify-center shrink-0',
-                        automation.is_active ? 'bg-primary/10' : 'bg-muted'
-                      )}>
-                        <Zap className={cn(
-                          'w-5 h-5',
-                          automation.is_active ? 'text-primary' : 'text-muted-foreground'
-                        )} />
-                      </div>
+          {isLoading ? (
+            <>
+              <AutomationSkeleton />
+              <AutomationSkeleton />
+              <AutomationSkeleton />
+            </>
+          ) : filteredAutomations.length > 0 ? (
+            filteredAutomations.map((automation, index) => {
+              const actions = parseActions(automation.actions);
+              const conditions = parseConditions(automation.conditions);
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-4 mb-2">
-                          <div>
-                            <h3 className="font-semibold text-foreground">{automation.name}</h3>
-                            {automation.description && (
-                              <p className="text-sm text-muted-foreground line-clamp-1">
-                                {automation.description}
-                              </p>
+              return (
+                <motion.div
+                  key={automation.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <Card
+                    className={cn(
+                      'transition-all hover:shadow-md',
+                      !automation.is_active && 'opacity-60'
+                    )}
+                  >
+                    <CardContent className="p-5">
+                      <div className="flex items-start gap-4">
+                        <div
+                          className={cn(
+                            'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
+                            automation.is_active ? 'bg-primary/10' : 'bg-muted'
+                          )}
+                        >
+                          <Zap
+                            className={cn(
+                              'h-5 w-5',
+                              automation.is_active ? 'text-primary' : 'text-muted-foreground'
                             )}
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <Switch
-                              checked={automation.is_active}
-                              onCheckedChange={() => handleToggleStatus(automation)}
-                              disabled={toggleAutomation.isPending}
-                            />
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                      <MoreVertical className="w-4 h-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Mais opções</TooltipContent>
-                                </Tooltip>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEditAutomation(automation)}>
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDeleteClick(automation)}
-                                  className="text-destructive"
-                                >
-                                  Excluir
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
+                          />
                         </div>
 
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <Badge variant="outline" className="text-xs">
-                            <Clock className="w-3 h-3 mr-1" />
-                            {getTriggerLabel(automation.trigger)}
-                          </Badge>
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-2 flex items-start justify-between gap-4">
+                            <div>
+                              <h3 className="font-semibold text-foreground">{automation.name}</h3>
+                              {automation.description && (
+                                <p className="line-clamp-1 text-sm text-muted-foreground">
+                                  {automation.description}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                              <Switch
+                                checked={automation.is_active}
+                                onCheckedChange={() => handleToggleStatus(automation)}
+                                disabled={toggleAutomation.isPending}
+                              />
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Mais opções</TooltipContent>
+                                  </Tooltip>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => handleEditAutomation(automation)}
+                                  >
+                                    Editar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeleteClick(automation)}
+                                    className="text-destructive"
+                                  >
+                                    Excluir
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
 
-                          {conditions.length > 0 && (
-                            <Badge variant="secondary" className="text-xs">
-                              {conditions.length} condição(ões)
+                          <div className="flex flex-wrap items-center gap-3">
+                            <Badge variant="outline" className="text-xs">
+                              <Clock className="mr-1 h-3 w-3" />
+                              {getTriggerLabel(automation.trigger)}
                             </Badge>
-                          )}
 
-                          <div className="flex items-center gap-1">
-                            {actions.slice(0, 3).map((action, i) => {
-                              const Icon = getActionIcon(action.type);
-                              return (
-                                <Badge key={i} variant="secondary" className="text-xs gap-1">
-                                  <Icon className="w-3 h-3" />
-                                  {getActionLabel(action.type)}
-                                </Badge>
-                              );
-                            })}
-                            {actions.length > 3 && (
+                            {conditions.length > 0 && (
                               <Badge variant="secondary" className="text-xs">
-                                +{actions.length - 3}
+                                {conditions.length} condição(ões)
                               </Badge>
                             )}
-                          </div>
 
-                          <span className="text-xs text-muted-foreground ml-auto">
-                            Atualizado em {format(new Date(automation.updated_at), "dd/MM/yyyy", { locale: ptBR })}
-                          </span>
+                            <div className="flex items-center gap-1">
+                              {actions.slice(0, 3).map((action, i) => {
+                                const Icon = getActionIcon(action.type);
+                                return (
+                                  <Badge key={i} variant="secondary" className="gap-1 text-xs">
+                                    <Icon className="h-3 w-3" />
+                                    {getActionLabel(action.type)}
+                                  </Badge>
+                                );
+                              })}
+                              {actions.length > 3 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  +{actions.length - 3}
+                                </Badge>
+                              )}
+                            </div>
+
+                            <span className="ml-auto text-xs text-muted-foreground">
+                              Atualizado em{' '}
+                              {format(new Date(automation.updated_at), 'dd/MM/yyyy', {
+                                locale: ptBR,
+                              })}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })
-        ) : (
-          <Card className="p-12">
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                <Zap className="w-8 h-8 text-muted-foreground" />
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              );
+            })
+          ) : (
+            <Card className="p-12">
+              <div className="text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                  <Zap className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="mb-2 font-semibold text-foreground">Nenhuma automação encontrada</h3>
+                <p className="mb-4 text-muted-foreground">
+                  {searchQuery
+                    ? 'Tente buscar por outro termo'
+                    : 'Crie sua primeira automação para automatizar processos'}
+                </p>
+                <Button onClick={handleNewAutomation} variant="outline">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Criar Automação
+                </Button>
               </div>
-              <h3 className="font-semibold text-foreground mb-2">Nenhuma automação encontrada</h3>
-              <p className="text-muted-foreground mb-4">
-                {searchQuery ? 'Tente buscar por outro termo' : 'Crie sua primeira automação para automatizar processos'}
-              </p>
-              <Button onClick={handleNewAutomation} variant="outline">
-                <Plus className="w-4 h-4 mr-2" />
-                Criar Automação
-              </Button>
-            </div>
-          </Card>
-        )}
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="logs">
@@ -553,18 +587,19 @@ const Automations = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir automação?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. A automação "{automationToDelete?.name}" será permanentemente removida.
+              Esta ação não pode ser desfeita. A automação "{automationToDelete?.name}" será
+              permanentemente removida.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteAutomation.isPending}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleConfirmDelete} 
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
               className="bg-destructive text-destructive-foreground"
               disabled={deleteAutomation.isPending}
             >
               {deleteAutomation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
               Excluir
             </AlertDialogAction>

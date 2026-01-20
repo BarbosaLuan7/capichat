@@ -16,7 +16,26 @@ const ALLOWED_EXTENSIONS: Record<string, string[]> = {
   document: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'csv'],
 };
 
-const BLOCKED_EXTENSIONS = ['exe', 'sh', 'bat', 'cmd', 'msi', 'js', 'jsx', 'ts', 'tsx', 'php', 'py', 'rb', 'pl', 'ps1', 'vbs', 'dll', 'so', 'dylib'];
+const BLOCKED_EXTENSIONS = [
+  'exe',
+  'sh',
+  'bat',
+  'cmd',
+  'msi',
+  'js',
+  'jsx',
+  'ts',
+  'tsx',
+  'php',
+  'py',
+  'rb',
+  'pl',
+  'ps1',
+  'vbs',
+  'dll',
+  'so',
+  'dylib',
+];
 
 const MAX_FILE_SIZE_MB = 25;
 
@@ -37,7 +56,7 @@ function validateFile(file: File): FileValidationResult {
 
   // Get extension
   const ext = file.name.split('.').pop()?.toLowerCase();
-  
+
   if (!ext) {
     return { valid: false, error: 'Arquivo sem extensão' };
   }
@@ -74,7 +93,9 @@ export function useFileUpload() {
 
       setUploadProgress({ progress: 0, uploading: true });
 
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         toast.error('Você precisa estar logado para enviar arquivos');
         setUploadProgress({ progress: 0, uploading: false });
@@ -86,19 +107,17 @@ export function useFileUpload() {
 
       // Simulate progress for better UX
       const progressInterval = setInterval(() => {
-        setUploadProgress(prev => ({
+        setUploadProgress((prev) => ({
           ...prev,
-          progress: Math.min(prev.progress + 10, 90)
+          progress: Math.min(prev.progress + 10, 90),
         }));
       }, 100);
 
       // Create promise with timeout
-      const uploadPromise = supabase.storage
-        .from('message-attachments')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
+      const uploadPromise = supabase.storage.from('message-attachments').upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
 
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
@@ -125,13 +144,13 @@ export function useFileUpload() {
       return storageRef;
     } catch (error) {
       logger.error('Upload error:', error);
-      
+
       if (error instanceof Error && error.message === 'UPLOAD_TIMEOUT') {
         toast.error('Upload demorou demais. Verifique sua conexão e tente novamente.');
       } else {
         toast.error('Erro ao enviar arquivo');
       }
-      
+
       setUploadProgress({ progress: 0, uploading: false });
       return null;
     }

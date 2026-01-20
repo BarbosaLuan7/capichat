@@ -37,7 +37,7 @@ function LeadAvatarComponent({ lead, className, size = 'md' }: LeadAvatarProps) 
   // Tentar buscar avatar em background se não tem
   useEffect(() => {
     if (!avatarUrl && lead.phone && lead.id) {
-      fetchAvatar(lead.id, lead.phone).then(url => {
+      fetchAvatar(lead.id, lead.phone).then((url) => {
         if (url) setAvatarUrl(url);
       });
     }

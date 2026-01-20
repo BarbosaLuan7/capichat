@@ -14,7 +14,7 @@ interface PaginatedLeadsResult {
 
 export function useLeads(page: number = 1, pageSize: number = 50) {
   const { currentTenant, tenants } = useTenant();
-  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map(t => t.id);
+  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map((t) => t.id);
 
   return useQuery({
     queryKey: ['leads', page, pageSize, currentTenant?.id || 'all'],
@@ -24,11 +24,14 @@ export function useLeads(page: number = 1, pageSize: number = 50) {
 
       let queryBuilder = supabase
         .from('leads')
-        .select(`
+        .select(
+          `
           *,
           funnel_stages (id, name, color),
           lead_labels (label_id, labels(*))
-        `, { count: 'exact' })
+        `,
+          { count: 'exact' }
+        )
         .order('created_at', { ascending: false })
         .range(from, to);
 
@@ -38,7 +41,7 @@ export function useLeads(page: number = 1, pageSize: number = 50) {
       }
 
       const { data, error, count } = await queryBuilder;
-      
+
       if (error) throw error;
       return { leads: data || [], totalCount: count || 0 };
     },
@@ -55,17 +58,19 @@ export function useLead(id: string | undefined) {
       if (!id) return null;
       const { data, error } = await supabase
         .from('leads')
-        .select(`
+        .select(
+          `
           *,
           funnel_stages (id, name, color),
           lead_labels (
             label_id,
             labels (id, name, color, category)
           )
-        `)
+        `
+        )
         .eq('id', id)
         .maybeSingle();
-      
+
       if (error) throw error;
       return data;
     },
@@ -80,12 +85,8 @@ export function useCreateLead() {
 
   return useMutation({
     mutationFn: async (lead: LeadInsert) => {
-      const { data, error } = await supabase
-        .from('leads')
-        .insert(lead)
-        .select()
-        .single();
-      
+      const { data, error } = await supabase.from('leads').insert(lead).select().single();
+
       if (error) throw error;
       return data;
     },
@@ -106,7 +107,7 @@ export function useUpdateLead() {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -122,11 +123,8 @@ export function useDeleteLead() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('leads')
-        .delete()
-        .eq('id', id);
-      
+      const { error } = await supabase.from('leads').delete().eq('id', id);
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -146,7 +144,7 @@ export function useUpdateLeadStage() {
         .eq('id', leadId)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },

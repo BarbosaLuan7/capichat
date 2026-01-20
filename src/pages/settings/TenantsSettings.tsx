@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { Building2, Plus, Pencil, Trash2, Users, MessageCircle, Loader2, Search, MoreHorizontal } from 'lucide-react';
+import {
+  Building2,
+  Plus,
+  Pencil,
+  Trash2,
+  Users,
+  MessageCircle,
+  Loader2,
+  Search,
+  MoreHorizontal,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,7 +45,12 @@ import { TenantModal } from '@/components/tenants/TenantModal';
 import { TenantUsersModal } from '@/components/tenants/TenantUsersModal';
 import { TenantInboxesModal } from '@/components/tenants/TenantInboxesModal';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
-import { useAllTenants, useCreateTenant, useUpdateTenant, useDeleteTenant } from '@/hooks/useTenants';
+import {
+  useAllTenants,
+  useCreateTenant,
+  useUpdateTenant,
+  useDeleteTenant,
+} from '@/hooks/useTenants';
 import { useDebounce } from '@/hooks/useDebounce';
 import type { Tenant } from '@/contexts/TenantContext';
 
@@ -54,9 +69,10 @@ export default function TenantsSettings() {
   const updateTenant = useUpdateTenant();
   const deleteTenant = useDeleteTenant();
 
-  const filteredTenants = (tenants || []).filter((tenant) =>
-    tenant.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-    tenant.slug.toLowerCase().includes(debouncedSearch.toLowerCase())
+  const filteredTenants = (tenants || []).filter(
+    (tenant) =>
+      tenant.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      tenant.slug.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   const handleOpenModal = (tenant?: Tenant) => {
@@ -64,7 +80,12 @@ export default function TenantsSettings() {
     setModalOpen(true);
   };
 
-  const handleSave = async (data: { name: string; slug: string; logo_url?: string; is_active: boolean }) => {
+  const handleSave = async (data: {
+    name: string;
+    slug: string;
+    logo_url?: string;
+    is_active: boolean;
+  }) => {
     if (selectedTenant) {
       await updateTenant.mutateAsync({
         id: selectedTenant.id,
@@ -106,7 +127,7 @@ export default function TenantsSettings() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-6 space-y-6">
+      <div className="container mx-auto space-y-6 py-6">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-64 w-full" />
@@ -115,24 +136,19 @@ export default function TenantsSettings() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto space-y-6 py-6">
       <PageBreadcrumb
-        items={[
-          { label: 'Configurações', href: '/settings' },
-          { label: 'Empresas' },
-        ]}
+        items={[{ label: 'Configurações', href: '/settings' }, { label: 'Empresas' }]}
       />
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
             <Building2 className="h-6 w-6" />
             Empresas (Multi-Tenant)
           </h1>
-          <p className="text-muted-foreground">
-            Gerencie as empresas e suas configurações
-          </p>
+          <p className="text-muted-foreground">Gerencie as empresas e suas configurações</p>
         </div>
         <Button onClick={() => handleOpenModal()} className="gap-2">
           <Plus className="h-4 w-4" />
@@ -141,7 +157,7 @@ export default function TenantsSettings() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader className="py-4">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -180,7 +196,7 @@ export default function TenantsSettings() {
 
       {/* Search */}
       <div className="relative w-full sm:w-80">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Buscar empresa..."
           value={search}
@@ -226,7 +242,7 @@ export default function TenantsSettings() {
                             <AvatarFallback>{tenant.name.charAt(0)}</AvatarFallback>
                           </Avatar>
                         ) : (
-                          <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
                             <Building2 className="h-4 w-4 text-muted-foreground" />
                           </div>
                         )}
@@ -234,16 +250,14 @@ export default function TenantsSettings() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                        {tenant.slug}
-                      </code>
+                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{tenant.slug}</code>
                     </TableCell>
                     <TableCell>
                       <Badge variant={tenant.is_active ? 'default' : 'secondary'}>
                         {tenant.is_active ? 'Ativo' : 'Inativo'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    <TableCell className="text-sm text-muted-foreground">
                       {new Date(tenant.created_at).toLocaleDateString('pt-BR')}
                     </TableCell>
                     <TableCell className="text-right">
@@ -255,23 +269,23 @@ export default function TenantsSettings() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleManageUsers(tenant)}>
-                            <Users className="h-4 w-4 mr-2" />
+                            <Users className="mr-2 h-4 w-4" />
                             Gerenciar Usuários
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleManageInboxes(tenant)}>
-                            <MessageCircle className="h-4 w-4 mr-2" />
+                            <MessageCircle className="mr-2 h-4 w-4" />
                             Gerenciar Caixas
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => handleOpenModal(tenant)}>
-                            <Pencil className="h-4 w-4 mr-2" />
+                            <Pencil className="mr-2 h-4 w-4" />
                             Editar
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={() => handleConfirmDelete(tenant)}
                             className="text-destructive focus:text-destructive"
                           >
-                            <Trash2 className="h-4 w-4 mr-2" />
+                            <Trash2 className="mr-2 h-4 w-4" />
                             Excluir
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -312,8 +326,8 @@ export default function TenantsSettings() {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir empresa?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Todos os dados associados a esta empresa
-              (leads, conversas, tarefas) perderão a associação.
+              Esta ação não pode ser desfeita. Todos os dados associados a esta empresa (leads,
+              conversas, tarefas) perderão a associação.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

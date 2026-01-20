@@ -1,15 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import { motion } from 'framer-motion';
-import {
-  Plus,
-  Search,
-  MoreVertical,
-  Tag,
-  Folder,
-  Trash2,
-  Pencil,
-} from 'lucide-react';
+import { Plus, Search, MoreVertical, Tag, Folder, Trash2, Pencil } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -93,17 +85,24 @@ const LabelsSettings = () => {
 
   const debouncedSearch = useDebounce(search, 300);
 
-  const filteredLabels = useMemo(() => labels.filter((label) => {
-    const matchesSearch = label.name.toLowerCase().includes(debouncedSearch.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || label.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  }), [labels, debouncedSearch, categoryFilter]);
+  const filteredLabels = useMemo(
+    () =>
+      labels.filter((label) => {
+        const matchesSearch = label.name.toLowerCase().includes(debouncedSearch.toLowerCase());
+        const matchesCategory = categoryFilter === 'all' || label.category === categoryFilter;
+        return matchesSearch && matchesCategory;
+      }),
+    [labels, debouncedSearch, categoryFilter]
+  );
 
   // Group by category for stats
-  const categoryStats = labels.reduce((acc, label) => {
-    acc[label.category] = (acc[label.category] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const categoryStats = labels.reduce(
+    (acc, label) => {
+      acc[label.category] = (acc[label.category] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
 
   const handleSave = async (data: { name: string; color: string; category: LabelCategory }) => {
     try {
@@ -147,8 +146,10 @@ const LabelsSettings = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <PageBreadcrumb items={[{ label: 'Configurações', href: '/settings' }, { label: 'Etiquetas' }]} />
+    <div className="space-y-6 p-6">
+      <PageBreadcrumb
+        items={[{ label: 'Configurações', href: '/settings' }, { label: 'Etiquetas' }]}
+      />
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -156,22 +157,22 @@ const LabelsSettings = () => {
           <h1 className="text-2xl font-bold text-foreground">Etiquetas</h1>
           <p className="text-muted-foreground">Gerencie as etiquetas do sistema</p>
         </div>
-        <Button onClick={openCreateModal} className="gradient-primary text-primary-foreground gap-2">
-          <Plus className="w-4 h-4" />
+        <Button
+          onClick={openCreateModal}
+          className="gradient-primary gap-2 text-primary-foreground"
+        >
+          <Plus className="h-4 w-4" />
           Nova Etiqueta
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Card>
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Tag className="w-6 h-6 text-primary" />
+            <CardContent className="flex items-center gap-4 p-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                <Tag className="h-6 w-6 text-primary" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{labels.length}</p>
@@ -181,36 +182,38 @@ const LabelsSettings = () => {
           </Card>
         </motion.div>
 
-        {Object.entries(categoryStats).slice(0, 3).map(([cat, count], i) => (
-          <motion.div
-            key={cat}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: (i + 1) * 0.1 }}
-          >
-            <Card>
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Folder className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{count}</p>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {CATEGORY_LABELS[cat as LabelCategory]}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
+        {Object.entries(categoryStats)
+          .slice(0, 3)
+          .map(([cat, count], i) => (
+            <motion.div
+              key={cat}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: (i + 1) * 0.1 }}
+            >
+              <Card>
+                <CardContent className="flex items-center gap-4 p-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                    <Folder className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{count}</p>
+                    <p className="truncate text-sm text-muted-foreground">
+                      {CATEGORY_LABELS[cat as LabelCategory]}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
       </div>
 
       {/* Filters and Table */}
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="relative flex-1 w-full sm:max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+            <div className="relative w-full flex-1 sm:max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Buscar etiqueta..."
                 className="pl-9"
@@ -273,7 +276,7 @@ const LabelsSettings = () => {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button variant="ghost" size="icon">
-                                <MoreVertical className="w-4 h-4" />
+                                <MoreVertical className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>Mais opções</TooltipContent>
@@ -281,14 +284,14 @@ const LabelsSettings = () => {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => openEditModal(label)}>
-                            <Pencil className="w-4 h-4 mr-2" />
+                            <Pencil className="mr-2 h-4 w-4" />
                             Editar
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={() => confirmDelete(label)}
                           >
-                            <Trash2 className="w-4 h-4 mr-2" />
+                            <Trash2 className="mr-2 h-4 w-4" />
                             Excluir
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -299,7 +302,7 @@ const LabelsSettings = () => {
 
                 {filteredLabels.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
                       {search || categoryFilter !== 'all'
                         ? 'Nenhuma etiqueta encontrada com os filtros aplicados'
                         : 'Nenhuma etiqueta cadastrada. Crie a primeira!'}
@@ -324,8 +327,8 @@ const LabelsSettings = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Etiqueta</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir a etiqueta "{labelToDelete?.name}"? Esta ação
-              não pode ser desfeita e removerá a etiqueta de todos os leads.
+              Tem certeza que deseja excluir a etiqueta "{labelToDelete?.name}"? Esta ação não pode
+              ser desfeita e removerá a etiqueta de todos os leads.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

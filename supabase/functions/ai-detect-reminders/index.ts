@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -53,14 +53,14 @@ Analise se há alguma promessa ou compromisso de retorno nesta mensagem.`;
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
+          { role: 'user', content: userPrompt },
         ],
         tools: [
           {
@@ -71,34 +71,35 @@ Analise se há alguma promessa ou compromisso de retorno nesta mensagem.`;
               parameters: {
                 type: 'object',
                 properties: {
-                  hasReminder: { 
-                    type: 'boolean', 
-                    description: 'Se há uma promessa/compromisso detectado' 
+                  hasReminder: {
+                    type: 'boolean',
+                    description: 'Se há uma promessa/compromisso detectado',
                   },
-                  taskTitle: { 
-                    type: 'string', 
-                    description: 'Título curto da tarefa a criar (se hasReminder=true)' 
+                  taskTitle: {
+                    type: 'string',
+                    description: 'Título curto da tarefa a criar (se hasReminder=true)',
                   },
-                  taskDescription: { 
-                    type: 'string', 
-                    description: 'Descrição do que foi prometido' 
+                  taskDescription: {
+                    type: 'string',
+                    description: 'Descrição do que foi prometido',
                   },
-                  suggestedDate: { 
-                    type: 'string', 
-                    description: 'Data sugerida no formato ISO (YYYY-MM-DD) ou null se não especificada' 
+                  suggestedDate: {
+                    type: 'string',
+                    description:
+                      'Data sugerida no formato ISO (YYYY-MM-DD) ou null se não especificada',
                   },
-                  priority: { 
-                    type: 'string', 
+                  priority: {
+                    type: 'string',
                     enum: ['low', 'medium', 'high', 'urgent'],
-                    description: 'Prioridade sugerida baseada na urgência' 
-                  }
+                    description: 'Prioridade sugerida baseada na urgência',
+                  },
                 },
-                required: ['hasReminder']
-              }
-            }
-          }
+                required: ['hasReminder'],
+              },
+            },
+          },
         ],
-        tool_choice: { type: 'function', function: { name: 'detect_reminder' } }
+        tool_choice: { type: 'function', function: { name: 'detect_reminder' } },
       }),
     });
 
@@ -138,7 +139,6 @@ Analise se há alguma promessa ou compromisso de retorno nesta mensagem.`;
     return new Response(JSON.stringify({ hasReminder: false }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-
   } catch (error: unknown) {
     console.error('Error in ai-detect-reminders:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

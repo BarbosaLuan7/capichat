@@ -20,24 +20,22 @@ export function useLeadActivities(leadId: string | undefined) {
     queryKey: ['lead-activities', leadId],
     queryFn: async (): Promise<LeadActivity[]> => {
       if (!leadId) return [];
-      
+
       // Fetch activities first
       const { data: activities, error } = await supabase
         .from('lead_activities')
         .select('*')
         .eq('lead_id', leadId)
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       if (!activities || activities.length === 0) return [];
-      
+
       // Collect unique user IDs (avoid N+1 by fetching all profiles at once)
-      const userIds = [...new Set(
-        activities
-          .map(a => a.user_id)
-          .filter((id): id is string => id !== null)
-      )];
-      
+      const userIds = [
+        ...new Set(activities.map((a) => a.user_id).filter((id): id is string => id !== null)),
+      ];
+
       // Fetch all profiles in a single query
       let profilesMap: Record<string, { id: string; name: string; avatar: string | null }> = {};
       if (userIds.length > 0) {
@@ -45,12 +43,12 @@ export function useLeadActivities(leadId: string | undefined) {
           .from('profiles')
           .select('id, name, avatar')
           .in('id', userIds);
-        
+
         if (profiles) {
-          profilesMap = Object.fromEntries(profiles.map(p => [p.id, p]));
+          profilesMap = Object.fromEntries(profiles.map((p) => [p.id, p]));
         }
       }
-      
+
       // Map activities with their profiles
       return activities.map((activity) => ({
         ...activity,
@@ -75,8 +73,10 @@ export function useCreateLeadActivity() {
       action: string;
       details?: Record<string, any>;
     }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       const { data, error } = await supabase
         .from('lead_activities')
         .insert({
@@ -87,7 +87,7 @@ export function useCreateLeadActivity() {
         })
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },

@@ -4,7 +4,10 @@ export function getEdgeFunctionErrorMessage(err: unknown): string | null {
   const message =
     typeof err === 'string'
       ? err
-      : err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
+      : err &&
+          typeof err === 'object' &&
+          'message' in err &&
+          typeof (err as any).message === 'string'
         ? (err as any).message
         : null;
 

@@ -64,10 +64,12 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       // Fetch user's tenant associations with tenant details
       const { data: userTenantsData, error: utError } = await supabase
         .from('user_tenants')
-        .select(`
+        .select(
+          `
           *,
           tenant:tenants(*)
-        `)
+        `
+        )
         .eq('user_id', authUser.id)
         .eq('is_active', true);
 
@@ -90,7 +92,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       // Restore current tenant from localStorage or default to first
       const savedTenantId = localStorage.getItem(TENANT_STORAGE_KEY);
       const savedTenant = fetchedTenants.find((t: Tenant) => t.id === savedTenantId);
-      
+
       if (savedTenant) {
         setCurrentTenantState(savedTenant);
       } else if (fetchedTenants.length === 1) {
@@ -129,10 +131,13 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const getUserTenantRole = useCallback((tenantId: string) => {
-    const ut = userTenants.find((ut) => ut.tenant_id === tenantId);
-    return ut?.role || null;
-  }, [userTenants]);
+  const getUserTenantRole = useCallback(
+    (tenantId: string) => {
+      const ut = userTenants.find((ut) => ut.tenant_id === tenantId);
+      return ut?.role || null;
+    },
+    [userTenants]
+  );
 
   const value: TenantContextType = {
     tenants,
@@ -146,11 +151,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     getUserTenantRole,
   };
 
-  return (
-    <TenantContext.Provider value={value}>
-      {children}
-    </TenantContext.Provider>
-  );
+  return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;
 }
 
 export function useTenant() {

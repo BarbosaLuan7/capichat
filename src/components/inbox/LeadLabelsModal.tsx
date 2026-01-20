@@ -13,11 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tag, Check, Plus, Search, X, ChevronDown } from 'lucide-react';
 import { useLabels, useAddLeadLabel, useRemoveLeadLabel, useCreateLabel } from '@/hooks/useLabels';
 import { LabelModal } from '@/components/labels/LabelModal';
@@ -68,14 +64,18 @@ export function LeadLabelsModal({
     }
   };
 
-  const handleCreateLabel = async (data: { name: string; color: string; category: LabelCategory }) => {
+  const handleCreateLabel = async (data: {
+    name: string;
+    color: string;
+    category: LabelCategory;
+  }) => {
     await createLabel.mutateAsync(data);
   };
 
   // Deduplica etiquetas por ID e filtra por termo de busca
   const uniqueLabels = useMemo(() => {
     if (!labels) return [];
-    
+
     // Remove duplicatas pelo ID
     const seen = new Set<string>();
     const deduplicated = labels.filter((label) => {
@@ -83,15 +83,14 @@ export function LeadLabelsModal({
       seen.add(label.id);
       return true;
     });
-    
+
     // Filtra pelo termo de busca (usando valor debounced)
     if (!debouncedSearchTerm.trim()) return deduplicated;
-    
+
     const term = debouncedSearchTerm.toLowerCase();
     return deduplicated.filter(
       (label) =>
-        label.name.toLowerCase().includes(term) ||
-        label.category.toLowerCase().includes(term)
+        label.name.toLowerCase().includes(term) || label.category.toLowerCase().includes(term)
     );
   }, [labels, debouncedSearchTerm]);
 
@@ -102,14 +101,17 @@ export function LeadLabelsModal({
 
   // Agrupar por categoria e ordenar
   const groupedLabels = useMemo(() => {
-    const groups = uniqueLabels.reduce((acc, label) => {
-      const category = label.category;
-      if (!acc[category]) {
-        acc[category] = [];
-      }
-      acc[category].push(label);
-      return acc;
-    }, {} as Record<string, typeof uniqueLabels>);
+    const groups = uniqueLabels.reduce(
+      (acc, label) => {
+        const category = label.category;
+        if (!acc[category]) {
+          acc[category] = [];
+        }
+        acc[category].push(label);
+        return acc;
+      },
+      {} as Record<string, typeof uniqueLabels>
+    );
 
     // Ordenar por ordem definida
     return Object.entries(groups).sort(([a], [b]) => {
@@ -146,17 +148,15 @@ export function LeadLabelsModal({
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Tag className="w-5 h-5" />
+              <Tag className="h-5 w-5" />
               Etiquetas do Lead
             </DialogTitle>
-            <DialogDescription>
-              Selecione as etiquetas para associar a este lead.
-            </DialogDescription>
+            <DialogDescription>Selecione as etiquetas para associar a este lead.</DialogDescription>
           </DialogHeader>
 
           {/* Campo de busca */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar etiqueta..."
               value={searchTerm}
@@ -167,9 +167,9 @@ export function LeadLabelsModal({
 
           {/* Etiquetas selecionadas (sempre visível) */}
           {selectedLabels.length > 0 && (
-            <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-              <h4 className="text-sm font-medium mb-2 flex items-center gap-2 text-primary">
-                <Check className="w-4 h-4" />
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+              <h4 className="mb-2 flex items-center gap-2 text-sm font-medium text-primary">
+                <Check className="h-4 w-4" />
                 Etiquetas aplicadas ({selectedLabels.length})
               </h4>
               <div className="flex flex-wrap gap-2">
@@ -177,11 +177,11 @@ export function LeadLabelsModal({
                   <Badge
                     key={label.id}
                     onClick={() => handleToggleLabel(label.id)}
-                    className="cursor-pointer hover:opacity-80 transition-opacity gap-1 pr-1"
+                    className="cursor-pointer gap-1 pr-1 transition-opacity hover:opacity-80"
                     style={{ backgroundColor: label.color, color: 'white' }}
                   >
                     {label.name}
-                    <X className="w-3 h-3 ml-1 hover:bg-white/20 rounded-full" />
+                    <X className="ml-1 h-3 w-3 rounded-full hover:bg-white/20" />
                   </Badge>
                 ))}
               </div>
@@ -192,15 +192,19 @@ export function LeadLabelsModal({
 
           <ScrollArea className="max-h-72">
             {isLoading ? (
-              <div className="p-4 text-center text-muted-foreground">
-                Carregando...
-              </div>
+              <div className="p-4 text-center text-muted-foreground">Carregando...</div>
             ) : (
               <div className="space-y-2 pr-4">
                 {groupedLabels.map(([category, categoryLabels]) => {
-                  const config = categoryConfig[category] || { label: category, icon: '📁', order: 99 };
+                  const config = categoryConfig[category] || {
+                    label: category,
+                    icon: '📁',
+                    order: 99,
+                  };
                   const isOpen = openCategories[category] ?? false;
-                  const selectedCount = categoryLabels.filter((l) => currentLabelIds.includes(l.id)).length;
+                  const selectedCount = categoryLabels.filter((l) =>
+                    currentLabelIds.includes(l.id)
+                  ).length;
 
                   return (
                     <Collapsible
@@ -208,27 +212,27 @@ export function LeadLabelsModal({
                       open={isOpen}
                       onOpenChange={() => toggleCategory(category)}
                     >
-                      <CollapsibleTrigger className="flex items-center justify-between w-full p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                      <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg p-2 transition-colors hover:bg-muted/50">
                         <div className="flex items-center gap-2">
                           <span className="text-lg">{config.icon}</span>
-                          <span className="font-medium text-sm">{config.label}</span>
-                          <Badge variant="secondary" className="text-xs h-5">
+                          <span className="text-sm font-medium">{config.label}</span>
+                          <Badge variant="secondary" className="h-5 text-xs">
                             {categoryLabels.length}
                           </Badge>
                           {selectedCount > 0 && (
-                            <Badge className="text-xs h-5 bg-primary/20 text-primary border-0">
+                            <Badge className="h-5 border-0 bg-primary/20 text-xs text-primary">
                               {selectedCount} aplicada{selectedCount > 1 ? 's' : ''}
                             </Badge>
                           )}
                         </div>
                         <ChevronDown
                           className={cn(
-                            'w-4 h-4 text-muted-foreground transition-transform duration-200',
+                            'h-4 w-4 text-muted-foreground transition-transform duration-200',
                             isOpen && 'rotate-180'
                           )}
                         />
                       </CollapsibleTrigger>
-                      <CollapsibleContent className="pt-2 pb-3 px-2">
+                      <CollapsibleContent className="px-2 pb-3 pt-2">
                         <div className="flex flex-wrap gap-2">
                           {categoryLabels.map((label) => {
                             const isSelected = currentLabelIds.includes(label.id);
@@ -239,8 +243,8 @@ export function LeadLabelsModal({
                                 size="sm"
                                 onClick={() => handleToggleLabel(label.id)}
                                 className={cn(
-                                  'gap-1.5 transition-all h-7 text-xs',
-                                  isSelected && 'ring-2 ring-offset-1 shadow-sm'
+                                  'h-7 gap-1.5 text-xs transition-all',
+                                  isSelected && 'shadow-sm ring-2 ring-offset-1'
                                 )}
                                 style={{
                                   borderColor: label.color,
@@ -250,9 +254,9 @@ export function LeadLabelsModal({
                                 }}
                               >
                                 {isSelected ? (
-                                  <Check className="w-3 h-3" />
+                                  <Check className="h-3 w-3" />
                                 ) : (
-                                  <Plus className="w-3 h-3 opacity-50" />
+                                  <Plus className="h-3 w-3 opacity-50" />
                                 )}
                                 {label.name}
                               </Button>
@@ -265,7 +269,7 @@ export function LeadLabelsModal({
                 })}
 
                 {groupedLabels.length === 0 && searchTerm && (
-                  <div className="text-center text-muted-foreground py-8">
+                  <div className="py-8 text-center text-muted-foreground">
                     Nenhuma etiqueta encontrada para "{searchTerm}"
                   </div>
                 )}
@@ -282,12 +286,10 @@ export function LeadLabelsModal({
               onClick={() => setCreateModalOpen(true)}
               className="gap-2"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="h-4 w-4" />
               Criar nova etiqueta
             </Button>
-            <Button onClick={() => onOpenChange(false)}>
-              Concluir
-            </Button>
+            <Button onClick={() => onOpenChange(false)}>Concluir</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

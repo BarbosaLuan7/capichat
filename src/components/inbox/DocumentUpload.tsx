@@ -2,18 +2,8 @@ import { useState, useRef } from 'react';
 import { Upload, File, Check, X, Clock, User, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -78,9 +68,7 @@ export function DocumentUpload({
       if (uploadError) throw uploadError;
 
       // Obter URL pública
-      const { data: urlData } = supabase.storage
-        .from('message-attachments')
-        .getPublicUrl(fileName);
+      const { data: urlData } = supabase.storage.from('message-attachments').getPublicUrl(fileName);
 
       const newDoc: UploadedDocument = {
         id: `${documentId}_${uniqueId}`,
@@ -130,19 +118,18 @@ export function DocumentUpload({
                 disabled={isUploading}
               >
                 {isUploading ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <Loader2 className="h-3 w-3 animate-spin" />
                 ) : hasUploads ? (
-                  <Check className="w-3 h-3" />
+                  <Check className="h-3 w-3" />
                 ) : (
-                  <Upload className="w-3 h-3" />
+                  <Upload className="h-3 w-3" />
                 )}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {hasUploads 
+              {hasUploads
                 ? `${existingUploads.length} arquivo(s) enviado(s) - Clique para adicionar mais`
-                : 'Fazer upload do documento'
-              }
+                : 'Fazer upload do documento'}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -154,7 +141,7 @@ export function DocumentUpload({
             className="h-7 px-2 text-xs text-muted-foreground"
             onClick={() => setShowHistory(true)}
           >
-            <Clock className="w-3 h-3 mr-1" />
+            <Clock className="mr-1 h-3 w-3" />
             Histórico
           </Button>
         )}
@@ -165,7 +152,7 @@ export function DocumentUpload({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <File className="w-5 h-5" />
+              <File className="h-5 w-5" />
               Histórico de Uploads: {documentName}
             </DialogTitle>
           </DialogHeader>
@@ -173,7 +160,7 @@ export function DocumentUpload({
           <ScrollArea className="max-h-96">
             {existingUploads.length === 0 ? (
               <div className="py-8 text-center text-muted-foreground">
-                <File className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <File className="mx-auto mb-2 h-12 w-12 opacity-50" />
                 <p>Nenhum documento enviado</p>
               </div>
             ) : (
@@ -181,16 +168,16 @@ export function DocumentUpload({
                 {existingUploads.map((doc) => (
                   <div
                     key={doc.id}
-                    className="flex items-center gap-3 p-3 border rounded-lg bg-card"
+                    className="flex items-center gap-3 rounded-lg border bg-card p-3"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                      <File className="w-5 h-5 text-muted-foreground" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+                      <File className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{doc.name}</p>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{doc.name}</p>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <User className="w-3 h-3" />
+                        <User className="h-3 w-3" />
                         <span>{doc.uploaded_by_name || 'Desconhecido'}</span>
                         <span>•</span>
                         <span>
@@ -207,7 +194,7 @@ export function DocumentUpload({
                       size="sm"
                       onClick={() => window.open(doc.url, '_blank')}
                     >
-                      <ExternalLink className="w-4 h-4" />
+                      <ExternalLink className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
@@ -222,9 +209,9 @@ export function DocumentUpload({
             disabled={isUploading}
           >
             {isUploading ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <Upload className="w-4 h-4 mr-2" />
+              <Upload className="mr-2 h-4 w-4" />
             )}
             Adicionar documento
           </Button>

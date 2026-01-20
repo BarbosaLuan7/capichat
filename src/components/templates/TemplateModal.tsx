@@ -94,7 +94,7 @@ export function TemplateModal({ open, onOpenChange, template }: TemplateModalPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-primary" />
@@ -167,7 +167,7 @@ export function TemplateModal({ open, onOpenChange, template }: TemplateModalPro
                 <Badge
                   key={variable.key}
                   variant="outline"
-                  className="cursor-pointer hover:bg-primary/10 hover:border-primary transition-colors"
+                  className="cursor-pointer transition-colors hover:border-primary hover:bg-primary/10"
                   onClick={() => handleInsertVariable(variable.key)}
                   title={variable.description}
                 >
@@ -184,9 +184,7 @@ export function TemplateModal({ open, onOpenChange, template }: TemplateModalPro
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="content">Conteúdo da Mensagem *</Label>
-              <span className="text-xs text-muted-foreground">
-                {content.length} caracteres
-              </span>
+              <span className="text-xs text-muted-foreground">{content.length} caracteres</span>
             </div>
             <Textarea
               id="content"
@@ -205,8 +203,8 @@ export function TemplateModal({ open, onOpenChange, template }: TemplateModalPro
                 <Eye className="h-4 w-4" />
                 Preview da Mensagem
               </Label>
-              <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-                <p className="text-sm whitespace-pre-wrap">{getTemplatePreview(content)}</p>
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                <p className="whitespace-pre-wrap text-sm">{getTemplatePreview(content)}</p>
               </div>
             </div>
           )}

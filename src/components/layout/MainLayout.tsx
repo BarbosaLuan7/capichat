@@ -10,7 +10,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 const MainLayout = () => {
   const { user } = useAuth();
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
-  
+
   // Enable realtime notifications for the current user
   useRealtimeNotifications(user?.id);
 
@@ -24,7 +24,7 @@ const MainLayout = () => {
     <>
       {/* Global aria-live regions for screen reader announcements */}
       <GlobalLiveRegion />
-      
+
       {/* Skip links for keyboard navigation */}
       <a href="#main-content" className="skip-link">
         Pular para o conteúdo principal
@@ -32,19 +32,21 @@ const MainLayout = () => {
       <a href="#main-nav" className="skip-link" style={{ left: '200px' }}>
         Pular para navegação
       </a>
-      
-      <div className="flex flex-col min-h-screen w-full bg-background">
+
+      <div className="flex min-h-screen w-full flex-col bg-background">
         <TopNavigation />
-        <main id="main-content" className="flex-1 overflow-auto" role="main" aria-label="Conteúdo principal">
+        <main
+          id="main-content"
+          className="flex-1 overflow-auto"
+          role="main"
+          aria-label="Conteúdo principal"
+        >
           <Outlet />
         </main>
       </div>
 
       {/* Keyboard shortcuts help modal */}
-      <KeyboardShortcutsHelp 
-        open={showShortcutsHelp} 
-        onOpenChange={setShowShortcutsHelp}
-      />
+      <KeyboardShortcutsHelp open={showShortcutsHelp} onOpenChange={setShowShortcutsHelp} />
     </>
   );
 };

@@ -18,14 +18,14 @@ class AICache {
 
   get<T>(key: string): T | null {
     const entry = this.cache.get(key);
-    
+
     if (!entry) return null;
-    
+
     if (Date.now() > entry.timestamp) {
       this.cache.delete(key);
       return null;
     }
-    
+
     return entry.data as T;
   }
 
@@ -48,27 +48,31 @@ class AICache {
 
 // Generate cache key from messages (use context ID + last message ID + count + lead context as fingerprint)
 export function generateMessagesKey(
-  prefix: string, 
-  messages: any[], 
-  contextId?: string,  // lead_id or conversation_id to isolate cache per lead
+  prefix: string,
+  messages: any[],
+  contextId?: string, // lead_id or conversation_id to isolate cache per lead
   leadContext?: { labels?: { name: string }[]; stage?: string } // lead labels and stage for context-aware caching
 ): string {
   const context = contextId || 'unknown';
-  
+
   if (!messages || messages.length === 0) return `${prefix}:${context}:empty`;
-  
+
   const lastMessage = messages[messages.length - 1];
-  
+
   // Include lead context in fingerprint for context-aware caching
   let leadFingerprint = '';
   if (leadContext) {
-    const labelNames = leadContext.labels?.map(l => l.name).sort().join(',') || '';
+    const labelNames =
+      leadContext.labels
+        ?.map((l) => l.name)
+        .sort()
+        .join(',') || '';
     const stage = leadContext.stage || '';
     leadFingerprint = `-${labelNames}-${stage}`;
   }
-  
+
   const fingerprint = `${context}-${messages.length}-${lastMessage?.id || lastMessage?.created_at || 'unknown'}${leadFingerprint}`;
-  
+
   return `${prefix}:${fingerprint}`;
 }
 

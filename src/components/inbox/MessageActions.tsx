@@ -27,7 +27,7 @@ export function MessageActions({
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!content) return;
-    
+
     try {
       await navigator.clipboard.writeText(content);
       toast.success('Copiado!', { duration: 1500 });
@@ -44,8 +44,8 @@ export function MessageActions({
   return (
     <div
       className={cn(
-        "absolute top-1/2 -translate-y-1/2 flex items-center gap-1 z-50",
-        isAgent ? "-left-24" : "-right-24"
+        'absolute top-1/2 z-50 flex -translate-y-1/2 items-center gap-1',
+        isAgent ? '-left-24' : '-right-24'
       )}
     >
       {/* Selection checkbox - only show in selection mode or on hover */}
@@ -57,8 +57,8 @@ export function MessageActions({
                 variant="ghost"
                 size="icon"
                 className={cn(
-                  "h-7 w-7 rounded-full bg-background hover:bg-background shadow-sm border border-border/50",
-                  isSelected && "bg-primary/10 border-primary/30"
+                  'h-7 w-7 rounded-full border border-border/50 bg-background shadow-sm hover:bg-background',
+                  isSelected && 'border-primary/30 bg-primary/10'
                 )}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -66,14 +66,14 @@ export function MessageActions({
                 }}
               >
                 {isSelected ? (
-                  <CheckSquare className="w-3.5 h-3.5 text-primary" />
+                  <CheckSquare className="h-3.5 w-3.5 text-primary" />
                 ) : (
-                  <Square className="w-3.5 h-3.5" />
+                  <Square className="h-3.5 w-3.5" />
                 )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent side={isAgent ? "left" : "right"} className="text-xs">
-              {isSelected ? "Desmarcar" : "Selecionar"}
+            <TooltipContent side={isAgent ? 'left' : 'right'} className="text-xs">
+              {isSelected ? 'Desmarcar' : 'Selecionar'}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -87,13 +87,13 @@ export function MessageActions({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 rounded-full bg-background hover:bg-background shadow-sm border border-border/50"
+                className="h-7 w-7 rounded-full border border-border/50 bg-background shadow-sm hover:bg-background"
                 onClick={handleCopy}
               >
-                <Copy className="w-3.5 h-3.5" />
+                <Copy className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side={isAgent ? "left" : "right"} className="text-xs">
+            <TooltipContent side={isAgent ? 'left' : 'right'} className="text-xs">
               Copiar
             </TooltipContent>
           </Tooltip>
@@ -107,16 +107,16 @@ export function MessageActions({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 rounded-full bg-background hover:bg-background shadow-sm border border-border/50"
+                className="h-7 w-7 rounded-full border border-border/50 bg-background shadow-sm hover:bg-background"
                 onClick={(e) => {
                   e.stopPropagation();
                   onReply();
                 }}
               >
-                <CornerUpLeft className="w-3.5 h-3.5" />
+                <CornerUpLeft className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side={isAgent ? "left" : "right"} className="text-xs">
+            <TooltipContent side={isAgent ? 'left' : 'right'} className="text-xs">
               Responder
             </TooltipContent>
           </Tooltip>

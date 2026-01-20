@@ -1,9 +1,5 @@
 import { useState, forwardRef, memo } from 'react';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Smile } from 'lucide-react';
 
@@ -12,18 +8,37 @@ interface EmojiPickerProps {
 }
 
 // Common emojis for quick selection
-const commonEmojis = ['😊', '👍', '❤️', '🎉', '🔥', '✅', '👏', '🙏', '😄', '🤝', '💪', '⭐', '📞', '📧', '💼', '📝'];
+const commonEmojis = [
+  '😊',
+  '👍',
+  '❤️',
+  '🎉',
+  '🔥',
+  '✅',
+  '👏',
+  '🙏',
+  '😄',
+  '🤝',
+  '💪',
+  '⭐',
+  '📞',
+  '📧',
+  '💼',
+  '📝',
+];
 
 // Memoized emoji button to avoid re-renders
-const EmojiButton = memo(({ emoji, onClick }: { emoji: string; onClick: (emoji: string) => void }) => (
-  <button
-    onClick={() => onClick(emoji)}
-    className="p-2 text-xl hover:bg-muted rounded transition-colors focusable"
-    aria-label={`Inserir emoji ${emoji}`}
-  >
-    {emoji}
-  </button>
-));
+const EmojiButton = memo(
+  ({ emoji, onClick }: { emoji: string; onClick: (emoji: string) => void }) => (
+    <button
+      onClick={() => onClick(emoji)}
+      className="focusable rounded p-2 text-xl transition-colors hover:bg-muted"
+      aria-label={`Inserir emoji ${emoji}`}
+    >
+      {emoji}
+    </button>
+  )
+);
 EmojiButton.displayName = 'EmojiButton';
 
 function EmojiPickerComponent({ onEmojiSelect }: EmojiPickerProps) {
@@ -43,7 +58,7 @@ function EmojiPickerComponent({ onEmojiSelect }: EmojiPickerProps) {
           className="text-muted-foreground hover:text-foreground"
           aria-label="Inserir emoji"
         >
-          <Smile className="w-5 h-5" aria-hidden="true" />
+          <Smile className="h-5 w-5" aria-hidden="true" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64 p-2" align="end" side="top">

@@ -18,13 +18,16 @@ export function KeyboardShortcutsHelp({ open, onOpenChange }: KeyboardShortcutsH
         </p>
         <div className="space-y-3">
           {KEYBOARD_SHORTCUTS.map((shortcut, index) => (
-            <div key={index} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+            <div
+              key={index}
+              className="flex items-center justify-between border-b border-border py-2 last:border-0"
+            >
               <span className="text-sm text-muted-foreground">{shortcut.description}</span>
               <div className="flex items-center gap-1">
                 {shortcut.keys.map((key, keyIndex) => (
                   <kbd
                     key={keyIndex}
-                    className="px-2 py-1 text-xs font-medium bg-muted border border-border rounded"
+                    className="rounded border border-border bg-muted px-2 py-1 text-xs font-medium"
                   >
                     {key}
                   </kbd>
@@ -33,8 +36,10 @@ export function KeyboardShortcutsHelp({ open, onOpenChange }: KeyboardShortcutsH
             </div>
           ))}
         </div>
-        <p className="text-xs text-muted-foreground mt-4">
-          Pressione <kbd className="px-1.5 py-0.5 bg-muted border border-border rounded text-xs">?</kbd> a qualquer momento para ver esta lista.
+        <p className="mt-4 text-xs text-muted-foreground">
+          Pressione{' '}
+          <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-xs">?</kbd> a
+          qualquer momento para ver esta lista.
         </p>
       </DialogContent>
     </Dialog>

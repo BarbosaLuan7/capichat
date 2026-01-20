@@ -1,5 +1,5 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import 'https://deno.land/x/xhr@0.1.0/mod.ts';
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,10 +26,10 @@ serve(async (req) => {
     if (!audioResponse.ok) {
       throw new Error('Failed to fetch audio file');
     }
-    
+
     const audioBlob = await audioResponse.blob();
     const audioBuffer = await audioBlob.arrayBuffer();
-    
+
     // Converter para base64 de forma segura (sem spread operator que causa stack overflow)
     const uint8Array = new Uint8Array(audioBuffer);
     let binaryString = '';
@@ -42,7 +42,7 @@ serve(async (req) => {
 
     // Use Lovable AI (Gemini) for transcription
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    
+
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY not configured');
     }
@@ -51,7 +51,7 @@ serve(async (req) => {
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -62,16 +62,16 @@ serve(async (req) => {
             content: [
               {
                 type: 'text',
-                text: 'Transcreva o áudio a seguir. Retorne APENAS o texto falado, sem explicações adicionais. Se não conseguir entender, responda "Áudio inaudível".'
+                text: 'Transcreva o áudio a seguir. Retorne APENAS o texto falado, sem explicações adicionais. Se não conseguir entender, responda "Áudio inaudível".',
               },
               {
                 type: 'image_url',
                 image_url: {
-                  url: `data:audio/webm;base64,${base64Audio}`
-                }
-              }
-            ]
-          }
+                  url: `data:audio/webm;base64,${base64Audio}`,
+                },
+              },
+            ],
+          },
         ],
         max_tokens: 1000,
       }),
@@ -89,24 +89,24 @@ serve(async (req) => {
     console.log('Transcription result:', transcription);
 
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         text: transcription.trim(),
-        success: true 
+        success: true,
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const errorStack = error instanceof Error ? error.stack : undefined;
-    
+
     console.error('[transcribe-audio] Error:', {
       message: errorMessage,
       stack: errorStack,
       type: error?.constructor?.name,
     });
-    
+
     // Retornar mensagem amigável baseada no tipo de erro
     let userMessage = 'Erro ao transcrever áudio';
     if (errorMessage.includes('fetch audio')) {
@@ -116,12 +116,12 @@ serve(async (req) => {
     } else if (errorMessage.includes('LOVABLE_API_KEY')) {
       userMessage = 'Configuração de API não encontrada';
     }
-    
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         error: userMessage,
         details: errorMessage,
-        success: false 
+        success: false,
       }),
       {
         status: 500,

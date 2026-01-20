@@ -37,7 +37,7 @@ export function useChatbotFlows() {
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
-      return (data || []).map(flow => ({
+      return (data || []).map((flow) => ({
         ...flow,
         nodes: (flow.nodes as unknown as FlowNode[]) || [],
         connections: (flow.connections as unknown as FlowConnection[]) || [],
@@ -73,17 +73,24 @@ export function useCreateChatbotFlow() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (flow: { name: string; description?: string; nodes: FlowNode[]; connections: FlowConnection[] }) => {
+    mutationFn: async (flow: {
+      name: string;
+      description?: string;
+      nodes: FlowNode[];
+      connections: FlowConnection[];
+    }) => {
       const { data: user } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('chatbot_flows')
-        .insert([{
-          name: flow.name,
-          description: flow.description,
-          nodes: JSON.parse(JSON.stringify(flow.nodes)),
-          connections: JSON.parse(JSON.stringify(flow.connections)),
-          created_by: user.user?.id,
-        }])
+        .insert([
+          {
+            name: flow.name,
+            description: flow.description,
+            nodes: JSON.parse(JSON.stringify(flow.nodes)),
+            connections: JSON.parse(JSON.stringify(flow.connections)),
+            created_by: user.user?.id,
+          },
+        ])
         .select()
         .single();
 
@@ -138,10 +145,7 @@ export function useDeleteChatbotFlow() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('chatbot_flows')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('chatbot_flows').delete().eq('id', id);
 
       if (error) throw error;
     },

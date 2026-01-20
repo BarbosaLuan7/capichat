@@ -23,12 +23,12 @@ function ScrollToBottomButtonComponent({ show, onClick, unreadCount }: ScrollToB
           <Button
             onClick={onClick}
             size="icon"
-            className="rounded-full shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 relative"
+            className="relative rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90"
             aria-label="Rolar para o final da conversa"
           >
-            <ChevronDown className="w-5 h-5" />
+            <ChevronDown className="h-5 w-5" />
             {unreadCount && unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center font-medium">
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-xs font-medium text-destructive-foreground">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
@@ -39,6 +39,7 @@ function ScrollToBottomButtonComponent({ show, onClick, unreadCount }: ScrollToB
   );
 }
 
-export const ScrollToBottomButton = memo(ScrollToBottomButtonComponent, (prev, next) =>
-  prev.show === next.show && prev.unreadCount === next.unreadCount
+export const ScrollToBottomButton = memo(
+  ScrollToBottomButtonComponent,
+  (prev, next) => prev.show === next.show && prev.unreadCount === next.unreadCount
 );

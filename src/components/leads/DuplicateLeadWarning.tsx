@@ -4,13 +4,13 @@ import { AlertTriangle, Users, ExternalLink, GitMerge, X } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogDescription,
-  DialogFooter 
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -66,10 +66,7 @@ export function DuplicateLeadWarning({
         .eq('lead_id', deleteLeadId);
 
       // Deletar lead duplicado
-      const { error: deleteError } = await supabase
-        .from('leads')
-        .delete()
-        .eq('id', deleteLeadId);
+      const { error: deleteError } = await supabase.from('leads').delete().eq('id', deleteLeadId);
 
       if (deleteError) throw deleteError;
 
@@ -92,26 +89,20 @@ export function DuplicateLeadWarning({
         <AlertDescription>
           <div className="mt-2 space-y-2">
             {duplicates.slice(0, 3).map((dup) => (
-              <div 
-                key={dup.id} 
-                className="flex items-center justify-between p-2 bg-background/50 rounded-md"
+              <div
+                key={dup.id}
+                className="flex items-center justify-between rounded-md bg-background/50 p-2"
               >
                 <div>
                   <span className="font-medium">{dup.name}</span>
-                  <span className="text-muted-foreground text-sm ml-2">
-                    {dup.phone}
-                  </span>
+                  <span className="ml-2 text-sm text-muted-foreground">{dup.phone}</span>
                   <Badge variant="outline" className="ml-2 text-xs">
                     {dup.source}
                   </Badge>
                 </div>
                 <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleViewLead(dup.id)}
-                  >
-                    <ExternalLink className="w-3 h-3 mr-1" />
+                  <Button variant="ghost" size="sm" onClick={() => handleViewLead(dup.id)}>
+                    <ExternalLink className="mr-1 h-3 w-3" />
                     Ver
                   </Button>
                   <Button
@@ -122,7 +113,7 @@ export function DuplicateLeadWarning({
                       setShowMergeDialog(true);
                     }}
                   >
-                    <GitMerge className="w-3 h-3 mr-1" />
+                    <GitMerge className="mr-1 h-3 w-3" />
                     Mesclar
                   </Button>
                 </div>
@@ -135,13 +126,8 @@ export function DuplicateLeadWarning({
             )}
           </div>
           {onDismiss && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-2"
-              onClick={onDismiss}
-            >
-              <X className="w-3 h-3 mr-1" />
+            <Button variant="ghost" size="sm" className="mt-2" onClick={onDismiss}>
+              <X className="mr-1 h-3 w-3" />
               Dispensar
             </Button>
           )}
@@ -152,7 +138,7 @@ export function DuplicateLeadWarning({
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <GitMerge className="w-5 h-5" />
+              <GitMerge className="h-5 w-5" />
               Mesclar Leads
             </DialogTitle>
             <DialogDescription>
@@ -162,19 +148,19 @@ export function DuplicateLeadWarning({
 
           {selectedDuplicate && (
             <div className="space-y-4 py-4">
-              <div className="p-4 border rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground mb-1">Lead atual</p>
+              <div className="rounded-lg border bg-muted/50 p-4">
+                <p className="mb-1 text-sm text-muted-foreground">Lead atual</p>
                 <p className="font-medium">Lead ID: {currentLeadId.slice(0, 8)}...</p>
               </div>
-              <div className="p-4 border rounded-lg">
-                <p className="text-sm text-muted-foreground mb-1">Lead duplicado</p>
+              <div className="rounded-lg border p-4">
+                <p className="mb-1 text-sm text-muted-foreground">Lead duplicado</p>
                 <p className="font-medium">{selectedDuplicate.name}</p>
                 <p className="text-sm text-muted-foreground">{selectedDuplicate.phone}</p>
               </div>
             </div>
           )}
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
             <Button
               variant="outline"
               onClick={() => setShowMergeDialog(false)}

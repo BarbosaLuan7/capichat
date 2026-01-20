@@ -1,6 +1,6 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import 'https://deno.land/x/xhr@0.1.0/mod.ts';
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,21 +28,21 @@ serve(async (req) => {
     }
 
     if (!conversationId) {
-      return new Response(
-        JSON.stringify({ error: 'conversationId é obrigatório' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'conversationId é obrigatório' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Validar que todos os IDs são UUIDs válidos (filtrar IDs temporários do frontend)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const invalidIds = messageIds.filter((id: string) => !uuidRegex.test(id));
-    
+
     if (invalidIds.length > 0) {
       console.warn('[delete-whatsapp-message] IDs inválidos ignorados:', invalidIds);
       messageIds = messageIds.filter((id: string) => uuidRegex.test(id));
     }
-    
+
     if (messageIds.length === 0) {
       return new Response(
         JSON.stringify({ error: 'Nenhuma mensagem válida para deletar', invalidIds }),
@@ -50,7 +50,9 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[delete-whatsapp-message] Deletando ${messageIds.length} mensagens da conversa ${conversationId}`);
+    console.log(
+      `[delete-whatsapp-message] Deletando ${messageIds.length} mensagens da conversa ${conversationId}`
+    );
 
     // Buscar a conversa para obter whatsapp_instance_id
     const { data: conversation, error: convError } = await supabase
@@ -61,10 +63,10 @@ serve(async (req) => {
 
     if (convError || !conversation) {
       console.error('[delete-whatsapp-message] Conversa não encontrada:', convError);
-      return new Response(
-        JSON.stringify({ error: 'Conversa não encontrada' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Conversa não encontrada' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Buscar lead para obter whatsapp_chat_id
@@ -76,24 +78,25 @@ serve(async (req) => {
 
     if (leadError || !lead) {
       console.error('[delete-whatsapp-message] Lead não encontrado:', leadError);
-      return new Response(
-        JSON.stringify({ error: 'Lead não encontrado' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Lead não encontrado' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const chatId = lead.whatsapp_chat_id || `${lead.phone.replace(/\D/g, '')}@c.us`;
 
     // Buscar config do WhatsApp
-    const { data: config, error: configError } = await supabase
-      .rpc('get_whatsapp_config_full', { config_id: conversation.whatsapp_instance_id });
+    const { data: config, error: configError } = await supabase.rpc('get_whatsapp_config_full', {
+      config_id: conversation.whatsapp_instance_id,
+    });
 
     if (configError || !config || config.length === 0) {
       console.error('[delete-whatsapp-message] Config WhatsApp não encontrada:', configError);
-      return new Response(
-        JSON.stringify({ error: 'Configuração WhatsApp não encontrada' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Configuração WhatsApp não encontrada' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const wahaConfig = config[0];
@@ -110,38 +113,47 @@ serve(async (req) => {
 
     if (msgError) {
       console.error('[delete-whatsapp-message] Erro ao buscar mensagens:', msgError);
-      return new Response(
-        JSON.stringify({ error: 'Erro ao buscar mensagens' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Erro ao buscar mensagens' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const results: Array<{ messageId: string; success: boolean; error?: string; deletedLocally?: boolean }> = [];
+    const results: Array<{
+      messageId: string;
+      success: boolean;
+      error?: string;
+      deletedLocally?: boolean;
+    }> = [];
 
     // Deletar cada mensagem no WAHA
     for (const message of messages || []) {
       // Priorizar external_id que tem o formato completo esperado pelo WAHA
       const wahaMessageId = message.external_id || message.waha_message_id;
-      
-      console.log(`[delete-whatsapp-message] Mensagem ${message.id}: external_id=${message.external_id}, waha_message_id=${message.waha_message_id}, usando=${wahaMessageId}`);
-      
+
+      console.log(
+        `[delete-whatsapp-message] Mensagem ${message.id}: external_id=${message.external_id}, waha_message_id=${message.waha_message_id}, usando=${wahaMessageId}`
+      );
+
       if (!wahaMessageId) {
         console.warn(`[delete-whatsapp-message] Mensagem ${message.id} não tem ID do WhatsApp`);
         // Marcar como deletado localmente mesmo sem ID do WhatsApp
-        await supabase
-          .from('messages')
-          .update({ is_deleted_locally: true })
-          .eq('id', message.id);
-        results.push({ messageId: message.id, success: true, deletedLocally: true, error: 'Sem ID do WhatsApp - removida apenas localmente' });
+        await supabase.from('messages').update({ is_deleted_locally: true }).eq('id', message.id);
+        results.push({
+          messageId: message.id,
+          success: true,
+          deletedLocally: true,
+          error: 'Sem ID do WhatsApp - removida apenas localmente',
+        });
         continue;
       }
 
       try {
         // WAHA API: DELETE /api/{session}/chats/{chatId}/messages/{messageId}
         const deleteUrl = `${baseUrl}/api/${session}/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(wahaMessageId)}`;
-        
+
         console.log(`[delete-whatsapp-message] Deletando mensagem: ${deleteUrl}`);
-        
+
         const wahaResponse = await fetch(deleteUrl, {
           method: 'DELETE',
           headers: {
@@ -152,47 +164,43 @@ serve(async (req) => {
 
         if (wahaResponse.ok) {
           // Marcar como deletado localmente no banco
-          await supabase
-            .from('messages')
-            .update({ is_deleted_locally: true })
-            .eq('id', message.id);
-          
+          await supabase.from('messages').update({ is_deleted_locally: true }).eq('id', message.id);
+
           results.push({ messageId: message.id, success: true });
           console.log(`[delete-whatsapp-message] Mensagem ${message.id} deletada com sucesso`);
         } else {
           const errorText = await wahaResponse.text();
-          console.error(`[delete-whatsapp-message] Erro WAHA: ${wahaResponse.status} - ${errorText}`);
-          
+          console.error(
+            `[delete-whatsapp-message] Erro WAHA: ${wahaResponse.status} - ${errorText}`
+          );
+
           // Mesmo se falhar no WAHA, marcar como deletado localmente
-          await supabase
-            .from('messages')
-            .update({ is_deleted_locally: true })
-            .eq('id', message.id);
-          
-          results.push({ 
-            messageId: message.id, 
-            success: false, 
-            error: `WAHA erro: ${wahaResponse.status}` 
+          await supabase.from('messages').update({ is_deleted_locally: true }).eq('id', message.id);
+
+          results.push({
+            messageId: message.id,
+            success: false,
+            error: `WAHA erro: ${wahaResponse.status}`,
           });
         }
       } catch (err) {
         console.error(`[delete-whatsapp-message] Erro ao deletar mensagem ${message.id}:`, err);
-        results.push({ 
-          messageId: message.id, 
-          success: false, 
-          error: err instanceof Error ? err.message : 'Erro desconhecido' 
+        results.push({
+          messageId: message.id,
+          success: false,
+          error: err instanceof Error ? err.message : 'Erro desconhecido',
         });
       }
     }
 
-    const successCount = results.filter(r => r.success).length;
-    console.log(`[delete-whatsapp-message] Finalizado: ${successCount}/${results.length} deletadas com sucesso`);
-
-    return new Response(
-      JSON.stringify({ success: true, results }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    const successCount = results.filter((r) => r.success).length;
+    console.log(
+      `[delete-whatsapp-message] Finalizado: ${successCount}/${results.length} deletadas com sucesso`
     );
 
+    return new Response(JSON.stringify({ success: true, results }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('[delete-whatsapp-message] Erro geral:', error);
     return new Response(

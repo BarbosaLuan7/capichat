@@ -1,6 +1,15 @@
 import { useState, useMemo } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
-import { Plus, Search, MoreHorizontal, Pencil, Trash2, Copy, Zap, MessageSquare } from 'lucide-react';
+import {
+  Plus,
+  Search,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Copy,
+  Zap,
+  MessageSquare,
+} from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,13 +62,17 @@ export default function TemplatesSettings() {
   const createTemplate = useCreateTemplate();
   const debouncedSearch = useDebounce(search, 300);
 
-  const filteredTemplates = useMemo(() => templates?.filter((template) => {
-    const matchesSearch =
-      template.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      template.shortcut.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      template.content.toLowerCase().includes(debouncedSearch.toLowerCase());
-    return matchesSearch;
-  }), [templates, debouncedSearch]);
+  const filteredTemplates = useMemo(
+    () =>
+      templates?.filter((template) => {
+        const matchesSearch =
+          template.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          template.shortcut.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          template.content.toLowerCase().includes(debouncedSearch.toLowerCase());
+        return matchesSearch;
+      }),
+    [templates, debouncedSearch]
+  );
 
   const handleEdit = (template: Template) => {
     setSelectedTemplate(template);
@@ -113,12 +126,9 @@ export default function TemplatesSettings() {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6 p-6">
       <PageBreadcrumb
-        items={[
-          { label: 'Configurações', href: '/settings' },
-          { label: 'Templates' },
-        ]}
+        items={[{ label: 'Configurações', href: '/settings' }, { label: 'Templates' }]}
       />
 
       {/* Header */}
@@ -130,13 +140,13 @@ export default function TemplatesSettings() {
           </p>
         </div>
         <Button onClick={handleNewTemplate} className="bg-gradient-to-r from-primary to-primary/80">
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="mr-2 h-4 w-4" />
           Novo Template
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total de Templates</CardDescription>
@@ -153,7 +163,7 @@ export default function TemplatesSettings() {
         <Card className="md:col-span-2">
           <CardHeader className="pb-2">
             <CardDescription>Dica de Uso</CardDescription>
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Zap className="h-5 w-5 text-primary" />
               Como usar os templates
             </CardTitle>
@@ -172,8 +182,8 @@ export default function TemplatesSettings() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="relative max-w-sm flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nome, atalho ou conteúdo..."
                 value={search}
@@ -185,10 +195,10 @@ export default function TemplatesSettings() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Carregando templates...</div>
+            <div className="py-8 text-center text-muted-foreground">Carregando templates...</div>
           ) : filteredTemplates?.length === 0 ? (
-            <div className="text-center py-8">
-              <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+            <div className="py-8 text-center">
+              <MessageSquare className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
               <p className="text-muted-foreground">
                 {search ? 'Nenhum template encontrado' : 'Nenhum template cadastrado'}
               </p>
@@ -250,11 +260,11 @@ export default function TemplatesSettings() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleEdit(template)}>
-                            <Pencil className="h-4 w-4 mr-2" />
+                            <Pencil className="mr-2 h-4 w-4" />
                             Editar
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDuplicate(template)}>
-                            <Copy className="h-4 w-4 mr-2" />
+                            <Copy className="mr-2 h-4 w-4" />
                             Duplicar
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
@@ -262,7 +272,7 @@ export default function TemplatesSettings() {
                             onClick={() => handleDelete(template)}
                             className="text-destructive focus:text-destructive"
                           >
-                            <Trash2 className="h-4 w-4 mr-2" />
+                            <Trash2 className="mr-2 h-4 w-4" />
                             Excluir
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -277,11 +287,7 @@ export default function TemplatesSettings() {
       </Card>
 
       {/* Modal */}
-      <TemplateModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        template={selectedTemplate}
-      />
+      <TemplateModal open={modalOpen} onOpenChange={setModalOpen} template={selectedTemplate} />
 
       {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

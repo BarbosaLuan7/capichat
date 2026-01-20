@@ -22,12 +22,12 @@ export function useDebounce<T>(value: T, delay: number): T {
 /**
  * Create a debounced callback function
  * Useful for search inputs, form submissions, etc.
- * 
+ *
  * @example
  * const debouncedSearch = useDebouncedCallback((query: string) => {
  *   performSearch(query);
  * }, 300);
- * 
+ *
  * // In JSX:
  * <Input onChange={(e) => debouncedSearch(e.target.value)} />
  */

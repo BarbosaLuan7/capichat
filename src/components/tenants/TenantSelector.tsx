@@ -49,8 +49,8 @@ function TenantSelectorComponent({ className, variant = 'header' }: TenantSelect
           size="sm"
           className={cn(
             'flex items-center gap-2 px-2',
-            variant === 'header' 
-              ? 'text-white/80 hover:text-white hover:bg-white/10' 
+            variant === 'header'
+              ? 'text-white/80 hover:bg-white/10 hover:text-white'
               : 'text-foreground hover:bg-muted',
             className
           )}
@@ -58,14 +58,14 @@ function TenantSelectorComponent({ className, variant = 'header' }: TenantSelect
           {currentTenant?.logo_url ? (
             <Avatar className="h-5 w-5">
               <AvatarImage src={currentTenant.logo_url} alt={currentTenant.name} />
-              <AvatarFallback className="bg-white/20 text-white text-xs">
+              <AvatarFallback className="bg-white/20 text-xs text-white">
                 {currentTenant.name.charAt(0)}
               </AvatarFallback>
             </Avatar>
           ) : (
             <Building2 className="h-4 w-4" />
           )}
-          <span className="text-sm font-medium truncate max-w-32">
+          <span className="max-w-32 truncate text-sm font-medium">
             {currentTenant?.name || 'Todas as empresas'}
           </span>
           <ChevronDown className="h-3 w-3 opacity-70" />
@@ -76,19 +76,14 @@ function TenantSelectorComponent({ className, variant = 'header' }: TenantSelect
           Selecionar empresa
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        
+
         {/* Option to see all */}
-        <DropdownMenuItem
-          onClick={() => setCurrentTenant(null)}
-          className="cursor-pointer"
-        >
-          <div className="flex items-center gap-2 flex-1">
+        <DropdownMenuItem onClick={() => setCurrentTenant(null)} className="cursor-pointer">
+          <div className="flex flex-1 items-center gap-2">
             <Building2 className="h-4 w-4 text-muted-foreground" />
             <span>Todas as empresas</span>
           </div>
-          {currentTenant === null && (
-            <Check className="h-4 w-4 text-primary" />
-          )}
+          {currentTenant === null && <Check className="h-4 w-4 text-primary" />}
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
@@ -100,26 +95,20 @@ function TenantSelectorComponent({ className, variant = 'header' }: TenantSelect
             onClick={() => setCurrentTenant(tenant)}
             className="cursor-pointer"
           >
-            <div className="flex items-center gap-2 flex-1">
+            <div className="flex flex-1 items-center gap-2">
               {tenant.logo_url ? (
                 <Avatar className="h-5 w-5">
                   <AvatarImage src={tenant.logo_url} alt={tenant.name} />
-                  <AvatarFallback className="text-xs">
-                    {tenant.name.charAt(0)}
-                  </AvatarFallback>
+                  <AvatarFallback className="text-xs">{tenant.name.charAt(0)}</AvatarFallback>
                 </Avatar>
               ) : (
-                <div className="h-5 w-5 rounded bg-muted flex items-center justify-center">
-                  <span className="text-xs font-medium">
-                    {tenant.name.charAt(0)}
-                  </span>
+                <div className="flex h-5 w-5 items-center justify-center rounded bg-muted">
+                  <span className="text-xs font-medium">{tenant.name.charAt(0)}</span>
                 </div>
               )}
               <span className="truncate">{tenant.name}</span>
             </div>
-            {currentTenant?.id === tenant.id && (
-              <Check className="h-4 w-4 text-primary" />
-            )}
+            {currentTenant?.id === tenant.id && <Check className="h-4 w-4 text-primary" />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

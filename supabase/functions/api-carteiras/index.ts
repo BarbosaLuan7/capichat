@@ -20,7 +20,7 @@ function formatCarteira(carteira: any, totalContatos?: number) {
     cor: carteira.color,
     total_contatos: totalContatos ?? carteira.total_contatos ?? 0,
     criada_em: carteira.created_at,
-    atualizada_em: carteira.updated_at
+    atualizada_em: carteira.updated_at,
   };
 }
 
@@ -30,7 +30,7 @@ function formatContato(lead: any) {
     nome: lead.name,
     telefone: lead.phone,
     email: lead.email,
-    adicionado_em: lead.wallet_contacts?.[0]?.created_at || lead.created_at
+    adicionado_em: lead.wallet_contacts?.[0]?.created_at || lead.created_at,
   };
 }
 
@@ -54,13 +54,15 @@ Deno.serve(async (req) => {
     }
 
     const apiKey = authHeader.replace('Bearer ', '');
-    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', { key_value: apiKey });
+    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', {
+      key_value: apiKey,
+    });
 
     if (apiKeyError || !apiKeyId) {
-      return new Response(
-        JSON.stringify({ sucesso: false, erro: 'API key inválida' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: false, erro: 'API key inválida' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const url = new URL(req.url);
@@ -68,7 +70,9 @@ Deno.serve(async (req) => {
     const action = url.searchParams.get('action');
     const tenantId = url.searchParams.get('tenant_id');
     const page = parseInt(url.searchParams.get('pagina') || url.searchParams.get('page') || '1');
-    const pageSize = parseInt(url.searchParams.get('por_pagina') || url.searchParams.get('page_size') || '50');
+    const pageSize = parseInt(
+      url.searchParams.get('por_pagina') || url.searchParams.get('page_size') || '50'
+    );
 
     // GET - List carteiras or contatos
     if (req.method === 'GET') {
@@ -77,21 +81,28 @@ Deno.serve(async (req) => {
         const from = (page - 1) * pageSize;
         const to = from + pageSize - 1;
 
-        const { data: contacts, error, count } = await supabase
+        const {
+          data: contacts,
+          error,
+          count,
+        } = await supabase
           .from('wallet_contacts')
-          .select(`
+          .select(
+            `
             lead_id,
             created_at,
             leads:lead_id(id, name, phone, email)
-          `, { count: 'exact' })
+          `,
+            { count: 'exact' }
+          )
           .eq('wallet_id', id)
           .range(from, to);
 
         if (error) {
-          return new Response(
-            JSON.stringify({ sucesso: false, erro: 'Erro ao listar contatos' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ sucesso: false, erro: 'Erro ao listar contatos' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
         const formattedContacts = (contacts || []).map((c: any) => ({
@@ -99,7 +110,7 @@ Deno.serve(async (req) => {
           nome: c.leads?.name,
           telefone: c.leads?.phone,
           email: c.leads?.email,
-          adicionado_em: c.created_at
+          adicionado_em: c.created_at,
         }));
 
         return new Response(
@@ -109,8 +120,8 @@ Deno.serve(async (req) => {
               pagina: page,
               por_pagina: pageSize,
               total: count || 0,
-              total_paginas: Math.ceil((count || 0) / pageSize)
-            }
+              total_paginas: Math.ceil((count || 0) / pageSize),
+            },
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -118,17 +129,13 @@ Deno.serve(async (req) => {
 
       // GET /api-carteiras?id=xxx - Get single wallet
       if (id) {
-        const { data, error } = await supabase
-          .from('wallets')
-          .select('*')
-          .eq('id', id)
-          .single();
+        const { data, error } = await supabase.from('wallets').select('*').eq('id', id).single();
 
         if (error) {
-          return new Response(
-            JSON.stringify({ sucesso: false, erro: 'Carteira não encontrada' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ sucesso: false, erro: 'Carteira não encontrada' }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
         // Get contact count
@@ -137,10 +144,9 @@ Deno.serve(async (req) => {
           .select('*', { count: 'exact', head: true })
           .eq('wallet_id', id);
 
-        return new Response(
-          JSON.stringify(formatCarteira(data, count || 0)),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify(formatCarteira(data, count || 0)), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // GET /api-carteiras - List all wallets
@@ -157,14 +163,14 @@ Deno.serve(async (req) => {
       const { data, error } = await query;
 
       if (error) {
-        return new Response(
-          JSON.stringify({ sucesso: false, erro: 'Erro ao listar carteiras' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ sucesso: false, erro: 'Erro ao listar carteiras' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // Get contact counts for each wallet
-      const walletIds = (data || []).map(w => w.id);
+      const walletIds = (data || []).map((w) => w.id);
       const { data: counts } = await supabase
         .from('wallet_contacts')
         .select('wallet_id')
@@ -175,12 +181,11 @@ Deno.serve(async (req) => {
         countMap[c.wallet_id] = (countMap[c.wallet_id] || 0) + 1;
       });
 
-      const formatted = (data || []).map(w => formatCarteira(w, countMap[w.id] || 0));
+      const formatted = (data || []).map((w) => formatCarteira(w, countMap[w.id] || 0));
 
-      return new Response(
-        JSON.stringify({ dados: formatted }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ dados: formatted }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // POST - Create wallet or add contact
@@ -188,7 +193,7 @@ Deno.serve(async (req) => {
       // POST /api-carteiras?id=xxx&action=contatos - Add contact to wallet
       if (id && action === 'contatos') {
         const body = await req.json();
-        
+
         if (!body.contato_id) {
           return new Response(
             JSON.stringify({ sucesso: false, erro: 'contato_id é obrigatório' }),
@@ -196,15 +201,14 @@ Deno.serve(async (req) => {
           );
         }
 
-        const { error } = await supabase
-          .from('wallet_contacts')
-          .insert({
-            wallet_id: id,
-            lead_id: body.contato_id
-          });
+        const { error } = await supabase.from('wallet_contacts').insert({
+          wallet_id: id,
+          lead_id: body.contato_id,
+        });
 
         if (error) {
-          if (error.code === '23505') { // Unique violation
+          if (error.code === '23505') {
+            // Unique violation
             return new Response(
               JSON.stringify({ sucesso: false, erro: 'Contato já está na carteira' }),
               { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -216,20 +220,20 @@ Deno.serve(async (req) => {
           );
         }
 
-        return new Response(
-          JSON.stringify({ sucesso: true }),
-          { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ sucesso: true }), {
+          status: 201,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // POST /api-carteiras - Create wallet
       const body: CarteiraPayload = await req.json();
 
       if (!body.nome) {
-        return new Response(
-          JSON.stringify({ sucesso: false, erro: 'nome é obrigatório' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ sucesso: false, erro: 'nome é obrigatório' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       const { data, error } = await supabase
@@ -238,22 +242,22 @@ Deno.serve(async (req) => {
           name: body.nome,
           description: body.descricao,
           color: body.cor || '#6366f1',
-          tenant_id: body.tenant_id || tenantId
+          tenant_id: body.tenant_id || tenantId,
         })
         .select()
         .single();
 
       if (error) {
-        return new Response(
-          JSON.stringify({ sucesso: false, erro: 'Erro ao criar carteira' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ sucesso: false, erro: 'Erro ao criar carteira' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
-      return new Response(
-        JSON.stringify({ sucesso: true, carteira: formatCarteira(data, 0) }),
-        { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: true, carteira: formatCarteira(data, 0) }), {
+        status: 201,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // PUT - Update wallet
@@ -286,10 +290,9 @@ Deno.serve(async (req) => {
         );
       }
 
-      return new Response(
-        JSON.stringify({ sucesso: true, carteira: formatCarteira(data) }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: true, carteira: formatCarteira(data) }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // DELETE - Remove wallet or contact from wallet
@@ -318,47 +321,41 @@ Deno.serve(async (req) => {
           .eq('lead_id', contatoId);
 
         if (error) {
-          return new Response(
-            JSON.stringify({ sucesso: false, erro: 'Erro ao remover contato' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ sucesso: false, erro: 'Erro ao remover contato' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
-        return new Response(
-          JSON.stringify({ sucesso: true }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ sucesso: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // DELETE /api-carteiras?id=xxx - Soft delete wallet
-      const { error } = await supabase
-        .from('wallets')
-        .update({ is_active: false })
-        .eq('id', id);
+      const { error } = await supabase.from('wallets').update({ is_active: false }).eq('id', id);
 
       if (error) {
-        return new Response(
-          JSON.stringify({ sucesso: false, erro: 'Erro ao remover carteira' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ sucesso: false, erro: 'Erro ao remover carteira' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
-      return new Response(
-        JSON.stringify({ sucesso: true }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    return new Response(
-      JSON.stringify({ sucesso: false, erro: 'Método não permitido' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
+    return new Response(JSON.stringify({ sucesso: false, erro: 'Método não permitido' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('[api-carteiras] Error:', error);
-    return new Response(
-      JSON.stringify({ sucesso: false, erro: 'Erro interno do servidor' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ sucesso: false, erro: 'Erro interno do servidor' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

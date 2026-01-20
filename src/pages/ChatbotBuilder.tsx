@@ -32,12 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,16 +43,15 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { 
-  useChatbotFlows, 
+import {
+  useChatbotFlows,
   useChatbotFlow,
-  useCreateChatbotFlow, 
-  useUpdateChatbotFlow, 
+  useCreateChatbotFlow,
+  useUpdateChatbotFlow,
   useDeleteChatbotFlow,
-  type FlowNode, 
-  type FlowConnection 
+  type FlowNode,
+  type FlowConnection,
 } from '@/hooks/useChatbotFlows';
-
 
 const nodeTypes = [
   { type: 'trigger', label: 'Gatilho', icon: Zap, color: 'bg-primary' },
@@ -105,12 +99,18 @@ const ChatbotBuilder = () => {
     if (currentFlow) {
       setFlowName(currentFlow.name);
       setFlowDescription(currentFlow.description || '');
-      setNodes(currentFlow.nodes.length > 0 ? currentFlow.nodes : [{
-        id: '1',
-        type: 'trigger',
-        data: { trigger: 'lead_created' },
-        position: { x: 100, y: 50 },
-      }]);
+      setNodes(
+        currentFlow.nodes.length > 0
+          ? currentFlow.nodes
+          : [
+              {
+                id: '1',
+                type: 'trigger',
+                data: { trigger: 'lead_created' },
+                position: { x: 100, y: 50 },
+              },
+            ]
+      );
       setConnections(currentFlow.connections);
     }
   }, [currentFlow]);
@@ -140,12 +140,12 @@ const ChatbotBuilder = () => {
       setConnections([...connections, { from: lastNode.id, to: newNode.id }]);
     }
 
-    toast.success(`Nó "${nodeTypes.find(n => n.type === type)?.label}" adicionado`);
+    toast.success(`Nó "${nodeTypes.find((n) => n.type === type)?.label}" adicionado`);
   };
 
   const removeNode = (nodeId: string) => {
-    setNodes(nodes.filter(n => n.id !== nodeId));
-    setConnections(connections.filter(c => c.from !== nodeId && c.to !== nodeId));
+    setNodes(nodes.filter((n) => n.id !== nodeId));
+    setConnections(connections.filter((c) => c.from !== nodeId && c.to !== nodeId));
     if (selectedNode?.id === nodeId) {
       setSelectedNode(null);
       setShowNodeEditor(false);
@@ -153,7 +153,7 @@ const ChatbotBuilder = () => {
   };
 
   const updateNodeData = (nodeId: string, data: Record<string, any>) => {
-    setNodes(nodes.map(n => n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n));
+    setNodes(nodes.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n)));
     if (selectedNode?.id === nodeId) {
       setSelectedNode({ ...selectedNode, data: { ...selectedNode.data, ...data } });
     }
@@ -168,12 +168,14 @@ const ChatbotBuilder = () => {
     setCurrentFlowId(null);
     setFlowName('Novo Fluxo');
     setFlowDescription('');
-    setNodes([{
-      id: '1',
-      type: 'trigger',
-      data: { trigger: 'lead_created' },
-      position: { x: 100, y: 50 },
-    }]);
+    setNodes([
+      {
+        id: '1',
+        type: 'trigger',
+        data: { trigger: 'lead_created' },
+        position: { x: 100, y: 50 },
+      },
+    ]);
     setConnections([]);
     setSelectedNode(null);
     setShowNodeEditor(false);
@@ -228,34 +230,32 @@ const ChatbotBuilder = () => {
   const isSaving = createFlow.isPending || updateFlow.isPending;
 
   const getNodeIcon = (type: string) => {
-    return nodeTypes.find(n => n.type === type)?.icon || Settings;
+    return nodeTypes.find((n) => n.type === type)?.icon || Settings;
   };
 
   const getNodeColor = (type: string) => {
-    return nodeTypes.find(n => n.type === type)?.color || 'bg-muted';
+    return nodeTypes.find((n) => n.type === type)?.color || 'bg-muted';
   };
 
   const getNodeLabel = (type: string) => {
-    return nodeTypes.find(n => n.type === type)?.label || type;
+    return nodeTypes.find((n) => n.type === type)?.label || type;
   };
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex">
+    <div className="flex h-[calc(100vh-4rem)]">
       {/* Left Sidebar - Node Palette */}
-      <div className="w-64 border-r border-border bg-card flex flex-col">
-        <div className="p-4 border-b border-border">
-          <h2 className="font-semibold text-foreground flex items-center gap-2">
-            <Zap className="w-5 h-5 text-primary" />
+      <div className="flex w-64 flex-col border-r border-border bg-card">
+        <div className="border-b border-border p-4">
+          <h2 className="flex items-center gap-2 font-semibold text-foreground">
+            <Zap className="h-5 w-5 text-primary" />
             Editor de Fluxo
           </h2>
-          <p className="text-xs text-muted-foreground mt-1">
-            Arraste os blocos para o canvas
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">Arraste os blocos para o canvas</p>
         </div>
 
         <ScrollArea className="flex-1 p-4">
           <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase mb-2">
+            <p className="mb-2 text-xs font-medium uppercase text-muted-foreground">
               Blocos Disponíveis
             </p>
             {nodeTypes.map((nodeType) => (
@@ -269,10 +269,15 @@ const ChatbotBuilder = () => {
                 onDragEnd={() => setDraggedNodeType(null)}
                 onClick={() => addNode(nodeType.type)}
               >
-                <Card className="hover:border-primary/50 transition-colors">
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center text-white', nodeType.color)}>
-                      <nodeType.icon className="w-4 h-4" />
+                <Card className="transition-colors hover:border-primary/50">
+                  <CardContent className="flex items-center gap-3 p-3">
+                    <div
+                      className={cn(
+                        'flex h-8 w-8 items-center justify-center rounded-lg text-white',
+                        nodeType.color
+                      )}
+                    >
+                      <nodeType.icon className="h-4 w-4" />
                     </div>
                     <span className="text-sm font-medium">{nodeType.label}</span>
                   </CardContent>
@@ -282,57 +287,55 @@ const ChatbotBuilder = () => {
           </div>
         </ScrollArea>
 
-        <div className="p-4 border-t border-border space-y-2">
+        <div className="space-y-2 border-t border-border p-4">
           <Button onClick={saveFlow} className="w-full gap-2" disabled={isSaving}>
-            {isSaving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             {currentFlowId ? 'Salvar Alterações' : 'Salvar Fluxo'}
           </Button>
         </div>
       </div>
 
       {/* Main Canvas */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex flex-1 flex-col">
         {/* Canvas Header */}
-        <div className="h-14 px-4 flex items-center justify-between border-b border-border bg-card">
+        <div className="flex h-14 items-center justify-between border-b border-border bg-card px-4">
           <div className="flex items-center gap-3">
             {/* Dropdown de fluxos salvos */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2">
-                  <List className="w-4 h-4" />
+                  <List className="h-4 w-4" />
                   {isLoadingFlows ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <>Fluxos ({flows.length})</>
                   )}
-                  <ChevronDown className="w-3 h-3" />
+                  <ChevronDown className="h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-64">
                 <DropdownMenuItem onClick={handleNewFlow} className="gap-2">
-                  <Plus className="w-4 h-4" />
+                  <Plus className="h-4 w-4" />
                   Novo Fluxo
                 </DropdownMenuItem>
                 {flows.length > 0 && <DropdownMenuSeparator />}
                 {flows.map((flow) => (
-                  <DropdownMenuItem 
-                    key={flow.id} 
+                  <DropdownMenuItem
+                    key={flow.id}
                     className="flex items-center justify-between"
                     onClick={() => handleSelectFlow(flow.id)}
                   >
-                    <span className={cn(
-                      "truncate",
-                      currentFlowId === flow.id && "font-semibold text-primary"
-                    )}>
+                    <span
+                      className={cn(
+                        'truncate',
+                        currentFlowId === flow.id && 'font-semibold text-primary'
+                      )}
+                    >
                       {flow.name}
                     </span>
                     <div className="flex items-center gap-1">
                       {flow.is_active && (
-                        <Badge variant="outline" className="text-xs text-success border-success">
+                        <Badge variant="outline" className="border-success text-xs text-success">
                           Ativo
                         </Badge>
                       )}
@@ -345,7 +348,7 @@ const ChatbotBuilder = () => {
                           handleDeleteFlow(flow.id);
                         }}
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
                   </DropdownMenuItem>
@@ -370,15 +373,15 @@ const ChatbotBuilder = () => {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" className="gap-2">
-              <Play className="w-4 h-4" />
+              <Play className="h-4 w-4" />
               Testar
             </Button>
           </div>
         </div>
 
         {/* Canvas Area */}
-        <div 
-          className="flex-1 bg-muted/30 overflow-auto p-8"
+        <div
+          className="flex-1 overflow-auto bg-muted/30 p-8"
           onDragOver={(e) => e.preventDefault()}
           onDrop={() => {
             if (draggedNodeType) {
@@ -386,19 +389,22 @@ const ChatbotBuilder = () => {
             }
           }}
         >
-          <div className="min-h-full min-w-full relative">
+          <div className="relative min-h-full min-w-full">
             {/* Connection Lines */}
-            <svg className="absolute inset-0 pointer-events-none" style={{ width: '100%', height: '100%' }}>
+            <svg
+              className="pointer-events-none absolute inset-0"
+              style={{ width: '100%', height: '100%' }}
+            >
               {connections.map((conn, index) => {
-                const fromNode = nodes.find(n => n.id === conn.from);
-                const toNode = nodes.find(n => n.id === conn.to);
+                const fromNode = nodes.find((n) => n.id === conn.from);
+                const toNode = nodes.find((n) => n.id === conn.to);
                 if (!fromNode || !toNode) return null;
-                
+
                 const fromX = fromNode.position.x + 120;
                 const fromY = fromNode.position.y + 40;
                 const toX = toNode.position.x + 120;
                 const toY = toNode.position.y;
-                
+
                 return (
                   <g key={index}>
                     <path
@@ -418,7 +424,7 @@ const ChatbotBuilder = () => {
             {nodes.map((node) => {
               const Icon = getNodeIcon(node.type);
               const colorClass = getNodeColor(node.type);
-              
+
               return (
                 <motion.div
                   key={node.id}
@@ -429,16 +435,24 @@ const ChatbotBuilder = () => {
                   drag
                   dragMomentum={false}
                   onDragEnd={(_, info) => {
-                    setNodes(nodes.map(n => 
-                      n.id === node.id 
-                        ? { ...n, position: { x: n.position.x + info.offset.x, y: n.position.y + info.offset.y } }
-                        : n
-                    ));
+                    setNodes(
+                      nodes.map((n) =>
+                        n.id === node.id
+                          ? {
+                              ...n,
+                              position: {
+                                x: n.position.x + info.offset.x,
+                                y: n.position.y + info.offset.y,
+                              },
+                            }
+                          : n
+                      )
+                    );
                   }}
                 >
-                  <Card 
+                  <Card
                     className={cn(
-                      'w-60 cursor-pointer hover:shadow-lg transition-shadow',
+                      'w-60 cursor-pointer transition-shadow hover:shadow-lg',
                       selectedNode?.id === node.id && 'ring-2 ring-primary'
                     )}
                     onClick={() => handleNodeClick(node)}
@@ -446,36 +460,43 @@ const ChatbotBuilder = () => {
                     <CardHeader className="p-3 pb-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center text-white', colorClass)}>
-                            <Icon className="w-4 h-4" />
+                          <div
+                            className={cn(
+                              'flex h-8 w-8 items-center justify-center rounded-lg text-white',
+                              colorClass
+                            )}
+                          >
+                            <Icon className="h-4 w-4" />
                           </div>
                           <CardTitle className="text-sm">{getNodeLabel(node.type)}</CardTitle>
                         </div>
                         <div className="flex items-center gap-1">
-                          <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
+                          <GripVertical className="h-4 w-4 cursor-grab text-muted-foreground" />
                           {node.type !== 'trigger' && (
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               className="h-6 w-6 text-muted-foreground hover:text-destructive"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 removeNode(node.id);
                               }}
                             >
-                              <X className="w-3 h-3" />
+                              <X className="h-3 w-3" />
                             </Button>
                           )}
                         </div>
                       </div>
                     </CardHeader>
                     <CardContent className="p-3 pt-0">
-                      <p className="text-xs text-muted-foreground truncate">
-                        {node.type === 'trigger' && triggerOptions.find(t => t.value === node.data.trigger)?.label}
+                      <p className="truncate text-xs text-muted-foreground">
+                        {node.type === 'trigger' &&
+                          triggerOptions.find((t) => t.value === node.data.trigger)?.label}
                         {node.type === 'wait' && `Esperar ${node.data.duration || 0}s`}
                         {node.type === 'message' && (node.data.content || 'Configurar mensagem...')}
                         {node.type === 'add_label' && (node.data.label || 'Selecionar etiqueta...')}
-                        {node.type === 'remove_label' && (node.data.label || 'Selecionar etiqueta...')}
+                        {node.type === 'remove_label' &&
+                          (node.data.label || 'Selecionar etiqueta...')}
                         {node.type === 'move_stage' && (node.data.stage || 'Selecionar etapa...')}
                       </p>
                     </CardContent>
@@ -487,7 +508,7 @@ const ChatbotBuilder = () => {
             {nodes.length === 0 && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center text-muted-foreground">
-                  <Zap className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <Zap className="mx-auto mb-4 h-12 w-12 opacity-50" />
                   <p className="font-medium">Comece arrastando um bloco</p>
                   <p className="text-sm">Clique em um bloco à esquerda para adicionar</p>
                 </div>
@@ -504,8 +525,16 @@ const ChatbotBuilder = () => {
             <SheetTitle className="flex items-center gap-2">
               {selectedNode && (
                 <>
-                  <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center text-white', getNodeColor(selectedNode.type))}>
-                    {(() => { const Icon = getNodeIcon(selectedNode.type); return <Icon className="w-4 h-4" />; })()}
+                  <div
+                    className={cn(
+                      'flex h-8 w-8 items-center justify-center rounded-lg text-white',
+                      getNodeColor(selectedNode.type)
+                    )}
+                  >
+                    {(() => {
+                      const Icon = getNodeIcon(selectedNode.type);
+                      return <Icon className="h-4 w-4" />;
+                    })()}
                   </div>
                   {getNodeLabel(selectedNode.type)}
                 </>
@@ -543,7 +572,9 @@ const ChatbotBuilder = () => {
                     <Input
                       type="number"
                       value={selectedNode.data.duration || 0}
-                      onChange={(e) => updateNodeData(selectedNode.id, { duration: parseInt(e.target.value) })}
+                      onChange={(e) =>
+                        updateNodeData(selectedNode.id, { duration: parseInt(e.target.value) })
+                      }
                     />
                   </div>
                   <div className="space-y-2">
@@ -605,8 +636,8 @@ const ChatbotBuilder = () => {
 
               <Separator className="my-4" />
 
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 className="w-full gap-2"
                 onClick={() => {
                   removeNode(selectedNode.id);
@@ -614,7 +645,7 @@ const ChatbotBuilder = () => {
                 }}
                 disabled={selectedNode.type === 'trigger'}
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="h-4 w-4" />
                 Remover Bloco
               </Button>
             </div>

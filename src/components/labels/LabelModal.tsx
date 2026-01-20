@@ -54,113 +54,113 @@ const CATEGORIES: { value: LabelCategory; label: string }[] = [
   { value: 'desqualificacao', label: 'Desqualificação' },
 ];
 
-export const LabelModal = forwardRef<HTMLDivElement, LabelModalProps>(
-  function LabelModal({ open, onOpenChange, label, onSave, isLoading = false }, _ref) {
-    const [name, setName] = useState('');
-    const [color, setColor] = useState('#3B82F6');
-    const [category, setCategory] = useState<LabelCategory>('status');
+export const LabelModal = forwardRef<HTMLDivElement, LabelModalProps>(function LabelModal(
+  { open, onOpenChange, label, onSave, isLoading = false },
+  _ref
+) {
+  const [name, setName] = useState('');
+  const [color, setColor] = useState('#3B82F6');
+  const [category, setCategory] = useState<LabelCategory>('status');
 
-    useEffect(() => {
-      if (label) {
-        setName(label.name);
-        setColor(label.color);
-        setCategory(label.category);
-      } else {
-        setName('');
-        setColor('#3B82F6');
-        setCategory('status');
-      }
-    }, [label, open]);
+  useEffect(() => {
+    if (label) {
+      setName(label.name);
+      setColor(label.color);
+      setCategory(label.category);
+    } else {
+      setName('');
+      setColor('#3B82F6');
+      setCategory('status');
+    }
+  }, [label, open]);
 
-    const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!name.trim()) return;
-      onSave({ name: name.trim(), color, category });
-      onOpenChange(false);
-    };
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    onSave({ name: name.trim(), color, category });
+    onOpenChange(false);
+  };
 
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {label ? 'Editar Etiqueta' : 'Nova Etiqueta'}
-            </DialogTitle>
-          </DialogHeader>
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{label ? 'Editar Etiqueta' : 'Nova Etiqueta'}</DialogTitle>
+        </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Preview */}
-            <div className="flex items-center justify-center p-4 bg-muted/30 rounded-lg">
-              <Badge
-                style={{ backgroundColor: color }}
-                className="text-white text-sm px-3 py-1"
-              >
-                {name || 'Preview da Etiqueta'}
-              </Badge>
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Preview */}
+          <div className="flex items-center justify-center rounded-lg bg-muted/30 p-4">
+            <Badge style={{ backgroundColor: color }} className="px-3 py-1 text-sm text-white">
+              {name || 'Preview da Etiqueta'}
+            </Badge>
+          </div>
 
-            {/* Nome */}
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome da Etiqueta</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: Facebook Ads, BPC Idoso..."
-                autoFocus
-              />
-            </div>
+          {/* Nome */}
+          <div className="space-y-2">
+            <Label htmlFor="name">Nome da Etiqueta</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex: Facebook Ads, BPC Idoso..."
+              autoFocus
+            />
+          </div>
 
-            {/* Categoria */}
-            <div className="space-y-2">
-              <Label>Categoria</Label>
-              <Select value={category} onValueChange={(v) => setCategory(v as LabelCategory)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Seletor de Cor */}
-            <div className="space-y-2">
-              <Label>Cor</Label>
-              <div className="grid grid-cols-5 gap-2">
-                {COLORS.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setColor(c.value)}
-                    className={`w-10 h-10 rounded-lg transition-all hover:scale-110 ${
-                      color === c.value ? 'ring-2 ring-offset-2 ring-primary' : ''
-                    }`}
-                    style={{ backgroundColor: c.value }}
-                    title={c.name}
-                  />
+          {/* Categoria */}
+          <div className="space-y-2">
+            <Label>Categoria</Label>
+            <Select value={category} onValueChange={(v) => setCategory(v as LabelCategory)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </SelectItem>
                 ))}
-              </div>
-            </div>
+              </SelectContent>
+            </Select>
+          </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" className="gradient-primary text-primary-foreground" disabled={isLoading}>
-                {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {label ? 'Salvar' : 'Criar Etiqueta'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-);
+          {/* Seletor de Cor */}
+          <div className="space-y-2">
+            <Label>Cor</Label>
+            <div className="grid grid-cols-5 gap-2">
+              {COLORS.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setColor(c.value)}
+                  className={`h-10 w-10 rounded-lg transition-all hover:scale-110 ${
+                    color === c.value ? 'ring-2 ring-primary ring-offset-2' : ''
+                  }`}
+                  style={{ backgroundColor: c.value }}
+                  title={c.name}
+                />
+              ))}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              className="gradient-primary text-primary-foreground"
+              disabled={isLoading}
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {label ? 'Salvar' : 'Criar Etiqueta'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+});
 
 LabelModal.displayName = 'LabelModal';

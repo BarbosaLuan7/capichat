@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,20 +31,22 @@ serve(async (req) => {
     // Validate API key
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ erro: 'Header de autorização ausente ou inválido' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ erro: 'Header de autorização ausente ou inválido' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const apiKey = authHeader.replace('Bearer ', '');
-    const { data: keyId, error: keyError } = await supabase.rpc('validate_api_key', { key_value: apiKey });
+    const { data: keyId, error: keyError } = await supabase.rpc('validate_api_key', {
+      key_value: apiKey,
+    });
 
     if (keyError || !keyId) {
-      return new Response(
-        JSON.stringify({ erro: 'API key inválida' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ erro: 'API key inválida' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const url = new URL(req.url);
@@ -54,23 +56,18 @@ serve(async (req) => {
     // GET - List templates or get single
     if (req.method === 'GET') {
       if (id) {
-        const { data, error } = await supabase
-          .from('templates')
-          .select('*')
-          .eq('id', id)
-          .single();
+        const { data, error } = await supabase.from('templates').select('*').eq('id', id).single();
 
         if (error) {
-          return new Response(
-            JSON.stringify({ erro: error.message }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ erro: error.message }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
-        return new Response(
-          JSON.stringify(formatTemplate(data)),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify(formatTemplate(data)), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       if (shortcut) {
@@ -81,35 +78,31 @@ serve(async (req) => {
           .single();
 
         if (error) {
-          return new Response(
-            JSON.stringify({ erro: error.message }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ erro: error.message }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
-        return new Response(
-          JSON.stringify(formatTemplate(data)),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify(formatTemplate(data)), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
-      const { data, error } = await supabase
-        .from('templates')
-        .select('*')
-        .order('name');
+      const { data, error } = await supabase.from('templates').select('*').order('name');
 
       if (error) {
-        return new Response(
-          JSON.stringify({ erro: error.message }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ erro: error.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       console.log('[api-templates] Retornando', data?.length || 0, 'templates');
 
       return new Response(
         JSON.stringify({
-          dados: (data || []).map(formatTemplate)
+          dados: (data || []).map(formatTemplate),
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -136,16 +129,16 @@ serve(async (req) => {
         .insert({
           name: nome,
           shortcut: atalho,
-          content: conteudo
+          content: conteudo,
         })
         .select()
         .single();
 
       if (error) {
-        return new Response(
-          JSON.stringify({ erro: error.message }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ erro: error.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       console.log('[api-templates] Template criado:', data.id);
@@ -153,7 +146,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           sucesso: true,
-          template: formatTemplate(data)
+          template: formatTemplate(data),
         }),
         { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -162,10 +155,10 @@ serve(async (req) => {
     // PUT - Update template
     if (req.method === 'PUT') {
       if (!id) {
-        return new Response(
-          JSON.stringify({ erro: 'Parâmetro id é obrigatório' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ erro: 'Parâmetro id é obrigatório' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       const body = await req.json();
@@ -190,10 +183,10 @@ serve(async (req) => {
         .single();
 
       if (error) {
-        return new Response(
-          JSON.stringify({ erro: error.message }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ erro: error.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       console.log('[api-templates] Template atualizado:', id);
@@ -201,7 +194,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           sucesso: true,
-          template: formatTemplate(data)
+          template: formatTemplate(data),
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -210,22 +203,19 @@ serve(async (req) => {
     // DELETE - Delete template
     if (req.method === 'DELETE') {
       if (!id) {
-        return new Response(
-          JSON.stringify({ erro: 'Parâmetro id é obrigatório' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ erro: 'Parâmetro id é obrigatório' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
-      const { error } = await supabase
-        .from('templates')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('templates').delete().eq('id', id);
 
       if (error) {
-        return new Response(
-          JSON.stringify({ erro: error.message }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ erro: error.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       console.log('[api-templates] Template removido:', id);
@@ -236,17 +226,16 @@ serve(async (req) => {
       );
     }
 
-    return new Response(
-      JSON.stringify({ erro: 'Método não permitido' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
+    return new Response(JSON.stringify({ erro: 'Método não permitido' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('[api-templates] Erro:', error);
     const message = error instanceof Error ? error.message : 'Erro interno do servidor';
-    return new Response(
-      JSON.stringify({ erro: message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ erro: message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

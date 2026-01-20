@@ -17,7 +17,8 @@ export function useConversations() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('conversations')
-        .select(`
+        .select(
+          `
           *,
           leads (
             id, 
@@ -37,9 +38,10 @@ export function useConversations() {
             name,
             phone_number
           )
-        `)
+        `
+        )
         .order('last_message_at', { ascending: false });
-      
+
       if (error) throw error;
       return data;
     },
@@ -53,22 +55,24 @@ export function useConversation(id: string | undefined, tenantId?: string | null
     queryKey: ['conversations', id, tenantId],
     queryFn: async () => {
       if (!id) return null;
-      
+
       let query = supabase
         .from('conversations')
-        .select(`
+        .select(
+          `
           *,
           leads (id, name, phone, email, temperature, avatar_url, tenant_id)
-        `)
+        `
+        )
         .eq('id', id);
-      
+
       // Add tenant filter if provided to prevent cross-tenant access
       if (tenantId) {
         query = query.eq('leads.tenant_id', tenantId);
       }
-      
+
       const { data, error } = await query.maybeSingle();
-      
+
       if (error) throw error;
       return data;
     },
@@ -88,7 +92,7 @@ export function useMessages(conversationId: string | undefined) {
         .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
-      
+
       if (error) throw error;
       return data as Message[];
     },
@@ -108,7 +112,7 @@ export function useCreateConversation() {
         .insert(conversation)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -171,7 +175,7 @@ export function useMarkConversationAsRead() {
         .eq('id', conversationId)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -180,25 +184,25 @@ export function useMarkConversationAsRead() {
       await queryClient.cancelQueries({ queryKey: ['conversations'] });
       await queryClient.cancelQueries({ queryKey: ['conversations', conversationId] });
       await queryClient.cancelQueries({ queryKey: ['conversations-infinite'], exact: false });
-      
+
       // Snapshot previous values
       const previousConversations = queryClient.getQueryData(['conversations']);
       const previousConversation = queryClient.getQueryData(['conversations', conversationId]);
-      
+
       // Optimistically update conversation list
       queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
         if (!old) return old;
-        return old.map(conv => 
+        return old.map((conv) =>
           conv.id === conversationId ? { ...conv, unread_count: 0 } : conv
         );
       });
-      
+
       // Optimistically update single conversation cache
       queryClient.setQueryData(['conversations', conversationId], (old: any) => {
         if (!old) return old;
         return { ...old, unread_count: 0 };
       });
-      
+
       // Also update infinite queries (used by Inbox)
       queryClient.setQueriesData(
         { queryKey: ['conversations-infinite'], exact: false },
@@ -215,7 +219,7 @@ export function useMarkConversationAsRead() {
           };
         }
       );
-      
+
       return { previousConversations, previousConversation };
     },
     onError: (_, conversationId, context) => {
@@ -234,34 +238,40 @@ export function useToggleConversationFavorite() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ conversationId, isFavorite }: { conversationId: string; isFavorite: boolean }) => {
+    mutationFn: async ({
+      conversationId,
+      isFavorite,
+    }: {
+      conversationId: string;
+      isFavorite: boolean;
+    }) => {
       const { data, error } = await supabase
         .from('conversations')
         .update({ is_favorite: isFavorite })
         .eq('id', conversationId)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
     onMutate: async ({ conversationId, isFavorite }) => {
       await queryClient.cancelQueries({ queryKey: ['conversations'] });
       const previousConversations = queryClient.getQueryData(['conversations']);
-      
+
       queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
         if (!old) return old;
-        return old.map(conv => 
+        return old.map((conv) =>
           conv.id === conversationId ? { ...conv, is_favorite: isFavorite } : conv
         );
       });
-      
+
       // Also update the single conversation cache
       queryClient.setQueryData(['conversations', conversationId], (old: any) => {
         if (!old) return old;
         return { ...old, is_favorite: isFavorite };
       });
-      
+
       return { previousConversations };
     },
     onError: (_, __, context) => {
@@ -276,14 +286,20 @@ export function useUpdateConversationAssignee() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ conversationId, assignedTo }: { conversationId: string; assignedTo: string }) => {
+    mutationFn: async ({
+      conversationId,
+      assignedTo,
+    }: {
+      conversationId: string;
+      assignedTo: string;
+    }) => {
       const { data, error } = await supabase
         .from('conversations')
         .update({ assigned_to: assignedTo })
         .eq('id', conversationId)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -304,7 +320,7 @@ export function useToggleMessageStar() {
         .eq('id', messageId)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -319,33 +335,37 @@ export function useUpdateConversationStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ conversationId, status }: { conversationId: string; status: 'open' | 'pending' | 'resolved' }) => {
+    mutationFn: async ({
+      conversationId,
+      status,
+    }: {
+      conversationId: string;
+      status: 'open' | 'pending' | 'resolved';
+    }) => {
       const { data, error } = await supabase
         .from('conversations')
         .update({ status })
         .eq('id', conversationId)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
     onMutate: async ({ conversationId, status }) => {
       await queryClient.cancelQueries({ queryKey: ['conversations'] });
       const previousConversations = queryClient.getQueryData(['conversations']);
-      
+
       queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
         if (!old) return old;
-        return old.map(conv => 
-          conv.id === conversationId ? { ...conv, status } : conv
-        );
+        return old.map((conv) => (conv.id === conversationId ? { ...conv, status } : conv));
       });
-      
+
       queryClient.setQueryData(['conversations', conversationId], (old: any) => {
         if (!old) return old;
         return { ...old, status };
       });
-      
+
       return { previousConversations };
     },
     onError: (_, __, context) => {

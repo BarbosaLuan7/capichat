@@ -12,11 +12,7 @@ import {
   DragStartEvent,
   DragEndEvent,
 } from '@dnd-kit/core';
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
   Plus,
@@ -56,7 +52,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useAllTasks, useUpdateTaskStatus, useDeleteTask, useCreateTask, useUpdateTask } from '@/hooks/useTasks';
+import {
+  useAllTasks,
+  useUpdateTaskStatus,
+  useDeleteTask,
+  useCreateTask,
+  useUpdateTask,
+} from '@/hooks/useTasks';
 import { useProfiles } from '@/hooks/useProfiles';
 import { useLeads } from '@/hooks/useLeads';
 import { cn } from '@/lib/utils';
@@ -71,8 +73,12 @@ import { toast } from 'sonner';
 import type { Database, Json } from '@/integrations/supabase/types';
 
 // Lazy load heavy components
-const TaskModal = lazy(() => import('@/components/tasks/TaskModal').then(m => ({ default: m.TaskModal })));
-const TaskCalendar = lazy(() => import('@/components/tasks/TaskCalendar').then(m => ({ default: m.TaskCalendar })));
+const TaskModal = lazy(() =>
+  import('@/components/tasks/TaskModal').then((m) => ({ default: m.TaskModal }))
+);
+const TaskCalendar = lazy(() =>
+  import('@/components/tasks/TaskCalendar').then((m) => ({ default: m.TaskCalendar }))
+);
 
 type TaskStatus = Database['public']['Enums']['task_status'];
 type TaskPriority = Database['public']['Enums']['task_priority'];
@@ -128,15 +134,17 @@ const formatDueDate = (dateStr: string) => {
   return format(date, "dd 'de' MMM", { locale: ptBR });
 };
 
-const SortableTaskCard = ({ task, onStatusChange, onEdit, onDelete, onSubtaskToggle }: TaskCardProps) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: task.id, data: { status: task.status } });
+const SortableTaskCard = ({
+  task,
+  onStatusChange,
+  onEdit,
+  onDelete,
+  onSubtaskToggle,
+}: TaskCardProps) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: task.id,
+    data: { status: task.status },
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -163,50 +171,62 @@ interface TaskCardWithDragProps extends TaskCardProps {
   dragHandleProps?: Record<string, any>;
 }
 
-const TaskCard = ({ task, onStatusChange, onEdit, onDelete, onSubtaskToggle, isDragging, dragHandleProps }: TaskCardWithDragProps) => {
+const TaskCard = ({
+  task,
+  onStatusChange,
+  onEdit,
+  onDelete,
+  onSubtaskToggle,
+  isDragging,
+  dragHandleProps,
+}: TaskCardWithDragProps) => {
   const isOverdue = task.due_date && isPast(parseISO(task.due_date)) && task.status !== 'done';
   const subtasks = (task.subtasks as Subtask[]) || [];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="group"
-    >
-      <Card className={cn(
-        'hover:shadow-md transition-shadow',
-        isOverdue && 'border-destructive/50',
-        isDragging && 'shadow-lg ring-2 ring-primary/20'
-      )}>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="group">
+      <Card
+        className={cn(
+          'transition-shadow hover:shadow-md',
+          isOverdue && 'border-destructive/50',
+          isDragging && 'shadow-lg ring-2 ring-primary/20'
+        )}
+      >
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
             {dragHandleProps && (
               <div
                 {...dragHandleProps}
-                className="mt-1 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                className="mt-1 cursor-grab opacity-0 transition-opacity active:cursor-grabbing group-hover:opacity-100"
               >
-                <GripVertical className="w-4 h-4 text-muted-foreground" />
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
               </div>
             )}
-            
+
             <Checkbox
               checked={task.status === 'done'}
               onCheckedChange={(checked) => onStatusChange(checked ? 'done' : 'todo')}
               className="mt-1"
             />
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <h4 className={cn(
-                  'font-medium text-foreground',
-                  task.status === 'done' && 'line-through text-muted-foreground'
-                )}>
+            <div className="min-w-0 flex-1">
+              <div className="mb-2 flex items-start justify-between gap-2">
+                <h4
+                  className={cn(
+                    'font-medium text-foreground',
+                    task.status === 'done' && 'text-muted-foreground line-through'
+                  )}
+                >
                   {task.title}
                 </h4>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100">
-                      <MoreVertical className="w-4 h-4" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                    >
+                      <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -219,7 +239,7 @@ const TaskCard = ({ task, onStatusChange, onEdit, onDelete, onSubtaskToggle, isD
               </div>
 
               {task.description && (
-                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">
                   {task.description}
                 </p>
               )}
@@ -227,40 +247,40 @@ const TaskCard = ({ task, onStatusChange, onEdit, onDelete, onSubtaskToggle, isD
               {/* Subtasks */}
               {subtasks.length > 0 && (
                 <div className="mb-3">
-                  <SubtaskList
-                    subtasks={subtasks}
-                    onToggle={onSubtaskToggle}
-                    compact
-                  />
+                  <SubtaskList subtasks={subtasks} onToggle={onSubtaskToggle} compact />
                 </div>
               )}
 
-              <div className="flex items-center gap-3 flex-wrap text-sm">
+              <div className="flex flex-wrap items-center gap-3 text-sm">
                 <Badge className={cn('text-xs', getPriorityColor(task.priority))}>
                   {getPriorityLabel(task.priority)}
                 </Badge>
 
                 {task.due_date && (
-                  <div className={cn(
-                    'flex items-center gap-1',
-                    isOverdue ? 'text-destructive' : 'text-muted-foreground'
-                  )}>
-                    <Clock className="w-3.5 h-3.5" />
+                  <div
+                    className={cn(
+                      'flex items-center gap-1',
+                      isOverdue ? 'text-destructive' : 'text-muted-foreground'
+                    )}
+                  >
+                    <Clock className="h-3.5 w-3.5" />
                     <span>{formatDueDate(task.due_date)}</span>
                   </div>
                 )}
 
                 {task.leads && (
                   <div className="flex items-center gap-1 text-muted-foreground">
-                    <User className="w-3.5 h-3.5" />
-                    <span className="truncate max-w-[100px]">{task.leads.name}</span>
+                    <User className="h-3.5 w-3.5" />
+                    <span className="max-w-[100px] truncate">{task.leads.name}</span>
                   </div>
                 )}
 
                 {task.profiles && (
-                  <Avatar className="w-6 h-6 ml-auto">
+                  <Avatar className="ml-auto h-6 w-6">
                     <AvatarImage src={task.profiles.avatar || undefined} />
-                    <AvatarFallback className="text-xs">{task.profiles.name.charAt(0)}</AvatarFallback>
+                    <AvatarFallback className="text-xs">
+                      {task.profiles.name.charAt(0)}
+                    </AvatarFallback>
                   </Avatar>
                 )}
               </div>
@@ -281,15 +301,15 @@ const Tasks = () => {
   const updateTask = useUpdateTask();
   const deleteTaskMutation = useDeleteTask();
   const createTask = useCreateTask();
-  
+
   const [view, setView] = useState<'list' | 'kanban' | 'calendar'>('list');
   const [filter, setFilter] = useState<'all' | 'todo' | 'in_progress' | 'done'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskFromDB | null>(null);
-  
+
   // Delete confirmation
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<TaskFromDB | null>(null);
@@ -312,17 +332,21 @@ const Tasks = () => {
     if (!tasks) return [];
     return tasks.filter((task) => {
       const matchesFilter = filter === 'all' || task.status === filter;
-      const matchesSearch = task.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      const matchesSearch =
+        task.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
         task.description?.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
       return matchesFilter && matchesSearch;
     });
   }, [tasks, filter, debouncedSearchQuery]);
 
-  const tasksByStatus = useMemo(() => ({
-    todo: (tasks || []).filter((t) => t.status === 'todo') as TaskFromDB[],
-    in_progress: (tasks || []).filter((t) => t.status === 'in_progress') as TaskFromDB[],
-    done: (tasks || []).filter((t) => t.status === 'done') as TaskFromDB[],
-  }), [tasks]);
+  const tasksByStatus = useMemo(
+    () => ({
+      todo: (tasks || []).filter((t) => t.status === 'todo') as TaskFromDB[],
+      in_progress: (tasks || []).filter((t) => t.status === 'in_progress') as TaskFromDB[],
+      done: (tasks || []).filter((t) => t.status === 'done') as TaskFromDB[],
+    }),
+    [tasks]
+  );
 
   const statusConfig = {
     todo: { label: 'A Fazer', icon: Circle, color: 'text-muted-foreground' },
@@ -406,9 +430,7 @@ const Tasks = () => {
 
   const handleSubtaskToggle = async (task: TaskFromDB, subtaskId: string, completed: boolean) => {
     const subtasks = (task.subtasks as Subtask[]) || [];
-    const updatedSubtasks = subtasks.map((s) =>
-      s.id === subtaskId ? { ...s, completed } : s
-    );
+    const updatedSubtasks = subtasks.map((s) => (s.id === subtaskId ? { ...s, completed } : s));
     try {
       await updateTask.mutateAsync({
         id: task.id,
@@ -456,7 +478,7 @@ const Tasks = () => {
     }
   };
 
-  const activeTask = activeId ? tasks?.find((t) => t.id === activeId) as TaskFromDB : null;
+  const activeTask = activeId ? (tasks?.find((t) => t.id === activeId) as TaskFromDB) : null;
 
   // Convert TaskFromDB to Task format for modal/calendar
   const convertToTaskFormat = (t: TaskFromDB) => ({
@@ -473,7 +495,7 @@ const Tasks = () => {
   });
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-6">
       <PageBreadcrumb items={[{ label: 'Tarefas' }]} />
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -483,16 +505,16 @@ const Tasks = () => {
             {tasks?.length || 0} tarefas · {tasksByStatus.todo.length} pendentes
           </p>
         </div>
-        <Button onClick={handleNewTask} className="gradient-primary text-primary-foreground gap-2">
-          <Plus className="w-4 h-4" />
+        <Button onClick={handleNewTask} className="gradient-primary gap-2 text-primary-foreground">
+          <Plus className="h-4 w-4" />
           Nova Tarefa
         </Button>
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-4 flex-wrap">
-        <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="relative min-w-[200px] max-w-md flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar tarefas..."
             className="pl-9"
@@ -510,7 +532,7 @@ const Tasks = () => {
           </TabsList>
         </Tabs>
 
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="ml-auto flex items-center gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -518,7 +540,7 @@ const Tasks = () => {
                 size="icon"
                 onClick={() => setView('list')}
               >
-                <ListTodo className="w-4 h-4" />
+                <ListTodo className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Visualização em lista</TooltipContent>
@@ -530,7 +552,7 @@ const Tasks = () => {
                 size="icon"
                 onClick={() => setView('kanban')}
               >
-                <LayoutGrid className="w-4 h-4" />
+                <LayoutGrid className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Visualização Kanban</TooltipContent>
@@ -542,7 +564,7 @@ const Tasks = () => {
                 size="icon"
                 onClick={() => setView('calendar')}
               >
-                <CalendarIcon className="w-4 h-4" />
+                <CalendarIcon className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Visualização calendário</TooltipContent>
@@ -552,14 +574,21 @@ const Tasks = () => {
 
       {/* Content */}
       {isLoading ? (
-        <div className="text-center text-muted-foreground py-12">Carregando tarefas...</div>
+        <div className="py-12 text-center text-muted-foreground">Carregando tarefas...</div>
       ) : view === 'calendar' ? (
-        <Suspense fallback={<div className="text-center text-muted-foreground py-12"><Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />Carregando calendário...</div>}>
-          <TaskCalendar 
-            tasks={tasks || []} 
+        <Suspense
+          fallback={
+            <div className="py-12 text-center text-muted-foreground">
+              <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />
+              Carregando calendário...
+            </div>
+          }
+        >
+          <TaskCalendar
+            tasks={tasks || []}
             onTaskClick={(t) => {
               handleEditTask(t as TaskFromDB);
-            }} 
+            }}
           />
         </Suspense>
       ) : view === 'list' ? (
@@ -571,22 +600,26 @@ const Tasks = () => {
               onStatusChange={(status) => handleStatusChange(task.id, status)}
               onEdit={() => handleEditTask(task as TaskFromDB)}
               onDelete={() => handleDeleteClick(task as TaskFromDB)}
-              onSubtaskToggle={(subtaskId, completed) => handleSubtaskToggle(task as TaskFromDB, subtaskId, completed)}
+              onSubtaskToggle={(subtaskId, completed) =>
+                handleSubtaskToggle(task as TaskFromDB, subtaskId, completed)
+              }
             />
           ))}
 
           {filteredTasks.length === 0 && (
             <Card className="p-12">
               <div className="text-center">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle2 className="w-8 h-8 text-muted-foreground" />
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                  <CheckCircle2 className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <h3 className="font-semibold text-foreground mb-2">Nenhuma tarefa encontrada</h3>
-                <p className="text-muted-foreground mb-4">
-                  {filter === 'all' ? 'Crie uma nova tarefa para começar' : 'Não há tarefas nesta categoria'}
+                <h3 className="mb-2 font-semibold text-foreground">Nenhuma tarefa encontrada</h3>
+                <p className="mb-4 text-muted-foreground">
+                  {filter === 'all'
+                    ? 'Crie uma nova tarefa para começar'
+                    : 'Não há tarefas nesta categoria'}
                 </p>
                 <Button onClick={handleNewTask} variant="outline">
-                  <Plus className="w-4 h-4 mr-2" />
+                  <Plus className="mr-2 h-4 w-4" />
                   Criar Tarefa
                 </Button>
               </div>
@@ -600,15 +633,15 @@ const Tasks = () => {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {(Object.keys(tasksByStatus) as Array<keyof typeof tasksByStatus>).map((status) => {
               const config = statusConfig[status];
               const statusTasks = tasksByStatus[status];
 
               return (
                 <div key={status} id={status}>
-                  <div className="flex items-center gap-2 mb-4">
-                    <config.icon className={cn('w-5 h-5', config.color)} />
+                  <div className="mb-4 flex items-center gap-2">
+                    <config.icon className={cn('h-5 w-5', config.color)} />
                     <h3 className="font-semibold text-foreground">{config.label}</h3>
                     <Badge variant="secondary">{statusTasks.length}</Badge>
                   </div>
@@ -617,10 +650,10 @@ const Tasks = () => {
                     items={statusTasks.map((t) => t.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    <div 
+                    <div
                       className={cn(
-                        "space-y-3 min-h-[200px] p-2 rounded-lg transition-colors",
-                        activeId && "bg-muted/30"
+                        'min-h-[200px] space-y-3 rounded-lg p-2 transition-colors',
+                        activeId && 'bg-muted/30'
                       )}
                       data-status={status}
                     >
@@ -631,12 +664,14 @@ const Tasks = () => {
                           onStatusChange={(newStatus) => handleStatusChange(task.id, newStatus)}
                           onEdit={() => handleEditTask(task)}
                           onDelete={() => handleDeleteClick(task)}
-                          onSubtaskToggle={(subtaskId, completed) => handleSubtaskToggle(task, subtaskId, completed)}
+                          onSubtaskToggle={(subtaskId, completed) =>
+                            handleSubtaskToggle(task, subtaskId, completed)
+                          }
                         />
                       ))}
 
                       {statusTasks.length === 0 && (
-                        <div className="p-8 text-center text-muted-foreground border-2 border-dashed border-border rounded-lg">
+                        <div className="rounded-lg border-2 border-dashed border-border p-8 text-center text-muted-foreground">
                           <p className="text-sm">Arraste tarefas aqui</p>
                         </div>
                       )}
@@ -683,12 +718,16 @@ const Tasks = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. A tarefa "{taskToDelete?.title}" será permanentemente removida.
+              Esta ação não pode ser desfeita. A tarefa "{taskToDelete?.title}" será permanentemente
+              removida.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground"
+            >
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>

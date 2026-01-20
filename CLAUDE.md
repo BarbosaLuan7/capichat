@@ -33,12 +33,14 @@ npm run preview
 ## Tooling & CI/CD
 
 ### Code Quality
+
 - **ESLint**: Linting com regras para React e TypeScript
 - **Prettier**: Formatação automática com plugin Tailwind CSS (ordena classes)
 - **Husky**: Pre-commit hooks para lint-staged
 - **lint-staged**: Roda ESLint e Prettier em arquivos staged
 
 ### GitHub Actions
+
 - CI workflow em `.github/workflows/ci.yml`
 - Roda em push/PR para main, master, develop
 - Jobs: lint, format check, type check, build
@@ -46,6 +48,7 @@ npm run preview
 ## Arquitetura
 
 ### Stack Principal
+
 - **Frontend**: React 18 + Vite + TypeScript
 - **Backend**: Supabase (Auth, PostgreSQL, Realtime, Edge Functions)
 - **State**: TanStack React Query v5 + Zustand (minimal)
@@ -72,6 +75,7 @@ npm run preview
 ### Design Tokens
 
 Tokens em `/src/tokens/` seguem o formato W3C Design Token Community Group:
+
 - `colors.json` - Cores primitivas, semânticas e de domínio
 - `spacing.json` - Escala de espaçamento e border radius
 - `typography.json` - Tipografia (fontes, tamanhos, pesos)
@@ -84,6 +88,7 @@ CSS custom properties em `index.css` são derivados destes tokens.
 **Multi-tenancy**: Todas as queries filtram por `tenant_id`. O tenant atual vem do `TenantContext`.
 
 **RBAC**: Roles definidas em `/lib/permissions.ts`:
+
 - `admin` - Acesso total
 - `manager` - Gerencia equipe
 - `agent` - Apenas seus leads
@@ -92,6 +97,7 @@ CSS custom properties em `index.css` são derivados destes tokens.
 **Autenticação**: `useAuth()` hook gerencia sessão Supabase + profile + role. Rotas protegidas com `<ProtectedRoute>`.
 
 **Data Fetching**: TanStack Query com:
+
 - `staleTime`: 5-60s
 - `gcTime`: 5-30min
 - Paginação infinita para Inbox/Leads

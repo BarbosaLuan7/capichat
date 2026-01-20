@@ -42,7 +42,7 @@ export function CategorizedLabels({
   // Agrupar labels por categoria
   const groupedLabels = useMemo(() => {
     const groups: Record<string, Label[]> = {};
-    
+
     labels.forEach((label) => {
       const category = label.category || 'status';
       if (!groups[category]) {
@@ -61,8 +61,8 @@ export function CategorizedLabels({
 
   if (labels.length === 0) {
     return (
-      <div className="text-center py-4 text-muted-foreground text-sm">
-        <Tag className="w-6 h-6 mx-auto mb-2 opacity-50" />
+      <div className="py-4 text-center text-sm text-muted-foreground">
+        <Tag className="mx-auto mb-2 h-6 w-6 opacity-50" />
         Nenhuma etiqueta disponível
       </div>
     );
@@ -74,7 +74,7 @@ export function CategorizedLabels({
       <div className="flex flex-wrap gap-1">
         {groupedLabels.map(([category, categoryLabels]) => (
           <div key={category} className="flex items-center gap-1">
-            <span className="text-xs opacity-60 mr-0.5">
+            <span className="mr-0.5 text-xs opacity-60">
               {categoryConfig[category]?.icon || '🏷️'}
             </span>
             {categoryLabels
@@ -83,7 +83,7 @@ export function CategorizedLabels({
                 <Badge
                   key={label.id}
                   variant="outline"
-                  className="text-xs px-1.5 py-0"
+                  className="px-1.5 py-0 text-xs"
                   style={{
                     borderColor: label.color,
                     color: label.color,
@@ -104,16 +104,14 @@ export function CategorizedLabels({
         {groupedLabels.map(([category, categoryLabels], index) => (
           <div key={category}>
             {index > 0 && <Separator className="mb-4" />}
-            
+
             {/* Header da categoria */}
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-base">
-                {categoryConfig[category]?.icon || '🏷️'}
-              </span>
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-base">{categoryConfig[category]?.icon || '🏷️'}</span>
               <span className="text-sm font-medium text-muted-foreground">
                 {categoryConfig[category]?.label || category}
               </span>
-              <Badge variant="secondary" className="text-xs ml-auto">
+              <Badge variant="secondary" className="ml-auto text-xs">
                 {categoryLabels.length}
               </Badge>
             </div>
@@ -122,7 +120,7 @@ export function CategorizedLabels({
             <div className="flex flex-wrap gap-2">
               {categoryLabels.map((label) => {
                 const isSelected = selectedLabelIds.includes(label.id);
-                
+
                 if (readOnly) {
                   return (
                     <Badge
@@ -145,17 +143,14 @@ export function CategorizedLabels({
                     variant="outline"
                     size="sm"
                     onClick={() => onToggleLabel?.(label.id)}
-                    className={cn(
-                      'gap-1.5 transition-all',
-                      isSelected && 'ring-2 ring-offset-1'
-                    )}
+                    className={cn('gap-1.5 transition-all', isSelected && 'ring-2 ring-offset-1')}
                     style={{
                       borderColor: label.color,
                       backgroundColor: isSelected ? label.color : 'transparent',
                       color: isSelected ? 'white' : label.color,
                     }}
                   >
-                    {isSelected && <Check className="w-3 h-3" />}
+                    {isSelected && <Check className="h-3 w-3" />}
                     {label.name}
                   </Button>
                 );
@@ -169,16 +164,16 @@ export function CategorizedLabels({
 }
 
 // Componente para exibição resumida de etiquetas por categoria
-export function CategorizedLabelsSummary({ 
+export function CategorizedLabelsSummary({
   labels,
   maxVisible = 3,
-}: { 
-  labels: Label[]; 
+}: {
+  labels: Label[];
   maxVisible?: number;
 }) {
   const groupedLabels = useMemo(() => {
     const groups: Record<string, Label[]> = {};
-    
+
     labels.forEach((label) => {
       const category = label.category || 'status';
       if (!groups[category]) {
@@ -200,25 +195,23 @@ export function CategorizedLabelsSummary({
   if (labels.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-1 flex-wrap">
+    <div className="flex flex-wrap items-center gap-1">
       {visibleLabels.map((label) => (
         <Badge
           key={label.id}
           variant="outline"
-          className="text-xs px-1.5 py-0"
+          className="px-1.5 py-0 text-xs"
           style={{
             borderColor: label.color,
             color: label.color,
           }}
         >
-          <span className="text-2xs mr-0.5 opacity-70">
-            {categoryConfig[label.category]?.icon}
-          </span>
+          <span className="text-2xs mr-0.5 opacity-70">{categoryConfig[label.category]?.icon}</span>
           {label.name}
         </Badge>
       ))}
       {hiddenCount > 0 && (
-        <Badge variant="secondary" className="text-xs px-1.5 py-0">
+        <Badge variant="secondary" className="px-1.5 py-0 text-xs">
           +{hiddenCount}
         </Badge>
       )}

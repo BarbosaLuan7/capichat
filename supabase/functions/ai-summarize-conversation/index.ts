@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,27 +20,31 @@ serve(async (req) => {
     }
 
     if (!messages || messages.length === 0) {
-      return new Response(JSON.stringify({ 
-        summary: 'Nenhuma mensagem para resumir.',
-        structured: null 
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({
+          summary: 'Nenhuma mensagem para resumir.',
+          structured: null,
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     console.log('Summarizing conversation for lead:', lead?.name);
     console.log('Messages count:', messages?.length);
 
     // Build conversation context
-    const conversationContext = messages
-      ?.map((m: any) => {
-        const date = new Date(m.created_at).toLocaleDateString('pt-BR');
-        return `[${date}] ${m.sender_type === 'lead' ? 'Cliente' : 'Atendente'}: ${m.content}`;
-      })
-      .join('\n') || '';
+    const conversationContext =
+      messages
+        ?.map((m: any) => {
+          const date = new Date(m.created_at).toLocaleDateString('pt-BR');
+          return `[${date}] ${m.sender_type === 'lead' ? 'Cliente' : 'Atendente'}: ${m.content}`;
+        })
+        .join('\n') || '';
 
     const leadName = lead?.name || 'Cliente';
-    
+
     const systemPrompt = `Você é um assistente jurídico da GaranteDireito, especializado em Direito Previdenciário.
 
 Seu objetivo é criar um resumo estruturado da conversa para que advogados e atendentes entendam rapidamente o caso.
@@ -80,14 +84,14 @@ Crie um resumo estruturado desta conversa.`;
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
+          { role: 'user', content: userPrompt },
         ],
         tools: [
           {
@@ -98,77 +102,83 @@ Crie um resumo estruturado desta conversa.`;
               parameters: {
                 type: 'object',
                 properties: {
-                  situation: { 
-                    type: 'string', 
-                    description: 'Breve descrição do caso/pedido' 
+                  situation: {
+                    type: 'string',
+                    description: 'Breve descrição do caso/pedido',
                   },
-                  benefit: { 
-                    type: 'string', 
-                    description: 'Tipo de benefício que o cliente precisa' 
+                  benefit: {
+                    type: 'string',
+                    description: 'Tipo de benefício que o cliente precisa',
                   },
-                  healthConditions: { 
-                    type: 'array', 
+                  healthConditions: {
+                    type: 'array',
                     items: { type: 'string' },
-                    description: 'Condições de saúde mencionadas' 
+                    description: 'Condições de saúde mencionadas',
                   },
-                  documentsReceived: { 
-                    type: 'array', 
+                  documentsReceived: {
+                    type: 'array',
                     items: { type: 'string' },
-                    description: 'Documentos já recebidos' 
+                    description: 'Documentos já recebidos',
                   },
-                  documentsPending: { 
-                    type: 'array', 
+                  documentsPending: {
+                    type: 'array',
                     items: { type: 'string' },
-                    description: 'Documentos pendentes' 
+                    description: 'Documentos pendentes',
                   },
-                  importantDates: { 
-                    type: 'array', 
-                    items: { 
+                  importantDates: {
+                    type: 'array',
+                    items: {
                       type: 'object',
                       properties: {
                         date: { type: 'string' },
-                        description: { type: 'string' }
-                      }
+                        description: { type: 'string' },
+                      },
                     },
-                    description: 'Datas importantes (perícias, prazos)' 
+                    description: 'Datas importantes (perícias, prazos)',
                   },
-                  nextSteps: { 
-                    type: 'array', 
+                  nextSteps: {
+                    type: 'array',
                     items: { type: 'string' },
-                    description: 'Próximos passos necessários' 
+                    description: 'Próximos passos necessários',
                   },
-                  observations: { 
-                    type: 'string', 
-                    description: 'Observações relevantes para o advogado' 
+                  observations: {
+                    type: 'string',
+                    description: 'Observações relevantes para o advogado',
                   },
                   summaryText: {
                     type: 'string',
-                    description: 'Resumo em texto corrido (2-3 frases)'
-                  }
+                    description: 'Resumo em texto corrido (2-3 frases)',
+                  },
                 },
-                required: ['situation', 'summaryText']
-              }
-            }
-          }
+                required: ['situation', 'summaryText'],
+              },
+            },
+          },
         ],
-        tool_choice: { type: 'function', function: { name: 'summarize_conversation' } }
+        tool_choice: { type: 'function', function: { name: 'summarize_conversation' } },
       }),
     });
 
     if (!response.ok) {
       if (response.status === 429) {
         console.error('Rate limit exceeded');
-        return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+          {
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
       }
       if (response.status === 402) {
         console.error('Payment required');
-        return new Response(JSON.stringify({ error: 'AI credits exhausted. Please add more credits.' }), {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return new Response(
+          JSON.stringify({ error: 'AI credits exhausted. Please add more credits.' }),
+          {
+            status: 402,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
       }
       const errorText = await response.text();
       console.error('AI gateway error:', response.status, errorText);
@@ -183,21 +193,26 @@ Crie um resumo estruturado desta conversa.`;
     if (toolCall?.function?.arguments) {
       const structured = JSON.parse(toolCall.function.arguments);
       console.log('Summary generated');
-      return new Response(JSON.stringify({ 
-        summary: structured.summaryText,
-        structured 
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({
+          summary: structured.summaryText,
+          structured,
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
-    return new Response(JSON.stringify({ 
-      summary: 'Não foi possível gerar o resumo.',
-      structured: null 
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
+    return new Response(
+      JSON.stringify({
+        summary: 'Não foi possível gerar o resumo.',
+        structured: null,
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
   } catch (error: unknown) {
     console.error('Error in ai-summarize-conversation:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

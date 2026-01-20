@@ -10,7 +10,7 @@ export function useLeadAvatarFetch() {
     try {
       const cached = sessionStorage.getItem(`${CACHE_KEY_PREFIX}${leadId}`);
       if (!cached) return true;
-      
+
       const timestamp = parseInt(cached, 10);
       return Date.now() - timestamp > CACHE_DURATION_MS;
     } catch {
@@ -26,32 +26,32 @@ export function useLeadAvatarFetch() {
     }
   }, []);
 
-  const fetchAvatar = useCallback(async (
-    leadId: string, 
-    phone: string
-  ): Promise<string | null> => {
-    if (!leadId || !phone) return null;
-    if (!shouldAttemptFetch(leadId)) return null;
+  const fetchAvatar = useCallback(
+    async (leadId: string, phone: string): Promise<string | null> => {
+      if (!leadId || !phone) return null;
+      if (!shouldAttemptFetch(leadId)) return null;
 
-    // Marcar tentativa antes de fazer a chamada
-    markAttempt(leadId);
+      // Marcar tentativa antes de fazer a chamada
+      markAttempt(leadId);
 
-    try {
-      const { data, error } = await supabase.functions.invoke('get-whatsapp-avatar', {
-        body: { lead_id: leadId, phone }
-      });
+      try {
+        const { data, error } = await supabase.functions.invoke('get-whatsapp-avatar', {
+          body: { lead_id: leadId, phone },
+        });
 
-      if (error) {
-        logger.warn('[useLeadAvatarFetch] Erro na função:', error.message);
+        if (error) {
+          logger.warn('[useLeadAvatarFetch] Erro na função:', error.message);
+          return null;
+        }
+
+        return data?.avatar_url || null;
+      } catch (err) {
+        logger.warn('[useLeadAvatarFetch] Erro ao buscar avatar:', err);
         return null;
       }
-
-      return data?.avatar_url || null;
-    } catch (err) {
-      logger.warn('[useLeadAvatarFetch] Erro ao buscar avatar:', err);
-      return null;
-    }
-  }, [shouldAttemptFetch, markAttempt]);
+    },
+    [shouldAttemptFetch, markAttempt]
+  );
 
   return { fetchAvatar };
 }

@@ -11,11 +11,7 @@ import {
   pointerWithin,
   useDroppable,
 } from '@dnd-kit/core';
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
-} from '@dnd-kit/sortable';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
   Phone,
@@ -48,12 +44,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -69,7 +60,9 @@ import { getContrastTextColor } from '@/lib/utils';
 import type { Database } from '@/integrations/supabase/types';
 
 // Lazy load heavy modal
-const LeadModal = lazy(() => import('@/components/leads/LeadModal').then(m => ({ default: m.LeadModal })));
+const LeadModal = lazy(() =>
+  import('@/components/leads/LeadModal').then((m) => ({ default: m.LeadModal }))
+);
 
 type Lead = Database['public']['Tables']['leads']['Row'] & {
   funnel_stages: { id: string; name: string; color: string } | null;
@@ -87,18 +80,24 @@ interface LeadCardProps {
   onOpenConversation?: (leadId: string) => void;
 }
 
-const LeadCardComponent = ({ lead, labels, leadLabels, isDragging, onEdit, onDelete, onOpenConversation }: LeadCardProps) => {
+const LeadCardComponent = ({
+  lead,
+  labels,
+  leadLabels,
+  isDragging,
+  onEdit,
+  onDelete,
+  onOpenConversation,
+}: LeadCardProps) => {
   // Get labels for this lead
-  const leadLabelIds = leadLabels
-    .filter((ll) => ll.lead_id === lead.id)
-    .map((ll) => ll.label_id);
+  const leadLabelIds = leadLabels.filter((ll) => ll.lead_id === lead.id).map((ll) => ll.label_id);
   const leadLabelsData = labels.filter((l) => leadLabelIds.includes(l.id));
 
   return (
     <Card
       className={cn(
-        'p-4 cursor-grab active:cursor-grabbing transition-all',
-        isDragging ? 'shadow-lg rotate-2 scale-105 opacity-90' : 'hover:shadow-md'
+        'cursor-grab p-4 transition-all active:cursor-grabbing',
+        isDragging ? 'rotate-2 scale-105 opacity-90 shadow-lg' : 'hover:shadow-md'
       )}
       role="article"
       aria-label={`Lead ${lead.name}${lead.estimated_value ? `, valor estimado R$ ${Number(lead.estimated_value).toLocaleString('pt-BR')}` : ''}`}
@@ -106,22 +105,22 @@ const LeadCardComponent = ({ lead, labels, leadLabels, isDragging, onEdit, onDel
       <div className="flex items-start gap-3">
         <LeadAvatar lead={lead} size="md" />
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-1">
-            <h4 className="font-semibold text-foreground truncate">{lead.name}</h4>
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex items-center justify-between">
+            <h4 className="truncate font-semibold text-foreground">{lead.name}</h4>
             <DropdownMenu>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-6 w-6 -mr-2" 
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="-mr-2 h-6 w-6"
                         aria-label={`Mais opções para ${lead.name}`}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <MoreVertical className="w-4 h-4" aria-hidden="true" />
+                        <MoreVertical className="h-4 w-4" aria-hidden="true" />
                       </Button>
                     </DropdownMenuTrigger>
                   </TooltipTrigger>
@@ -130,14 +129,14 @@ const LeadCardComponent = ({ lead, labels, leadLabels, isDragging, onEdit, onDel
               </TooltipProvider>
               <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenuItem onClick={() => onEdit?.(lead.id)}>
-                  <Pencil className="w-4 h-4 mr-2" />
+                  <Pencil className="mr-2 h-4 w-4" />
                   Editar Lead
                 </DropdownMenuItem>
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={() => onDelete?.(lead.id)}
                   className="text-destructive focus:text-destructive"
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
+                  <Trash2 className="mr-2 h-4 w-4" />
                   Excluir Lead
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -146,18 +145,18 @@ const LeadCardComponent = ({ lead, labels, leadLabels, isDragging, onEdit, onDel
 
           <div className="space-y-1.5 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
-              <Phone className="w-3.5 h-3.5" />
+              <Phone className="h-3.5 w-3.5" />
               <span className="truncate">{lead.phone}</span>
             </div>
             {lead.estimated_value && (
-              <div className="flex items-center gap-2 text-success font-medium">
-                <DollarSign className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-2 font-medium text-success">
+                <DollarSign className="h-3.5 w-3.5" />
                 <span>R$ {Number(lead.estimated_value).toLocaleString('pt-BR')}</span>
               </div>
             )}
           </div>
 
-          <div className="flex items-center gap-2 mt-3 flex-wrap">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <Badge
               variant="outline"
               className={cn(
@@ -172,10 +171,13 @@ const LeadCardComponent = ({ lead, labels, leadLabels, isDragging, onEdit, onDel
             {leadLabelsData.slice(0, 2).map((label) => (
               <Badge
                 key={label.id}
-                className="text-xs border-0"
-                style={{ 
-                  backgroundColor: label.color, 
-                  color: getContrastTextColor(label.color) === 'text-white' ? 'white' : 'hsl(var(--foreground))'
+                className="border-0 text-xs"
+                style={{
+                  backgroundColor: label.color,
+                  color:
+                    getContrastTextColor(label.color) === 'text-white'
+                      ? 'white'
+                      : 'hsl(var(--foreground))',
                 }}
               >
                 {label.name}
@@ -188,23 +190,23 @@ const LeadCardComponent = ({ lead, labels, leadLabels, isDragging, onEdit, onDel
             )}
           </div>
 
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border text-xs text-muted-foreground">
-            <span>{format(new Date(lead.created_at), "dd/MM", { locale: ptBR })}</span>
+          <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
+            <span>{format(new Date(lead.created_at), 'dd/MM', { locale: ptBR })}</span>
             <div className="flex items-center gap-2">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-6 w-6" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
                       aria-label={`Abrir conversa com ${lead.name}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         onOpenConversation?.(lead.id);
                       }}
                     >
-                      <MessageSquare className="w-3.5 h-3.5" aria-hidden="true" />
+                      <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Abrir conversa</TooltipContent>
@@ -219,12 +221,14 @@ const LeadCardComponent = ({ lead, labels, leadLabels, isDragging, onEdit, onDel
 };
 
 // Memoize LeadCard to prevent re-renders during drag-and-drop
-const LeadCard = memo(LeadCardComponent, (prev, next) =>
-  prev.lead.id === next.lead.id &&
-  prev.lead.updated_at === next.lead.updated_at &&
-  prev.lead.stage_id === next.lead.stage_id &&
-  prev.isDragging === next.isDragging &&
-  prev.leadLabels === next.leadLabels
+const LeadCard = memo(
+  LeadCardComponent,
+  (prev, next) =>
+    prev.lead.id === next.lead.id &&
+    prev.lead.updated_at === next.lead.updated_at &&
+    prev.lead.stage_id === next.lead.stage_id &&
+    prev.isDragging === next.isDragging &&
+    prev.leadLabels === next.leadLabels
 );
 LeadCard.displayName = 'LeadCard';
 
@@ -237,7 +241,14 @@ interface SortableLeadCardProps {
   onOpenConversation?: (leadId: string) => void;
 }
 
-const SortableLeadCard = ({ lead, labels, leadLabels, onEdit, onDelete, onOpenConversation }: SortableLeadCardProps) => {
+const SortableLeadCard = ({
+  lead,
+  labels,
+  leadLabels,
+  onEdit,
+  onDelete,
+  onOpenConversation,
+}: SortableLeadCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: lead.id,
     data: {
@@ -254,10 +265,10 @@ const SortableLeadCard = ({ lead, labels, leadLabels, onEdit, onDelete, onOpenCo
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <LeadCard 
-        lead={lead} 
-        labels={labels} 
-        leadLabels={leadLabels} 
+      <LeadCard
+        lead={lead}
+        labels={labels}
+        leadLabels={leadLabels}
         isDragging={isDragging}
         onEdit={onEdit}
         onDelete={onDelete}
@@ -277,7 +288,15 @@ interface FunnelColumnProps {
   onOpenConversation?: (leadId: string) => void;
 }
 
-const FunnelColumn = ({ stage, leads, labels, leadLabels, onEditLead, onDeleteLead, onOpenConversation }: FunnelColumnProps) => {
+const FunnelColumn = ({
+  stage,
+  leads,
+  labels,
+  leadLabels,
+  onEditLead,
+  onDeleteLead,
+  onOpenConversation,
+}: FunnelColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({
     id: `stage-${stage.id}`,
     data: {
@@ -289,14 +308,18 @@ const FunnelColumn = ({ stage, leads, labels, leadLabels, onEditLead, onDeleteLe
   const totalValue = leads.reduce((sum, lead) => sum + (Number(lead.estimated_value) || 0), 0);
 
   return (
-    <section 
-      className="flex-shrink-0 w-80"
+    <section
+      className="w-80 flex-shrink-0"
       aria-label={`Etapa ${stage.name} - ${leads.length} leads`}
       aria-roledescription="Coluna do funil"
     >
       <div className="mb-4">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} aria-hidden="true" />
+        <div className="mb-2 flex items-center gap-2">
+          <div
+            className="h-3 w-3 rounded-full"
+            style={{ backgroundColor: stage.color }}
+            aria-hidden="true"
+          />
           <h3 className="font-semibold text-foreground">{stage.name}</h3>
           <Badge variant="secondary" className="ml-auto" aria-label={`${leads.length} leads`}>
             {leads.length}
@@ -310,18 +333,18 @@ const FunnelColumn = ({ stage, leads, labels, leadLabels, onEditLead, onDeleteLe
       <div
         ref={setNodeRef}
         className={cn(
-          "min-h-[calc(100vh-16rem)] rounded-lg transition-all duration-200",
-          isOver && "bg-primary/10 ring-2 ring-primary/30 ring-offset-2"
+          'min-h-[calc(100vh-16rem)] rounded-lg transition-all duration-200',
+          isOver && 'bg-primary/10 ring-2 ring-primary/30 ring-offset-2'
         )}
       >
         <ScrollArea className="h-[calc(100vh-16rem)]" style={{ willChange: 'scroll-position' }}>
           <SortableContext items={leads.map((l) => l.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-3 pr-2" style={{ willChange: 'contents' }}>
               {leads.map((lead) => (
-                <SortableLeadCard 
-                  key={lead.id} 
-                  lead={lead} 
-                  labels={labels} 
+                <SortableLeadCard
+                  key={lead.id}
+                  lead={lead}
+                  labels={labels}
                   leadLabels={leadLabels}
                   onEdit={onEditLead}
                   onDelete={onDeleteLead}
@@ -332,7 +355,7 @@ const FunnelColumn = ({ stage, leads, labels, leadLabels, onEditLead, onDeleteLe
           </SortableContext>
 
           {leads.length === 0 && (
-            <div className="p-8 text-center text-muted-foreground border-2 border-dashed border-border rounded-lg">
+            <div className="rounded-lg border-2 border-dashed border-border p-8 text-center text-muted-foreground">
               <p className="text-sm">Nenhum lead nesta etapa</p>
             </div>
           )}
@@ -345,9 +368,9 @@ const FunnelColumn = ({ stage, leads, labels, leadLabels, onEditLead, onDeleteLe
 const FunnelSkeleton = () => (
   <div className="flex gap-4 overflow-x-auto pb-4">
     {Array.from({ length: 4 }).map((_, i) => (
-      <div key={i} className="flex-shrink-0 w-80">
-        <Skeleton className="h-6 w-32 mb-2" />
-        <Skeleton className="h-4 w-24 mb-4" />
+      <div key={i} className="w-80 flex-shrink-0">
+        <Skeleton className="mb-2 h-6 w-32" />
+        <Skeleton className="mb-4 h-4 w-24" />
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, j) => (
             <Skeleton key={j} className="h-40 w-full rounded-lg" />
@@ -370,15 +393,15 @@ const Funnel = () => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [leadLabels, setLeadLabels] = useState<{ lead_id: string; label_id: string }[]>([]);
-  
+
   // Ref for scroll container
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  
+
   // Modal states
   const [showLeadModal, setShowLeadModal] = useState(false);
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [leadModalMode, setLeadModalMode] = useState<'create' | 'edit' | 'view'>('create');
-  
+
   // Delete confirmation state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
@@ -386,10 +409,8 @@ const Funnel = () => {
   // Fetch lead_labels from database
   useEffect(() => {
     const fetchLeadLabels = async () => {
-      const { data, error } = await supabase
-        .from('lead_labels')
-        .select('lead_id, label_id');
-      
+      const { data, error } = await supabase.from('lead_labels').select('lead_id, label_id');
+
       if (!error && data) {
         setLeadLabels(data);
       }
@@ -496,8 +517,8 @@ const Funnel = () => {
         // Se não houver conversa, criar uma nova com assigned_to
         const { data: newConv, error } = await supabase
           .from('conversations')
-          .insert({ 
-            lead_id: leadId, 
+          .insert({
+            lead_id: leadId,
             status: 'open',
             assigned_to: user?.id || null, // Atribuir ao usuário atual
           })
@@ -526,23 +547,20 @@ const Funnel = () => {
     <div className="p-6">
       <PageBreadcrumb items={[{ label: 'Funil de Vendas' }]} />
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Funil de Vendas</h1>
           <p className="text-muted-foreground">
             Arraste os leads entre as etapas
             {isUpdating && (
               <span className="ml-2 inline-flex items-center gap-1 text-primary">
-                <Loader2 className="w-3 h-3 animate-spin" />
+                <Loader2 className="h-3 w-3 animate-spin" />
                 Salvando...
               </span>
             )}
           </p>
         </div>
-        <Button 
-          className="gradient-primary text-primary-foreground"
-          onClick={handleNewLead}
-        >
+        <Button className="gradient-primary text-primary-foreground" onClick={handleNewLead}>
           Novo Lead
         </Button>
       </div>
@@ -558,14 +576,11 @@ const Funnel = () => {
           onDragEnd={handleDragEnd}
         >
           <div className="relative">
-            <FunnelScrollIndicators 
-              containerRef={scrollContainerRef} 
-              totalColumns={stages.length} 
+            <FunnelScrollIndicators
+              containerRef={scrollContainerRef}
+              totalColumns={stages.length}
             />
-            <div 
-              ref={scrollContainerRef}
-              className="flex gap-4 overflow-x-auto pb-4 px-1"
-            >
+            <div ref={scrollContainerRef} className="flex gap-4 overflow-x-auto px-1 pb-4">
               {stages.map((stage) => {
                 const stageLeads = leads.filter((l) => l.stage_id === stage.id);
                 return (
@@ -610,7 +625,8 @@ const Funnel = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir lead?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O lead "{leadToDelete?.name}" será permanentemente removido do sistema.
+              Esta ação não pode ser desfeita. O lead "{leadToDelete?.name}" será permanentemente
+              removido do sistema.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

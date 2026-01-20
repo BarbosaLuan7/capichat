@@ -1,13 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  X,
-  GitBranch,
-  UserPlus,
-  Tag,
-  Trash2,
-  ChevronDown,
-} from 'lucide-react';
+import { X, GitBranch, UserPlus, Tag, Trash2, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -49,11 +42,7 @@ export function BulkActionsBar({ selectedIds, onClearSelection }: BulkActionsBar
   const handleMoveToStage = async (stageId: string) => {
     setIsProcessing(true);
     try {
-      await Promise.all(
-        selectedIds.map((id) =>
-          updateLead.mutateAsync({ id, stage_id: stageId })
-        )
-      );
+      await Promise.all(selectedIds.map((id) => updateLead.mutateAsync({ id, stage_id: stageId })));
       const stage = stages.find((s) => s.id === stageId);
       toast.success(`${selectedIds.length} leads movidos para "${stage?.name}"`);
       onClearSelection();
@@ -68,9 +57,7 @@ export function BulkActionsBar({ selectedIds, onClearSelection }: BulkActionsBar
     setIsProcessing(true);
     try {
       await Promise.all(
-        selectedIds.map((id) =>
-          updateLead.mutateAsync({ id, assigned_to: userId })
-        )
+        selectedIds.map((id) => updateLead.mutateAsync({ id, assigned_to: userId }))
       );
       const user = profiles.find((p) => p.id === userId);
       toast.success(`${selectedIds.length} leads atribuídos a "${user?.name}"`);
@@ -105,10 +92,10 @@ export function BulkActionsBar({ selectedIds, onClearSelection }: BulkActionsBar
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50"
+          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2"
         >
-          <div className="flex items-center gap-2 bg-background border border-border shadow-lg rounded-lg p-2 pl-4">
-            <span className="text-sm font-medium text-foreground mr-2">
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-background p-2 pl-4 shadow-lg">
+            <span className="mr-2 text-sm font-medium text-foreground">
               {selectedIds.length} selecionados
             </span>
 
@@ -116,9 +103,9 @@ export function BulkActionsBar({ selectedIds, onClearSelection }: BulkActionsBar
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" disabled={isProcessing}>
-                  <GitBranch className="w-4 h-4 mr-2" />
+                  <GitBranch className="mr-2 h-4 w-4" />
                   Mover
-                  <ChevronDown className="w-4 h-4 ml-1" />
+                  <ChevronDown className="ml-1 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="center">
@@ -129,7 +116,7 @@ export function BulkActionsBar({ selectedIds, onClearSelection }: BulkActionsBar
                     className="gap-2"
                   >
                     <div
-                      className="w-3 h-3 rounded-full"
+                      className="h-3 w-3 rounded-full"
                       style={{ backgroundColor: stage.color }}
                     />
                     {stage.name}
@@ -142,17 +129,14 @@ export function BulkActionsBar({ selectedIds, onClearSelection }: BulkActionsBar
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" disabled={isProcessing}>
-                  <UserPlus className="w-4 h-4 mr-2" />
+                  <UserPlus className="mr-2 h-4 w-4" />
                   Atribuir
-                  <ChevronDown className="w-4 h-4 ml-1" />
+                  <ChevronDown className="ml-1 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="center">
                 {profiles.map((profile) => (
-                  <DropdownMenuItem
-                    key={profile.id}
-                    onClick={() => handleAssignTo(profile.id)}
-                  >
+                  <DropdownMenuItem key={profile.id} onClick={() => handleAssignTo(profile.id)}>
                     {profile.name}
                   </DropdownMenuItem>
                 ))}
@@ -166,7 +150,7 @@ export function BulkActionsBar({ selectedIds, onClearSelection }: BulkActionsBar
               onClick={() => setDeleteDialogOpen(true)}
               disabled={isProcessing}
             >
-              <Trash2 className="w-4 h-4 mr-2" />
+              <Trash2 className="mr-2 h-4 w-4" />
               Excluir
             </Button>
 
@@ -178,7 +162,7 @@ export function BulkActionsBar({ selectedIds, onClearSelection }: BulkActionsBar
               className="ml-2"
               aria-label="Cancelar seleção"
             >
-              <X className="w-4 h-4" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
         </motion.div>
@@ -190,8 +174,8 @@ export function BulkActionsBar({ selectedIds, onClearSelection }: BulkActionsBar
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir {selectedIds.length} leads?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Todos os leads selecionados serão
-              permanentemente removidos.
+              Esta ação não pode ser desfeita. Todos os leads selecionados serão permanentemente
+              removidos.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

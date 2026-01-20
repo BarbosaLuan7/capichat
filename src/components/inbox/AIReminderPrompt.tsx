@@ -43,7 +43,7 @@ export function AIReminderPrompt({
 }: AIReminderPromptProps) {
   const { user } = useAuth();
   const createTask = useCreateTask();
-  
+
   const [isExpanded, setIsExpanded] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -87,7 +87,7 @@ export function AIReminderPrompt({
     }
   };
 
-  const formattedDate = dueDate 
+  const formattedDate = dueDate
     ? format(parseISO(dueDate), "dd 'de' MMMM", { locale: ptBR })
     : 'Amanhã';
 
@@ -97,33 +97,27 @@ export function AIReminderPrompt({
         initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 20, scale: 0.95 }}
-        className="fixed bottom-24 right-8 z-50 w-80 bg-card border border-border rounded-lg shadow-lg overflow-hidden"
+        className="fixed bottom-24 right-8 z-50 w-80 overflow-hidden rounded-lg border border-border bg-card shadow-lg"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-primary/10 to-primary/5 border-b border-border">
+        <div className="flex items-center justify-between border-b border-border bg-gradient-to-r from-primary/10 to-primary/5 p-3">
           <div className="flex items-center gap-2">
-            <Bell className="w-4 h-4 text-primary" />
+            <Bell className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium">Lembrete Detectado</span>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={onClose}
-            title="Fechar"
-          >
-            <X className="w-3.5 h-3.5" />
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose} title="Fechar">
+            <X className="h-3.5 w-3.5" />
           </Button>
         </div>
 
         {/* Content */}
-        <div className="p-3 space-y-3">
+        <div className="space-y-3 p-3">
           <p className="text-sm text-foreground">
             {reminder.taskDescription || 'Promessa de retorno detectada'}
           </p>
 
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Calendar className="w-3.5 h-3.5" />
+            <Calendar className="h-3.5 w-3.5" />
             <span>Sugerido para: {formattedDate}</span>
           </div>
 
@@ -132,7 +126,7 @@ export function AIReminderPrompt({
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
-              className="space-y-2 pt-2 border-t border-border"
+              className="space-y-2 border-t border-border pt-2"
             >
               <Input
                 value={title}
@@ -152,7 +146,7 @@ export function AIReminderPrompt({
                     key={p}
                     variant="outline"
                     className={cn(
-                      'text-xs cursor-pointer',
+                      'cursor-pointer text-xs',
                       priority === p && priorityLabels[p].color
                     )}
                     onClick={() => setPriority(p)}
@@ -172,19 +166,18 @@ export function AIReminderPrompt({
               className="flex-1 text-xs"
               onClick={() => setIsExpanded(!isExpanded)}
             >
-              <ChevronDown className={cn(
-                "w-3 h-3 mr-1 transition-transform",
-                isExpanded && "rotate-180"
-              )} />
+              <ChevronDown
+                className={cn('mr-1 h-3 w-3 transition-transform', isExpanded && 'rotate-180')}
+              />
               {isExpanded ? 'Menos' : 'Editar'}
             </Button>
             <Button
               size="sm"
-              className="flex-1 text-xs gradient-primary text-primary-foreground"
+              className="gradient-primary flex-1 text-xs text-primary-foreground"
               onClick={handleQuickCreate}
               disabled={createTask.isPending}
             >
-              <Check className="w-3 h-3 mr-1" />
+              <Check className="mr-1 h-3 w-3" />
               Criar Tarefa
             </Button>
           </div>

@@ -87,13 +87,15 @@ export function useSignedUrl(mediaUrl: string | null | undefined) {
 
         if (signError) {
           logger.error('[useSignedUrl] Erro ao gerar signed URL:', signError);
-          const { data: { publicUrl } } = supabase.storage.from(parsed.bucket).getPublicUrl(parsed.path);
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from(parsed.bucket).getPublicUrl(parsed.path);
           setSignedUrl(publicUrl);
           setError(signError.message);
         } else if (data?.signedUrl) {
           urlCache.set(mediaUrl, {
             url: data.signedUrl,
-            expiresAt: Date.now() + (SIGNED_URL_EXPIRY * 1000) - 60000,
+            expiresAt: Date.now() + SIGNED_URL_EXPIRY * 1000 - 60000,
           });
           setSignedUrl(data.signedUrl);
         }
@@ -129,7 +131,7 @@ export function useSignedUrlBatch(mediaUrls: (string | null | undefined)[]) {
   // Filtrar URLs únicas que precisam de signed URL
   const urlsToResolve = useMemo(() => {
     const unique = new Set<string>();
-    mediaUrls.forEach(url => {
+    mediaUrls.forEach((url) => {
       if (url && needsSignedUrl(url)) {
         const cached = urlCache.get(url);
         if (!cached || cached.expiresAt <= Date.now()) {
@@ -144,7 +146,7 @@ export function useSignedUrlBatch(mediaUrls: (string | null | undefined)[]) {
     // Build initial map from cache
     const buildMapFromCache = () => {
       const cached = new Map<string, string>();
-      mediaUrls.forEach(url => {
+      mediaUrls.forEach((url) => {
         if (url) {
           if (!needsSignedUrl(url)) {
             cached.set(url, url);
@@ -198,14 +200,16 @@ export function useSignedUrlBatch(mediaUrls: (string | null | undefined)[]) {
                 .createSignedUrl(parsed.path, SIGNED_URL_EXPIRY);
 
               if (error || !data?.signedUrl) {
-                const { data: { publicUrl } } = supabase.storage.from(parsed.bucket).getPublicUrl(parsed.path);
+                const {
+                  data: { publicUrl },
+                } = supabase.storage.from(parsed.bucket).getPublicUrl(parsed.path);
                 return { original: url, signed: publicUrl };
               }
 
               // Cachear
               urlCache.set(url, {
                 url: data.signedUrl,
-                expiresAt: Date.now() + (SIGNED_URL_EXPIRY * 1000) - 60000,
+                expiresAt: Date.now() + SIGNED_URL_EXPIRY * 1000 - 60000,
               });
 
               return { original: url, signed: data.signedUrl };
@@ -236,23 +240,26 @@ export function useSignedUrlBatch(mediaUrls: (string | null | undefined)[]) {
     };
   }, [urlsKey]);
 
-  const getSignedUrl = useCallback((originalUrl: string | null | undefined): string | null => {
-    if (!originalUrl) return null;
-    
-    // Se não precisa de signed URL, retorna a original
-    if (!needsSignedUrl(originalUrl)) {
-      return originalUrl;
-    }
-    
-    // Se precisa de signed URL, só retorna se já tiver resolvida
-    // Retorna null enquanto não resolve para evitar carregar storage:// no <img>
-    const resolved = urlMap.get(originalUrl);
-    if (resolved && !resolved.startsWith('storage://')) {
-      return resolved;
-    }
-    
-    return null;
-  }, [urlMap]);
+  const getSignedUrl = useCallback(
+    (originalUrl: string | null | undefined): string | null => {
+      if (!originalUrl) return null;
+
+      // Se não precisa de signed URL, retorna a original
+      if (!needsSignedUrl(originalUrl)) {
+        return originalUrl;
+      }
+
+      // Se precisa de signed URL, só retorna se já tiver resolvida
+      // Retorna null enquanto não resolve para evitar carregar storage:// no <img>
+      const resolved = urlMap.get(originalUrl);
+      if (resolved && !resolved.startsWith('storage://')) {
+        return resolved;
+      }
+
+      return null;
+    },
+    [urlMap]
+  );
 
   return { getSignedUrl, isLoading, urlMap };
 }
@@ -262,7 +269,7 @@ export function useSignedUrlBatch(mediaUrls: (string | null | undefined)[]) {
  */
 export async function getSignedUrl(mediaUrl: string): Promise<string> {
   if (!mediaUrl) return '';
-  
+
   if (!needsSignedUrl(mediaUrl)) {
     return mediaUrl;
   }
@@ -281,13 +288,15 @@ export async function getSignedUrl(mediaUrl: string): Promise<string> {
       .createSignedUrl(parsed.path, SIGNED_URL_EXPIRY);
 
     if (error || !data?.signedUrl) {
-      const { data: { publicUrl } } = supabase.storage.from(parsed.bucket).getPublicUrl(parsed.path);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from(parsed.bucket).getPublicUrl(parsed.path);
       return publicUrl;
     }
 
     urlCache.set(mediaUrl, {
       url: data.signedUrl,
-      expiresAt: Date.now() + (SIGNED_URL_EXPIRY * 1000) - 60000,
+      expiresAt: Date.now() + SIGNED_URL_EXPIRY * 1000 - 60000,
     });
 
     return data.signedUrl;

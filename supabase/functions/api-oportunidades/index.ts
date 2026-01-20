@@ -6,15 +6,15 @@ const corsHeaders = {
 };
 
 const temperatureMap: Record<string, string> = {
-  'cold': 'frio',
-  'warm': 'morno',
-  'hot': 'quente'
+  cold: 'frio',
+  warm: 'morno',
+  hot: 'quente',
 };
 
 const temperatureMapReverse: Record<string, string> = {
-  'frio': 'cold',
-  'morno': 'warm',
-  'quente': 'hot'
+  frio: 'cold',
+  morno: 'warm',
+  quente: 'hot',
 };
 
 function formatOportunidade(lead: any) {
@@ -24,11 +24,13 @@ function formatOportunidade(lead: any) {
     telefone: lead.phone,
     email: lead.email,
     etapa_id: lead.stage_id,
-    etapa: lead.funnel_stages ? {
-      id: lead.funnel_stages.id,
-      nome: lead.funnel_stages.name,
-      cor: lead.funnel_stages.color
-    } : null,
+    etapa: lead.funnel_stages
+      ? {
+          id: lead.funnel_stages.id,
+          nome: lead.funnel_stages.name,
+          cor: lead.funnel_stages.color,
+        }
+      : null,
     temperatura: temperatureMap[lead.temperature] || lead.temperature,
     responsavel_id: lead.assigned_to,
     valor_estimado: lead.estimated_value,
@@ -37,10 +39,10 @@ function formatOportunidade(lead: any) {
     etiquetas: (lead.lead_labels || []).map((ll: any) => ({
       id: ll.labels?.id,
       nome: ll.labels?.name,
-      cor: ll.labels?.color
+      cor: ll.labels?.color,
     })),
     criado_em: lead.created_at,
-    atualizado_em: lead.updated_at
+    atualizado_em: lead.updated_at,
   };
 }
 
@@ -64,13 +66,15 @@ Deno.serve(async (req) => {
     }
 
     const apiKey = authHeader.replace('Bearer ', '');
-    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', { key_value: apiKey });
+    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', {
+      key_value: apiKey,
+    });
 
     if (apiKeyError || !apiKeyId) {
-      return new Response(
-        JSON.stringify({ sucesso: false, erro: 'API key inválida' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: false, erro: 'API key inválida' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const url = new URL(req.url);
@@ -79,7 +83,9 @@ Deno.serve(async (req) => {
     const etapaId = url.searchParams.get('etapa_id');
     const responsavelId = url.searchParams.get('responsavel_id');
     const page = parseInt(url.searchParams.get('pagina') || url.searchParams.get('page') || '1');
-    const pageSize = parseInt(url.searchParams.get('por_pagina') || url.searchParams.get('page_size') || '50');
+    const pageSize = parseInt(
+      url.searchParams.get('por_pagina') || url.searchParams.get('page_size') || '50'
+    );
 
     // GET - List or get single
     if (req.method === 'GET') {
@@ -92,23 +98,22 @@ Deno.serve(async (req) => {
           .order('created_at', { ascending: false });
 
         if (error) {
-          return new Response(
-            JSON.stringify({ sucesso: false, erro: 'Erro ao listar notas' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ sucesso: false, erro: 'Erro ao listar notas' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
-        const notas = (activities || []).map(a => ({
+        const notas = (activities || []).map((a) => ({
           id: a.id,
           acao: a.action,
           detalhes: a.details,
-          criada_em: a.created_at
+          criada_em: a.created_at,
         }));
 
-        return new Response(
-          JSON.stringify({ dados: notas }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ dados: notas }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // GET /api-oportunidades?id=xxx
@@ -126,10 +131,9 @@ Deno.serve(async (req) => {
           );
         }
 
-        return new Response(
-          JSON.stringify(formatOportunidade(data)),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify(formatOportunidade(data)), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // GET /api-oportunidades - List with filters
@@ -161,8 +165,8 @@ Deno.serve(async (req) => {
             pagina: page,
             por_pagina: pageSize,
             total: count || 0,
-            total_paginas: Math.ceil((count || 0) / pageSize)
-          }
+            total_paginas: Math.ceil((count || 0) / pageSize),
+          },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -190,7 +194,7 @@ Deno.serve(async (req) => {
           .from('leads')
           .insert({
             ...leadData,
-            name: `${original.name} (cópia)`
+            name: `${original.name} (cópia)`,
           })
           .select()
           .single();
@@ -211,12 +215,12 @@ Deno.serve(async (req) => {
       // POST /api-oportunidades?id=xxx&action=notas
       if (id && action === 'notas') {
         const body = await req.json();
-        
+
         if (!body.conteudo) {
-          return new Response(
-            JSON.stringify({ sucesso: false, erro: 'conteudo é obrigatório' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ sucesso: false, erro: 'conteudo é obrigatório' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
         const { data, error } = await supabase
@@ -224,22 +228,27 @@ Deno.serve(async (req) => {
           .insert({
             lead_id: id,
             action: 'note',
-            details: { content: body.conteudo }
+            details: { content: body.conteudo },
           })
           .select()
           .single();
 
         if (error) {
-          return new Response(
-            JSON.stringify({ sucesso: false, erro: 'Erro ao adicionar nota' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ sucesso: false, erro: 'Erro ao adicionar nota' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
         return new Response(
-          JSON.stringify({ 
-            sucesso: true, 
-            nota: { id: data.id, acao: data.action, detalhes: data.details, criada_em: data.created_at }
+          JSON.stringify({
+            sucesso: true,
+            nota: {
+              id: data.id,
+              acao: data.action,
+              detalhes: data.details,
+              criada_em: data.created_at,
+            },
           }),
           { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -279,7 +288,7 @@ Deno.serve(async (req) => {
           estimated_value: body.valor_estimado,
           benefit_type: body.tipo_beneficio,
           source: body.origem || 'api',
-          status: 'active'
+          status: 'active',
         })
         .select('*, funnel_stages(*)')
         .single();
@@ -312,10 +321,10 @@ Deno.serve(async (req) => {
       // PUT /api-oportunidades?id=xxx&action=mover
       if (action === 'mover') {
         if (!body.etapa_id) {
-          return new Response(
-            JSON.stringify({ sucesso: false, erro: 'etapa_id é obrigatório' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ sucesso: false, erro: 'etapa_id é obrigatório' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
         const { data, error } = await supabase
@@ -346,7 +355,8 @@ Deno.serve(async (req) => {
       if (body.email !== undefined) updateData.email = body.email;
       if (body.etapa_id !== undefined) updateData.stage_id = body.etapa_id;
       if (body.responsavel_id !== undefined) updateData.assigned_to = body.responsavel_id;
-      if (body.temperatura !== undefined) updateData.temperature = temperatureMapReverse[body.temperatura] || body.temperatura;
+      if (body.temperatura !== undefined)
+        updateData.temperature = temperatureMapReverse[body.temperatura] || body.temperatura;
       if (body.valor_estimado !== undefined) updateData.estimated_value = body.valor_estimado;
       if (body.tipo_beneficio !== undefined) updateData.benefit_type = body.tipo_beneficio;
       if (body.status_caso !== undefined) updateData.case_status = body.status_caso;
@@ -381,10 +391,7 @@ Deno.serve(async (req) => {
       }
 
       // Soft delete - mark as archived
-      const { error } = await supabase
-        .from('leads')
-        .update({ status: 'archived' })
-        .eq('id', id);
+      const { error } = await supabase.from('leads').update({ status: 'archived' }).eq('id', id);
 
       if (error) {
         return new Response(
@@ -393,22 +400,20 @@ Deno.serve(async (req) => {
         );
       }
 
-      return new Response(
-        JSON.stringify({ sucesso: true }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    return new Response(
-      JSON.stringify({ sucesso: false, erro: 'Método não permitido' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
+    return new Response(JSON.stringify({ sucesso: false, erro: 'Método não permitido' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('[api-oportunidades] Error:', error);
-    return new Response(
-      JSON.stringify({ sucesso: false, erro: 'Erro interno do servidor' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ sucesso: false, erro: 'Erro interno do servidor' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

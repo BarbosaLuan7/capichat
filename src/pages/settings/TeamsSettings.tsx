@@ -24,21 +24,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { toast } from 'sonner';
-import { 
-  useTeams, 
-  useCreateTeam, 
-  useUpdateTeam, 
-  useDeleteTeam, 
+import {
+  useTeams,
+  useCreateTeam,
+  useUpdateTeam,
+  useDeleteTeam,
   useUpdateTeamMembers,
   useUpdateTeamWhatsAppConfigs,
-  type TeamWithRelations 
+  type TeamWithRelations,
 } from '@/hooks/useTeams';
 import { useTenant } from '@/contexts/TenantContext';
 import { useLeads } from '@/hooks/useLeads';
@@ -66,10 +61,10 @@ const TeamsSettings = () => {
   const leads = leadsData?.leads || [];
 
   const getTeamLeadsCount = (teamId: string) => {
-    const team = teams?.find(t => t.id === teamId);
+    const team = teams?.find((t) => t.id === teamId);
     if (!team) return 0;
-    const memberIds = team.team_members?.map(m => m.user_id) || [];
-    return leads.filter(l => l.assigned_to && memberIds.includes(l.assigned_to)).length;
+    const memberIds = team.team_members?.map((m) => m.user_id) || [];
+    return leads.filter((l) => l.assigned_to && memberIds.includes(l.assigned_to)).length;
   };
 
   const handleSave = async (data: {
@@ -161,17 +156,19 @@ const TeamsSettings = () => {
 
   if (teamsLoading) {
     return (
-      <div className="p-6 space-y-6">
-        <PageBreadcrumb items={[{ label: 'Configurações', href: '/settings' }, { label: 'Equipes' }]} />
+      <div className="space-y-6 p-6">
+        <PageBreadcrumb
+          items={[{ label: 'Configurações', href: '/settings' }, { label: 'Equipes' }]}
+        />
         <div className="flex items-center justify-between">
           <div>
             <Skeleton className="h-8 w-32" />
-            <Skeleton className="h-4 w-48 mt-2" />
+            <Skeleton className="mt-2 h-4 w-48" />
           </div>
           <Skeleton className="h-10 w-32" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map(i => (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-64" />
           ))}
         </div>
@@ -180,28 +177,33 @@ const TeamsSettings = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <PageBreadcrumb items={[{ label: 'Configurações', href: '/settings' }, { label: 'Equipes' }]} />
-      
+    <div className="space-y-6 p-6">
+      <PageBreadcrumb
+        items={[{ label: 'Configurações', href: '/settings' }, { label: 'Equipes' }]}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Equipes</h1>
           <p className="text-muted-foreground">Organize sua equipe em departamentos</p>
         </div>
-        <Button onClick={openCreateModal} className="gradient-primary text-primary-foreground gap-2">
-          <Plus className="w-4 h-4" />
+        <Button
+          onClick={openCreateModal}
+          className="gradient-primary gap-2 text-primary-foreground"
+        >
+          <Plus className="h-4 w-4" />
           Nova Equipe
         </Button>
       </div>
 
       {/* Teams Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {teams?.map((team, index) => {
           const members = team.team_members || [];
           const channels = team.team_whatsapp_configs || [];
           const leadsCount = getTeamLeadsCount(team.id);
-          const supervisors = members.filter(m => m.is_supervisor);
+          const supervisors = members.filter((m) => m.is_supervisor);
 
           return (
             <motion.div
@@ -210,26 +212,27 @@ const TeamsSettings = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <Card 
-                className="hover:shadow-lg transition-shadow cursor-pointer"
+              <Card
+                className="cursor-pointer transition-shadow hover:shadow-lg"
                 onClick={() => openDetailsSheet(team)}
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-lg gradient-primary flex items-center justify-center">
-                        <Users className="w-6 h-6 text-primary-foreground" />
+                      <div className="gradient-primary flex h-12 w-12 items-center justify-center rounded-lg">
+                        <Users className="h-6 w-6 text-primary-foreground" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
                           <CardTitle className="text-lg">{team.name}</CardTitle>
                           {team.is_default && (
-                            <Star className="w-4 h-4 text-warning fill-warning" />
+                            <Star className="h-4 w-4 fill-warning text-warning" />
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {members.length} membro{members.length !== 1 && 's'}
-                          {supervisors.length > 0 && ` • ${supervisors.length} supervisor${supervisors.length !== 1 ? 'es' : ''}`}
+                          {supervisors.length > 0 &&
+                            ` • ${supervisors.length} supervisor${supervisors.length !== 1 ? 'es' : ''}`}
                         </p>
                       </div>
                     </div>
@@ -238,19 +241,27 @@ const TeamsSettings = () => {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="ghost" size="icon">
-                              <MoreVertical className="w-4 h-4" />
+                              <MoreVertical className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Mais opções</TooltipContent>
                         </Tooltip>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditModal(team); }}>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditModal(team);
+                          }}
+                        >
                           Editar
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"
-                          onClick={(e) => { e.stopPropagation(); confirmDelete(team); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            confirmDelete(team);
+                          }}
                         >
                           Excluir
                         </DropdownMenuItem>
@@ -264,13 +275,13 @@ const TeamsSettings = () => {
                   <div className="flex flex-wrap gap-2">
                     {channels.length > 0 && (
                       <Badge variant="secondary" className="gap-1">
-                        <Phone className="w-3 h-3" />
+                        <Phone className="h-3 w-3" />
                         {channels.length} canal{channels.length !== 1 && 'is'}
                       </Badge>
                     )}
                     {team.auto_distribution && (
                       <Badge variant="secondary" className="gap-1">
-                        <Shuffle className="w-3 h-3" />
+                        <Shuffle className="h-3 w-3" />
                         Auto
                       </Badge>
                     )}
@@ -278,11 +289,11 @@ const TeamsSettings = () => {
 
                   {/* Stats */}
                   <div className="flex gap-4">
-                    <div className="flex-1 text-center p-3 rounded-lg bg-primary/5">
+                    <div className="flex-1 rounded-lg bg-primary/5 p-3 text-center">
                       <p className="text-2xl font-bold text-primary">{leadsCount}</p>
                       <p className="text-xs text-muted-foreground">Leads</p>
                     </div>
-                    <div className="flex-1 text-center p-3 rounded-lg bg-success/5">
+                    <div className="flex-1 rounded-lg bg-success/5 p-3 text-center">
                       <p className="text-2xl font-bold text-success">{members.length}</p>
                       <p className="text-xs text-muted-foreground">Atendentes</p>
                     </div>
@@ -291,14 +302,14 @@ const TeamsSettings = () => {
                   {/* Members */}
                   {members.length > 0 && (
                     <div>
-                      <p className="text-sm font-medium text-foreground mb-2">Membros</p>
+                      <p className="mb-2 text-sm font-medium text-foreground">Membros</p>
                       <div className="flex flex-wrap gap-2">
-                        {members.slice(0, 4).map(member => (
+                        {members.slice(0, 4).map((member) => (
                           <div
                             key={member.id}
-                            className="flex items-center gap-2 px-2 py-1 rounded-full bg-muted text-sm"
+                            className="flex items-center gap-2 rounded-full bg-muted px-2 py-1 text-sm"
                           >
-                            <Avatar className="w-5 h-5">
+                            <Avatar className="h-5 w-5">
                               <AvatarImage src={member.user?.avatar || undefined} />
                               <AvatarFallback className="text-xs">
                                 {member.user?.name?.charAt(0) || '?'}
@@ -308,7 +319,7 @@ const TeamsSettings = () => {
                               {member.user?.name?.split(' ')[0] || 'Usuário'}
                             </span>
                             {member.is_supervisor && (
-                              <Star className="w-3 h-3 text-warning fill-warning" />
+                              <Star className="h-3 w-3 fill-warning text-warning" />
                             )}
                           </div>
                         ))}
@@ -320,7 +331,7 @@ const TeamsSettings = () => {
                   )}
 
                   {members.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-4">
+                    <p className="py-4 text-center text-sm text-muted-foreground">
                       Nenhum membro atribuído
                     </p>
                   )}
@@ -333,13 +344,13 @@ const TeamsSettings = () => {
         {(!teams || teams.length === 0) && (
           <Card className="col-span-full">
             <CardContent className="p-12 text-center">
-              <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="font-semibold text-foreground mb-2">Nenhuma equipe criada</h3>
-              <p className="text-muted-foreground mb-4">
+              <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+              <h3 className="mb-2 font-semibold text-foreground">Nenhuma equipe criada</h3>
+              <p className="mb-4 text-muted-foreground">
                 Crie equipes para organizar seus atendentes
               </p>
               <Button onClick={openCreateModal}>
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="mr-2 h-4 w-4" />
                 Criar Equipe
               </Button>
             </CardContent>
@@ -358,7 +369,7 @@ const TeamsSettings = () => {
 
       {/* Sheet de detalhes */}
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <SheetContent className="w-full sm:max-w-[600px] p-0 overflow-y-auto">
+        <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-[600px]">
           <SheetHeader className="sr-only">
             <SheetTitle>Detalhes da Equipe</SheetTitle>
           </SheetHeader>
@@ -378,8 +389,9 @@ const TeamsSettings = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir equipe?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir a equipe <span className="font-medium">{teamToDelete?.name}</span>? 
-              Os membros não serão excluídos, apenas desvinculados.
+              Tem certeza que deseja excluir a equipe{' '}
+              <span className="font-medium">{teamToDelete?.name}</span>? Os membros não serão
+              excluídos, apenas desvinculados.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -391,7 +403,7 @@ const TeamsSettings = () => {
             >
               {deleteTeamMutation.isPending ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Excluindo...
                 </>
               ) : (

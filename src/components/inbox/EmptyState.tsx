@@ -1,11 +1,21 @@
 import { memo } from 'react';
-import { MessageCircle, Search, Inbox, FileText, Tag, Users, Filter, CheckCircle2, Clock } from 'lucide-react';
+import {
+  MessageCircle,
+  Search,
+  Inbox,
+  FileText,
+  Tag,
+  Users,
+  Filter,
+  CheckCircle2,
+  Clock,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 /**
  * Tipos de empty state disponíveis:
- * 
+ *
  * - `conversations`: Lista de conversas vazia (estado inicial)
  * - `messages`: Nenhuma mensagem na conversa
  * - `search`: Busca sem resultados
@@ -17,7 +27,17 @@ import { cn } from '@/lib/utils';
  * - `no-open`: Nenhuma conversa aberta
  * - `no-resolved`: Nenhuma conversa resolvida
  */
-type EmptyStateType = 'conversations' | 'messages' | 'search' | 'notes' | 'labels' | 'team' | 'filtered' | 'no-pending' | 'no-open' | 'no-resolved';
+type EmptyStateType =
+  | 'conversations'
+  | 'messages'
+  | 'search'
+  | 'notes'
+  | 'labels'
+  | 'team'
+  | 'filtered'
+  | 'no-pending'
+  | 'no-open'
+  | 'no-resolved';
 
 interface EmptyStateProps {
   /** Tipo de empty state a exibir */
@@ -98,31 +118,24 @@ const emptyStateConfig = {
   },
 };
 
-function EmptyStateComponent({ 
-  type, 
-  title, 
-  description, 
-  action,
-  className 
-}: EmptyStateProps) {
+function EmptyStateComponent({ type, title, description, action, className }: EmptyStateProps) {
   const config = emptyStateConfig[type];
   const Icon = config.icon;
-  
+
   return (
-    <div className={cn(
-      "flex flex-col items-center justify-center py-12 px-4 text-center",
-      className
-    )}>
-      <div className={cn(
-        "w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4",
-        config.iconColor
-      )}>
-        <Icon className="w-8 h-8" />
+    <div
+      className={cn('flex flex-col items-center justify-center px-4 py-12 text-center', className)}
+    >
+      <div
+        className={cn(
+          'mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted',
+          config.iconColor
+        )}
+      >
+        <Icon className="h-8 w-8" />
       </div>
-      <h3 className="text-base font-medium text-foreground mb-1">
-        {title || config.title}
-      </h3>
-      <p className="text-sm text-muted-foreground max-w-xs mb-4">
+      <h3 className="mb-1 text-base font-medium text-foreground">{title || config.title}</h3>
+      <p className="mb-4 max-w-xs text-sm text-muted-foreground">
         {description || config.description}
       </p>
       {action && (

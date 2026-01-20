@@ -29,9 +29,7 @@ const SuggestionButton = forwardRef<
   }
 >(({ suggestion, index, onClick, ...props }, ref) => {
   const isTruncated = suggestion.text.length > 50;
-  const displayText = isTruncated 
-    ? suggestion.text.substring(0, 50) + '...' 
-    : suggestion.text;
+  const displayText = isTruncated ? suggestion.text.substring(0, 50) + '...' : suggestion.text;
 
   return (
     <motion.button
@@ -42,7 +40,7 @@ const SuggestionButton = forwardRef<
       onClick={onClick}
       aria-label={`Usar sugestão: ${suggestion.text.substring(0, 50)}`}
       className={cn(
-        'px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors shrink-0',
+        'shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
         intentColors[suggestion.intent] || intentColors.info
       )}
       {...props}
@@ -63,7 +61,7 @@ function AISuggestionsComponent({
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground">
-        <Sparkles className="w-4 h-4 animate-pulse text-primary" />
+        <Sparkles className="h-4 w-4 animate-pulse text-primary" />
         <span>Gerando sugestões...</span>
       </div>
     );
@@ -77,15 +75,15 @@ function AISuggestionsComponent({
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="px-4 py-2 border-t border-border bg-gradient-to-r from-primary/5 to-transparent"
+      className="border-t border-border bg-gradient-to-r from-primary/5 to-transparent px-4 py-2"
     >
-      <div className="flex items-center gap-2 max-w-3xl mx-auto">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-          <Sparkles className="w-3.5 h-3.5 text-primary" />
+      <div className="mx-auto flex max-w-3xl items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+          <Sparkles className="h-3.5 w-3.5 text-primary" />
           <span>IA:</span>
         </div>
-        
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide flex-1">
+
+        <div className="scrollbar-hide flex flex-1 items-center gap-2 overflow-x-auto">
           {suggestions.map((suggestion, index) => {
             const isTruncated = suggestion.text.length > 50;
 
@@ -100,9 +98,7 @@ function AISuggestionsComponent({
                         onClick={() => onSelectSuggestion(suggestion.text)}
                       />
                     </TooltipTrigger>
-                    <TooltipContent className="max-w-xs text-sm">
-                      {suggestion.text}
-                    </TooltipContent>
+                    <TooltipContent className="max-w-xs text-sm">{suggestion.text}</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               );
@@ -126,7 +122,7 @@ function AISuggestionsComponent({
           onClick={onRefresh}
           aria-label="Gerar novas sugestões"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
+          <RefreshCw className="h-3.5 w-3.5" />
         </Button>
       </div>
     </motion.div>

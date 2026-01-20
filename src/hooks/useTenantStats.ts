@@ -23,12 +23,9 @@ export function useTenantStats(tenantIds: string[]) {
           .eq('tenant_id', tenantId);
 
         // Fetch lead IDs for this tenant to get conversations
-        const { data: leads } = await supabase
-          .from('leads')
-          .select('id')
-          .eq('tenant_id', tenantId);
+        const { data: leads } = await supabase.from('leads').select('id').eq('tenant_id', tenantId);
 
-        const leadIds = leads?.map(l => l.id) || [];
+        const leadIds = leads?.map((l) => l.id) || [];
 
         let openConversations = 0;
         let resolvedConversations = 0;
@@ -41,15 +38,16 @@ export function useTenantStats(tenantIds: string[]) {
             .in('lead_id', leadIds);
 
           if (conversations) {
-            openConversations = conversations.filter(c => c.status === 'open').length;
-            resolvedConversations = conversations.filter(c => c.status === 'resolved').length;
+            openConversations = conversations.filter((c) => c.status === 'open').length;
+            resolvedConversations = conversations.filter((c) => c.status === 'resolved').length;
           }
         }
 
         const totalConversations = openConversations + resolvedConversations;
-        const resolutionRate = totalConversations > 0 
-          ? Math.round((resolvedConversations / totalConversations) * 100) 
-          : 0;
+        const resolutionRate =
+          totalConversations > 0
+            ? Math.round((resolvedConversations / totalConversations) * 100)
+            : 0;
 
         return {
           tenantId,
@@ -61,11 +59,14 @@ export function useTenantStats(tenantIds: string[]) {
       });
 
       const statsArray = await Promise.all(statsPromises);
-      
-      return statsArray.reduce((acc, stat) => {
-        acc[stat.tenantId] = stat;
-        return acc;
-      }, {} as Record<string, TenantStats>);
+
+      return statsArray.reduce(
+        (acc, stat) => {
+          acc[stat.tenantId] = stat;
+          return acc;
+        },
+        {} as Record<string, TenantStats>
+      );
     },
     enabled: tenantIds.length > 0,
     staleTime: 60 * 1000, // 60 seconds - stats don't need to be realtime

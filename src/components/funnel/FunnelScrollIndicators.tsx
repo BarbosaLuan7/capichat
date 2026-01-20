@@ -10,10 +10,10 @@ interface FunnelScrollIndicatorsProps {
   columnWidth?: number;
 }
 
-export function FunnelScrollIndicators({ 
-  containerRef, 
+export function FunnelScrollIndicators({
+  containerRef,
   totalColumns,
-  columnWidth = 320 + 16 // w-80 + gap-4
+  columnWidth = 320 + 16, // w-80 + gap-4
 }: FunnelScrollIndicatorsProps) {
   const [scrollState, setScrollState] = useState({
     canScrollLeft: false,
@@ -28,7 +28,7 @@ export function FunnelScrollIndicators({
 
     const { scrollLeft, scrollWidth, clientWidth } = container;
     const maxScroll = scrollWidth - clientWidth;
-    
+
     // Calculate hidden columns
     const visibleColumns = Math.floor(clientWidth / columnWidth);
     const scrolledColumns = Math.floor(scrollLeft / columnWidth);
@@ -52,7 +52,7 @@ export function FunnelScrollIndicators({
 
     // Initial update (immediate)
     updateScrollState();
-    
+
     // Throttled scroll handler for better performance
     container.addEventListener('scroll', throttledUpdateScrollState, { passive: true });
     window.addEventListener('resize', throttledUpdateScrollState);
@@ -82,21 +82,18 @@ export function FunnelScrollIndicators({
     <>
       {/* Left indicator */}
       {scrollState.canScrollLeft && (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10 flex items-center gap-2">
+        <div className="absolute left-0 top-1/2 z-10 flex -translate-y-1/2 items-center gap-2">
           <Button
             variant="secondary"
             size="icon"
-            className="h-10 w-10 rounded-full shadow-lg bg-background/95 backdrop-blur-sm"
+            className="h-10 w-10 rounded-full bg-background/95 shadow-lg backdrop-blur-sm"
             onClick={() => scrollTo('left')}
             aria-label={`Rolar para esquerda (${scrollState.hiddenLeft} etapas ocultas)`}
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>
           {scrollState.hiddenLeft > 0 && (
-            <Badge 
-              variant="secondary" 
-              className="shadow-md bg-background/95 backdrop-blur-sm"
-            >
+            <Badge variant="secondary" className="bg-background/95 shadow-md backdrop-blur-sm">
               ← {scrollState.hiddenLeft} {scrollState.hiddenLeft === 1 ? 'etapa' : 'etapas'}
             </Badge>
           )}
@@ -105,19 +102,16 @@ export function FunnelScrollIndicators({
 
       {/* Right indicator */}
       {scrollState.canScrollRight && (
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 z-10 flex items-center gap-2">
+        <div className="absolute right-0 top-1/2 z-10 flex -translate-y-1/2 items-center gap-2">
           {scrollState.hiddenRight > 0 && (
-            <Badge 
-              variant="secondary"
-              className="shadow-md bg-background/95 backdrop-blur-sm"
-            >
+            <Badge variant="secondary" className="bg-background/95 shadow-md backdrop-blur-sm">
               {scrollState.hiddenRight} {scrollState.hiddenRight === 1 ? 'etapa' : 'etapas'} →
             </Badge>
           )}
           <Button
             variant="secondary"
             size="icon"
-            className="h-10 w-10 rounded-full shadow-lg bg-background/95 backdrop-blur-sm"
+            className="h-10 w-10 rounded-full bg-background/95 shadow-lg backdrop-blur-sm"
             onClick={() => scrollTo('right')}
             aria-label={`Rolar para direita (${scrollState.hiddenRight} etapas ocultas)`}
           >

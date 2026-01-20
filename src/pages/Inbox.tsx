@@ -25,15 +25,22 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useInboxRealtime } from '@/hooks/useInboxRealtime';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 
-
 // Components - Lazy loaded for better performance
 import { ConversationList } from '@/components/inbox/ConversationList';
 import { LeadDetailsPanelSkeleton, ChatAreaSkeleton } from '@/components/ui/skeleton';
 
 // Lazy load heavy components
-const ChatArea = lazy(() => import('@/components/inbox/ChatArea').then(m => ({ default: m.ChatArea })));
-const LeadDetailsPanel = lazy(() => import('@/components/inbox/LeadDetailsPanel').then(m => ({ default: m.LeadDetailsPanel })));
-const NewConversationModal = lazy(() => import('@/components/inbox/NewConversationModal').then(m => ({ default: m.NewConversationModal })));
+const ChatArea = lazy(() =>
+  import('@/components/inbox/ChatArea').then((m) => ({ default: m.ChatArea }))
+);
+const LeadDetailsPanel = lazy(() =>
+  import('@/components/inbox/LeadDetailsPanel').then((m) => ({ default: m.LeadDetailsPanel }))
+);
+const NewConversationModal = lazy(() =>
+  import('@/components/inbox/NewConversationModal').then((m) => ({
+    default: m.NewConversationModal,
+  }))
+);
 
 import type { Database } from '@/integrations/supabase/types';
 
@@ -45,7 +52,6 @@ const Inbox = () => {
   const { user, authUser } = useAuth();
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
-  
 
   // Orchestration state
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -83,7 +89,11 @@ const Inbox = () => {
     removeMessage,
   } = useMessagesInfinite(selectedConversationId || undefined);
 
-  const { data: leadData, refetch: refetchLead, isLoading: loadingLead } = useLead(selectedConversation?.lead_id || undefined);
+  const {
+    data: leadData,
+    refetch: refetchLead,
+    isLoading: loadingLead,
+  } = useLead(selectedConversation?.lead_id || undefined);
   const { data: leadLabels } = useLeadLabels(selectedConversation?.lead_id || undefined);
 
   // Mutations
@@ -93,7 +103,6 @@ const Inbox = () => {
   const updateAssignee = useUpdateConversationAssignee();
   const updateLead = useUpdateLead();
   const updateConversationStatus = useUpdateConversationStatus();
-  
 
   // Notification sound hook
   const { notify } = useNotificationSound();
@@ -137,7 +146,6 @@ const Inbox = () => {
     userClickedConversationRef.current = false;
   }, [selectedConversationId]);
 
-
   // Prepare lead with labels - memoized to prevent re-renders
   const leadWithLabels = useMemo(() => {
     if (!leadData) return null;
@@ -153,95 +161,121 @@ const Inbox = () => {
     setSelectedConversationId(id);
   }, []);
 
-  const handleSendMessage = useCallback(async (content: string, type: string, mediaUrl?: string | null, replyToExternalId?: string | null) => {
-    if (!selectedConversationId || !user) return;
+  const handleSendMessage = useCallback(
+    async (
+      content: string,
+      type: string,
+      mediaUrl?: string | null,
+      replyToExternalId?: string | null
+    ) => {
+      if (!selectedConversationId || !user) return;
 
-    // AUTO-ATRIBUIÇÃO: Se a conversa não está atribuída, atribuir ao usuário atual
-    const isUnassigned = !selectedConversation?.assigned_to;
-    
-    if (isUnassigned && leadData) {
-      // Atribuir conversa e lead ao usuário atual (em paralelo, não bloqueia o envio)
-      Promise.all([
-        updateAssignee.mutateAsync({
-          conversationId: selectedConversationId,
-          assignedTo: user.id,
-        }),
-        updateLead.mutateAsync({
-          id: leadData.id,
-          assigned_to: user.id,
-        }),
-      ]).then(() => {
-        toast.info('Lead atribuído a você automaticamente');
-      }).catch((error) => {
-        logger.error('Erro na auto-atribuição:', error);
+      // AUTO-ATRIBUIÇÃO: Se a conversa não está atribuída, atribuir ao usuário atual
+      const isUnassigned = !selectedConversation?.assigned_to;
+
+      if (isUnassigned && leadData) {
+        // Atribuir conversa e lead ao usuário atual (em paralelo, não bloqueia o envio)
+        Promise.all([
+          updateAssignee.mutateAsync({
+            conversationId: selectedConversationId,
+            assignedTo: user.id,
+          }),
+          updateLead.mutateAsync({
+            id: leadData.id,
+            assigned_to: user.id,
+          }),
+        ])
+          .then(() => {
+            toast.info('Lead atribuído a você automaticamente');
+          })
+          .catch((error) => {
+            logger.error('Erro na auto-atribuição:', error);
+          });
+      }
+
+      const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+
+      // 1. IMEDIATAMENTE adicionar mensagem otimista
+      addMessageOptimistically({
+        id: tempId,
+        conversation_id: selectedConversationId,
+        content,
+        type: type as any,
+        sender_type: 'agent',
+        sender_id: user.id,
+        status: 'sending', // ⏳ Enviando
+        created_at: new Date().toISOString(),
+        source: 'crm',
+        media_url: mediaUrl || null,
+        is_starred: false,
+        direction: 'outbound',
+        is_internal_note: false,
+        lead_id: null,
+        external_id: null,
+        reply_to_external_id: replyToExternalId || null,
+        quoted_message: null,
+        isOptimistic: true,
       });
-    }
 
-    const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-    
-    // 1. IMEDIATAMENTE adicionar mensagem otimista
-    addMessageOptimistically({
-      id: tempId,
-      conversation_id: selectedConversationId,
-      content,
-      type: type as any,
-      sender_type: 'agent',
-      sender_id: user.id,
-      status: 'sending', // ⏳ Enviando
-      created_at: new Date().toISOString(),
-      source: 'crm',
-      media_url: mediaUrl || null,
-      is_starred: false,
-      direction: 'outbound',
-      is_internal_note: false,
-      lead_id: null,
-      external_id: null,
-      reply_to_external_id: replyToExternalId || null,
-      quoted_message: null,
-      isOptimistic: true,
-    });
+      // 2. API em background (não bloqueia)
+      sendMessage
+        .mutateAsync({
+          conversation_id: selectedConversationId,
+          sender_id: user.id,
+          sender_type: 'agent',
+          content,
+          type: type as any,
+          media_url: mediaUrl,
+          reply_to_external_id: replyToExternalId || undefined,
+        })
+        .then((realMessage) => {
+          // Sucesso: substituir temp pela mensagem real
+          if (realMessage) {
+            replaceOptimisticMessage(tempId, realMessage);
+          } else {
+            // Se não retornou mensagem, apenas atualizar status
+            updateMessageOptimistically(tempId, { status: 'sent' });
+          }
+        })
+        .catch((error) => {
+          // Erro: marcar em vermelho
+          const errorMsg = error instanceof Error ? error.message : 'Erro ao enviar';
+          markMessageFailed(tempId, errorMsg);
+        });
+    },
+    [
+      selectedConversationId,
+      selectedConversation?.assigned_to,
+      user,
+      leadData,
+      sendMessage,
+      updateAssignee,
+      updateLead,
+      addMessageOptimistically,
+      replaceOptimisticMessage,
+      updateMessageOptimistically,
+      markMessageFailed,
+    ]
+  );
 
-    // 2. API em background (não bloqueia)
-    sendMessage.mutateAsync({
-      conversation_id: selectedConversationId,
-      sender_id: user.id,
-      sender_type: 'agent',
-      content,
-      type: type as any,
-      media_url: mediaUrl,
-      reply_to_external_id: replyToExternalId || undefined,
-    })
-    .then((realMessage) => {
-      // Sucesso: substituir temp pela mensagem real
-      if (realMessage) {
-        replaceOptimisticMessage(tempId, realMessage);
-      } else {
-        // Se não retornou mensagem, apenas atualizar status
-        updateMessageOptimistically(tempId, { status: 'sent' });
-      }
-    })
-    .catch((error) => {
-      // Erro: marcar em vermelho
-      const errorMsg = error instanceof Error ? error.message : 'Erro ao enviar';
-      markMessageFailed(tempId, errorMsg);
-    });
-  }, [selectedConversationId, selectedConversation?.assigned_to, user, leadData, sendMessage, updateAssignee, updateLead, addMessageOptimistically, replaceOptimisticMessage, updateMessageOptimistically, markMessageFailed]);
-
-  const handleStatusChange = useCallback((status: ConversationStatus) => {
-    if (!selectedConversationId) return;
-    updateConversationStatus.mutate(
-      { conversationId: selectedConversationId, status },
-      {
-        onSuccess: () => {
-          const statusLabels = { open: 'Aberta', pending: 'Pendente', resolved: 'Resolvida' };
-          toast.success(`Conversa marcada como ${statusLabels[status]}`);
-        },
-        onError: () => {
-          toast.error('Erro ao atualizar status');
-        },
-      }
-    );
-  }, [selectedConversationId, updateConversationStatus]);
+  const handleStatusChange = useCallback(
+    (status: ConversationStatus) => {
+      if (!selectedConversationId) return;
+      updateConversationStatus.mutate(
+        { conversationId: selectedConversationId, status },
+        {
+          onSuccess: () => {
+            const statusLabels = { open: 'Aberta', pending: 'Pendente', resolved: 'Resolvida' };
+            toast.success(`Conversa marcada como ${statusLabels[status]}`);
+          },
+          onError: () => {
+            toast.error('Erro ao atualizar status');
+          },
+        }
+      );
+    },
+    [selectedConversationId, updateConversationStatus]
+  );
 
   const handleToggleFavorite = useCallback(() => {
     if (!selectedConversationId || !selectedConversation) return;
@@ -251,147 +285,186 @@ const Inbox = () => {
     });
   }, [selectedConversationId, selectedConversation, toggleFavorite]);
 
-  const handleTransfer = useCallback(async (userId: string) => {
-    if (!selectedConversationId || !leadData) return;
+  const handleTransfer = useCallback(
+    async (userId: string) => {
+      if (!selectedConversationId || !leadData) return;
 
-    try {
-      await updateAssignee.mutateAsync({
-        conversationId: selectedConversationId,
-        assignedTo: userId,
-      });
-      await updateLead.mutateAsync({
-        id: leadData.id,
-        assigned_to: userId,
-      });
-      toast.success('Lead transferido com sucesso');
-    } catch (error) {
-      toast.error('Erro ao transferir lead');
-    }
-  }, [selectedConversationId, leadData, updateAssignee, updateLead]);
+      try {
+        await updateAssignee.mutateAsync({
+          conversationId: selectedConversationId,
+          assignedTo: userId,
+        });
+        await updateLead.mutateAsync({
+          id: leadData.id,
+          assigned_to: userId,
+        });
+        toast.success('Lead transferido com sucesso');
+      } catch (error) {
+        toast.error('Erro ao transferir lead');
+      }
+    },
+    [selectedConversationId, leadData, updateAssignee, updateLead]
+  );
 
   // Mobile visibility logic
   const showConversationList = !isMobile || !selectedConversationId;
   const showChatArea = !isMobile || selectedConversationId;
 
   return (
-    <div className={cn(
-      "h-[calc(100vh-4rem)] flex flex-col min-w-0 overflow-hidden relative select-none",
-      isMobile && "h-[calc(100vh-4rem-3.5rem)]"
-    )}>
+    <div
+      className={cn(
+        'relative flex h-[calc(100vh-4rem)] min-w-0 select-none flex-col overflow-hidden',
+        isMobile && 'h-[calc(100vh-4rem-3.5rem)]'
+      )}
+    >
       {/* Disconnection Banner - only shows after 3s delay */}
       {showDisconnectedBanner && (
-        <div className="bg-destructive/10 border-b border-destructive/20 px-4 py-2 flex items-center justify-between text-sm text-destructive shrink-0">
+        <div className="flex shrink-0 items-center justify-between border-b border-destructive/20 bg-destructive/10 px-4 py-2 text-sm text-destructive">
           <div className="flex items-center gap-2">
-            <WifiOff className="w-4 h-4" />
+            <WifiOff className="h-4 w-4" />
             <span>Conexão perdida. Tentando reconectar...</span>
           </div>
-          <Button 
-            size="sm" 
-            variant="outline" 
+          <Button
+            size="sm"
+            variant="outline"
             onClick={forceReconnect}
-            className="h-7 text-xs border-destructive/30 text-destructive hover:bg-destructive/10"
+            className="h-7 border-destructive/30 text-xs text-destructive hover:bg-destructive/10"
           >
-            <RefreshCw className="w-3 h-3 mr-1" />
+            <RefreshCw className="mr-1 h-3 w-3" />
             Reconectar
           </Button>
         </div>
       )}
 
-      <div className="flex-1 flex min-w-0 overflow-hidden">
-      {/* Conversation List */}
-      {showConversationList && (
-        <div className={cn(
-          "w-64 md:w-72 xl:w-80 border-r border-border flex flex-col bg-card shrink-0 min-w-0",
-          isMobile && "w-full border-r-0"
-        )}>
-          <ConversationList
-            conversations={conversations}
-            selectedConversationId={selectedConversationId}
-            onSelectConversation={handleSelectConversation}
-            onNewConversation={() => setShowNewConversationModal(true)}
-            isLoading={loadingConversations}
-            isError={conversationsError}
-            onRetry={() => fetchMoreConversations()}
-            userId={user?.id}
-            hasMore={hasMoreConversations}
-            onLoadMore={fetchMoreConversations}
-            isLoadingMore={loadingMoreConversations}
-          />
-        </div>
-      )}
+      <div className="flex min-w-0 flex-1 overflow-hidden">
+        {/* Conversation List */}
+        {showConversationList && (
+          <div
+            className={cn(
+              'flex w-64 min-w-0 shrink-0 flex-col border-r border-border bg-card md:w-72 xl:w-80',
+              isMobile && 'w-full border-r-0'
+            )}
+          >
+            <ConversationList
+              conversations={conversations}
+              selectedConversationId={selectedConversationId}
+              onSelectConversation={handleSelectConversation}
+              onNewConversation={() => setShowNewConversationModal(true)}
+              isLoading={loadingConversations}
+              isError={conversationsError}
+              onRetry={() => fetchMoreConversations()}
+              userId={user?.id}
+              hasMore={hasMoreConversations}
+              onLoadMore={fetchMoreConversations}
+              isLoadingMore={loadingMoreConversations}
+            />
+          </div>
+        )}
 
-      {/* Chat Area - Lazy loaded */}
-      {showChatArea && (
-        <Suspense fallback={<ChatAreaSkeleton />}>
-          <ChatArea
-            conversation={selectedConversation ? {
-              id: selectedConversation.id,
-              status: selectedConversation.status,
-              is_favorite: (selectedConversation as any).is_favorite,
-              lead_id: selectedConversation.lead_id,
-              unread_count: selectedConversation.unread_count,
-            } : null}
-            lead={leadWithLabels}
-            messages={messages}
-            isLoadingMessages={loadingMessages}
-            onSendMessage={handleSendMessage}
-            onStatusChange={handleStatusChange}
-            onToggleFavorite={handleToggleFavorite}
-            isUpdatingStatus={updateConversationStatus.isPending}
-            showLeadPanel={showLeadPanel}
-            onToggleLeadPanel={() => setShowLeadPanel(!showLeadPanel)}
-            agentName={authUser?.name}
-            onBack={() => setSelectedConversationId(null)}
-            hasMoreMessages={hasMoreMessages}
-            onLoadMoreMessages={fetchMoreMessages}
-            isLoadingMoreMessages={loadingMoreMessages}
-            onStartTyping={() => {
-              // Badge some ao digitar APENAS se já está atribuída
-              if (
-                selectedConversationId && 
-                selectedConversation?.assigned_to &&
-                selectedConversation?.unread_count && 
-                selectedConversation.unread_count > 0
-              ) {
-                markAsRead.mutate(selectedConversationId);
+        {/* Chat Area - Lazy loaded */}
+        {showChatArea && (
+          <Suspense fallback={<ChatAreaSkeleton />}>
+            <ChatArea
+              conversation={
+                selectedConversation
+                  ? {
+                      id: selectedConversation.id,
+                      status: selectedConversation.status,
+                      is_favorite: (selectedConversation as any).is_favorite,
+                      lead_id: selectedConversation.lead_id,
+                      unread_count: selectedConversation.unread_count,
+                    }
+                  : null
               }
-            }}
-            onMessageSent={() => {
-              // Badge some ao enviar APENAS se NÃO estava atribuída
-              if (
-                selectedConversationId && 
-                !selectedConversation?.assigned_to &&
-                selectedConversation?.unread_count && 
-                selectedConversation.unread_count > 0
-              ) {
-                markAsRead.mutate(selectedConversationId);
-              }
-            }}
-          />
-        </Suspense>
-      )}
+              lead={leadWithLabels}
+              messages={messages}
+              isLoadingMessages={loadingMessages}
+              onSendMessage={handleSendMessage}
+              onStatusChange={handleStatusChange}
+              onToggleFavorite={handleToggleFavorite}
+              isUpdatingStatus={updateConversationStatus.isPending}
+              showLeadPanel={showLeadPanel}
+              onToggleLeadPanel={() => setShowLeadPanel(!showLeadPanel)}
+              agentName={authUser?.name}
+              onBack={() => setSelectedConversationId(null)}
+              hasMoreMessages={hasMoreMessages}
+              onLoadMoreMessages={fetchMoreMessages}
+              isLoadingMoreMessages={loadingMoreMessages}
+              onStartTyping={() => {
+                // Badge some ao digitar APENAS se já está atribuída
+                if (
+                  selectedConversationId &&
+                  selectedConversation?.assigned_to &&
+                  selectedConversation?.unread_count &&
+                  selectedConversation.unread_count > 0
+                ) {
+                  markAsRead.mutate(selectedConversationId);
+                }
+              }}
+              onMessageSent={() => {
+                // Badge some ao enviar APENAS se NÃO estava atribuída
+                if (
+                  selectedConversationId &&
+                  !selectedConversation?.assigned_to &&
+                  selectedConversation?.unread_count &&
+                  selectedConversation.unread_count > 0
+                ) {
+                  markAsRead.mutate(selectedConversationId);
+                }
+              }}
+            />
+          </Suspense>
+        )}
 
-      {/* Lead Panel - Lazy loaded */}
-      <AnimatePresence>
-        {selectedConversation && showLeadPanel && (
-          isMobile ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="absolute inset-0 z-50 bg-background/40 backdrop-blur-sm"
-              onClick={() => setShowLeadPanel(false)}
-              role="dialog"
-              aria-label="Detalhes do lead"
-            >
+        {/* Lead Panel - Lazy loaded */}
+        <AnimatePresence>
+          {selectedConversation &&
+            showLeadPanel &&
+            (isMobile ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="absolute inset-0 z-50 bg-background/40 backdrop-blur-sm"
+                onClick={() => setShowLeadPanel(false)}
+                role="dialog"
+                aria-label="Detalhes do lead"
+              >
+                <motion.aside
+                  initial={{ x: 360 }}
+                  animate={{ x: 0 }}
+                  exit={{ x: 360 }}
+                  transition={{ type: 'tween', duration: 0.2 }}
+                  className="absolute right-0 top-0 h-full w-[360px] max-w-[92vw] overflow-hidden border-l border-border bg-card shadow-lg"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {loadingLead ? (
+                    <LeadDetailsPanelSkeleton />
+                  ) : leadWithLabels ? (
+                    <Suspense fallback={<LeadDetailsPanelSkeleton />}>
+                      <LeadDetailsPanel
+                        lead={leadWithLabels}
+                        conversationId={selectedConversation.id}
+                        messages={messages}
+                        isFavorite={(selectedConversation as any).is_favorite}
+                        onToggleFavorite={handleToggleFavorite}
+                        onTransfer={handleTransfer}
+                        onLabelsUpdate={() => refetchLead()}
+                      />
+                    </Suspense>
+                  ) : (
+                    <LeadDetailsPanelSkeleton />
+                  )}
+                </motion.aside>
+              </motion.div>
+            ) : (
               <motion.aside
-                initial={{ x: 360 }}
-                animate={{ x: 0 }}
-                exit={{ x: 360 }}
-                transition={{ type: 'tween', duration: 0.2 }}
-                className="absolute right-0 top-0 h-full w-[360px] max-w-[92vw] border-l border-border bg-card shadow-lg overflow-hidden"
-                onClick={(e) => e.stopPropagation()}
+                initial={{ x: 24, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 24, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="w-[300px] max-w-[340px] shrink-0 overflow-hidden border-l border-border bg-card xl:w-[340px]"
               >
                 {loadingLead ? (
                   <LeadDetailsPanelSkeleton />
@@ -411,47 +484,19 @@ const Inbox = () => {
                   <LeadDetailsPanelSkeleton />
                 )}
               </motion.aside>
-            </motion.div>
-          ) : (
-            <motion.aside
-              initial={{ x: 24, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 24, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="w-[300px] xl:w-[340px] max-w-[340px] border-l border-border bg-card overflow-hidden shrink-0"
-            >
-              {loadingLead ? (
-                <LeadDetailsPanelSkeleton />
-              ) : leadWithLabels ? (
-                <Suspense fallback={<LeadDetailsPanelSkeleton />}>
-                  <LeadDetailsPanel
-                    lead={leadWithLabels}
-                    conversationId={selectedConversation.id}
-                    messages={messages}
-                    isFavorite={(selectedConversation as any).is_favorite}
-                    onToggleFavorite={handleToggleFavorite}
-                    onTransfer={handleTransfer}
-                    onLabelsUpdate={() => refetchLead()}
-                  />
-                </Suspense>
-              ) : (
-                <LeadDetailsPanelSkeleton />
-              )}
-            </motion.aside>
-          )
-        )}
-      </AnimatePresence>
+            ))}
+        </AnimatePresence>
 
-      {/* New Conversation Modal - Lazy loaded */}
-      <Suspense fallback={null}>
-        <NewConversationModal
-          open={showNewConversationModal}
-          onOpenChange={setShowNewConversationModal}
-          onConversationCreated={(conversationId) => {
-            setSelectedConversationId(conversationId);
-          }}
-        />
-      </Suspense>
+        {/* New Conversation Modal - Lazy loaded */}
+        <Suspense fallback={null}>
+          <NewConversationModal
+            open={showNewConversationModal}
+            onOpenChange={setShowNewConversationModal}
+            onConversationCreated={(conversationId) => {
+              setSelectedConversationId(conversationId);
+            }}
+          />
+        </Suspense>
       </div>
     </div>
   );

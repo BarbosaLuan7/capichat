@@ -9,28 +9,28 @@ const corsHeaders = {
 // Função centralizada para normalizar telefone para busca
 // Suporta múltiplos formatos: com/sem código do país, DDD, etc.
 interface NormalizedPhone {
-  original: string;       // Número original apenas dígitos
+  original: string; // Número original apenas dígitos
   withoutCountry: string; // Sem código 55
-  last11: string;         // Últimos 11 dígitos (DDD + 9 dígitos)
-  last10: string;         // Últimos 10 dígitos (DDD + 8 dígitos)
-  ddd: string;            // DDD extraído (2 dígitos)
+  last11: string; // Últimos 11 dígitos (DDD + 9 dígitos)
+  last10: string; // Últimos 10 dígitos (DDD + 8 dígitos)
+  ddd: string; // DDD extraído (2 dígitos)
 }
 
 function normalizePhoneForSearch(phone: string): NormalizedPhone {
   const digits = phone.replace(/\D/g, '');
-  
+
   // Remover código 55 se presente (número com 12+ dígitos começando com 55)
   let withoutCountry = digits;
   if (digits.startsWith('55') && digits.length >= 12) {
     withoutCountry = digits.substring(2);
   }
-  
+
   return {
     original: digits,
     withoutCountry,
     last11: digits.slice(-11),
     last10: digits.slice(-10),
-    ddd: withoutCountry.substring(0, 2)
+    ddd: withoutCountry.substring(0, 2),
   };
 }
 
@@ -48,15 +48,15 @@ function looksLikePhone(str: string): boolean {
 
 // Helper: Return safe error response
 function safeErrorResponse(
-  internalError: unknown, 
-  publicMessage: string, 
+  internalError: unknown,
+  publicMessage: string,
   status: number = 500
 ): Response {
   console.error('[api-lead-summary] Internal error:', internalError);
-  return new Response(
-    JSON.stringify({ success: false, error: publicMessage }),
-    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return new Response(JSON.stringify({ success: false, error: publicMessage }), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }
 
 Deno.serve(async (req) => {
@@ -81,18 +81,18 @@ Deno.serve(async (req) => {
     }
 
     const apiKey = authHeader.replace('Bearer ', '');
-    
+
     // Validate API key using database function
     const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', {
-      key_value: apiKey
+      key_value: apiKey,
     });
 
     if (apiKeyError || !apiKeyId) {
       console.error('Invalid API key');
-      return new Response(
-        JSON.stringify({ success: false, error: 'Invalid API key' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ success: false, error: 'Invalid API key' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log('[api-lead-summary] API key validated successfully');
@@ -112,17 +112,22 @@ Deno.serve(async (req) => {
 
     // Resolve lead_id from phone if needed
     let leadId = leadIdParam;
-    
+
     // Auto-detect: se lead_id parece um telefone (não é UUID), tratar como busca por telefone
     if (leadIdParam && !isValidUUID(leadIdParam) && looksLikePhone(leadIdParam)) {
-      console.log('[api-lead-summary] lead_id looks like a phone number, treating as phone search:', leadIdParam);
-      
+      console.log(
+        '[api-lead-summary] lead_id looks like a phone number, treating as phone search:',
+        leadIdParam
+      );
+
       const phone = normalizePhoneForSearch(leadIdParam);
-      
+
       const { data: leadByPhone, error: phoneError } = await supabase
         .from('leads')
         .select('id, phone')
-        .or(`phone.eq.${phone.withoutCountry},phone.eq.${phone.last11},phone.eq.${phone.last10},phone.ilike.%${phone.last10}`)
+        .or(
+          `phone.eq.${phone.withoutCountry},phone.eq.${phone.last11},phone.eq.${phone.last10},phone.ilike.%${phone.last10}`
+        )
         .limit(1)
         .maybeSingle();
 
@@ -133,43 +138,51 @@ Deno.serve(async (req) => {
 
       if (!leadByPhone) {
         return new Response(
-          JSON.stringify({ 
-            success: false, 
+          JSON.stringify({
+            success: false,
             error: 'Lead not found with this phone number',
             hint: 'You passed a phone number in lead_id parameter. Use ?phone=XXXX or a valid UUID for lead_id.',
-            searched: { input: leadIdParam, variations_tried: [phone.withoutCountry, phone.last11, phone.last10] }
+            searched: {
+              input: leadIdParam,
+              variations_tried: [phone.withoutCountry, phone.last11, phone.last10],
+            },
           }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       leadId = leadByPhone.id;
-      console.log('[api-lead-summary] Found lead by phone (auto-detected):', leadId, '| stored phone:', leadByPhone.phone);
-      
+      console.log(
+        '[api-lead-summary] Found lead by phone (auto-detected):',
+        leadId,
+        '| stored phone:',
+        leadByPhone.phone
+      );
     } else if (leadIdParam && !isValidUUID(leadIdParam)) {
       // Não é UUID válido nem parece telefone
       return new Response(
-        JSON.stringify({ 
-          success: false, 
+        JSON.stringify({
+          success: false,
           error: 'Invalid lead_id format',
-          hint: 'lead_id must be a valid UUID. For phone search, use ?phone=XXXX or pass a valid phone number.'
+          hint: 'lead_id must be a valid UUID. For phone search, use ?phone=XXXX or pass a valid phone number.',
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
-      
     } else if (phoneParam && !leadIdParam) {
       // Busca explícita por telefone
       const phone = normalizePhoneForSearch(phoneParam);
-      
+
       console.log('[api-lead-summary] Searching lead by phone:', {
         input: phoneParam,
-        normalized: phone
+        normalized: phone,
       });
-      
+
       const { data: leadByPhone, error: phoneError } = await supabase
         .from('leads')
         .select('id, phone')
-        .or(`phone.eq.${phone.withoutCountry},phone.eq.${phone.last11},phone.eq.${phone.last10},phone.ilike.%${phone.last10}`)
+        .or(
+          `phone.eq.${phone.withoutCountry},phone.eq.${phone.last11},phone.eq.${phone.last10},phone.ilike.%${phone.last10}`
+        )
         .limit(1)
         .maybeSingle();
 
@@ -180,20 +193,25 @@ Deno.serve(async (req) => {
 
       if (!leadByPhone) {
         return new Response(
-          JSON.stringify({ 
-            success: false, 
+          JSON.stringify({
+            success: false,
             error: 'Lead not found with this phone number',
             searched: {
               input: phoneParam,
-              variations_tried: [phone.withoutCountry, phone.last11, phone.last10]
-            }
+              variations_tried: [phone.withoutCountry, phone.last11, phone.last10],
+            },
           }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       leadId = leadByPhone.id;
-      console.log('[api-lead-summary] Found lead by phone:', leadId, '| stored phone:', leadByPhone.phone);
+      console.log(
+        '[api-lead-summary] Found lead by phone:',
+        leadId,
+        '| stored phone:',
+        leadByPhone.phone
+      );
     }
 
     // GET /api-lead-summary?lead_id=xxx - Get case summary
@@ -209,23 +227,23 @@ Deno.serve(async (req) => {
       }
 
       if (!lead) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'Lead not found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ success: false, error: 'Lead not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       const caseSummary = (lead.custom_fields as Record<string, unknown>)?.case_summary || null;
 
       console.log('[api-lead-summary] GET summary for lead:', leadId);
       return new Response(
-        JSON.stringify({ 
-          success: true, 
+        JSON.stringify({
+          success: true,
           data: {
             lead_id: lead.id,
             lead_name: lead.name,
-            case_summary: caseSummary
-          }
+            case_summary: caseSummary,
+          },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -255,24 +273,24 @@ Deno.serve(async (req) => {
       }
 
       if (!currentLead) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'Lead not found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ success: false, error: 'Lead not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // Merge case_summary into existing custom_fields
       const existingFields = (currentLead.custom_fields as Record<string, unknown>) || {};
       const updatedFields = {
         ...existingFields,
-        case_summary: summary
+        case_summary: summary,
       };
 
       const { data: updatedLead, error: updateError } = await supabase
         .from('leads')
         .update({
           custom_fields: updatedFields,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', leadId)
         .select('id, name, custom_fields')
@@ -288,19 +306,19 @@ Deno.serve(async (req) => {
         payload: {
           lead_id: leadId,
           case_summary: summary,
-          action: 'updated'
-        }
+          action: 'updated',
+        },
       });
 
       console.log('[api-lead-summary] PUT summary updated for lead:', leadId);
       return new Response(
-        JSON.stringify({ 
-          success: true, 
+        JSON.stringify({
+          success: true,
           data: {
             lead_id: updatedLead.id,
             lead_name: updatedLead.name,
-            case_summary: (updatedLead.custom_fields as Record<string, unknown>)?.case_summary
-          }
+            case_summary: (updatedLead.custom_fields as Record<string, unknown>)?.case_summary,
+          },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -320,10 +338,10 @@ Deno.serve(async (req) => {
       }
 
       if (!currentLead) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'Lead not found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ success: false, error: 'Lead not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // Remove case_summary from custom_fields
@@ -334,7 +352,7 @@ Deno.serve(async (req) => {
         .from('leads')
         .update({
           custom_fields: remainingFields,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', leadId)
         .select('id, name')
@@ -350,19 +368,19 @@ Deno.serve(async (req) => {
         payload: {
           lead_id: leadId,
           case_summary: null,
-          action: 'removed'
-        }
+          action: 'removed',
+        },
       });
 
       console.log('[api-lead-summary] DELETE summary removed for lead:', leadId);
       return new Response(
-        JSON.stringify({ 
-          success: true, 
+        JSON.stringify({
+          success: true,
           message: 'Case summary removed successfully',
           data: {
             lead_id: updatedLead.id,
-            lead_name: updatedLead.name
-          }
+            lead_name: updatedLead.name,
+          },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -373,7 +391,6 @@ Deno.serve(async (req) => {
       JSON.stringify({ success: false, error: 'Method not allowed. Use GET, PUT or DELETE.' }),
       { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error) {
     return safeErrorResponse(error, 'Internal server error');
   }

@@ -1,53 +1,53 @@
-import { useState, lazy, Suspense } from "react";
-import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { TenantProvider } from "@/contexts/TenantContext";
-import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { CommandBar } from "@/components/command/CommandBar";
-import ProtectedRoute from "./components/ProtectedRoute";
-import { AccountOwnerRoute } from "./components/AccountOwnerRoute";
-import MainLayout from "./components/layout/MainLayout";
-import { PageSkeleton } from "./components/layout/PageSkeleton";
-import { logger } from "@/lib/logger";
-import React from "react";
+import { useState, lazy, Suspense } from 'react';
+import { Toaster } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { TenantProvider } from '@/contexts/TenantContext';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { CommandBar } from '@/components/command/CommandBar';
+import ProtectedRoute from './components/ProtectedRoute';
+import { AccountOwnerRoute } from './components/AccountOwnerRoute';
+import MainLayout from './components/layout/MainLayout';
+import { PageSkeleton } from './components/layout/PageSkeleton';
+import { logger } from '@/lib/logger';
+import React from 'react';
 
 // Lazy load all pages for better initial bundle size
-const Auth = lazy(() => import("./pages/Auth"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const Inbox = lazy(() => import("./pages/Inbox"));
-const Funnel = lazy(() => import("./pages/Funnel"));
-const Leads = lazy(() => import("./pages/Leads"));
-const LeadDetail = lazy(() => import("./pages/LeadDetail"));
-const Tasks = lazy(() => import("./pages/Tasks"));
-const Calendar = lazy(() => import("./pages/Calendar"));
-const Automations = lazy(() => import("./pages/Automations"));
-const ChatbotBuilder = lazy(() => import("./pages/ChatbotBuilder"));
+const Auth = lazy(() => import('./pages/Auth'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Inbox = lazy(() => import('./pages/Inbox'));
+const Funnel = lazy(() => import('./pages/Funnel'));
+const Leads = lazy(() => import('./pages/Leads'));
+const LeadDetail = lazy(() => import('./pages/LeadDetail'));
+const Tasks = lazy(() => import('./pages/Tasks'));
+const Calendar = lazy(() => import('./pages/Calendar'));
+const Automations = lazy(() => import('./pages/Automations'));
+const ChatbotBuilder = lazy(() => import('./pages/ChatbotBuilder'));
 
-const Settings = lazy(() => import("./pages/Settings"));
-const UsersSettings = lazy(() => import("./pages/settings/UsersSettings"));
-const TeamsSettings = lazy(() => import("./pages/settings/TeamsSettings"));
-const LabelsSettings = lazy(() => import("./pages/settings/LabelsSettings"));
-const TemplatesSettings = lazy(() => import("./pages/settings/TemplatesSettings"));
-const WebhooksSettings = lazy(() => import("./pages/settings/WebhooksSettings"));
-const WhatsAppSettings = lazy(() => import("./pages/settings/WhatsAppSettings"));
-const ApiSettings = lazy(() => import("./pages/settings/ApiSettings"));
-const TenantsSettings = lazy(() => import("./pages/settings/TenantsSettings"));
-const MyAccount = lazy(() => import("./pages/MyAccount"));
+const Settings = lazy(() => import('./pages/Settings'));
+const UsersSettings = lazy(() => import('./pages/settings/UsersSettings'));
+const TeamsSettings = lazy(() => import('./pages/settings/TeamsSettings'));
+const LabelsSettings = lazy(() => import('./pages/settings/LabelsSettings'));
+const TemplatesSettings = lazy(() => import('./pages/settings/TemplatesSettings'));
+const WebhooksSettings = lazy(() => import('./pages/settings/WebhooksSettings'));
+const WhatsAppSettings = lazy(() => import('./pages/settings/WhatsAppSettings'));
+const ApiSettings = lazy(() => import('./pages/settings/ApiSettings'));
+const TenantsSettings = lazy(() => import('./pages/settings/TenantsSettings'));
+const MyAccount = lazy(() => import('./pages/MyAccount'));
 
-const ApiDocs = lazy(() => import("./pages/ApiDocs"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+const ApiDocs = lazy(() => import('./pages/ApiDocs'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Preload critical routes during idle time for faster navigation
 if (typeof window !== 'undefined') {
-const preloadCriticalRoutes = () => {
+  const preloadCriticalRoutes = () => {
     // Preload apenas Inbox - tela principal do time
     // Dashboard carrega sob demanda (apenas admin usa)
-    import("./pages/Inbox");
+    import('./pages/Inbox');
   };
-  
+
   if ('requestIdleCallback' in window) {
     (window as any).requestIdleCallback(preloadCriticalRoutes);
   } else {
@@ -80,24 +80,22 @@ class ErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    logger.error("React Error Boundary caught an error:", error, errorInfo);
+    logger.error('React Error Boundary caught an error:', error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-muted p-4">
-          <div className="bg-card p-6 rounded-lg shadow-lg max-w-lg w-full border border-border">
-            <h1 className="text-xl font-bold text-destructive mb-4">Algo deu errado</h1>
-            <p className="text-foreground mb-4">
-              Ocorreu um erro ao carregar a aplicação.
-            </p>
-            <pre className="bg-muted p-3 rounded text-sm overflow-auto max-h-40 text-destructive">
+        <div className="flex min-h-screen items-center justify-center bg-muted p-4">
+          <div className="w-full max-w-lg rounded-lg border border-border bg-card p-6 shadow-lg">
+            <h1 className="mb-4 text-xl font-bold text-destructive">Algo deu errado</h1>
+            <p className="mb-4 text-foreground">Ocorreu um erro ao carregar a aplicação.</p>
+            <pre className="max-h-40 overflow-auto rounded bg-muted p-3 text-sm text-destructive">
               {this.state.error?.message}
             </pre>
             <button
               onClick={() => window.location.reload()}
-              className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+              className="mt-4 rounded bg-primary px-4 py-2 text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Recarregar
             </button>
@@ -120,18 +118,15 @@ function AppContent() {
 
   return (
     <BrowserRouter>
-      <CommandBar
-        open={commandBarOpen}
-        onOpenChange={setCommandBarOpen}
-      />
+      <CommandBar open={commandBarOpen} onOpenChange={setCommandBarOpen} />
       <Suspense fallback={<PageSkeleton />}>
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/login" element={<Navigate to="/auth" replace />} />
-          
+
           {/* Rota pública - Documentação da API */}
           <Route path="/api-docs" element={<ApiDocs />} />
-          
+
           <Route
             path="/"
             element={
@@ -141,16 +136,65 @@ function AppContent() {
             }
           >
             <Route index element={<Navigate to="/inbox" replace />} />
-            
+
             {/* Rotas protegidas apenas para account owners */}
-            <Route path="dashboard" element={<AccountOwnerRoute><Dashboard /></AccountOwnerRoute>} />
-            <Route path="settings/users" element={<AccountOwnerRoute><UsersSettings /></AccountOwnerRoute>} />
-            <Route path="settings/teams" element={<AccountOwnerRoute><TeamsSettings /></AccountOwnerRoute>} />
-            <Route path="settings/webhooks" element={<AccountOwnerRoute><WebhooksSettings /></AccountOwnerRoute>} />
-            <Route path="settings/whatsapp" element={<AccountOwnerRoute><WhatsAppSettings /></AccountOwnerRoute>} />
-            <Route path="settings/api" element={<AccountOwnerRoute><ApiSettings /></AccountOwnerRoute>} />
-            <Route path="settings/tenants" element={<AccountOwnerRoute><TenantsSettings /></AccountOwnerRoute>} />
-            
+            <Route
+              path="dashboard"
+              element={
+                <AccountOwnerRoute>
+                  <Dashboard />
+                </AccountOwnerRoute>
+              }
+            />
+            <Route
+              path="settings/users"
+              element={
+                <AccountOwnerRoute>
+                  <UsersSettings />
+                </AccountOwnerRoute>
+              }
+            />
+            <Route
+              path="settings/teams"
+              element={
+                <AccountOwnerRoute>
+                  <TeamsSettings />
+                </AccountOwnerRoute>
+              }
+            />
+            <Route
+              path="settings/webhooks"
+              element={
+                <AccountOwnerRoute>
+                  <WebhooksSettings />
+                </AccountOwnerRoute>
+              }
+            />
+            <Route
+              path="settings/whatsapp"
+              element={
+                <AccountOwnerRoute>
+                  <WhatsAppSettings />
+                </AccountOwnerRoute>
+              }
+            />
+            <Route
+              path="settings/api"
+              element={
+                <AccountOwnerRoute>
+                  <ApiSettings />
+                </AccountOwnerRoute>
+              }
+            />
+            <Route
+              path="settings/tenants"
+              element={
+                <AccountOwnerRoute>
+                  <TenantsSettings />
+                </AccountOwnerRoute>
+              }
+            />
+
             {/* Rotas disponíveis para todos os usuários */}
             <Route path="inbox" element={<Inbox />} />
             <Route path="funnel" element={<Funnel />} />
@@ -164,7 +208,6 @@ function AppContent() {
             <Route path="settings/labels" element={<LabelsSettings />} />
             <Route path="settings/templates" element={<TemplatesSettings />} />
             <Route path="account" element={<MyAccount />} />
-            
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

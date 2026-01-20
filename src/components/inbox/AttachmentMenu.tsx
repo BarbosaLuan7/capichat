@@ -1,24 +1,8 @@
 import { useRef } from 'react';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
-  Paperclip,
-  Image,
-  Video,
-  FileText,
-  Mic,
-  FileIcon,
-} from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Paperclip, Image, Video, FileText, Mic, FileIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface AttachmentMenuProps {
@@ -34,20 +18,20 @@ export function AttachmentMenu({ onFileSelect, onAudioRecordStart }: AttachmentM
   const audioInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (type: 'image' | 'video' | 'audio' | 'document') => (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > MAX_FILE_SIZE) {
-        toast.error('Arquivo muito grande. Limite: 10MB');
-        e.target.value = '';
-        return;
+  const handleFileChange =
+    (type: 'image' | 'video' | 'audio' | 'document') =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        if (file.size > MAX_FILE_SIZE) {
+          toast.error('Arquivo muito grande. Limite: 10MB');
+          e.target.value = '';
+          return;
+        }
+        onFileSelect(file, type);
       }
-      onFileSelect(file, type);
-    }
-    e.target.value = '';
-  };
+      e.target.value = '';
+    };
 
   return (
     <>
@@ -89,56 +73,60 @@ export function AttachmentMenu({ onFileSelect, onAudioRecordStart }: AttachmentM
           <Tooltip>
             <TooltipTrigger asChild>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                  <Paperclip className="w-5 h-5" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <Paperclip className="h-5 w-5" />
                 </Button>
               </PopoverTrigger>
             </TooltipTrigger>
             <TooltipContent>Anexar arquivo</TooltipContent>
           </Tooltip>
-        <PopoverContent className="w-48 p-2" align="start">
-          <div className="space-y-1">
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-3 text-sm"
-              onClick={() => imageInputRef.current?.click()}
-            >
-              <Image className="w-4 h-4 text-primary" />
-              Imagem
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-3 text-sm"
-              onClick={() => videoInputRef.current?.click()}
-            >
-              <Video className="w-4 h-4 text-accent" />
-              Vídeo
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-3 text-sm"
-              onClick={onAudioRecordStart}
-            >
-              <Mic className="w-4 h-4 text-warning" />
-              Gravar Áudio
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-3 text-sm"
-              onClick={() => audioInputRef.current?.click()}
-            >
-              <FileIcon className="w-4 h-4 text-warning" />
-              Enviar Áudio
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-3 text-sm"
-              onClick={() => documentInputRef.current?.click()}
-            >
-              <FileText className="w-4 h-4 text-destructive" />
-              Documento
-            </Button>
-          </div>
+          <PopoverContent className="w-48 p-2" align="start">
+            <div className="space-y-1">
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-sm"
+                onClick={() => imageInputRef.current?.click()}
+              >
+                <Image className="h-4 w-4 text-primary" />
+                Imagem
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-sm"
+                onClick={() => videoInputRef.current?.click()}
+              >
+                <Video className="h-4 w-4 text-accent" />
+                Vídeo
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-sm"
+                onClick={onAudioRecordStart}
+              >
+                <Mic className="h-4 w-4 text-warning" />
+                Gravar Áudio
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-sm"
+                onClick={() => audioInputRef.current?.click()}
+              >
+                <FileIcon className="h-4 w-4 text-warning" />
+                Enviar Áudio
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-sm"
+                onClick={() => documentInputRef.current?.click()}
+              >
+                <FileText className="h-4 w-4 text-destructive" />
+                Documento
+              </Button>
+            </div>
           </PopoverContent>
         </Popover>
       </TooltipProvider>

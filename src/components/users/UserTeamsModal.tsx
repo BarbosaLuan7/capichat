@@ -27,11 +27,7 @@ interface UserTeamsModalProps {
   user: ProfileWithRelations | null;
 }
 
-export const UserTeamsModal = ({
-  open,
-  onOpenChange,
-  user,
-}: UserTeamsModalProps) => {
+export const UserTeamsModal = ({ open, onOpenChange, user }: UserTeamsModalProps) => {
   const { data: teams } = useTeams();
   const updateUserTeams = useUpdateUserTeams();
 
@@ -41,10 +37,10 @@ export const UserTeamsModal = ({
   useEffect(() => {
     if (open && teams && user) {
       const currentTeams = user.team_memberships || [];
-      
+
       setSelections(
-        teams.map(team => {
-          const membership = currentTeams.find(tm => tm.team_id === team.id);
+        teams.map((team) => {
+          const membership = currentTeams.find((tm) => tm.team_id === team.id);
           return {
             teamId: team.id,
             isUser: !!membership,
@@ -56,27 +52,31 @@ export const UserTeamsModal = ({
   }, [open, teams, user]);
 
   const toggleUser = (teamId: string) => {
-    setSelections(prev => prev.map(s => {
-      if (s.teamId === teamId) {
-        // Se desmarcar usuário, também desmarca supervisor
-        const newIsUser = !s.isUser;
-        return {
-          ...s,
-          isUser: newIsUser,
-          isSupervisor: newIsUser ? s.isSupervisor : false,
-        };
-      }
-      return s;
-    }));
+    setSelections((prev) =>
+      prev.map((s) => {
+        if (s.teamId === teamId) {
+          // Se desmarcar usuário, também desmarca supervisor
+          const newIsUser = !s.isUser;
+          return {
+            ...s,
+            isUser: newIsUser,
+            isSupervisor: newIsUser ? s.isSupervisor : false,
+          };
+        }
+        return s;
+      })
+    );
   };
 
   const toggleSupervisor = (teamId: string) => {
-    setSelections(prev => prev.map(s => {
-      if (s.teamId === teamId && s.isUser) {
-        return { ...s, isSupervisor: !s.isSupervisor };
-      }
-      return s;
-    }));
+    setSelections((prev) =>
+      prev.map((s) => {
+        if (s.teamId === teamId && s.isUser) {
+          return { ...s, isSupervisor: !s.isSupervisor };
+        }
+        return s;
+      })
+    );
   };
 
   const handleSave = async () => {
@@ -84,8 +84,8 @@ export const UserTeamsModal = ({
 
     try {
       const teamsToSave = selections
-        .filter(s => s.isUser)
-        .map(s => ({
+        .filter((s) => s.isUser)
+        .map((s) => ({
           teamId: s.teamId,
           isSupervisor: s.isSupervisor,
         }));
@@ -103,36 +103,38 @@ export const UserTeamsModal = ({
   };
 
   const getTeamName = (teamId: string) => {
-    return teams?.find(t => t.id === teamId)?.name || '';
+    return teams?.find((t) => t.id === teamId)?.name || '';
   };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg p-0 flex flex-col">
+      <SheetContent className="flex w-full flex-col p-0 sm:max-w-lg">
         <SheetHeader className="p-6 pb-0">
           <SheetTitle>Equipes do usuário</SheetTitle>
-          <SheetDescription>Defina em quais equipes o usuário faz parte e se é supervisor</SheetDescription>
+          <SheetDescription>
+            Defina em quais equipes o usuário faz parte e se é supervisor
+          </SheetDescription>
         </SheetHeader>
 
         <ScrollArea className="flex-1">
-          <div className="p-6 space-y-6">
+          <div className="space-y-6 p-6">
             {/* Seção Usuário */}
             <div>
-              <h3 className="font-medium mb-1">Usuário</h3>
-              <p className="text-xs text-muted-foreground mb-4">
+              <h3 className="mb-1 font-medium">Usuário</h3>
+              <p className="mb-4 text-xs text-muted-foreground">
                 Defina em quais equipes este usuário poderá atender aos clientes
               </p>
 
               <div className="space-y-2">
-                {teams?.map(team => {
-                  const selection = selections.find(s => s.teamId === team.id);
+                {teams?.map((team) => {
+                  const selection = selections.find((s) => s.teamId === team.id);
                   return (
-                    <div 
+                    <div
                       key={team.id}
-                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                      className="flex items-center justify-between rounded-lg bg-muted/50 p-3"
                     >
                       <span className="text-sm font-medium">{team.name}</span>
-                      <Switch 
+                      <Switch
                         checked={selection?.isUser || false}
                         onCheckedChange={() => toggleUser(team.id)}
                       />
@@ -146,25 +148,26 @@ export const UserTeamsModal = ({
 
             {/* Seção Supervisor */}
             <div>
-              <h3 className="font-medium mb-1">Supervisor</h3>
-              <p className="text-xs text-muted-foreground mb-4">
-                Defina em quais equipes este usuário poderá ver todos os atendimentos e moderar as mensagens
+              <h3 className="mb-1 font-medium">Supervisor</h3>
+              <p className="mb-4 text-xs text-muted-foreground">
+                Defina em quais equipes este usuário poderá ver todos os atendimentos e moderar as
+                mensagens
               </p>
 
               <div className="space-y-2">
-                {teams?.map(team => {
-                  const selection = selections.find(s => s.teamId === team.id);
+                {teams?.map((team) => {
+                  const selection = selections.find((s) => s.teamId === team.id);
                   const isDisabled = !selection?.isUser;
-                  
+
                   return (
-                    <div 
+                    <div
                       key={team.id}
-                      className={`flex items-center justify-between p-3 rounded-lg ${
+                      className={`flex items-center justify-between rounded-lg p-3 ${
                         isDisabled ? 'bg-muted/30 opacity-50' : 'bg-muted/50'
                       }`}
                     >
                       <span className="text-sm font-medium">{team.name}</span>
-                      <Switch 
+                      <Switch
                         checked={selection?.isSupervisor || false}
                         onCheckedChange={() => toggleSupervisor(team.id)}
                         disabled={isDisabled}
@@ -184,20 +187,15 @@ export const UserTeamsModal = ({
               Id: <span className="font-mono">{user?.id}</span>
             </p>
             <div className="flex gap-2">
-              <Button 
+              <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 disabled={updateUserTeams.isPending}
               >
                 Cancelar
               </Button>
-              <Button 
-                onClick={handleSave}
-                disabled={updateUserTeams.isPending}
-              >
-                {updateUserTeams.isPending && (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                )}
+              <Button onClick={handleSave} disabled={updateUserTeams.isPending}>
+                {updateUserTeams.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Salvar
               </Button>
             </div>

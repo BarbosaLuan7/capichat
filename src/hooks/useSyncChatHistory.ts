@@ -15,7 +15,7 @@ export function useSyncChatHistory() {
   return useMutation({
     mutationFn: async (conversationId: string): Promise<SyncResult> => {
       logger.log('[useSyncChatHistory] Sincronizando histórico para:', conversationId);
-      
+
       const { data, error } = await supabase.functions.invoke('sync-chat-history', {
         body: { conversation_id: conversationId, limit: 100 },
       });

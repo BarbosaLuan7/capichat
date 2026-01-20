@@ -2,7 +2,13 @@ import { useEffect } from 'react';
 import { Check, CheckCircle2, Circle, FileCheck, ListChecks, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -24,7 +30,12 @@ interface DocumentChecklistProps {
   onUpdate?: () => void;
 }
 
-export function DocumentChecklist({ leadId, customFields, labels = [], onUpdate }: DocumentChecklistProps) {
+export function DocumentChecklist({
+  leadId,
+  customFields,
+  labels = [],
+  onUpdate,
+}: DocumentChecklistProps) {
   const {
     benefitType,
     setBenefitType,
@@ -55,23 +66,27 @@ export function DocumentChecklist({ leadId, customFields, labels = [], onUpdate 
   const progress = getProgress();
 
   // Agrupa documentos por categoria
-  const groupedDocuments = currentBenefit?.documents.reduce((acc, doc) => {
-    if (!acc[doc.category]) {
-      acc[doc.category] = [];
-    }
-    acc[doc.category].push(doc);
-    return acc;
-  }, {} as Record<string, DocumentItem[]>) || {};
+  const groupedDocuments =
+    currentBenefit?.documents.reduce(
+      (acc, doc) => {
+        if (!acc[doc.category]) {
+          acc[doc.category] = [];
+        }
+        acc[doc.category].push(doc);
+        return acc;
+      },
+      {} as Record<string, DocumentItem[]>
+    ) || {};
 
   return (
     <div className="space-y-4">
       {/* Header com seletor de benefício */}
       <div className="space-y-2">
-        <h4 className="font-medium text-xs text-muted-foreground uppercase flex items-center gap-2">
-          <FileCheck className="w-3 h-3" />
+        <h4 className="flex items-center gap-2 text-xs font-medium uppercase text-muted-foreground">
+          <FileCheck className="h-3 w-3" />
           Checklist de Documentos
         </h4>
-        
+
         <Select
           value={benefitType || ''}
           onValueChange={(value) => setBenefitType(value as BenefitType)}
@@ -100,7 +115,7 @@ export function DocumentChecklist({ leadId, customFields, labels = [], onUpdate 
               <span className="text-muted-foreground">
                 {progress.checked} de {progress.total} documentos
               </span>
-              <Badge 
+              <Badge
                 variant={progress.percentage === 100 ? 'default' : 'secondary'}
                 className={cn(
                   'text-xs',
@@ -110,12 +125,9 @@ export function DocumentChecklist({ leadId, customFields, labels = [], onUpdate 
                 {progress.percentage}%
               </Badge>
             </div>
-            <Progress 
-              value={progress.percentage} 
-              className={cn(
-                'h-2',
-                progress.percentage === 100 && '[&>div]:bg-success'
-              )}
+            <Progress
+              value={progress.percentage}
+              className={cn('h-2', progress.percentage === 100 && '[&>div]:bg-success')}
             />
           </div>
 
@@ -129,7 +141,7 @@ export function DocumentChecklist({ leadId, customFields, labels = [], onUpdate 
               disabled={isSaving || progress.checked === progress.total}
               aria-label="Marcar todos os documentos como entregues"
             >
-              <ListChecks className="w-3 h-3 mr-1" />
+              <ListChecks className="mr-1 h-3 w-3" />
               Marcar todos
             </Button>
             <Button
@@ -140,7 +152,7 @@ export function DocumentChecklist({ leadId, customFields, labels = [], onUpdate 
               disabled={isSaving || progress.checked === 0}
               aria-label="Limpar todos os documentos marcados"
             >
-              <Trash2 className="w-3 h-3 mr-1" />
+              <Trash2 className="mr-1 h-3 w-3" />
               Limpar
             </Button>
           </div>
@@ -154,7 +166,7 @@ export function DocumentChecklist({ leadId, customFields, labels = [], onUpdate 
                   <span>{categoryLabels[category as keyof typeof categoryLabels]}</span>
                 </div>
                 <div className="space-y-1">
-                {docs.map((doc) => {
+                  {docs.map((doc) => {
                     const isChecked = isDocumentChecked(doc.id);
                     const checkboxId = `doc-${doc.id}`;
                     return (
@@ -162,10 +174,10 @@ export function DocumentChecklist({ leadId, customFields, labels = [], onUpdate 
                         key={doc.id}
                         htmlFor={checkboxId}
                         className={cn(
-                          'flex items-start gap-2 p-2 rounded-md transition-colors cursor-pointer',
-                          isChecked 
-                            ? 'bg-success/10 border border-success/20' 
-                            : 'bg-muted/50 hover:bg-muted border border-transparent'
+                          'flex cursor-pointer items-start gap-2 rounded-md p-2 transition-colors',
+                          isChecked
+                            ? 'border border-success/20 bg-success/10'
+                            : 'border border-transparent bg-muted/50 hover:bg-muted'
                         )}
                       >
                         <Checkbox
@@ -177,28 +189,33 @@ export function DocumentChecklist({ leadId, customFields, labels = [], onUpdate 
                             isChecked && 'border-success data-[state=checked]:bg-success'
                           )}
                         />
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <span className={cn(
-                              'text-sm',
-                              isChecked && 'line-through text-muted-foreground'
-                            )}>
+                            <span
+                              className={cn(
+                                'text-sm',
+                                isChecked && 'text-muted-foreground line-through'
+                              )}
+                            >
                               {doc.name}
                             </span>
                             {doc.required && (
-                              <Badge variant="outline" className="text-2xs px-1 py-0 h-4">
+                              <Badge variant="outline" className="text-2xs h-4 px-1 py-0">
                                 Obrigatório
                               </Badge>
                             )}
                           </div>
                           {doc.description && (
-                            <p className="text-xs text-muted-foreground mt-0.5">
+                            <p className="mt-0.5 text-xs text-muted-foreground">
                               {doc.description}
                             </p>
                           )}
                         </div>
                         {isChecked && (
-                          <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" aria-hidden="true" />
+                          <CheckCircle2
+                            className="h-4 w-4 flex-shrink-0 text-success"
+                            aria-hidden="true"
+                          />
                         )}
                       </label>
                     );
@@ -210,15 +227,15 @@ export function DocumentChecklist({ leadId, customFields, labels = [], onUpdate 
 
           {/* Status de salvamento */}
           {(isSaving || pendingSave) && (
-            <div className="text-xs text-muted-foreground text-center animate-pulse flex items-center justify-center gap-1.5">
+            <div className="flex animate-pulse items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
               {isSaving ? (
                 <>
-                  <Check className="w-3 h-3" />
+                  <Check className="h-3 w-3" />
                   Salvando...
                 </>
               ) : (
                 <>
-                  <Circle className="w-3 h-3" />
+                  <Circle className="h-3 w-3" />
                   Alterações pendentes...
                 </>
               )}
@@ -229,9 +246,11 @@ export function DocumentChecklist({ leadId, customFields, labels = [], onUpdate 
 
       {/* Estado vazio */}
       {!benefitType && (
-        <div className="text-center py-6 text-muted-foreground">
-          <FileCheck className="w-8 h-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">Selecione o tipo de benefício para ver a lista de documentos necessários</p>
+        <div className="py-6 text-center text-muted-foreground">
+          <FileCheck className="mx-auto mb-2 h-8 w-8 opacity-50" />
+          <p className="text-sm">
+            Selecione o tipo de benefício para ver a lista de documentos necessários
+          </p>
         </div>
       )}
     </div>

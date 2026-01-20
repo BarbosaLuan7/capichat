@@ -9,11 +9,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -119,13 +115,13 @@ export function TemplatePreview({
             disabled={disabled}
             className="text-muted-foreground hover:text-foreground"
           >
-            <Zap className="w-5 h-5" />
+            <Zap className="h-5 w-5" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-96 p-0" align="start" side="top">
-          <div className="p-3 border-b border-border">
+          <div className="border-b border-border p-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Buscar template..."
                 value={search}
@@ -137,43 +133,41 @@ export function TemplatePreview({
 
           <ScrollArea className="max-h-80">
             {isLoading ? (
-              <div className="p-4 text-center text-muted-foreground">
-                Carregando...
-              </div>
+              <div className="p-4 text-center text-muted-foreground">Carregando...</div>
             ) : filteredTemplates.length === 0 ? (
               <div className="p-4 text-center text-muted-foreground">
                 Nenhum template encontrado
               </div>
             ) : (
-              <div className="p-2 space-y-1">
+              <div className="space-y-1 p-2">
                 {filteredTemplates.map((template) => (
                   <div
                     key={template.id}
-                    className="p-3 rounded-lg hover:bg-muted/50 transition-colors group"
+                    className="group rounded-lg p-3 transition-colors hover:bg-muted/50"
                   >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium text-sm text-foreground">
-                        {template.name}
-                      </span>
+                    <div className="mb-1 flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">{template.name}</span>
                       <Badge variant="outline" className="text-xs">
                         /{template.shortcut}
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                    <p className="mb-2 line-clamp-2 text-xs text-muted-foreground">
                       {template.content}
                     </p>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
                       <Button
                         variant="outline"
                         size="sm"
                         className="flex-1 text-xs"
-                        onClick={() => handleSelectTemplate({
-                          name: template.name,
-                          content: template.content,
-                          shortcut: template.shortcut,
-                        })}
+                        onClick={() =>
+                          handleSelectTemplate({
+                            name: template.name,
+                            content: template.content,
+                            shortcut: template.shortcut,
+                          })
+                        }
                       >
-                        <Eye className="w-3 h-3 mr-1" />
+                        <Eye className="mr-1 h-3 w-3" />
                         Visualizar
                       </Button>
                       <Button
@@ -182,7 +176,7 @@ export function TemplatePreview({
                         className="flex-1 text-xs"
                         onClick={() => handleSendDirect(template.content)}
                       >
-                        <Send className="w-3 h-3 mr-1" />
+                        <Send className="mr-1 h-3 w-3" />
                         Enviar
                       </Button>
                     </div>
@@ -193,7 +187,7 @@ export function TemplatePreview({
           </ScrollArea>
 
           <Separator />
-          <div className="p-2 text-xs text-muted-foreground text-center">
+          <div className="p-2 text-center text-xs text-muted-foreground">
             Clique em "Visualizar" para ver o preview com dados do lead
           </div>
         </PopoverContent>
@@ -204,7 +198,7 @@ export function TemplatePreview({
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5" />
+              <MessageSquare className="h-5 w-5" />
               Preview da Mensagem
             </DialogTitle>
             <DialogDescription>
@@ -219,58 +213,53 @@ export function TemplatePreview({
           <div className="py-4">
             {/* Lead info */}
             {leadName && (
-              <div className="flex flex-wrap gap-2 mb-4 text-sm">
-                <Badge variant="secondary">
-                  👤 {leadName}
-                </Badge>
-                {leadPhone && (
-                  <Badge variant="secondary">
-                    📱 {leadPhone}
-                  </Badge>
-                )}
-                {leadBenefitType && (
-                  <Badge variant="secondary">
-                    📋 {leadBenefitType}
-                  </Badge>
-                )}
+              <div className="mb-4 flex flex-wrap gap-2 text-sm">
+                <Badge variant="secondary">👤 {leadName}</Badge>
+                {leadPhone && <Badge variant="secondary">📱 {leadPhone}</Badge>}
+                {leadBenefitType && <Badge variant="secondary">📋 {leadBenefitType}</Badge>}
               </div>
             )}
 
             {/* Message preview */}
             <div className="relative">
-              <div className="bg-primary/10 rounded-lg p-4 border border-primary/20">
+              <div className="rounded-lg border border-primary/20 bg-primary/10 p-4">
                 <div className="absolute -top-2 left-4 bg-background px-2 text-xs text-muted-foreground">
                   Mensagem
                 </div>
-                <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                  {previewContent}
-                </p>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">{previewContent}</p>
               </div>
             </div>
 
             {/* Variables legend */}
-            <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-              <p className="text-xs font-medium text-muted-foreground mb-2">
+            <div className="mt-4 rounded-lg bg-muted/50 p-3">
+              <p className="mb-2 text-xs font-medium text-muted-foreground">
                 Variáveis substituídas:
               </p>
               <div className="flex flex-wrap gap-2 text-xs">
-                <span className="text-success">{'{{nome}}'} → {leadName || '[não informado]'}</span>
-                {leadPhone && <span className="text-success">{'{{telefone}}'} → {leadPhone}</span>}
-                {agentName && <span className="text-success">{'{{atendente}}'} → {agentName}</span>}
+                <span className="text-success">
+                  {'{{nome}}'} → {leadName || '[não informado]'}
+                </span>
+                {leadPhone && (
+                  <span className="text-success">
+                    {'{{telefone}}'} → {leadPhone}
+                  </span>
+                )}
+                {agentName && (
+                  <span className="text-success">
+                    {'{{atendente}}'} → {agentName}
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setPreviewOpen(false)}
-            >
-              <X className="w-4 h-4 mr-2" />
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button variant="outline" onClick={() => setPreviewOpen(false)}>
+              <X className="mr-2 h-4 w-4" />
               Cancelar
             </Button>
             <Button onClick={handleSend}>
-              <Send className="w-4 h-4 mr-2" />
+              <Send className="mr-2 h-4 w-4" />
               Enviar Mensagem
             </Button>
           </DialogFooter>

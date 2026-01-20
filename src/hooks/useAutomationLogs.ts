@@ -53,12 +53,14 @@ export function useRecentAutomationLogs(limit = 20) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('automation_logs')
-        .select(`
+        .select(
+          `
           *,
           automations:automation_id (
             name
           )
-        `)
+        `
+        )
         .order('created_at', { ascending: false })
         .limit(limit);
 
@@ -95,9 +97,9 @@ export function useAutomationStats() {
 
       const countByStatus = (data: { status: string }[]) => ({
         total: data.length,
-        success: data.filter(d => d.status === 'success').length,
-        failed: data.filter(d => d.status === 'failed').length,
-        skipped: data.filter(d => d.status === 'skipped').length,
+        success: data.filter((d) => d.status === 'success').length,
+        failed: data.filter((d) => d.status === 'failed').length,
+        skipped: data.filter((d) => d.status === 'skipped').length,
       });
 
       return {

@@ -44,8 +44,8 @@ export function ImageLightbox({ src, alt = 'Imagem', children }: ImageLightboxPr
 
   return (
     <>
-      <div 
-        className="cursor-pointer hover:opacity-90 transition-opacity focusable rounded-lg"
+      <div
+        className="focusable cursor-pointer rounded-lg transition-opacity hover:opacity-90"
         onClick={() => setOpen(true)}
         onKeyDown={handleKeyDown}
         role="button"
@@ -55,34 +55,46 @@ export function ImageLightbox({ src, alt = 'Imagem', children }: ImageLightboxPr
         {children}
       </div>
 
-      <Dialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if (!isOpen) setZoom(1); }}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-black/95 border-none overflow-hidden">
+      <Dialog
+        open={open}
+        onOpenChange={(isOpen) => {
+          setOpen(isOpen);
+          if (!isOpen) setZoom(1);
+        }}
+      >
+        <DialogContent className="max-h-[95vh] max-w-[95vw] overflow-hidden border-none bg-black/95 p-0">
           <VisuallyHidden>
             <DialogTitle>Visualização de imagem</DialogTitle>
           </VisuallyHidden>
-          
-          <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-3 bg-gradient-to-b from-black/60 to-transparent" role="toolbar" aria-label="Controles da imagem">
+
+          <div
+            className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between bg-gradient-to-b from-black/60 to-transparent p-3"
+            role="toolbar"
+            aria-label="Controles da imagem"
+          >
             <div className="flex items-center gap-2" role="group" aria-label="Controles de zoom">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-white hover:bg-white/20 focusable"
+                className="focusable h-8 w-8 text-white hover:bg-white/20"
                 onClick={handleZoomOut}
                 disabled={zoom <= 0.5}
                 aria-label="Diminuir zoom"
               >
-                <ZoomOut className="w-4 h-4" aria-hidden="true" />
+                <ZoomOut className="h-4 w-4" aria-hidden="true" />
               </Button>
-              <span className="text-white text-sm min-w-[3rem] text-center" aria-live="polite">{Math.round(zoom * 100)}%</span>
+              <span className="min-w-[3rem] text-center text-sm text-white" aria-live="polite">
+                {Math.round(zoom * 100)}%
+              </span>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-white hover:bg-white/20 focusable"
+                className="focusable h-8 w-8 text-white hover:bg-white/20"
                 onClick={handleZoomIn}
                 disabled={zoom >= 3}
                 aria-label="Aumentar zoom"
               >
-                <ZoomIn className="w-4 h-4" aria-hidden="true" />
+                <ZoomIn className="h-4 w-4" aria-hidden="true" />
               </Button>
             </div>
 
@@ -90,35 +102,35 @@ export function ImageLightbox({ src, alt = 'Imagem', children }: ImageLightboxPr
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-white hover:bg-white/20 focusable"
+                className="focusable h-8 w-8 text-white hover:bg-white/20"
                 onClick={handleDownload}
                 aria-label="Baixar imagem"
               >
-                <Download className="w-4 h-4" aria-hidden="true" />
+                <Download className="h-4 w-4" aria-hidden="true" />
               </Button>
               <DialogClose asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-white hover:bg-white/20 focusable"
+                  className="focusable h-8 w-8 text-white hover:bg-white/20"
                   aria-label="Fechar visualização"
                 >
-                  <X className="w-5 h-5" aria-hidden="true" />
+                  <X className="h-5 w-5" aria-hidden="true" />
                 </Button>
               </DialogClose>
             </div>
           </div>
 
-          <div 
-            className="flex items-center justify-center w-full h-[90vh] overflow-auto"
+          <div
+            className="flex h-[90vh] w-full items-center justify-center overflow-auto"
             onClick={() => setOpen(false)}
           >
             <img
               src={src}
               alt={alt}
               className={cn(
-                "max-w-full max-h-full object-contain transition-transform duration-200",
-                zoom !== 1 && "cursor-grab"
+                'max-h-full max-w-full object-contain transition-transform duration-200',
+                zoom !== 1 && 'cursor-grab'
               )}
               style={{ transform: `scale(${zoom})` }}
               onClick={(e) => e.stopPropagation()}

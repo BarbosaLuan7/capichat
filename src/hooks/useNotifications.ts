@@ -71,21 +71,21 @@ export function useMarkNotificationRead() {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['notifications'] });
       await queryClient.cancelQueries({ queryKey: ['notifications', 'unread'] });
-      
+
       // Snapshot previous values
       const previousNotifications = queryClient.getQueryData<Notification[]>(['notifications']);
       const previousUnreadCount = queryClient.getQueryData<number>(['notifications', 'unread']);
-      
+
       // Optimistically update notifications list
-      queryClient.setQueryData<Notification[]>(['notifications'], (old) => 
-        old?.map(n => n.id === notificationId ? { ...n, read: true } : n)
+      queryClient.setQueryData<Notification[]>(['notifications'], (old) =>
+        old?.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
       );
-      
+
       // Optimistically decrement unread count
-      queryClient.setQueryData<number>(['notifications', 'unread'], (old) => 
+      queryClient.setQueryData<number>(['notifications', 'unread'], (old) =>
         Math.max(0, (old || 1) - 1)
       );
-      
+
       return { previousNotifications, previousUnreadCount };
     },
     onError: (_, __, context) => {

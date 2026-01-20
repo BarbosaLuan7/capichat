@@ -16,7 +16,10 @@ interface MessageDetailsPopoverProps {
 }
 
 // Source configuration with icons and colors
-const SOURCE_CONFIG: Record<string, { label: string; icon: React.ElementType; colorClass: string }> = {
+const SOURCE_CONFIG: Record<
+  string,
+  { label: string; icon: React.ElementType; colorClass: string }
+> = {
   crm: {
     label: 'CRM',
     icon: Monitor,
@@ -54,44 +57,42 @@ const STATUS_LABELS: Record<string, string> = {
   failed: 'Falhou',
 };
 
-export function MessageDetailsPopover({ 
-  source, 
-  status, 
-  createdAt, 
-  isAgent 
+export function MessageDetailsPopover({
+  source,
+  status,
+  createdAt,
+  isAgent,
 }: MessageDetailsPopoverProps) {
   const sourceKey = source || 'unknown';
   const config = SOURCE_CONFIG[sourceKey] || SOURCE_CONFIG.unknown;
   const SourceIcon = config.icon;
-  
+
   const formattedDate = format(new Date(createdAt), 'dd/MM/yyyy', { locale: ptBR });
   const formattedTime = format(new Date(createdAt), 'HH:mm:ss', { locale: ptBR });
 
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button 
+        <button
           className={cn(
-            "p-1 rounded-full transition-colors",
-            isAgent 
-              ? "text-primary-foreground/50 hover:text-primary-foreground hover:bg-primary-foreground/10" 
-              : "text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted"
+            'rounded-full p-1 transition-colors',
+            isAgent
+              ? 'text-primary-foreground/50 hover:bg-primary-foreground/10 hover:text-primary-foreground'
+              : 'text-muted-foreground/50 hover:bg-muted hover:text-muted-foreground'
           )}
           aria-label="Detalhes da mensagem"
         >
-          <MoreVertical className="w-3.5 h-3.5" />
+          <MoreVertical className="h-3.5 w-3.5" />
         </button>
       </PopoverTrigger>
-      <PopoverContent 
-        className="w-64 p-3" 
-        side={isAgent ? "left" : "right"}
-        align="start"
-      >
+      <PopoverContent className="w-64 p-3" side={isAgent ? 'left' : 'right'} align="start">
         {/* Header */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="mb-3 flex items-center justify-between">
           <h4 className="text-sm font-medium text-foreground">Detalhes</h4>
-          <Badge 
-            variant={status === 'read' ? 'success' : status === 'failed' ? 'destructive' : 'secondary'}
+          <Badge
+            variant={
+              status === 'read' ? 'success' : status === 'failed' ? 'destructive' : 'secondary'
+            }
             className="text-xs"
           >
             {STATUS_LABELS[status] || status}
@@ -100,7 +101,7 @@ export function MessageDetailsPopover({
 
         {/* Timestamp */}
         <div className="mb-3">
-          <span className="text-xs text-muted-foreground block mb-1">Criada em</span>
+          <span className="mb-1 block text-xs text-muted-foreground">Criada em</span>
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">{formattedDate}</span>
             <span className="text-sm text-muted-foreground">{formattedTime}</span>
@@ -110,10 +111,10 @@ export function MessageDetailsPopover({
         {/* Origin - only show for outbound messages (isAgent) */}
         {isAgent && (
           <div>
-            <span className="text-xs text-muted-foreground block mb-1.5">Origem</span>
+            <span className="mb-1.5 block text-xs text-muted-foreground">Origem</span>
             <div className="flex items-center gap-2">
-              <span className={cn("w-2 h-2 rounded-full", config.colorClass)} />
-              <SourceIcon className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className={cn('h-2 w-2 rounded-full', config.colorClass)} />
+              <SourceIcon className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-sm">{config.label}</span>
             </div>
           </div>

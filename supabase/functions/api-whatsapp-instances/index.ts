@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,10 +26,10 @@ serve(async (req) => {
   }
 
   if (req.method !== 'GET') {
-    return new Response(
-      JSON.stringify({ erro: 'Método não permitido' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ erro: 'Método não permitido' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   try {
@@ -40,21 +40,23 @@ serve(async (req) => {
     // Validate API key from Authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ erro: 'Header de autorização ausente ou inválido' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ erro: 'Header de autorização ausente ou inválido' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const apiKey = authHeader.replace('Bearer ', '');
-    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', { key_value: apiKey });
+    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', {
+      key_value: apiKey,
+    });
 
     if (apiKeyError || !apiKeyId) {
       console.error('[api-whatsapp-instances] API key inválida:', apiKeyError);
-      return new Response(
-        JSON.stringify({ erro: 'API key inválida ou inativa' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ erro: 'API key inválida ou inativa' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Parse query parameters
@@ -74,10 +76,10 @@ serve(async (req) => {
         .single();
 
       if (error) {
-        return new Response(
-          JSON.stringify({ erro: 'Canal não encontrado' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ erro: 'Canal não encontrado' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       return new Response(
@@ -112,13 +114,13 @@ serve(async (req) => {
 
     if (queryError) {
       console.error('[api-whatsapp-instances] Erro ao buscar instâncias:', queryError);
-      return new Response(
-        JSON.stringify({ erro: 'Erro ao buscar canais WhatsApp' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ erro: 'Erro ao buscar canais WhatsApp' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const dados = (instances || []).map(inst => ({
+    const dados = (instances || []).map((inst) => ({
       id: inst.id,
       nome: inst.name,
       telefone: formatTelefone(inst.phone_number),
@@ -137,12 +139,11 @@ serve(async (req) => {
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error: unknown) {
     console.error('[api-whatsapp-instances] Erro:', error);
-    return new Response(
-      JSON.stringify({ erro: 'Erro interno do servidor' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ erro: 'Erro interno do servidor' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

@@ -6,17 +6,17 @@ const corsHeaders = {
 };
 
 const tipoMap: Record<string, string> = {
-  'text': 'texto',
-  'image': 'imagem',
-  'audio': 'audio',
-  'video': 'video',
-  'document': 'documento'
+  text: 'texto',
+  image: 'imagem',
+  audio: 'audio',
+  video: 'video',
+  document: 'documento',
 };
 
 const statusMap: Record<string, string> = {
-  'sent': 'enviada',
-  'delivered': 'entregue',
-  'read': 'lida'
+  sent: 'enviada',
+  delivered: 'entregue',
+  read: 'lida',
 };
 
 function formatMensagem(msg: any) {
@@ -32,7 +32,7 @@ function formatMensagem(msg: any) {
     media_url: msg.media_url,
     transcricao: msg.transcription,
     externa_id: msg.external_id,
-    enviada_em: msg.created_at
+    enviada_em: msg.created_at,
   };
 }
 
@@ -56,13 +56,15 @@ Deno.serve(async (req) => {
     }
 
     const apiKey = authHeader.replace('Bearer ', '');
-    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', { key_value: apiKey });
+    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', {
+      key_value: apiKey,
+    });
 
     if (apiKeyError || !apiKeyId) {
-      return new Response(
-        JSON.stringify({ sucesso: false, erro: 'API key inválida' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: false, erro: 'API key inválida' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const url = new URL(req.url);
@@ -70,7 +72,9 @@ Deno.serve(async (req) => {
     const action = url.searchParams.get('action');
     const conversaId = url.searchParams.get('conversa_id');
     const page = parseInt(url.searchParams.get('pagina') || url.searchParams.get('page') || '1');
-    const pageSize = parseInt(url.searchParams.get('por_pagina') || url.searchParams.get('page_size') || '50');
+    const pageSize = parseInt(
+      url.searchParams.get('por_pagina') || url.searchParams.get('page_size') || '50'
+    );
 
     // GET - Get message(s)
     if (req.method === 'GET') {
@@ -83,17 +87,17 @@ Deno.serve(async (req) => {
           .single();
 
         if (error) {
-          return new Response(
-            JSON.stringify({ sucesso: false, erro: 'Mensagem não encontrada' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ sucesso: false, erro: 'Mensagem não encontrada' }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
         return new Response(
           JSON.stringify({
             id: data.id,
             status: statusMap[data.status] || data.status,
-            atualizado_em: data.created_at
+            atualizado_em: data.created_at,
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -101,23 +105,18 @@ Deno.serve(async (req) => {
 
       // GET /api-mensagens?id=xxx
       if (id) {
-        const { data, error } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('id', id)
-          .single();
+        const { data, error } = await supabase.from('messages').select('*').eq('id', id).single();
 
         if (error) {
-          return new Response(
-            JSON.stringify({ sucesso: false, erro: 'Mensagem não encontrada' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ sucesso: false, erro: 'Mensagem não encontrada' }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
-        return new Response(
-          JSON.stringify(formatMensagem(data)),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify(formatMensagem(data)), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // GET /api-mensagens?conversa_id=xxx - List messages in conversation
@@ -146,8 +145,8 @@ Deno.serve(async (req) => {
               pagina: page,
               por_pagina: pageSize,
               total: count || 0,
-              total_paginas: Math.ceil((count || 0) / pageSize)
-            }
+              total_paginas: Math.ceil((count || 0) / pageSize),
+            },
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -175,28 +174,26 @@ Deno.serve(async (req) => {
         .eq('id', id);
 
       if (error) {
-        return new Response(
-          JSON.stringify({ sucesso: false, erro: 'Erro ao remover mensagem' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ sucesso: false, erro: 'Erro ao remover mensagem' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
-      return new Response(
-        JSON.stringify({ sucesso: true }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    return new Response(
-      JSON.stringify({ sucesso: false, erro: 'Método não permitido' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
+    return new Response(JSON.stringify({ sucesso: false, erro: 'Método não permitido' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('[api-mensagens] Error:', error);
-    return new Response(
-      JSON.stringify({ sucesso: false, erro: 'Erro interno do servidor' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ sucesso: false, erro: 'Erro interno do servidor' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

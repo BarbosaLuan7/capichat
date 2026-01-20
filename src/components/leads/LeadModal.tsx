@@ -44,21 +44,39 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Phone, Mail, DollarSign, Trash2, MessageSquare, Eye, Pencil, ExternalLink, Loader2 } from 'lucide-react';
+import {
+  Phone,
+  Mail,
+  DollarSign,
+  Trash2,
+  MessageSquare,
+  Eye,
+  Pencil,
+  ExternalLink,
+  Loader2,
+} from 'lucide-react';
 import { useLeads, useLead, useCreateLead, useUpdateLead, useDeleteLead } from '@/hooks/useLeads';
 import { getErrorWithFallback } from '@/lib/errorMessages';
 import { useFunnelStages } from '@/hooks/useFunnelStages';
 import { useLabels, useLeadLabels, useAddLeadLabel, useRemoveLeadLabel } from '@/hooks/useLabels';
 import { cn } from '@/lib/utils';
 import { MaskedInput } from '@/components/ui/masked-input';
-import { formatPhone, formatPhoneNumber, formatCPF, unformatPhone, unformatCPF, toWhatsAppFormat } from '@/lib/masks';
+import {
+  formatPhone,
+  formatPhoneNumber,
+  formatCPF,
+  unformatPhone,
+  unformatCPF,
+  toWhatsAppFormat,
+} from '@/lib/masks';
 import type { Database } from '@/integrations/supabase/types';
 
 type LeadTemperature = Database['public']['Enums']['lead_temperature'];
 
 const leadSchema = z.object({
   name: z.string().min(1, 'Nome obrigatório').max(100, 'Nome muito longo'),
-  phone: z.string()
+  phone: z
+    .string()
     .min(1, 'Telefone obrigatório')
     .refine((val) => {
       // Remove formatação e verifica se tem entre 10-11 dígitos (telefone BR)
@@ -66,11 +84,14 @@ const leadSchema = z.object({
       return digits.length >= 10 && digits.length <= 11;
     }, 'Telefone inválido (deve ter 10 ou 11 dígitos)'),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
-  cpf: z.string().optional().refine((val) => {
-    if (!val) return true;
-    const digits = val.replace(/\D/g, '');
-    return digits.length === 0 || digits.length === 11;
-  }, 'CPF deve ter 11 dígitos'),
+  cpf: z
+    .string()
+    .optional()
+    .refine((val) => {
+      if (!val) return true;
+      const digits = val.replace(/\D/g, '');
+      return digits.length === 0 || digits.length === 11;
+    }, 'CPF deve ter 11 dígitos'),
   source: z.string().min(1, 'Origem obrigatória'),
   stage_id: z.string().optional(),
   temperature: z.enum(['cold', 'warm', 'hot']),
@@ -143,7 +164,7 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
     try {
       const phoneDigits = unformatPhone(data.phone);
       const cpfDigits = data.cpf ? unformatCPF(data.cpf) : null;
-      
+
       if (leadId && currentMode === 'edit') {
         await updateLead.mutateAsync({
           id: leadId,
@@ -219,7 +240,7 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
     <AlertDialog>
       <AlertDialogTrigger asChild>
         <Button type="button" variant="destructive" size="sm">
-          <Trash2 className="w-4 h-4 mr-2" />
+          <Trash2 className="mr-2 h-4 w-4" />
           Excluir
         </Button>
       </AlertDialogTrigger>
@@ -227,7 +248,8 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
         <AlertDialogHeader>
           <AlertDialogTitle>Excluir lead?</AlertDialogTitle>
           <AlertDialogDescription>
-            Esta ação não pode ser desfeita. O lead "{lead?.name}" será permanentemente removido do sistema.
+            Esta ação não pode ser desfeita. O lead "{lead?.name}" será permanentemente removido do
+            sistema.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -245,17 +267,21 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>
-            {currentMode === 'create' ? 'Novo Lead' : currentMode === 'edit' ? 'Editar Lead' : 'Detalhes do Lead'}
+            {currentMode === 'create'
+              ? 'Novo Lead'
+              : currentMode === 'edit'
+                ? 'Editar Lead'
+                : 'Detalhes do Lead'}
           </DialogTitle>
           <DialogDescription>
-            {currentMode === 'create' 
-              ? 'Preencha os dados para criar um novo lead.' 
-              : currentMode === 'edit' 
-              ? 'Atualize as informações do lead.'
-              : 'Visualize as informações do lead.'}
+            {currentMode === 'create'
+              ? 'Preencha os dados para criar um novo lead.'
+              : currentMode === 'edit'
+                ? 'Atualize as informações do lead.'
+                : 'Visualize as informações do lead.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -265,13 +291,15 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
           <div className="space-y-4">
             {/* Lead Header */}
             <div className="flex items-start gap-4">
-              <Avatar className="w-16 h-16">
-                <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.name || 'default'}`} />
+              <Avatar className="h-16 w-16">
+                <AvatarImage
+                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${lead.name || 'default'}`}
+                />
                 <AvatarFallback className="text-xl">{lead.name?.charAt(0) || '?'}</AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <h3 className="text-xl font-semibold">{lead.name}</h3>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="mt-1 flex items-center gap-2">
                   <Badge
                     className={cn(
                       'text-xs',
@@ -280,7 +308,11 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
                       lead.temperature === 'cold' && 'bg-primary/10 text-primary'
                     )}
                   >
-                    {lead.temperature === 'hot' ? '🔥 Quente' : lead.temperature === 'warm' ? '🌡️ Morno' : '❄️ Frio'}
+                    {lead.temperature === 'hot'
+                      ? '🔥 Quente'
+                      : lead.temperature === 'warm'
+                        ? '🌡️ Morno'
+                        : '❄️ Frio'}
                   </Badge>
                   {(lead as any).funnel_stages && (
                     <Badge
@@ -297,37 +329,42 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setCurrentMode('edit')}>
-                  <Pencil className="w-4 h-4 mr-1" />
+                  <Pencil className="mr-1 h-4 w-4" />
                   Editar
                 </Button>
-                <Button variant="outline" size="sm" onClick={openWhatsApp} aria-label="Abrir conversa no WhatsApp">
-                  <ExternalLink className="w-4 h-4" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={openWhatsApp}
+                  aria-label="Abrir conversa no WhatsApp"
+                >
+                  <ExternalLink className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
             {/* Contact Info */}
-            <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
+            <div className="grid grid-cols-2 gap-4 rounded-lg bg-muted/30 p-4">
               <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-muted-foreground" />
+                <Phone className="h-4 w-4 text-muted-foreground" />
                 <span>{formatPhoneNumber(lead.phone)}</span>
               </div>
               {lead.email && (
                 <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-muted-foreground" />
+                  <Mail className="h-4 w-4 text-muted-foreground" />
                   <span className="truncate">{lead.email}</span>
                 </div>
               )}
               {lead.estimated_value && (
                 <div className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-success" />
-                  <span className="text-success font-medium">
+                  <DollarSign className="h-4 w-4 text-success" />
+                  <span className="font-medium text-success">
                     R$ {lead.estimated_value.toLocaleString('pt-BR')}
                   </span>
                 </div>
               )}
               <div>
-                <span className="text-muted-foreground text-sm">Origem: </span>
+                <span className="text-sm text-muted-foreground">Origem: </span>
                 <span>{lead.source}</span>
               </div>
             </div>
@@ -361,7 +398,7 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
             </div>
 
             {/* Actions */}
-            <div className="flex justify-between pt-4 border-t">
+            <div className="flex justify-between border-t pt-4">
               <DeleteButton />
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Fechar
@@ -527,7 +564,9 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
                         type="number"
                         placeholder="0,00"
                         {...field}
-                        onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                        onChange={(e) =>
+                          field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)
+                        }
                         value={field.value || ''}
                       />
                     </FormControl>
@@ -538,17 +577,17 @@ export function LeadModal({ open, onOpenChange, leadId, mode = 'create' }: LeadM
 
               <div className="flex justify-between pt-4">
                 {leadId && currentMode === 'edit' && <DeleteButton />}
-                <div className="flex gap-2 ml-auto">
+                <div className="ml-auto flex gap-2">
                   <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                     Cancelar
                   </Button>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="gradient-primary text-primary-foreground"
                     disabled={createLead.isPending || updateLead.isPending}
                   >
                     {(createLead.isPending || updateLead.isPending) && (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
                     {leadId ? 'Salvar' : 'Criar Lead'}
                   </Button>

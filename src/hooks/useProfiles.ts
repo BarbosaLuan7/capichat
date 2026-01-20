@@ -29,7 +29,8 @@ export function useProfiles() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select(`
+        .select(
+          `
           *,
           team_memberships:team_members (
             id,
@@ -37,9 +38,10 @@ export function useProfiles() {
             is_supervisor,
             team:teams (id, name)
           )
-        `)
+        `
+        )
         .order('name');
-      
+
       if (error) throw error;
       return data as ProfileWithRelations[];
     },
@@ -57,7 +59,8 @@ export function useProfile(id: string | undefined) {
       if (!id) return null;
       const { data, error } = await supabase
         .from('profiles')
-        .select(`
+        .select(
+          `
           *,
           team_memberships:team_members (
             id,
@@ -65,10 +68,11 @@ export function useProfile(id: string | undefined) {
             is_supervisor,
             team:teams (id, name)
           )
-        `)
+        `
+        )
         .eq('id', id)
         .maybeSingle();
-      
+
       if (error) throw error;
       return data as ProfileWithRelations | null;
     },
@@ -84,10 +88,8 @@ export function useUserRoles() {
   return useQuery({
     queryKey: ['user_roles'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('*');
-      
+      const { data, error } = await supabase.from('user_roles').select('*');
+
       if (error) throw error;
       return data;
     },
@@ -109,7 +111,7 @@ export function useUpdateProfile() {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -132,7 +134,7 @@ export function useUpdateAvailability() {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -148,13 +150,7 @@ export function useUpdateUserRole() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ 
-      userId, 
-      role 
-    }: { 
-      userId: string; 
-      role: AppRole;
-    }) => {
+    mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
       // Primeiro tenta atualizar
       const { data: existing } = await supabase
         .from('user_roles')
@@ -163,15 +159,10 @@ export function useUpdateUserRole() {
         .maybeSingle();
 
       if (existing) {
-        const { error } = await supabase
-          .from('user_roles')
-          .update({ role })
-          .eq('user_id', userId);
+        const { error } = await supabase.from('user_roles').update({ role }).eq('user_id', userId);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('user_roles')
-          .insert({ user_id: userId, role });
+        const { error } = await supabase.from('user_roles').insert({ user_id: userId, role });
         if (error) throw error;
       }
 
@@ -189,31 +180,26 @@ export function useUpdateUserTeams() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ 
-      userId, 
-      teams 
-    }: { 
-      userId: string; 
+    mutationFn: async ({
+      userId,
+      teams,
+    }: {
+      userId: string;
       teams: { teamId: string; isSupervisor: boolean }[];
     }) => {
       // 1. Remover todas as associações atuais
-      await supabase
-        .from('team_members')
-        .delete()
-        .eq('user_id', userId);
+      await supabase.from('team_members').delete().eq('user_id', userId);
 
       // 2. Inserir novas associações
       if (teams.length > 0) {
-        const { error } = await supabase
-          .from('team_members')
-          .insert(
-            teams.map(t => ({
-              user_id: userId,
-              team_id: t.teamId,
-              is_supervisor: t.isSupervisor,
-            }))
-          );
-        
+        const { error } = await supabase.from('team_members').insert(
+          teams.map((t) => ({
+            user_id: userId,
+            team_id: t.teamId,
+            is_supervisor: t.isSupervisor,
+          }))
+        );
+
         if (error) throw error;
       }
 
@@ -239,7 +225,7 @@ export function useToggleUserBlock() {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -262,7 +248,7 @@ export function useCreateUser() {
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      
+
       return data;
     },
     onSuccess: () => {

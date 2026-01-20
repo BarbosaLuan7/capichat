@@ -35,8 +35,12 @@ import { LeadTimeline } from '@/components/leads/LeadTimeline';
 import { DocumentChecklist } from './DocumentChecklist';
 
 // Lazy loaded AI components - loaded only when IA tab is active
-const AIClassificationSuggestion = React.lazy(() => import('./AIClassificationSuggestion').then(m => ({ default: m.AIClassificationSuggestion })));
-const AIConversationSummary = React.lazy(() => import('./AIConversationSummary').then(m => ({ default: m.AIConversationSummary })));
+const AIClassificationSuggestion = React.lazy(() =>
+  import('./AIClassificationSuggestion').then((m) => ({ default: m.AIClassificationSuggestion }))
+);
+const AIConversationSummary = React.lazy(() =>
+  import('./AIConversationSummary').then((m) => ({ default: m.AIConversationSummary }))
+);
 import { formatPhoneNumber, formatCPF, toWhatsAppFormat, maskCPF } from '@/lib/masks';
 import { useLeadActivities, formatActivityMessage } from '@/hooks/useLeadActivities';
 import { useInternalNotes } from '@/hooks/useInternalNotes';
@@ -97,7 +101,9 @@ function LeadDetailsPanelComponent({
   const qualification = (lead as any).qualification || {};
 
   // Map activities to timeline events
-  const getEventType = (action: string): 'message' | 'stage_change' | 'label_added' | 'assigned' | 'task_completed' | 'note' => {
+  const getEventType = (
+    action: string
+  ): 'message' | 'stage_change' | 'label_added' | 'assigned' | 'task_completed' | 'note' => {
     switch (action) {
       case 'stage_changed':
         return 'stage_change';
@@ -117,14 +123,15 @@ function LeadDetailsPanelComponent({
   };
 
   const allTimelineEvents = useMemo(() => {
-    const events = activities?.map(activity => ({
-      id: activity.id,
-      type: getEventType(activity.action),
-      title: formatActivityMessage(activity.action, activity.details || {}),
-      description: activity.details?.description || activity.details?.content,
-      createdAt: new Date(activity.created_at),
-      user: activity.profiles?.name,
-    })) || [];
+    const events =
+      activities?.map((activity) => ({
+        id: activity.id,
+        type: getEventType(activity.action),
+        title: formatActivityMessage(activity.action, activity.details || {}),
+        description: activity.details?.description || activity.details?.content,
+        createdAt: new Date(activity.created_at),
+        user: activity.profiles?.name,
+      })) || [];
 
     // Always add lead creation event
     events.push({
@@ -142,14 +149,14 @@ function LeadDetailsPanelComponent({
   // Filter events based on selected filter
   const filteredEvents = useMemo(() => {
     if (activityFilter === 'all') return allTimelineEvents;
-    return allTimelineEvents.filter(event => event.type === activityFilter);
+    return allTimelineEvents.filter((event) => event.type === activityFilter);
   }, [allTimelineEvents, activityFilter]);
 
   return (
     <>
-      <div className="h-full w-full max-w-full min-w-[320px] flex flex-col overflow-hidden">
+      <div className="flex h-full w-full min-w-[320px] max-w-full flex-col overflow-hidden">
         {/* Lead Header */}
-        <div className="p-4 border-b border-border">
+        <div className="border-b border-border p-4">
           <div className="flex items-start gap-3">
             <div className="relative">
               <LeadAvatar lead={lead} size="lg" />
@@ -160,14 +167,14 @@ function LeadDetailsPanelComponent({
                       variant="ghost"
                       size="icon"
                       className={cn(
-                        'absolute -right-1 -top-1 h-6 w-6 rounded-full bg-card border border-border',
+                        'absolute -right-1 -top-1 h-6 w-6 rounded-full border border-border bg-card',
                         isFavorite && 'text-warning'
                       )}
                       onClick={onToggleFavorite}
                       aria-label={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
                     >
                       <Star
-                        className={cn('w-3 h-3', isFavorite && 'fill-warning')}
+                        className={cn('h-3 w-3', isFavorite && 'fill-warning')}
                         aria-hidden="true"
                       />
                     </Button>
@@ -178,25 +185,31 @@ function LeadDetailsPanelComponent({
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
               {(() => {
-                const isPhoneAsName = lead.name?.startsWith('Lead ') && /^Lead \d+$/.test(lead.name);
-                const panelDisplayName = (lead as any).whatsapp_name || (!isPhoneAsName ? lead.name : null) || formatPhoneNumber(lead.phone);
+                const isPhoneAsName =
+                  lead.name?.startsWith('Lead ') && /^Lead \d+$/.test(lead.name);
+                const panelDisplayName =
+                  (lead as any).whatsapp_name ||
+                  (!isPhoneAsName ? lead.name : null) ||
+                  formatPhoneNumber(lead.phone);
                 return (
                   <>
-                    <h3 className="font-semibold text-foreground truncate" title={panelDisplayName}>
+                    <h3 className="truncate font-semibold text-foreground" title={panelDisplayName}>
                       {panelDisplayName}
                     </h3>
-                    {(lead as any).whatsapp_name && (lead as any).whatsapp_name !== lead.name && !isPhoneAsName && (
-                      <p className="text-xs text-muted-foreground">
-                        WhatsApp: {(lead as any).whatsapp_name}
-                      </p>
-                    )}
+                    {(lead as any).whatsapp_name &&
+                      (lead as any).whatsapp_name !== lead.name &&
+                      !isPhoneAsName && (
+                        <p className="text-xs text-muted-foreground">
+                          WhatsApp: {(lead as any).whatsapp_name}
+                        </p>
+                      )}
                   </>
                 );
               })()}
               {lead.funnel_stages && (
-                <div className="flex items-center gap-2 mt-1">
+                <div className="mt-1 flex items-center gap-2">
                   <Badge
                     variant="outline"
                     className="text-xs"
@@ -213,14 +226,14 @@ function LeadDetailsPanelComponent({
           </div>
 
           {/* Quick Actions */}
-          <div className="flex gap-2 mt-3">
+          <div className="mt-3 flex gap-2">
             <Button
               variant="outline"
               size="sm"
               className="flex-1 text-xs"
               onClick={() => setShowTransferModal(true)}
             >
-              <UserPlus className="w-3 h-3 mr-1" />
+              <UserPlus className="mr-1 h-3 w-3" />
               Transferir
             </Button>
             <Button
@@ -229,7 +242,7 @@ function LeadDetailsPanelComponent({
               className="flex-1 text-xs"
               onClick={() => setShowLabelsModal(true)}
             >
-              <Tag className="w-3 h-3 mr-1" />
+              <Tag className="mr-1 h-3 w-3" />
               Etiquetar
             </Button>
             <TooltipProvider>
@@ -242,7 +255,7 @@ function LeadDetailsPanelComponent({
                     onClick={openWhatsApp}
                     aria-label="Abrir conversa no WhatsApp"
                   >
-                    <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                    <ExternalLink className="h-3 w-3" aria-hidden="true" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Abrir no WhatsApp</TooltipContent>
@@ -252,30 +265,38 @@ function LeadDetailsPanelComponent({
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="dados" className="flex-1 flex flex-col min-h-0 overflow-hidden w-full max-w-full">
-          <TabsList className="w-full justify-start rounded-none border-b border-border bg-transparent px-4 shrink-0">
-            <TabsTrigger value="dados" className="text-xs gap-1 data-[state=active]:bg-muted">
-              <User className="w-3 h-3" />
+        <Tabs
+          defaultValue="dados"
+          className="flex min-h-0 w-full max-w-full flex-1 flex-col overflow-hidden"
+        >
+          <TabsList className="w-full shrink-0 justify-start rounded-none border-b border-border bg-transparent px-4">
+            <TabsTrigger value="dados" className="gap-1 text-xs data-[state=active]:bg-muted">
+              <User className="h-3 w-3" />
               Dados
             </TabsTrigger>
-            <TabsTrigger value="docs" className="text-xs gap-1 data-[state=active]:bg-muted relative">
-              <ClipboardList className="w-3 h-3" />
+            <TabsTrigger
+              value="docs"
+              className="relative gap-1 text-xs data-[state=active]:bg-muted"
+            >
+              <ClipboardList className="h-3 w-3" />
               Docs
               {(() => {
                 const customFields = (lead as any).custom_fields;
                 const checklistState = customFields?.documentChecklist;
                 if (!checklistState?.benefitType) return null;
-                
-                const benefit = getDocumentsByBenefitType(checklistState.benefitType as BenefitType);
+
+                const benefit = getDocumentsByBenefitType(
+                  checklistState.benefitType as BenefitType
+                );
                 if (!benefit) return null;
-                
+
                 const total = benefit.documents.length;
                 const checked = checklistState.checkedDocuments?.length || 0;
                 const pending = total - checked;
-                
+
                 if (pending > 0) {
                   return (
-                    <Badge variant="destructive" className="ml-1 h-4 px-1 text-2xs">
+                    <Badge variant="destructive" className="text-2xs ml-1 h-4 px-1">
                       {pending}
                     </Badge>
                   );
@@ -283,15 +304,15 @@ function LeadDetailsPanelComponent({
                 return null;
               })()}
             </TabsTrigger>
-            <TabsTrigger value="ia" className="text-xs gap-1 data-[state=active]:bg-muted">
-              <Brain className="w-3 h-3" />
+            <TabsTrigger value="ia" className="gap-1 text-xs data-[state=active]:bg-muted">
+              <Brain className="h-3 w-3" />
               IA
             </TabsTrigger>
-            <TabsTrigger value="historico" className="text-xs gap-1 data-[state=active]:bg-muted">
-              <History className="w-3 h-3" />
+            <TabsTrigger value="historico" className="gap-1 text-xs data-[state=active]:bg-muted">
+              <History className="h-3 w-3" />
               Histórico
               {(notes?.length ?? 0) > 0 && (
-                <Badge variant="secondary" className="ml-1 h-4 px-1 text-2xs">
+                <Badge variant="secondary" className="text-2xs ml-1 h-4 px-1">
                   {notes?.length}
                 </Badge>
               )}
@@ -299,25 +320,29 @@ function LeadDetailsPanelComponent({
           </TabsList>
 
           {/* Dados Tab */}
-          <TabsContent value="dados" className="flex-1 m-0 min-h-0 overflow-hidden data-[state=inactive]:hidden flex flex-col">
-            <ScrollArea className="flex-1 min-h-0 w-full max-w-full [&_[data-radix-scroll-area-viewport]]:!overflow-x-hidden [&_[data-radix-scroll-area-viewport]]:max-w-full">
-              <div className="p-4 space-y-4 pb-8 max-w-full min-w-0 overflow-hidden box-border">
+          <TabsContent
+            value="dados"
+            className="m-0 flex min-h-0 flex-1 flex-col overflow-hidden data-[state=inactive]:hidden"
+          >
+            <ScrollArea className="min-h-0 w-full max-w-full flex-1 [&_[data-radix-scroll-area-viewport]]:max-w-full [&_[data-radix-scroll-area-viewport]]:!overflow-x-hidden">
+              <div className="box-border min-w-0 max-w-full space-y-4 overflow-hidden p-4 pb-8">
                 {/* Facebook LID Warning */}
                 {(lead as any).is_facebook_lid && (
-                  <div className="p-3 rounded-lg bg-warning/10 border border-warning/30 space-y-2">
+                  <div className="space-y-2 rounded-lg border border-warning/30 bg-warning/10 p-3">
                     <div className="flex items-start gap-2">
-                      <div className="w-5 h-5 rounded-full bg-warning/20 flex items-center justify-center shrink-0 mt-0.5">
-                        <span className="text-warning text-xs">!</span>
+                      <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-warning/20">
+                        <span className="text-xs text-warning">!</span>
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-warning">Número Privado</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Contato veio de anúncio Facebook. O número real ainda não foi resolvido por privacidade.
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          Contato veio de anúncio Facebook. O número real ainda não foi resolvido
+                          por privacidade.
                         </p>
                       </div>
                     </div>
                     {(lead as any).original_lid && (
-                      <div className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded font-mono">
+                      <div className="rounded bg-muted/50 px-2 py-1 font-mono text-xs text-muted-foreground">
                         LID: {(lead as any).original_lid}
                       </div>
                     )}
@@ -326,26 +351,27 @@ function LeadDetailsPanelComponent({
 
                 {/* Contact Info */}
                 <div className="space-y-2">
-                  <h4 className="font-medium text-xs text-muted-foreground uppercase">
-                    Contato
-                  </h4>
+                  <h4 className="text-xs font-medium uppercase text-muted-foreground">Contato</h4>
                   <div className="space-y-1.5">
                     {/* Phone - with special handling for LID leads */}
                     {(lead as any).is_facebook_lid ? (
-                      <div className="flex items-center gap-2 p-2 rounded-md bg-warning/5 border border-warning/20 group">
-                        <Phone className="w-3.5 h-3.5 text-warning" />
-                        <span className="text-sm flex-1 text-muted-foreground italic">
+                      <div className="group flex items-center gap-2 rounded-md border border-warning/20 bg-warning/5 p-2">
+                        <Phone className="h-3.5 w-3.5 text-warning" />
+                        <span className="flex-1 text-sm italic text-muted-foreground">
                           Aguardando resolução...
                         </span>
-                        <Badge variant="outline" className="text-2xs border-warning/30 text-warning">
+                        <Badge
+                          variant="outline"
+                          className="text-2xs border-warning/30 text-warning"
+                        >
                           Facebook
                         </Badge>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 group">
-                        <Phone className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-sm flex-1">{formatPhoneNumber(lead.phone)}</span>
-                        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="group flex items-center gap-2 rounded-md bg-muted/50 p-2">
+                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="flex-1 text-sm">{formatPhoneNumber(lead.phone)}</span>
+                        <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -356,7 +382,7 @@ function LeadDetailsPanelComponent({
                                   onClick={() => handleCopy(lead.phone, 'Telefone')}
                                   aria-label="Copiar telefone"
                                 >
-                                  <Copy className="w-2.5 h-2.5" />
+                                  <Copy className="h-2.5 w-2.5" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>Copiar telefone</TooltipContent>
@@ -372,7 +398,7 @@ function LeadDetailsPanelComponent({
                                   onClick={openWhatsApp}
                                   aria-label="Abrir no WhatsApp"
                                 >
-                                  <MessageSquare className="w-2.5 h-2.5" />
+                                  <MessageSquare className="h-2.5 w-2.5" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>Abrir no WhatsApp</TooltipContent>
@@ -382,20 +408,22 @@ function LeadDetailsPanelComponent({
                       </div>
                     )}
                     {lead.email && (
-                      <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 group">
-                        <Mail className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="text-sm truncate flex-1" title={lead.email}>{lead.email}</span>
+                      <div className="group flex items-center gap-2 rounded-md bg-muted/50 p-2">
+                        <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="flex-1 truncate text-sm" title={lead.email}>
+                          {lead.email}
+                        </span>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100"
                                 onClick={() => handleCopy(lead.email!, 'Email')}
                                 aria-label="Copiar email"
                               >
-                                <Copy className="w-2.5 h-2.5" />
+                                <Copy className="h-2.5 w-2.5" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>Copiar email</TooltipContent>
@@ -404,22 +432,20 @@ function LeadDetailsPanelComponent({
                       </div>
                     )}
                     {lead.cpf && (
-                      <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 group">
-                        <span className="text-xs font-medium text-muted-foreground w-4">
-                          CPF
-                        </span>
-                        <span className="text-sm flex-1">{maskCPF(lead.cpf)}</span>
+                      <div className="group flex items-center gap-2 rounded-md bg-muted/50 p-2">
+                        <span className="w-4 text-xs font-medium text-muted-foreground">CPF</span>
+                        <span className="flex-1 text-sm">{maskCPF(lead.cpf)}</span>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100"
                                 onClick={() => handleCopy(lead.cpf!, 'CPF')}
                                 aria-label="Copiar CPF"
                               >
-                                <Copy className="w-2.5 h-2.5" />
+                                <Copy className="h-2.5 w-2.5" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>Copiar CPF completo</TooltipContent>
@@ -433,14 +459,14 @@ function LeadDetailsPanelComponent({
                 {/* Labels */}
                 {lead.labels && lead.labels.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="font-medium text-xs text-muted-foreground uppercase">
+                    <h4 className="text-xs font-medium uppercase text-muted-foreground">
                       Etiquetas
                     </h4>
                     <div className="flex flex-wrap gap-1.5">
                       {lead.labels.map((label) => (
                         <Badge
                           key={label.id}
-                          className={cn("text-xs border-0", getContrastTextColor(label.color))}
+                          className={cn('border-0 text-xs', getContrastTextColor(label.color))}
                           style={{ backgroundColor: label.color }}
                         >
                           {label.name}
@@ -453,32 +479,40 @@ function LeadDetailsPanelComponent({
                 {/* Qualification */}
                 {Object.keys(qualification).length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="font-medium text-xs text-muted-foreground uppercase">
+                    <h4 className="text-xs font-medium uppercase text-muted-foreground">
                       Qualificação
                     </h4>
                     <div className="space-y-1.5 text-sm">
                       {qualification.situacao && (
                         <div className="flex justify-between gap-2">
-                          <span className="text-muted-foreground shrink-0">Situação:</span>
-                          <span className="text-right min-w-0 break-words">{qualification.situacao}</span>
+                          <span className="shrink-0 text-muted-foreground">Situação:</span>
+                          <span className="min-w-0 break-words text-right">
+                            {qualification.situacao}
+                          </span>
                         </div>
                       )}
                       {qualification.condicao_saude && (
                         <div className="flex justify-between gap-2">
-                          <span className="text-muted-foreground shrink-0">Condição:</span>
-                          <span className="text-right min-w-0 break-words">{qualification.condicao_saude}</span>
+                          <span className="shrink-0 text-muted-foreground">Condição:</span>
+                          <span className="min-w-0 break-words text-right">
+                            {qualification.condicao_saude}
+                          </span>
                         </div>
                       )}
                       {qualification.renda && (
                         <div className="flex justify-between gap-2">
-                          <span className="text-muted-foreground shrink-0">Renda:</span>
-                          <span className="text-right min-w-0 break-words">{qualification.renda}</span>
+                          <span className="shrink-0 text-muted-foreground">Renda:</span>
+                          <span className="min-w-0 break-words text-right">
+                            {qualification.renda}
+                          </span>
                         </div>
                       )}
                       {qualification.idade && (
                         <div className="flex justify-between gap-2">
-                          <span className="text-muted-foreground shrink-0">Idade:</span>
-                          <span className="text-right min-w-0 break-words">{qualification.idade} anos</span>
+                          <span className="shrink-0 text-muted-foreground">Idade:</span>
+                          <span className="min-w-0 break-words text-right">
+                            {qualification.idade} anos
+                          </span>
                         </div>
                       )}
                     </div>
@@ -488,84 +522,130 @@ function LeadDetailsPanelComponent({
                 {/* Resumo do Caso - IA (Custom Field) - ACIMA de Informações */}
                 {(() => {
                   const caseSummary = (lead as any).custom_fields?.case_summary;
-                  
+
                   // Função para renderizar texto formatado (markdown-like)
                   const renderFormattedText = (text: string) => {
                     const lines = text.split('\n');
-                    
+
                     return lines.map((line, lineIndex) => {
                       // Processar a linha
-                      let processedLine = line;
+                      const processedLine = line;
                       const elements: React.ReactNode[] = [];
-                      let lastIndex = 0;
-                      
+                      const lastIndex = 0;
+
                       // Regex para encontrar padrões
                       const patterns = [
-                        { regex: /\*\*(.+?)\*\*/g, render: (match: string, p1: string) => <strong key={`bold-${lineIndex}-${lastIndex}`} className="font-semibold">{p1}</strong> },
-                        { regex: /\*([^*\n]+)\*/g, render: (match: string, p1: string) => <strong key={`bold2-${lineIndex}-${lastIndex}`} className="font-semibold">{p1}</strong> },
-                        { regex: /_([^_\n]+)_/g, render: (match: string, p1: string) => <em key={`italic-${lineIndex}-${lastIndex}`}>{p1}</em> },
-                        { regex: /\(?(https?:\/\/[^\s\)]+)\)?/g, render: (match: string, p1: string) => (
-                          <a 
-                            key={`link-${lineIndex}-${lastIndex}`} 
-                            href={p1} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="text-primary hover:underline"
-                          >
-                            {p1.length > 40 ? p1.substring(0, 40) + '...' : p1}
-                          </a>
-                        )},
+                        {
+                          regex: /\*\*(.+?)\*\*/g,
+                          render: (match: string, p1: string) => (
+                            <strong
+                              key={`bold-${lineIndex}-${lastIndex}`}
+                              className="font-semibold"
+                            >
+                              {p1}
+                            </strong>
+                          ),
+                        },
+                        {
+                          regex: /\*([^*\n]+)\*/g,
+                          render: (match: string, p1: string) => (
+                            <strong
+                              key={`bold2-${lineIndex}-${lastIndex}`}
+                              className="font-semibold"
+                            >
+                              {p1}
+                            </strong>
+                          ),
+                        },
+                        {
+                          regex: /_([^_\n]+)_/g,
+                          render: (match: string, p1: string) => (
+                            <em key={`italic-${lineIndex}-${lastIndex}`}>{p1}</em>
+                          ),
+                        },
+                        {
+                          regex: /\(?(https?:\/\/[^\s\)]+)\)?/g,
+                          render: (match: string, p1: string) => (
+                            <a
+                              key={`link-${lineIndex}-${lastIndex}`}
+                              href={p1}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              {p1.length > 40 ? p1.substring(0, 40) + '...' : p1}
+                            </a>
+                          ),
+                        },
                       ];
-                      
+
                       // Processar bold **text** e *text*
                       let result = processedLine;
                       result = result.replace(/\*\*(.+?)\*\*/g, '⟨⟨BOLD⟩⟩$1⟨⟨/BOLD⟩⟩');
                       result = result.replace(/\*([^*\n]+)\*/g, '⟨⟨BOLD⟩⟩$1⟨⟨/BOLD⟩⟩');
                       result = result.replace(/_([^_\n]+)_/g, '⟨⟨ITALIC⟩⟩$1⟨⟨/ITALIC⟩⟩');
-                      
+
                       // Converter marcadores para JSX
                       const parts = result.split(/(⟨⟨BOLD⟩⟩|⟨⟨\/BOLD⟩⟩|⟨⟨ITALIC⟩⟩|⟨⟨\/ITALIC⟩⟩)/);
                       let inBold = false;
                       let inItalic = false;
-                      
-                      const renderedParts = parts.map((part, partIndex) => {
-                        if (part === '⟨⟨BOLD⟩⟩') { inBold = true; return null; }
-                        if (part === '⟨⟨/BOLD⟩⟩') { inBold = false; return null; }
-                        if (part === '⟨⟨ITALIC⟩⟩') { inItalic = true; return null; }
-                        if (part === '⟨⟨/ITALIC⟩⟩') { inItalic = false; return null; }
-                        
-                        if (!part) return null;
-                        
-                        // Processar links dentro do texto
-                        const linkRegex = /\(?(https?:\/\/[^\s\)]+)\)?/g;
-                        const linkParts = part.split(linkRegex);
-                        
-                        const content = linkParts.map((lp, lpIndex) => {
-                          if (lp?.match(/^https?:\/\//)) {
+
+                      const renderedParts = parts
+                        .map((part, partIndex) => {
+                          if (part === '⟨⟨BOLD⟩⟩') {
+                            inBold = true;
+                            return null;
+                          }
+                          if (part === '⟨⟨/BOLD⟩⟩') {
+                            inBold = false;
+                            return null;
+                          }
+                          if (part === '⟨⟨ITALIC⟩⟩') {
+                            inItalic = true;
+                            return null;
+                          }
+                          if (part === '⟨⟨/ITALIC⟩⟩') {
+                            inItalic = false;
+                            return null;
+                          }
+
+                          if (!part) return null;
+
+                          // Processar links dentro do texto
+                          const linkRegex = /\(?(https?:\/\/[^\s\)]+)\)?/g;
+                          const linkParts = part.split(linkRegex);
+
+                          const content = linkParts.map((lp, lpIndex) => {
+                            if (lp?.match(/^https?:\/\//)) {
+                              return (
+                                <a
+                                  key={`link-${lineIndex}-${partIndex}-${lpIndex}`}
+                                  href={lp}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-primary hover:underline"
+                                >
+                                  Link
+                                </a>
+                              );
+                            }
+                            return lp;
+                          });
+
+                          if (inBold) {
                             return (
-                              <a 
-                                key={`link-${lineIndex}-${partIndex}-${lpIndex}`}
-                                href={lp}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary hover:underline"
-                              >
-                                Link
-                              </a>
+                              <strong key={`b-${lineIndex}-${partIndex}`} className="font-semibold">
+                                {content}
+                              </strong>
                             );
                           }
-                          return lp;
-                        });
-                        
-                        if (inBold) {
-                          return <strong key={`b-${lineIndex}-${partIndex}`} className="font-semibold">{content}</strong>;
-                        }
-                        if (inItalic) {
-                          return <em key={`i-${lineIndex}-${partIndex}`}>{content}</em>;
-                        }
-                        return <span key={`s-${lineIndex}-${partIndex}`}>{content}</span>;
-                      }).filter(Boolean);
-                      
+                          if (inItalic) {
+                            return <em key={`i-${lineIndex}-${partIndex}`}>{content}</em>;
+                          }
+                          return <span key={`s-${lineIndex}-${partIndex}`}>{content}</span>;
+                        })
+                        .filter(Boolean);
+
                       return (
                         <span key={lineIndex} className="block">
                           {renderedParts.length > 0 ? renderedParts : line}
@@ -573,14 +653,14 @@ function LeadDetailsPanelComponent({
                       );
                     });
                   };
-                  
+
                   return (
                     <div className="space-y-2">
-                      <h4 className="font-medium text-xs text-muted-foreground uppercase flex items-center gap-2">
-                        <Sparkles className="w-3 h-3 text-primary" />
+                      <h4 className="flex items-center gap-2 text-xs font-medium uppercase text-muted-foreground">
+                        <Sparkles className="h-3 w-3 text-primary" />
                         Resumo do Caso - IA
                       </h4>
-                      <div className="relative rounded-lg border-l-4 border-primary bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-3 overflow-hidden">
+                      <div className="relative overflow-hidden rounded-lg border-l-4 border-primary bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-3">
                         {caseSummary && (
                           <TooltipProvider>
                             <Tooltip>
@@ -588,11 +668,11 @@ function LeadDetailsPanelComponent({
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="absolute top-1 right-1 h-6 w-6 opacity-50 hover:opacity-100 transition-opacity"
+                                  className="absolute right-1 top-1 h-6 w-6 opacity-50 transition-opacity hover:opacity-100"
                                   onClick={() => handleCopy(caseSummary, 'Resumo')}
                                   aria-label="Copiar resumo"
                                 >
-                                  <Copy className="w-3 h-3" />
+                                  <Copy className="h-3 w-3" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>Copiar resumo</TooltipContent>
@@ -600,13 +680,13 @@ function LeadDetailsPanelComponent({
                           </TooltipProvider>
                         )}
                         {caseSummary ? (
-                          <div className="overflow-y-auto max-h-[300px] pr-6">
-                            <div className="text-sm text-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+                          <div className="max-h-[300px] overflow-y-auto pr-6">
+                            <div className="whitespace-pre-wrap break-words text-sm text-foreground [overflow-wrap:anywhere]">
                               {renderFormattedText(caseSummary)}
                             </div>
                           </div>
                         ) : (
-                          <p className="text-sm text-muted-foreground italic">
+                          <p className="text-sm italic text-muted-foreground">
                             Nenhum resumo disponível
                           </p>
                         )}
@@ -617,16 +697,16 @@ function LeadDetailsPanelComponent({
 
                 {/* Stage & Source */}
                 <div className="space-y-2">
-                  <h4 className="font-medium text-xs text-muted-foreground uppercase">
+                  <h4 className="text-xs font-medium uppercase text-muted-foreground">
                     Informações
                   </h4>
                   <div className="space-y-1.5 text-sm">
                     {lead.funnel_stages && (
-                      <div className="flex justify-between items-center gap-2">
-                        <span className="text-muted-foreground shrink-0">Etapa:</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="shrink-0 text-muted-foreground">Etapa:</span>
                         <Badge
                           variant="outline"
-                          className="text-xs max-w-[60%] truncate"
+                          className="max-w-[60%] truncate text-xs"
                           style={{
                             borderColor: lead.funnel_stages.color,
                             color: lead.funnel_stages.color,
@@ -639,19 +719,23 @@ function LeadDetailsPanelComponent({
                     )}
                     {lead.funnel_stages?.grupo && (
                       <div className="flex justify-between gap-2">
-                        <span className="text-muted-foreground shrink-0">Grupo:</span>
-                        <span className="text-right min-w-0 break-words">{lead.funnel_stages.grupo}</span>
+                        <span className="shrink-0 text-muted-foreground">Grupo:</span>
+                        <span className="min-w-0 break-words text-right">
+                          {lead.funnel_stages.grupo}
+                        </span>
                       </div>
                     )}
                     <div className="flex justify-between gap-2">
-                      <span className="text-muted-foreground shrink-0">Origem:</span>
-                      <span className="text-right min-w-0 break-words">{lead.source || 'Não informada'}</span>
+                      <span className="shrink-0 text-muted-foreground">Origem:</span>
+                      <span className="min-w-0 break-words text-right">
+                        {lead.source || 'Não informada'}
+                      </span>
                     </div>
                     <div className="flex justify-between gap-2">
-                      <span className="text-muted-foreground shrink-0">Criado:</span>
+                      <span className="shrink-0 text-muted-foreground">Criado:</span>
                       <span>
                         {lead.created_at
-                          ? format(new Date(lead.created_at), "dd/MM/yyyy", {
+                          ? format(new Date(lead.created_at), 'dd/MM/yyyy', {
                               locale: ptBR,
                             })
                           : 'Não informado'}
@@ -659,7 +743,7 @@ function LeadDetailsPanelComponent({
                     </div>
                     {lead.estimated_value && (
                       <div className="flex justify-between gap-2">
-                        <span className="text-muted-foreground shrink-0">Valor:</span>
+                        <span className="shrink-0 text-muted-foreground">Valor:</span>
                         <span className="font-medium text-success">
                           R$ {lead.estimated_value.toLocaleString('pt-BR')}
                         </span>
@@ -672,7 +756,10 @@ function LeadDetailsPanelComponent({
           </TabsContent>
 
           {/* Docs Tab */}
-          <TabsContent value="docs" className="flex-1 m-0 min-h-0 overflow-hidden data-[state=inactive]:hidden">
+          <TabsContent
+            value="docs"
+            className="m-0 min-h-0 flex-1 overflow-hidden data-[state=inactive]:hidden"
+          >
             <ScrollArea className="h-full">
               <div className="p-4">
                 <DocumentChecklist
@@ -686,10 +773,19 @@ function LeadDetailsPanelComponent({
           </TabsContent>
 
           {/* IA Tab */}
-          <TabsContent value="ia" className="flex-1 m-0 min-h-0 overflow-hidden data-[state=inactive]:hidden">
+          <TabsContent
+            value="ia"
+            className="m-0 min-h-0 flex-1 overflow-hidden data-[state=inactive]:hidden"
+          >
             <ScrollArea className="h-full">
-              <div className="p-4 space-y-4">
-                <Suspense fallback={<div className="flex items-center justify-center p-4"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>}>
+              <div className="space-y-4 p-4">
+                <Suspense
+                  fallback={
+                    <div className="flex items-center justify-center p-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  }
+                >
                   {/* AI Summary */}
                   <AIConversationSummary
                     messages={messages || []}
@@ -701,22 +797,25 @@ function LeadDetailsPanelComponent({
                   <AIClassificationSuggestion
                     messages={messages || []}
                     lead={lead}
-                  onApplyClassification={onLabelsUpdate}
-                />
+                    onApplyClassification={onLabelsUpdate}
+                  />
                 </Suspense>
               </div>
             </ScrollArea>
           </TabsContent>
 
           {/* Histórico Tab */}
-          <TabsContent value="historico" className="flex-1 m-0 min-h-0 overflow-hidden data-[state=inactive]:hidden">
+          <TabsContent
+            value="historico"
+            className="m-0 min-h-0 flex-1 overflow-hidden data-[state=inactive]:hidden"
+          >
             <ScrollArea className="h-full">
-              <div className="p-4 space-y-6">
+              <div className="space-y-6 p-4">
                 {/* Seção de Notas Internas */}
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <StickyNote className="w-4 h-4 text-warning" />
-                    <h3 className="font-medium text-sm">Notas Internas</h3>
+                    <StickyNote className="h-4 w-4 text-warning" />
+                    <h3 className="text-sm font-medium">Notas Internas</h3>
                     {(notes?.length ?? 0) > 0 && (
                       <Badge variant="secondary" className="text-xs">
                         {notes?.length}
@@ -732,12 +831,12 @@ function LeadDetailsPanelComponent({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Activity className="w-4 h-4 text-primary" />
-                      <h3 className="font-medium text-sm">Histórico de Atividades</h3>
+                      <Activity className="h-4 w-4 text-primary" />
+                      <h3 className="text-sm font-medium">Histórico de Atividades</h3>
                     </div>
                     <Select value={activityFilter} onValueChange={setActivityFilter}>
-                      <SelectTrigger className="w-[140px] h-7 text-xs">
-                        <Filter className="w-3 h-3 mr-1" />
+                      <SelectTrigger className="h-7 w-[140px] text-xs">
+                        <Filter className="mr-1 h-3 w-3" />
                         <SelectValue placeholder="Filtrar" />
                       </SelectTrigger>
                       <SelectContent>
@@ -750,10 +849,10 @@ function LeadDetailsPanelComponent({
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   {activitiesLoading ? (
                     <div className="flex items-center justify-center py-8 text-muted-foreground">
-                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                       Carregando histórico...
                     </div>
                   ) : (

@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,7 +18,7 @@ function gerarIdLegivel(tipo: string, uuid: string): string {
     usuario: 'usr_',
     tarefa: 'task_',
     instancia: 'inst_',
-    equipe: 'eqp_'
+    equipe: 'eqp_',
   };
   const hashCurto = uuid.replace(/-/g, '').substring(0, 8);
   return (prefixos[tipo] || '') + hashCurto;
@@ -35,24 +35,24 @@ function gerarRequestId(): string {
 function formatarTelefone(numero: string | null | undefined): string {
   if (!numero) return '';
   const digits = numero.replace(/\D/g, '');
-  
+
   // +55 (XX) 9XXXX-XXXX (13 dígitos com 55)
   if (digits.length === 13 && digits.startsWith('55')) {
-    return `+${digits.slice(0,2)} (${digits.slice(2,4)}) ${digits.slice(4,9)}-${digits.slice(9)}`;
+    return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
   }
   // +55 (XX) XXXX-XXXX (12 dígitos com 55)
   if (digits.length === 12 && digits.startsWith('55')) {
-    return `+${digits.slice(0,2)} (${digits.slice(2,4)}) ${digits.slice(4,8)}-${digits.slice(8)}`;
+    return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 8)}-${digits.slice(8)}`;
   }
   // 11 dígitos (DDD + 9 dígitos)
   if (digits.length === 11) {
-    return `+55 (${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
+    return `+55 (${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
   }
   // 10 dígitos (DDD + 8 dígitos)
   if (digits.length === 10) {
-    return `+55 (${digits.slice(0,2)}) ${digits.slice(2,6)}-${digits.slice(6)}`;
+    return `+55 (${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
   }
-  
+
   return numero;
 }
 
@@ -60,7 +60,7 @@ function formatarCPF(cpf: string | null | undefined): string | null {
   if (!cpf) return null;
   const digits = cpf.replace(/\D/g, '');
   if (digits.length !== 11) return cpf;
-  return `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6,9)}-${digits.slice(9)}`;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 }
 
 // Formatar timestamp em GMT-3 (São Paulo/Brasília)
@@ -68,9 +68,9 @@ function formatTimestamp(): string {
   const now = new Date();
   // Offset de -3 horas em milissegundos
   const brasiliaOffset = -3 * 60 * 60 * 1000;
-  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60 * 1000);
+  const utcTime = now.getTime() + now.getTimezoneOffset() * 60 * 1000;
   const brasiliaTime = new Date(utcTime + brasiliaOffset);
-  
+
   const year = brasiliaTime.getFullYear();
   const month = String(brasiliaTime.getMonth() + 1).padStart(2, '0');
   const day = String(brasiliaTime.getDate()).padStart(2, '0');
@@ -78,29 +78,29 @@ function formatTimestamp(): string {
   const minutes = String(brasiliaTime.getMinutes()).padStart(2, '0');
   const seconds = String(brasiliaTime.getSeconds()).padStart(2, '0');
   const ms = String(brasiliaTime.getMilliseconds()).padStart(3, '0');
-  
+
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${ms}-03:00`;
 }
 
 // Converter data do banco (UTC) para GMT-3
 function formatDateToGMT3(dateString: string | null | undefined): string | null {
   if (!dateString) return null;
-  
+
   try {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return dateString;
-    
+
     // Subtrair 3 horas para GMT-3
     const brasiliaOffset = -3 * 60 * 60 * 1000;
     const brasiliaTime = new Date(date.getTime() + brasiliaOffset);
-    
+
     const year = brasiliaTime.getUTCFullYear();
     const month = String(brasiliaTime.getUTCMonth() + 1).padStart(2, '0');
     const day = String(brasiliaTime.getUTCDate()).padStart(2, '0');
     const hours = String(brasiliaTime.getUTCHours()).padStart(2, '0');
     const minutes = String(brasiliaTime.getUTCMinutes()).padStart(2, '0');
     const seconds = String(brasiliaTime.getUTCSeconds()).padStart(2, '0');
-    
+
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}-03:00`;
   } catch {
     return dateString;
@@ -108,25 +108,34 @@ function formatDateToGMT3(dateString: string | null | undefined): string | null 
 }
 
 function traduzirTemperatura(temp: string): string {
-  const map: Record<string, string> = { 'cold': 'frio', 'warm': 'morno', 'hot': 'quente' };
+  const map: Record<string, string> = { cold: 'frio', warm: 'morno', hot: 'quente' };
   return map[temp] || temp;
 }
 
 function traduzirTipoMensagem(type: string): string {
   const map: Record<string, string> = {
-    'text': 'texto', 'image': 'imagem', 'audio': 'audio',
-    'video': 'video', 'document': 'documento', 'sticker': 'sticker', 'location': 'localizacao'
+    text: 'texto',
+    image: 'imagem',
+    audio: 'audio',
+    video: 'video',
+    document: 'documento',
+    sticker: 'sticker',
+    location: 'localizacao',
   };
   return map[type] || type;
 }
 
 function traduzirStatusConversa(status: string): string {
-  const map: Record<string, string> = { 'open': 'aberta', 'pending': 'pendente', 'resolved': 'resolvida' };
+  const map: Record<string, string> = {
+    open: 'aberta',
+    pending: 'pendente',
+    resolved: 'resolvida',
+  };
   return map[status] || status;
 }
 
 function traduzirStatusMensagem(status: string): string {
-  const map: Record<string, string> = { 'sent': 'enviada', 'delivered': 'entregue', 'read': 'lida' };
+  const map: Record<string, string> = { sent: 'enviada', delivered: 'entregue', read: 'lida' };
   return map[status] || status;
 }
 
@@ -136,23 +145,23 @@ function traduzirStatusMensagem(status: string): string {
 
 async function buscarLeadCompleto(supabase: any, leadId: string) {
   if (!leadId) return null;
-  
+
   const { data: lead } = await supabase
     .from('leads')
     .select(`*, funnel_stages (id, name, color)`)
     .eq('id', leadId)
     .maybeSingle();
-  
+
   if (!lead) return null;
-  
+
   // Buscar etiquetas
   const { data: leadLabels } = await supabase
     .from('lead_labels')
     .select('labels (id, name)')
     .eq('lead_id', leadId);
-  
+
   const etiquetas = leadLabels?.map((ll: any) => ll.labels?.name).filter(Boolean) || [];
-  
+
   // Buscar responsável
   let responsavel = null;
   if (lead.assigned_to) {
@@ -161,15 +170,15 @@ async function buscarLeadCompleto(supabase: any, leadId: string) {
       .select('id, name')
       .eq('id', lead.assigned_to)
       .maybeSingle();
-    
+
     if (profile) {
       responsavel = {
         id: gerarIdLegivel('usuario', profile.id),
-        nome: profile.name
+        nome: profile.name,
       };
     }
   }
-  
+
   return {
     id: gerarIdLegivel('lead', lead.id),
     id_original: lead.id,
@@ -185,26 +194,26 @@ async function buscarLeadCompleto(supabase: any, leadId: string) {
     beneficio: lead.benefit_type || null,
     criado_em: formatDateToGMT3(lead.created_at),
     responsavel,
-    raw: lead
+    raw: lead,
   };
 }
 
 async function buscarConversa(supabase: any, conversationId: string) {
   if (!conversationId) return null;
-  
+
   const { data: conv } = await supabase
     .from('conversations')
     .select('*')
     .eq('id', conversationId)
     .maybeSingle();
-  
+
   if (!conv) return null;
-  
+
   const { count } = await supabase
     .from('messages')
     .select('*', { count: 'exact', head: true })
     .eq('conversation_id', conversationId);
-  
+
   // Buscar responsável da conversa
   let responsavel = null;
   if (conv.assigned_to) {
@@ -213,15 +222,15 @@ async function buscarConversa(supabase: any, conversationId: string) {
       .select('id, name, team_id')
       .eq('id', conv.assigned_to)
       .maybeSingle();
-    
+
     if (profile) {
       responsavel = {
         id: gerarIdLegivel('usuario', profile.id),
-        nome: profile.name
+        nome: profile.name,
       };
     }
   }
-  
+
   // Buscar equipe (do responsável ou do lead)
   let equipe = null;
   if (conv.assigned_to) {
@@ -232,15 +241,15 @@ async function buscarConversa(supabase: any, conversationId: string) {
       .eq('user_id', conv.assigned_to)
       .limit(1)
       .maybeSingle();
-    
+
     if (teamMember?.teams) {
       equipe = {
         id: `eqp_${teamMember.teams.id.slice(0, 8)}`,
-        nome: teamMember.teams.name
+        nome: teamMember.teams.name,
       };
     }
   }
-  
+
   // Buscar canal/instância WhatsApp
   let canal = null;
   if (conv.whatsapp_instance_id) {
@@ -249,15 +258,15 @@ async function buscarConversa(supabase: any, conversationId: string) {
       .select('id, name, instance_name')
       .eq('id', conv.whatsapp_instance_id)
       .maybeSingle();
-    
+
     if (instance) {
       canal = {
         tipo: 'whatsapp',
-        nome: instance.instance_name || instance.name
+        nome: instance.instance_name || instance.name,
       };
     }
   }
-  
+
   return {
     id: gerarIdLegivel('conversa', conv.id),
     id_original: conv.id,
@@ -269,45 +278,45 @@ async function buscarConversa(supabase: any, conversationId: string) {
     responsavel,
     equipe,
     canal,
-    iniciada_em: formatDateToGMT3(conv.created_at)
+    iniciada_em: formatDateToGMT3(conv.created_at),
   };
 }
 
 async function buscarInstanciaWhatsApp(supabase: any, instanceId: string) {
   if (!instanceId) return null;
-  
+
   const { data: instance } = await supabase
     .from('whatsapp_config')
     .select('id, name, instance_name, phone_number')
     .eq('id', instanceId)
     .maybeSingle();
-  
+
   if (!instance) return null;
-  
+
   return {
     id: gerarIdLegivel('instancia', instance.id),
     nome: instance.name,
     telefone: formatarTelefone(instance.phone_number),
-    identificador: instance.instance_name
+    identificador: instance.instance_name,
   };
 }
 
 async function buscarUsuario(supabase: any, userId: string) {
   if (!userId) return null;
-  
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('id, name')
     .eq('id', userId)
     .maybeSingle();
-  
+
   if (!profile) return null;
   return { id: gerarIdLegivel('usuario', profile.id), nome: profile.name };
 }
 
 async function buscarInstanciaDoLead(supabase: any, leadId: string) {
   if (!leadId) return null;
-  
+
   // Buscar a conversa mais recente do lead para obter a instância
   const { data: conv } = await supabase
     .from('conversations')
@@ -316,14 +325,14 @@ async function buscarInstanciaDoLead(supabase: any, leadId: string) {
     .order('last_message_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  
+
   if (!conv?.whatsapp_instance_id) return null;
   return await buscarInstanciaWhatsApp(supabase, conv.whatsapp_instance_id);
 }
 
 async function buscarConversaDoLead(supabase: any, leadId: string) {
   if (!leadId) return null;
-  
+
   const { data: conv } = await supabase
     .from('conversations')
     .select('id')
@@ -331,7 +340,7 @@ async function buscarConversaDoLead(supabase: any, leadId: string) {
     .order('last_message_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  
+
   if (!conv) return null;
   return await buscarConversa(supabase, conv.id);
 }
@@ -351,7 +360,7 @@ function formatarLeadPayload(lead: any) {
     campanha: lead.campanha,
     etiquetas: lead.etiquetas,
     responsavel: lead.responsavel,
-    criado_em: lead.criado_em
+    criado_em: lead.criado_em,
   };
 }
 
@@ -364,7 +373,7 @@ function formatarConversaPayload(conversa: any) {
     responsavel: conversa.responsavel,
     equipe: conversa.equipe,
     canal: conversa.canal,
-    iniciada_em: conversa.iniciada_em
+    iniciada_em: conversa.iniciada_em,
   };
 }
 
@@ -376,11 +385,13 @@ async function buildMensagemRecebida(supabase: any, eventData: any) {
   const msg = eventData?.message || eventData;
   const leadId = msg?.lead_id || eventData?.lead_id;
   const convId = msg?.conversation_id || eventData?.conversation_id;
-  
+
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
   const conversa = convId ? await buscarConversa(supabase, convId) : null;
-  const instancia = conversa?.whatsapp_instance_id ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id) : null;
-  
+  const instancia = conversa?.whatsapp_instance_id
+    ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id)
+    : null;
+
   return {
     evento: 'mensagem.recebida',
     timestamp: formatTimestamp(),
@@ -396,31 +407,35 @@ async function buildMensagemRecebida(supabase: any, eventData: any) {
       remetente: {
         tipo: 'contato',
         id: lead?.id || null,
-        nome: lead?.nome || null
-      }
+        nome: lead?.nome || null,
+      },
     },
-    lead: lead ? {
-      id: lead.id,
-      nome: lead.nome,
-      whatsapp: lead.whatsapp,
-      email: lead.email,
-      temperatura: lead.temperatura,
-      etapa_funil: lead.etapa_funil,
-      tipo_beneficio: lead.beneficio,
-      origem: lead.origem,
-      etiquetas: lead.etiquetas,
-      responsavel: lead.responsavel,
-      criado_em: lead.criado_em
-    } : null,
-    conversa: conversa ? {
-      id: conversa.id,
-      status: conversa.status,
-      nao_lidas: conversa.nao_lidas,
-      responsavel: conversa.responsavel,
-      equipe: conversa.equipe,
-      canal: conversa.canal,
-      iniciada_em: conversa.iniciada_em
-    } : null
+    lead: lead
+      ? {
+          id: lead.id,
+          nome: lead.nome,
+          whatsapp: lead.whatsapp,
+          email: lead.email,
+          temperatura: lead.temperatura,
+          etapa_funil: lead.etapa_funil,
+          tipo_beneficio: lead.beneficio,
+          origem: lead.origem,
+          etiquetas: lead.etiquetas,
+          responsavel: lead.responsavel,
+          criado_em: lead.criado_em,
+        }
+      : null,
+    conversa: conversa
+      ? {
+          id: conversa.id,
+          status: conversa.status,
+          nao_lidas: conversa.nao_lidas,
+          responsavel: conversa.responsavel,
+          equipe: conversa.equipe,
+          canal: conversa.canal,
+          iniciada_em: conversa.iniciada_em,
+        }
+      : null,
   };
 }
 
@@ -428,11 +443,13 @@ async function buildMensagemEnviada(supabase: any, eventData: any) {
   const msg = eventData?.message || eventData;
   const leadId = msg?.lead_id || eventData?.lead_id;
   const convId = msg?.conversation_id || eventData?.conversation_id;
-  
+
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
   const conversa = convId ? await buscarConversa(supabase, convId) : null;
-  const instancia = conversa?.whatsapp_instance_id ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id) : null;
-  
+  const instancia = conversa?.whatsapp_instance_id
+    ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id)
+    : null;
+
   // Buscar remetente (quem enviou a mensagem)
   let remetente = null;
   if (msg?.sender_id) {
@@ -441,21 +458,26 @@ async function buildMensagemEnviada(supabase: any, eventData: any) {
       .select('id, name')
       .eq('id', msg.sender_id)
       .maybeSingle();
-    
+
     if (profile) {
       remetente = {
-        tipo: msg?.sender_type === 'agent' ? 'atendente' : msg?.sender_type === 'lead' ? 'contato' : 'sistema',
+        tipo:
+          msg?.sender_type === 'agent'
+            ? 'atendente'
+            : msg?.sender_type === 'lead'
+              ? 'contato'
+              : 'sistema',
         id: gerarIdLegivel('usuario', profile.id),
-        nome: profile.name
+        nome: profile.name,
       };
     }
   } else if (msg?.sender_type === 'agent') {
     remetente = { tipo: 'atendente', id: null, nome: null };
   }
-  
+
   // Determinar direção
   const direcao = msg?.direction === 'inbound' ? 'entrada' : 'saida';
-  
+
   return {
     evento: 'mensagem.enviada',
     timestamp: formatTimestamp(),
@@ -469,62 +491,74 @@ async function buildMensagemEnviada(supabase: any, eventData: any) {
       enviada_em: formatDateToGMT3(msg?.created_at) || formatTimestamp(),
       status: traduzirStatusMensagem(msg?.status || 'sent'),
       direcao,
-      remetente
+      remetente,
     },
-    lead: lead ? {
-      id: lead.id,
-      nome: lead.nome,
-      whatsapp: lead.whatsapp,
-      email: lead.email,
-      temperatura: lead.temperatura,
-      etapa_funil: lead.etapa_funil,
-      tipo_beneficio: lead.beneficio,
-      origem: lead.origem,
-      etiquetas: lead.etiquetas,
-      responsavel: lead.responsavel,
-      criado_em: lead.criado_em
-    } : null,
-    conversa: conversa ? {
-      id: conversa.id,
-      status: conversa.status,
-      nao_lidas: conversa.nao_lidas,
-      responsavel: conversa.responsavel,
-      equipe: conversa.equipe,
-      canal: conversa.canal,
-      iniciada_em: conversa.iniciada_em
-    } : null
+    lead: lead
+      ? {
+          id: lead.id,
+          nome: lead.nome,
+          whatsapp: lead.whatsapp,
+          email: lead.email,
+          temperatura: lead.temperatura,
+          etapa_funil: lead.etapa_funil,
+          tipo_beneficio: lead.beneficio,
+          origem: lead.origem,
+          etiquetas: lead.etiquetas,
+          responsavel: lead.responsavel,
+          criado_em: lead.criado_em,
+        }
+      : null,
+    conversa: conversa
+      ? {
+          id: conversa.id,
+          status: conversa.status,
+          nao_lidas: conversa.nao_lidas,
+          responsavel: conversa.responsavel,
+          equipe: conversa.equipe,
+          canal: conversa.canal,
+          iniciada_em: conversa.iniciada_em,
+        }
+      : null,
   };
 }
 
 async function buildLeadCriado(supabase: any, eventData: any) {
   const leadData = eventData?.lead || eventData;
   const lead = leadData?.id ? await buscarLeadCompleto(supabase, leadData.id) : null;
-  const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
-  const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
-  
+  const instancia = lead?.id_original
+    ? await buscarInstanciaDoLead(supabase, lead.id_original)
+    : null;
+  const conversa = lead?.id_original
+    ? await buscarConversaDoLead(supabase, lead.id_original)
+    : null;
+
   return {
     evento: 'lead.criado',
     timestamp: formatTimestamp(),
     request_id: gerarRequestId(),
     instancia_whatsapp: instancia,
     lead: formatarLeadPayload(lead),
-    conversa: formatarConversaPayload(conversa)
+    conversa: formatarConversaPayload(conversa),
   };
 }
 
 async function buildLeadAtualizado(supabase: any, eventData: any) {
   const leadData = eventData?.lead || eventData;
   const lead = leadData?.id ? await buscarLeadCompleto(supabase, leadData.id) : null;
-  const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
-  const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
-  
+  const instancia = lead?.id_original
+    ? await buscarInstanciaDoLead(supabase, lead.id_original)
+    : null;
+  const conversa = lead?.id_original
+    ? await buscarConversaDoLead(supabase, lead.id_original)
+    : null;
+
   return {
     evento: 'lead.atualizado',
     timestamp: formatTimestamp(),
     request_id: gerarRequestId(),
     instancia_whatsapp: instancia,
     lead: formatarLeadPayload(lead),
-    conversa: formatarConversaPayload(conversa)
+    conversa: formatarConversaPayload(conversa),
   };
 }
 
@@ -532,9 +566,13 @@ async function buildLeadEtapaAlterada(supabase: any, eventData: any) {
   const leadData = eventData?.lead || eventData;
   const leadId = leadData?.id || eventData?.lead_id;
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
-  const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
-  const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
-  
+  const instancia = lead?.id_original
+    ? await buscarInstanciaDoLead(supabase, lead.id_original)
+    : null;
+  const conversa = lead?.id_original
+    ? await buscarConversaDoLead(supabase, lead.id_original)
+    : null;
+
   // Buscar nome da etapa anterior
   let etapaAnterior = null;
   if (eventData?.previous_stage_id) {
@@ -545,7 +583,7 @@ async function buildLeadEtapaAlterada(supabase: any, eventData: any) {
       .maybeSingle();
     etapaAnterior = stage?.name || null;
   }
-  
+
   // Buscar nome da etapa nova
   let etapaNova = null;
   if (eventData?.new_stage_id) {
@@ -556,7 +594,7 @@ async function buildLeadEtapaAlterada(supabase: any, eventData: any) {
       .maybeSingle();
     etapaNova = stage?.name || null;
   }
-  
+
   return {
     evento: 'lead.etapa_alterada',
     timestamp: formatTimestamp(),
@@ -565,7 +603,7 @@ async function buildLeadEtapaAlterada(supabase: any, eventData: any) {
     lead: formatarLeadPayload(lead),
     conversa: formatarConversaPayload(conversa),
     etapa_anterior: etapaAnterior,
-    etapa_nova: etapaNova || lead?.etapa_funil
+    etapa_nova: etapaNova || lead?.etapa_funil,
   };
 }
 
@@ -573,9 +611,13 @@ async function buildLeadTemperaturaAlterada(supabase: any, eventData: any) {
   const leadData = eventData?.lead || eventData;
   const leadId = leadData?.id || eventData?.lead_id;
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
-  const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
-  const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
-  
+  const instancia = lead?.id_original
+    ? await buscarInstanciaDoLead(supabase, lead.id_original)
+    : null;
+  const conversa = lead?.id_original
+    ? await buscarConversaDoLead(supabase, lead.id_original)
+    : null;
+
   return {
     evento: 'lead.temperatura_alterada',
     timestamp: formatTimestamp(),
@@ -584,7 +626,7 @@ async function buildLeadTemperaturaAlterada(supabase: any, eventData: any) {
     lead: formatarLeadPayload(lead),
     conversa: formatarConversaPayload(conversa),
     temperatura_anterior: traduzirTemperatura(eventData?.previous_temperature || ''),
-    temperatura_nova: traduzirTemperatura(eventData?.new_temperature || lead?.temperatura || '')
+    temperatura_nova: traduzirTemperatura(eventData?.new_temperature || lead?.temperatura || ''),
   };
 }
 
@@ -592,11 +634,19 @@ async function buildLeadTransferido(supabase: any, eventData: any) {
   const leadData = eventData?.lead || eventData;
   const leadId = leadData?.id || eventData?.lead_id;
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
-  const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
-  const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
-  const de = eventData?.previous_assigned_to ? await buscarUsuario(supabase, eventData.previous_assigned_to) : null;
-  const para = eventData?.new_assigned_to ? await buscarUsuario(supabase, eventData.new_assigned_to) : null;
-  
+  const instancia = lead?.id_original
+    ? await buscarInstanciaDoLead(supabase, lead.id_original)
+    : null;
+  const conversa = lead?.id_original
+    ? await buscarConversaDoLead(supabase, lead.id_original)
+    : null;
+  const de = eventData?.previous_assigned_to
+    ? await buscarUsuario(supabase, eventData.previous_assigned_to)
+    : null;
+  const para = eventData?.new_assigned_to
+    ? await buscarUsuario(supabase, eventData.new_assigned_to)
+    : null;
+
   return {
     evento: 'lead.transferido',
     timestamp: formatTimestamp(),
@@ -605,16 +655,20 @@ async function buildLeadTransferido(supabase: any, eventData: any) {
     lead: formatarLeadPayload(lead),
     conversa: formatarConversaPayload(conversa),
     de,
-    para
+    para,
   };
 }
 
 async function buildLeadEtiqueta(supabase: any, eventData: any, adicionada: boolean) {
   const leadId = eventData?.lead_id;
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
-  const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
-  const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
-  
+  const instancia = lead?.id_original
+    ? await buscarInstanciaDoLead(supabase, lead.id_original)
+    : null;
+  const conversa = lead?.id_original
+    ? await buscarConversaDoLead(supabase, lead.id_original)
+    : null;
+
   return {
     evento: adicionada ? 'lead.etiqueta_adicionada' : 'lead.etiqueta_removida',
     timestamp: formatTimestamp(),
@@ -623,7 +677,7 @@ async function buildLeadEtiqueta(supabase: any, eventData: any, adicionada: bool
     lead: formatarLeadPayload(lead),
     conversa: formatarConversaPayload(conversa),
     etiqueta: eventData?.label_name || null,
-    etiquetas_atuais: lead?.etiquetas || []
+    etiquetas_atuais: lead?.etiquetas || [],
   };
 }
 
@@ -632,15 +686,17 @@ async function buildConversaCriada(supabase: any, eventData: any) {
   const conversa = convData?.id ? await buscarConversa(supabase, convData.id) : null;
   const leadId = convData?.lead_id || conversa?.lead_id;
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
-  const instancia = conversa?.whatsapp_instance_id ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id) : null;
-  
+  const instancia = conversa?.whatsapp_instance_id
+    ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id)
+    : null;
+
   return {
     evento: 'conversa.criada',
     timestamp: formatTimestamp(),
     request_id: gerarRequestId(),
     instancia_whatsapp: instancia,
     lead: formatarLeadPayload(lead),
-    conversa: formatarConversaPayload(conversa)
+    conversa: formatarConversaPayload(conversa),
   };
 }
 
@@ -649,8 +705,10 @@ async function buildConversaResolvida(supabase: any, eventData: any) {
   const conversa = convData?.id ? await buscarConversa(supabase, convData.id) : null;
   const leadId = convData?.lead_id || conversa?.lead_id;
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
-  const instancia = conversa?.whatsapp_instance_id ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id) : null;
-  
+  const instancia = conversa?.whatsapp_instance_id
+    ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id)
+    : null;
+
   // Calcular duração
   let duracaoMinutos = 0;
   if (conversa?.id_original) {
@@ -661,23 +719,25 @@ async function buildConversaResolvida(supabase: any, eventData: any) {
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle();
-    
+
     if (firstMsg) {
       duracaoMinutos = Math.round((Date.now() - new Date(firstMsg.created_at).getTime()) / 60000);
     }
   }
-  
+
   return {
     evento: 'conversa.resolvida',
     timestamp: formatTimestamp(),
     request_id: gerarRequestId(),
     instancia_whatsapp: instancia,
     lead: formatarLeadPayload(lead),
-    conversa: conversa ? {
-      ...formatarConversaPayload(conversa),
-      total_mensagens: conversa.total_mensagens,
-      duracao_minutos: duracaoMinutos
-    } : null
+    conversa: conversa
+      ? {
+          ...formatarConversaPayload(conversa),
+          total_mensagens: conversa.total_mensagens,
+          duracao_minutos: duracaoMinutos,
+        }
+      : null,
   };
 }
 
@@ -685,10 +745,16 @@ async function buildTarefaCriada(supabase: any, eventData: any) {
   const taskData = eventData?.task || eventData;
   const leadId = taskData?.lead_id;
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
-  const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
-  const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
-  const responsavel = taskData?.assigned_to ? await buscarUsuario(supabase, taskData.assigned_to) : null;
-  
+  const instancia = lead?.id_original
+    ? await buscarInstanciaDoLead(supabase, lead.id_original)
+    : null;
+  const conversa = lead?.id_original
+    ? await buscarConversaDoLead(supabase, lead.id_original)
+    : null;
+  const responsavel = taskData?.assigned_to
+    ? await buscarUsuario(supabase, taskData.assigned_to)
+    : null;
+
   return {
     evento: 'tarefa.criada',
     timestamp: formatTimestamp(),
@@ -701,10 +767,10 @@ async function buildTarefaCriada(supabase: any, eventData: any) {
       prioridade: taskData?.priority || 'medium',
       vencimento: taskData?.due_date || null,
       status: 'pendente',
-      responsavel
+      responsavel,
     },
     lead: formatarLeadPayload(lead),
-    conversa: formatarConversaPayload(conversa)
+    conversa: formatarConversaPayload(conversa),
   };
 }
 
@@ -712,10 +778,16 @@ async function buildTarefaConcluida(supabase: any, eventData: any) {
   const taskData = eventData?.task || eventData;
   const leadId = taskData?.lead_id;
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
-  const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
-  const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
-  const responsavel = taskData?.assigned_to ? await buscarUsuario(supabase, taskData.assigned_to) : null;
-  
+  const instancia = lead?.id_original
+    ? await buscarInstanciaDoLead(supabase, lead.id_original)
+    : null;
+  const conversa = lead?.id_original
+    ? await buscarConversaDoLead(supabase, lead.id_original)
+    : null;
+  const responsavel = taskData?.assigned_to
+    ? await buscarUsuario(supabase, taskData.assigned_to)
+    : null;
+
   return {
     evento: 'tarefa.concluida',
     timestamp: formatTimestamp(),
@@ -725,10 +797,10 @@ async function buildTarefaConcluida(supabase: any, eventData: any) {
       id: taskData?.id ? gerarIdLegivel('tarefa', taskData.id) : null,
       titulo: taskData?.title || null,
       concluida_em: formatTimestamp(),
-      concluida_por: responsavel
+      concluida_por: responsavel,
     },
     lead: formatarLeadPayload(lead),
-    conversa: formatarConversaPayload(conversa)
+    conversa: formatarConversaPayload(conversa),
   };
 }
 
@@ -738,9 +810,9 @@ async function buildTarefaConcluida(supabase: any, eventData: any) {
 
 async function buildPayload(supabase: any, evento: string, dados: any): Promise<any> {
   const eventData = dados?.data || dados;
-  
+
   console.log(`[Webhook] Construindo payload limpo para: ${evento}`);
-  
+
   switch (evento) {
     case 'message.received':
       return await buildMensagemRecebida(supabase, eventData);
@@ -781,14 +853,18 @@ async function generateSignature(payload: any, secret: string): Promise<string> 
   const encoder = new TextEncoder();
   const data = encoder.encode(JSON.stringify(payload));
   const keyData = encoder.encode(secret);
-  
+
   const key = await crypto.subtle.importKey(
-    'raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
   );
-  
+
   const signature = await crypto.subtle.sign('HMAC', key, data);
   const hashArray = Array.from(new Uint8Array(signature));
-  return `sha256=${hashArray.map(b => b.toString(16).padStart(2, '0')).join('')}`;
+  return `sha256=${hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')}`;
 }
 
 // ============================================
@@ -806,60 +882,63 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { event, payload: rawPayload, webhook_id } = await req.json();
-    
+
     console.log(`[Webhook] Evento recebido: ${event}`);
-    
+
     // Buscar webhooks
     let webhooksQuery = supabase.from('webhooks').select('*').eq('is_active', true);
     if (webhook_id) webhooksQuery = webhooksQuery.eq('id', webhook_id);
-    
+
     const { data: webhooks, error: webhooksError } = await webhooksQuery;
-    
+
     if (webhooksError) throw webhooksError;
-    
+
     if (!webhooks || webhooks.length === 0) {
       return new Response(JSON.stringify({ success: true, message: 'Nenhum webhook ativo' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    
+
     // Filtrar webhooks para este evento
-    const webhooksToSend = webhooks.filter(w => w.events?.includes(event));
-    
+    const webhooksToSend = webhooks.filter((w) => w.events?.includes(event));
+
     if (webhooksToSend.length === 0) {
-      return new Response(JSON.stringify({ success: true, message: 'Nenhum webhook para este evento' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      return new Response(
+        JSON.stringify({ success: true, message: 'Nenhum webhook para este evento' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
-    
+
     // Construir payload LIMPO
     const payload = await buildPayload(supabase, event, rawPayload);
-    
+
     console.log(`[Webhook] Payload:`, JSON.stringify(payload, null, 2));
-    
+
     // Enviar para cada webhook
     const results = [];
     for (const webhook of webhooksToSend) {
       try {
         const signature = await generateSignature(payload, webhook.secret);
         const timestamp = Math.floor(Date.now() / 1000);
-        
+
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
           'X-Webhook-Evento': payload.evento,
           'X-Webhook-Timestamp': timestamp.toString(),
           'X-Webhook-Assinatura': signature,
-          ...(webhook.headers || {})
+          ...(webhook.headers || {}),
         };
-        
+
         const response = await fetch(webhook.url, {
           method: 'POST',
           headers,
-          body: JSON.stringify(payload)
+          body: JSON.stringify(payload),
         });
-        
+
         const responseText = await response.text();
-        
+
         await supabase.from('webhook_logs').insert({
           webhook_id: webhook.id,
           event,
@@ -867,36 +946,34 @@ serve(async (req) => {
           status: response.ok ? 'success' : 'failed',
           response_status: response.status,
           response_body: responseText.substring(0, 1000),
-          completed_at: response.ok ? new Date().toISOString() : null
+          completed_at: response.ok ? new Date().toISOString() : null,
         });
-        
+
         results.push({ webhook_id: webhook.id, success: response.ok, status: response.status });
         console.log(`[Webhook] ${webhook.name}: ${response.status}`);
-        
       } catch (error: any) {
         console.error(`[Webhook] Erro ${webhook.name}:`, error);
-        
+
         await supabase.from('webhook_logs').insert({
           webhook_id: webhook.id,
           event,
           payload,
           status: 'failed',
-          error_message: error?.message || 'Erro desconhecido'
+          error_message: error?.message || 'Erro desconhecido',
         });
-        
+
         results.push({ webhook_id: webhook.id, success: false, error: error?.message });
       }
     }
-    
-    return new Response(JSON.stringify({ success: true, results }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
 
+    return new Response(JSON.stringify({ success: true, results }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error: any) {
     console.error('[Webhook] Erro:', error);
     return new Response(JSON.stringify({ error: error?.message || 'Erro' }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });

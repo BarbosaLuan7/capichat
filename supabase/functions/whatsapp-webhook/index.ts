@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -67,17 +67,17 @@ interface EvolutionWebhookPayload {
 // Detecta se é um chat de grupo (IDs terminam com @g.us ou começam com 120363)
 function isGroupChat(chatId: string): boolean {
   if (!chatId) return false;
-  return chatId.includes('@g.us') || 
-         chatId.includes('g.us') ||
-         chatId.startsWith('120363');
+  return chatId.includes('@g.us') || chatId.includes('g.us') || chatId.startsWith('120363');
 }
 
 // Detecta se é um broadcast/status (stories do WhatsApp) - deve ser ignorado
 function isStatusBroadcast(chatId: string): boolean {
   if (!chatId) return false;
-  return chatId.includes('status@broadcast') || 
-         chatId === 'status@broadcast' ||
-         chatId.includes('@broadcast');
+  return (
+    chatId.includes('status@broadcast') ||
+    chatId === 'status@broadcast' ||
+    chatId.includes('@broadcast')
+  );
 }
 
 // Detecta se é um LID do Facebook (formato: número@lid ou número muito longo sem @c.us)
@@ -87,9 +87,11 @@ function isLID(phone: string): boolean {
   // - "174621106159626@lid"
   // - Números com 15+ dígitos sem @c.us/@s.whatsapp.net
   const cleanPhone = phone.replace(/\D/g, '');
-  return phone.includes('@lid') || 
-         phone.endsWith('@lid') ||
-         (cleanPhone.length >= 15 && !phone.includes('@c.us') && !phone.includes('@s.whatsapp.net'));
+  return (
+    phone.includes('@lid') ||
+    phone.endsWith('@lid') ||
+    (cleanPhone.length >= 15 && !phone.includes('@c.us') && !phone.includes('@s.whatsapp.net'))
+  );
 }
 
 // Extrai o número real do payload WAHA quando é um LID
@@ -102,7 +104,7 @@ function extractRealPhoneFromPayload(payload: any): string | null {
     payload?._data?.chatId,
     payload?._data?.from,
   ];
-  
+
   for (const path of possiblePaths) {
     if (path && typeof path === 'string') {
       // Se termina com @c.us ou @s.whatsapp.net, é um número real
@@ -116,7 +118,7 @@ function extractRealPhoneFromPayload(payload: any): string | null {
       }
     }
   }
-  
+
   return null;
 }
 
@@ -130,37 +132,42 @@ async function resolvePhoneFromLID(
   try {
     // Limpar o LID para obter apenas o número
     const cleanLid = lid.replace('@lid', '').replace(/\D/g, '');
-    
+
     // URL da API WAHA para resolver LID
     const url = `${wahaBaseUrl}/api/${sessionName}/lids/${cleanLid}`;
-    
+
     console.log('[whatsapp-webhook] Tentando resolver LID via WAHA API:', url);
-    
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
         'X-Api-Key': apiKey,
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!response.ok) {
       console.log('[whatsapp-webhook] API WAHA retornou:', response.status, await response.text());
       return null;
     }
-    
+
     const data = await response.json();
     console.log('[whatsapp-webhook] Resposta da API LID:', JSON.stringify(data));
-    
+
     // A resposta do WAHA pode ter diferentes formatos - campo 'pn' é o mais comum
-    const realPhone = data?.pn?.replace('@c.us', '') || data?.phone || data?.number || data?.jid?.replace('@c.us', '') || data?.id?.replace('@c.us', '');
-    
+    const realPhone =
+      data?.pn?.replace('@c.us', '') ||
+      data?.phone ||
+      data?.number ||
+      data?.jid?.replace('@c.us', '') ||
+      data?.id?.replace('@c.us', '');
+
     if (realPhone && !realPhone.includes('lid')) {
       console.log('[whatsapp-webhook] Número real encontrado via API:', realPhone);
       return realPhone;
     }
-    
+
     return null;
   } catch (error) {
     console.error('[whatsapp-webhook] Erro ao resolver LID via API:', error);
@@ -177,46 +184,49 @@ async function getContactInfo(
 ): Promise<{ name: string | null; pushname: string | null }> {
   try {
     // Usar apenas o número SEM @c.us
-    const cleanNumber = contactId.replace('@c.us', '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
-    
+    const cleanNumber = contactId
+      .replace('@c.us', '')
+      .replace('@s.whatsapp.net', '')
+      .replace(/\D/g, '');
+
     const url = `${wahaBaseUrl}/api/contacts?contactId=${cleanNumber}&session=${sessionName}`;
-    
+
     console.log('[whatsapp-webhook] 📇 Buscando info do contato:', cleanNumber);
-    
+
     // Usar AbortController para timeout de 5 segundos
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
-    
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
         'X-Api-Key': apiKey,
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       signal: controller.signal,
     });
-    
+
     clearTimeout(timeoutId);
-    
+
     if (!response.ok) {
       console.log('[whatsapp-webhook] 📇 API contato retornou status:', response.status);
       return { name: null, pushname: null };
     }
-    
+
     const data = await response.json();
     console.log('[whatsapp-webhook] 📇 Resposta info contato:', JSON.stringify(data).slice(0, 300));
-    
+
     // A resposta pode ter diferentes formatos
     const name = data?.name || data?.verifiedName || null;
     const pushname = data?.pushname || data?.pushName || data?.notify || null;
-    
+
     if (name || pushname) {
       console.log('[whatsapp-webhook] 📇 Info encontrada - name:', name, '| pushname:', pushname);
     } else {
       console.log('[whatsapp-webhook] 📇 Nenhum nome encontrado para:', cleanNumber);
     }
-    
+
     return { name, pushname };
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
@@ -245,7 +255,7 @@ async function getProfilePictureWithReason(
 ): Promise<ProfilePictureResult> {
   try {
     let formattedContactId: string;
-    
+
     if (isLid) {
       // Para LIDs: garantir que tem @lid no final
       const cleanLid = contactId.replace('@lid', '').replace(/\D/g, '');
@@ -253,54 +263,69 @@ async function getProfilePictureWithReason(
       console.log('[whatsapp-webhook] 📷 Buscando foto via LID:', formattedContactId);
     } else {
       // Para números normais: usar apenas o número SEM @c.us
-      formattedContactId = contactId.replace('@c.us', '').replace('@s.whatsapp.net', '').replace(/\D/g, '');
-      
+      formattedContactId = contactId
+        .replace('@c.us', '')
+        .replace('@s.whatsapp.net', '')
+        .replace(/\D/g, '');
+
       // Ignorar números muito curtos ou inválidos
       if (formattedContactId.length < 10) {
-        console.log('[whatsapp-webhook] 📷 Número muito curto para buscar foto:', formattedContactId);
+        console.log(
+          '[whatsapp-webhook] 📷 Número muito curto para buscar foto:',
+          formattedContactId
+        );
         return { url: null, reason: 'number_too_short' };
       }
       console.log('[whatsapp-webhook] 📷 Buscando foto via telefone:', formattedContactId);
     }
-    
+
     // Adicionar refresh=true para forçar buscar do WhatsApp (evita cache vazio de 24h)
     const url = `${wahaBaseUrl}/api/contacts/profile-picture?contactId=${formattedContactId}&session=${sessionName}&refresh=true`;
-    
+
     console.log('[whatsapp-webhook] 📷 Request URL:', url);
-    
+
     // Usar AbortController para timeout de 8 segundos (fotos podem demorar mais)
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 8000);
-    
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
         'X-Api-Key': apiKey,
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       signal: controller.signal,
     });
-    
+
     clearTimeout(timeoutId);
-    
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.log('[whatsapp-webhook] 📷 API foto de perfil retornou status:', response.status, errorText.substring(0, 100));
+      console.log(
+        '[whatsapp-webhook] 📷 API foto de perfil retornou status:',
+        response.status,
+        errorText.substring(0, 100)
+      );
       return { url: null, reason: `api_error_${response.status}` };
     }
-    
+
     const data = await response.json();
     console.log('[whatsapp-webhook] 📷 Resposta API foto:', JSON.stringify(data).substring(0, 200));
-    
+
     // A resposta pode ter diferentes formatos
-    const profilePictureUrl = data?.profilePictureURL || data?.profilePicture || data?.url || data?.imgUrl;
-    
-    if (profilePictureUrl && typeof profilePictureUrl === 'string' && profilePictureUrl.startsWith('http')) {
+    const profilePictureUrl =
+      data?.profilePictureURL || data?.profilePicture || data?.url || data?.imgUrl;
+
+    if (
+      profilePictureUrl &&
+      typeof profilePictureUrl === 'string' &&
+      profilePictureUrl.startsWith('http')
+    ) {
       console.log('[whatsapp-webhook] 📷 Foto de perfil encontrada!');
       return { url: profilePictureUrl };
     }
-    
+
     console.log('[whatsapp-webhook] 📷 Foto não encontrada ou privada');
     return { url: null, reason: 'no_picture_or_private' };
   } catch (error) {
@@ -326,7 +351,15 @@ async function getProfilePicture(
 }
 
 // Busca configuração do WAHA no banco (genérica - qualquer instância ativa)
-async function getWAHAConfig(supabase: any): Promise<{ baseUrl: string; apiKey: string; sessionName: string; instanceId: string; tenantId: string | null } | null> {
+async function getWAHAConfig(
+  supabase: any
+): Promise<{
+  baseUrl: string;
+  apiKey: string;
+  sessionName: string;
+  instanceId: string;
+  tenantId: string | null;
+} | null> {
   try {
     const { data } = await supabase
       .from('whatsapp_config')
@@ -335,7 +368,7 @@ async function getWAHAConfig(supabase: any): Promise<{ baseUrl: string; apiKey: 
       .eq('provider', 'waha')
       .limit(1)
       .maybeSingle();
-    
+
     if (data) {
       return {
         baseUrl: data.base_url.replace(/\/$/, ''), // Remove trailing slash
@@ -345,7 +378,7 @@ async function getWAHAConfig(supabase: any): Promise<{ baseUrl: string; apiKey: 
         tenantId: data.tenant_id || null,
       };
     }
-    
+
     return null;
   } catch (error) {
     console.error('[whatsapp-webhook] Erro ao buscar config WAHA:', error);
@@ -356,27 +389,40 @@ async function getWAHAConfig(supabase: any): Promise<{ baseUrl: string; apiKey: 
 // Busca configuração do WAHA pela session/instance_name específica (do webhook)
 // Usa ilike para busca case-insensitive (LUAN = luan = Luan)
 async function getWAHAConfigBySession(
-  supabase: any, 
+  supabase: any,
   sessionName: string
-): Promise<{ baseUrl: string; apiKey: string; sessionName: string; instanceId: string; tenantId: string | null } | null> {
+): Promise<{
+  baseUrl: string;
+  apiKey: string;
+  sessionName: string;
+  instanceId: string;
+  tenantId: string | null;
+} | null> {
   try {
     console.log('[whatsapp-webhook] Buscando config WAHA para session:', sessionName);
-    
+
     const { data } = await supabase
       .from('whatsapp_config')
       .select('id, base_url, api_key, instance_name, phone_number, tenant_id')
       .eq('is_active', true)
       .eq('provider', 'waha')
-      .ilike('instance_name', sessionName)  // Case-insensitive: LUAN = luan = Luan
+      .ilike('instance_name', sessionName) // Case-insensitive: LUAN = luan = Luan
       .limit(1)
       .maybeSingle();
-    
+
     if (data) {
-      console.log('[whatsapp-webhook] ✅ Config encontrada para session:', sessionName, 
-        '| instanceId:', data.id, 
-        '| instance_name:', data.instance_name,
-        '| phone:', data.phone_number,
-        '| tenant_id:', data.tenant_id);
+      console.log(
+        '[whatsapp-webhook] ✅ Config encontrada para session:',
+        sessionName,
+        '| instanceId:',
+        data.id,
+        '| instance_name:',
+        data.instance_name,
+        '| phone:',
+        data.phone_number,
+        '| tenant_id:',
+        data.tenant_id
+      );
       return {
         baseUrl: data.base_url.replace(/\/$/, ''),
         apiKey: data.api_key,
@@ -385,13 +431,20 @@ async function getWAHAConfigBySession(
         tenantId: data.tenant_id || null,
       };
     }
-    
+
     // Fallback: se não encontrar pela session, buscar qualquer uma ativa
-    console.warn('[whatsapp-webhook] ⚠️ Instância NÃO encontrada para session:', sessionName, '- usando fallback (primeira ativa)');
+    console.warn(
+      '[whatsapp-webhook] ⚠️ Instância NÃO encontrada para session:',
+      sessionName,
+      '- usando fallback (primeira ativa)'
+    );
     const fallback = await getWAHAConfig(supabase);
     if (fallback) {
-      console.warn('[whatsapp-webhook] ⚠️ ATENÇÃO: Usando instância fallback:', fallback.sessionName, 
-        '| Cadastre a instância "' + sessionName + '" em Configurações > WhatsApp para corrigir');
+      console.warn(
+        '[whatsapp-webhook] ⚠️ ATENÇÃO: Usando instância fallback:',
+        fallback.sessionName,
+        '| Cadastre a instância "' + sessionName + '" em Configurações > WhatsApp para corrigir'
+      );
     }
     return fallback;
   } catch (error) {
@@ -402,12 +455,12 @@ async function getWAHAConfigBySession(
 
 function normalizePhone(phone: string): string {
   // Remove @c.us, @s.whatsapp.net, @lid e caracteres não numéricos
-  let numbers = phone
+  const numbers = phone
     .replace('@c.us', '')
     .replace('@s.whatsapp.net', '')
     .replace('@lid', '')
     .replace(/\D/g, '');
-  
+
   return numbers;
 }
 
@@ -449,7 +502,7 @@ interface ParsedPhone {
 // Detecta o código do país a partir de um número completo
 function parseInternationalPhone(phone: string): ParsedPhone {
   const digits = phone.replace(/\D/g, '');
-  
+
   // Tentar detectar código do país conhecido
   for (const { code, name } of COUNTRY_CODES) {
     if (digits.startsWith(code)) {
@@ -465,7 +518,7 @@ function parseInternationalPhone(phone: string): ParsedPhone {
       }
     }
   }
-  
+
   // Fallback: assumir Brasil (55) se não detectar
   // Ou retornar como está se já for um número curto (sem código do país)
   if (digits.length >= 12) {
@@ -476,7 +529,7 @@ function parseInternationalPhone(phone: string): ParsedPhone {
       fullNumber: digits,
     };
   }
-  
+
   // Número local sem código do país (assumir Brasil)
   return {
     countryCode: '55',
@@ -498,7 +551,7 @@ function normalizePhoneForStorage(phone: string): { localNumber: string; country
 function formatPhoneForDisplay(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   const parsed = parseInternationalPhone(digits);
-  
+
   // Formatação brasileira (55)
   if (parsed.countryCode === '55') {
     const local = parsed.localNumber;
@@ -509,7 +562,7 @@ function formatPhoneForDisplay(phone: string): string {
       return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
     }
   }
-  
+
   // Formatação internacional: +{código} {número}
   return `+${parsed.countryCode} ${parsed.localNumber}`;
 }
@@ -518,7 +571,7 @@ function formatPhoneForDisplay(phone: string): string {
 function getPhoneWithCountryCode(phone: string, existingCountryCode?: string | null): string {
   const digits = phone.replace(/\D/g, '');
   const parsed = parseInternationalPhone(digits);
-  
+
   // Se detectou um código de país diferente de 55 (Brasil), usar o número completo
   if (parsed.countryCode !== '55') {
     console.log('[whatsapp-webhook] 📞 Número internacional detectado:', {
@@ -528,13 +581,13 @@ function getPhoneWithCountryCode(phone: string, existingCountryCode?: string | n
     });
     return parsed.fullNumber;
   }
-  
+
   // Se temos country_code do lead existente e NÃO é 55, usar ele
   if (existingCountryCode && existingCountryCode !== '55') {
     console.log('[whatsapp-webhook] 📞 Usando country_code do lead:', existingCountryCode);
     return existingCountryCode + parsed.localNumber;
   }
-  
+
   // Fallback: usar número completo parseado (Brasil)
   return parsed.fullNumber;
 }
@@ -544,10 +597,10 @@ function getPhoneWithCountryCode(phone: string, existingCountryCode?: string | n
 // Suporta números internacionais (595, 1, 54, etc) além de brasileiros (55)
 async function findLeadByPhone(supabase: any, phone: string): Promise<any> {
   const digits = phone.replace(/\D/g, '');
-  
+
   // Detectar código do país usando parseInternationalPhone
   const parsed = parseInternationalPhone(digits);
-  
+
   console.log('[whatsapp-webhook] Parsed phone:', {
     original: digits,
     countryCode: parsed.countryCode,
@@ -555,32 +608,32 @@ async function findLeadByPhone(supabase: any, phone: string): Promise<any> {
     fullNumber: parsed.fullNumber,
     country: parsed.country,
   });
-  
+
   // Gerar todas as variações possíveis do número
   const variations: string[] = [];
-  
+
   // 1. Número como veio (completo)
   variations.push(digits);
-  
+
   // 2. Número local isolado (sem código do país)
   variations.push(parsed.localNumber);
-  
+
   // 3. Número completo formatado (código + local)
   variations.push(parsed.fullNumber);
-  
+
   // 4. Para Brasil (55), gerar variações com/sem 9° dígito
   if (parsed.countryCode === '55') {
     const local = parsed.localNumber;
     const ddd = local.substring(0, 2);
     const rest = local.substring(2);
-    
+
     // Se tem 11 dígitos (com 9° dígito), criar versão sem
     if (local.length === 11 && rest.startsWith('9')) {
       const without9 = `${ddd}${rest.substring(1)}`;
       variations.push(without9);
       variations.push(`55${without9}`);
     }
-    
+
     // Se tem 10 dígitos (sem 9° dígito), criar versão com
     if (local.length === 10) {
       const with9 = `${ddd}9${rest}`;
@@ -588,133 +641,160 @@ async function findLeadByPhone(supabase: any, phone: string): Promise<any> {
       variations.push(`55${with9}`);
     }
   }
-  
+
   // 5. Também buscar com outros códigos de país comuns (caso o lead tenha sido cadastrado errado)
   // Só para Brasil, adicionar também variação sem código
   if (parsed.countryCode !== '55' && digits.length >= 10 && digits.length <= 11) {
     // Número pode ter sido salvo com código 55 por engano
     variations.push(`55${digits}`);
   }
-  
+
   // Remover duplicatas
   const uniqueVariations = [...new Set(variations)];
-  
+
   console.log('[whatsapp-webhook] Buscando lead com variações:', uniqueVariations);
-  
+
   // Tentar buscar por todas as variações de uma vez usando OR
   const { data: leads, error } = await supabase
     .from('leads')
     .select('*')
     .in('phone', uniqueVariations)
     .limit(1);
-  
+
   if (error) {
     console.error('[whatsapp-webhook] Erro na busca flexível:', error);
   }
-  
+
   if (leads && leads.length > 0) {
-    console.log('[whatsapp-webhook] ✅ Lead encontrado via busca flexível:', leads[0].id, 
-      'phone salvo:', leads[0].phone, 
-      'country_code salvo:', leads[0].country_code);
+    console.log(
+      '[whatsapp-webhook] ✅ Lead encontrado via busca flexível:',
+      leads[0].id,
+      'phone salvo:',
+      leads[0].phone,
+      'country_code salvo:',
+      leads[0].country_code
+    );
     return leads[0];
   }
-  
+
   // Fallback 1: buscar pelos últimos 8 dígitos (núcleo do número sem DDD/país)
   const corePart8 = digits.slice(-8);
   console.log('[whatsapp-webhook] Tentando busca por núcleo 8 dígitos:', corePart8);
-  
+
   const { data: fallbackLeads8 } = await supabase
     .from('leads')
     .select('*')
     .ilike('phone', `%${corePart8}`)
     .limit(1);
-  
+
   if (fallbackLeads8 && fallbackLeads8.length > 0) {
-    console.log('[whatsapp-webhook] ✅ Lead encontrado via fallback (8 dígitos):', fallbackLeads8[0].id, 
-      'phone salvo:', fallbackLeads8[0].phone,
-      'country_code salvo:', fallbackLeads8[0].country_code);
+    console.log(
+      '[whatsapp-webhook] ✅ Lead encontrado via fallback (8 dígitos):',
+      fallbackLeads8[0].id,
+      'phone salvo:',
+      fallbackLeads8[0].phone,
+      'country_code salvo:',
+      fallbackLeads8[0].country_code
+    );
     return fallbackLeads8[0];
   }
-  
+
   // Fallback 2: buscar pelos últimos 7 dígitos (mais agressivo para variações com/sem 9)
   const corePart7 = digits.slice(-7);
   console.log('[whatsapp-webhook] Tentando busca por núcleo 7 dígitos:', corePart7);
-  
+
   const { data: fallbackLeads7 } = await supabase
     .from('leads')
     .select('*')
     .ilike('phone', `%${corePart7}`)
     .limit(5); // Pegar até 5 para escolher o melhor match
-  
+
   if (fallbackLeads7 && fallbackLeads7.length > 0) {
     // Se só encontrou 1, retornar esse
     if (fallbackLeads7.length === 1) {
-      console.log('[whatsapp-webhook] ✅ Lead encontrado via fallback (7 dígitos):', fallbackLeads7[0].id);
+      console.log(
+        '[whatsapp-webhook] ✅ Lead encontrado via fallback (7 dígitos):',
+        fallbackLeads7[0].id
+      );
       return fallbackLeads7[0];
     }
-    
+
     // Se encontrou múltiplos, preferir o que tem mais dígitos em comum
     const bestMatch = fallbackLeads7.reduce((best: any, current: any) => {
       const bestPhone = best.phone?.replace(/\D/g, '') || '';
       const currentPhone = current.phone?.replace(/\D/g, '') || '';
-      
+
       // Contar quantos dígitos do final batem
       let bestMatchCount = 0;
       let currentMatchCount = 0;
-      
+
       for (let i = 1; i <= Math.min(digits.length, bestPhone.length); i++) {
         if (digits.slice(-i) === bestPhone.slice(-i)) bestMatchCount = i;
       }
       for (let i = 1; i <= Math.min(digits.length, currentPhone.length); i++) {
         if (digits.slice(-i) === currentPhone.slice(-i)) currentMatchCount = i;
       }
-      
+
       return currentMatchCount > bestMatchCount ? current : best;
     });
-    
-    console.log('[whatsapp-webhook] ✅ Lead encontrado via fallback (7 dígitos, melhor match):', bestMatch.id,
-      'phone salvo:', bestMatch.phone);
+
+    console.log(
+      '[whatsapp-webhook] ✅ Lead encontrado via fallback (7 dígitos, melhor match):',
+      bestMatch.id,
+      'phone salvo:',
+      bestMatch.phone
+    );
     return bestMatch;
   }
-  
-  console.log('[whatsapp-webhook] Lead não encontrado para:', phone, '| country detectado:', parsed.country || parsed.countryCode);
+
+  console.log(
+    '[whatsapp-webhook] Lead não encontrado para:',
+    phone,
+    '| country detectado:',
+    parsed.country || parsed.countryCode
+  );
   return null;
 }
 
 // Busca lead por telefone + nome (fallback adicional para mensagens com pushName)
 async function findLeadByPhoneAndName(supabase: any, phone: string, name: string): Promise<any> {
   if (!name || name.trim().length < 2) return null;
-  
+
   const digits = phone.replace(/\D/g, '');
   const corePart = digits.slice(-7);
   const cleanName = name.trim().toLowerCase();
-  
-  console.log('[whatsapp-webhook] Buscando lead por telefone + nome:', { corePart, name: cleanName });
-  
+
+  console.log('[whatsapp-webhook] Buscando lead por telefone + nome:', {
+    corePart,
+    name: cleanName,
+  });
+
   const { data: leads } = await supabase
     .from('leads')
     .select('*')
     .ilike('phone', `%${corePart}`)
     .limit(10);
-  
+
   if (!leads || leads.length === 0) return null;
-  
+
   // Encontrar lead cujo nome seja similar
   const matchingLead = leads.find((lead: any) => {
     const leadName = (lead.name || '').toLowerCase();
     const leadWhatsappName = (lead.whatsapp_name || '').toLowerCase();
-    
+
     // Match exato ou parcial
-    return leadName.includes(cleanName) || 
-           cleanName.includes(leadName) ||
-           leadWhatsappName.includes(cleanName) ||
-           cleanName.includes(leadWhatsappName);
+    return (
+      leadName.includes(cleanName) ||
+      cleanName.includes(leadName) ||
+      leadWhatsappName.includes(cleanName) ||
+      cleanName.includes(leadWhatsappName)
+    );
   });
-  
+
   if (matchingLead) {
     console.log('[whatsapp-webhook] ✅ Lead encontrado por telefone + nome:', matchingLead.id);
   }
-  
+
   return matchingLead || null;
 }
 
@@ -731,45 +811,60 @@ async function uploadMediaToStorage(
     let normalizedUrl = mediaUrl;
     if (!mediaUrl.startsWith('http://') && !mediaUrl.startsWith('https://')) {
       normalizedUrl = `https://${mediaUrl}`;
-      console.log('[whatsapp-webhook] URL normalizada (protocolo adicionado):', mediaUrl, '->', normalizedUrl);
+      console.log(
+        '[whatsapp-webhook] URL normalizada (protocolo adicionado):',
+        mediaUrl,
+        '->',
+        normalizedUrl
+      );
     }
-    
+
     // Corrigir URL localhost para usar base_url do WAHA
     let correctedUrl = normalizedUrl;
     const urlObj = new URL(normalizedUrl);
     const isLocalhost = urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1';
-    
+
     if (isLocalhost && wahaConfig?.baseUrl) {
       // Reescrever URL usando base_url do WAHA config
       const wahaUrlObj = new URL(wahaConfig.baseUrl);
       correctedUrl = `${wahaUrlObj.protocol}//${wahaUrlObj.host}${urlObj.pathname}${urlObj.search}`;
       console.log('[whatsapp-webhook] URL localhost corrigida:', mediaUrl, '->', correctedUrl);
     }
-    
+
     console.log('[whatsapp-webhook] Baixando mídia de:', correctedUrl);
-    
+
     // Preparar headers de autenticação se for URL do WAHA
     const headers: Record<string, string> = {};
-    const isWahaUrl = wahaConfig?.baseUrl && correctedUrl.includes(new URL(wahaConfig.baseUrl).host);
-    
+    const isWahaUrl =
+      wahaConfig?.baseUrl && correctedUrl.includes(new URL(wahaConfig.baseUrl).host);
+
     if (isWahaUrl && wahaConfig?.apiKey) {
       headers['X-Api-Key'] = wahaConfig.apiKey;
       headers['Authorization'] = `Bearer ${wahaConfig.apiKey}`;
       console.log('[whatsapp-webhook] Adicionando headers de autenticação para WAHA');
     }
-    
+
     // Baixar o arquivo
     const response = await fetch(correctedUrl, { headers });
     if (!response.ok) {
-      console.error('[whatsapp-webhook] Erro ao baixar mídia:', response.status, await response.text().catch(() => ''));
+      console.error(
+        '[whatsapp-webhook] Erro ao baixar mídia:',
+        response.status,
+        await response.text().catch(() => '')
+      );
       return null;
     }
-    
+
     const contentType = response.headers.get('content-type') || 'application/octet-stream';
     const arrayBuffer = await response.arrayBuffer();
-    
-    console.log('[whatsapp-webhook] Mídia baixada, contentType:', contentType, 'size:', arrayBuffer.byteLength);
-    
+
+    console.log(
+      '[whatsapp-webhook] Mídia baixada, contentType:',
+      contentType,
+      'size:',
+      arrayBuffer.byteLength
+    );
+
     // Determinar extensão baseada no content-type ou tipo de mensagem
     const extensionMap: Record<string, string> = {
       'image/jpeg': 'jpg',
@@ -787,7 +882,7 @@ async function uploadMediaToStorage(
       'application/msword': 'doc',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
     };
-    
+
     // Tentar encontrar extensão pelo content-type exato ou parcial
     let extension = extensionMap[contentType];
     if (!extension) {
@@ -799,21 +894,21 @@ async function uploadMediaToStorage(
         }
       }
     }
-    
+
     // Fallback baseado no tipo de mensagem
     if (!extension) {
       const typeExtMap: Record<string, string> = {
-        'image': 'jpg',
-        'audio': 'ogg',
-        'video': 'mp4',
-        'document': 'bin',
+        image: 'jpg',
+        audio: 'ogg',
+        video: 'mp4',
+        document: 'bin',
       };
       extension = typeExtMap[type] || 'bin';
     }
-    
+
     // Nome do arquivo: leads/{leadId}/{timestamp}.{ext}
     const fileName = `leads/${leadId}/${Date.now()}.${extension}`;
-    
+
     // Upload para o storage
     const { data, error } = await supabase.storage
       .from('message-attachments')
@@ -822,12 +917,12 @@ async function uploadMediaToStorage(
         cacheControl: '31536000', // 1 ano
         upsert: false,
       });
-    
+
     if (error) {
       console.error('[whatsapp-webhook] Erro no upload:', error);
       return null;
     }
-    
+
     // Retornar storage ref em vez de publicUrl (bucket é privado)
     // Frontend vai gerar signed URL quando precisar exibir
     const storageRef = `storage://message-attachments/${data.path}`;
@@ -848,22 +943,22 @@ function isSystemNotification(payload: any): boolean {
     'ciphertext',
     'protocol',
     'call_log',
-    'revoked'
+    'revoked',
   ];
-  
+
   const messageType = payload?._data?.type || payload?.type || '';
   const subtype = payload?._data?.subtype || payload?.subtype || '';
-  
+
   // Verificar se é notificação do sistema
   if (systemTypes.includes(messageType)) {
     return true;
   }
-  
+
   // Verificar subtipos que indicam notificações
   if (subtype === 'contact_info_card' || subtype === 'url') {
     return true;
   }
-  
+
   return false;
 }
 
@@ -882,25 +977,36 @@ interface MessageContentResult {
   quotedMessage?: QuotedMessageData;
 }
 
-function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'waha' | 'evolution'): MessageContentResult {
+function getMessageContent(
+  payload: WAHAMessage | EvolutionMessage,
+  provider: 'waha' | 'evolution'
+): MessageContentResult {
   if (provider === 'waha') {
     const msg = payload as WAHAMessage & { _data?: any };
-    
+
     // Verificar se é notificação do sistema
     if (isSystemNotification(msg)) {
       return { content: '', type: 'text', isSystemMessage: true };
     }
-    
+
     // Extrair mediaUrl de múltiplas fontes possíveis no WAHA
-    const extractedMediaUrl = msg.mediaUrl || msg.media?.url || (msg as any)._data?.media?.url || (msg as any)._data?.deprecatedMms3Url;
-    
+    const extractedMediaUrl =
+      msg.mediaUrl ||
+      msg.media?.url ||
+      (msg as any)._data?.media?.url ||
+      (msg as any)._data?.deprecatedMms3Url;
+
     // Extrair mimetype de várias fontes
-    const mimetype = msg.media?.mimetype || (msg as any)._data?.mimetype || (msg as any)._data?.media?.mimetype || '';
-    
+    const mimetype =
+      msg.media?.mimetype ||
+      (msg as any)._data?.mimetype ||
+      (msg as any)._data?.media?.mimetype ||
+      '';
+
     // Detectar tipo primeiro pelo msg.type, depois pelo _data.type, depois pelo mimetype
     let type = 'text';
     const msgType = msg.type || (msg as any)._data?.type || '';
-    
+
     if (msgType === 'ptt' || msgType === 'audio') {
       type = 'audio';
     } else if (msgType === 'image') {
@@ -917,85 +1023,120 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
         type = 'image';
       } else if (mimetype.startsWith('video/')) {
         type = 'video';
-      } else if (mimetype.startsWith('application/') || mimetype.includes('pdf') || mimetype.includes('document')) {
+      } else if (
+        mimetype.startsWith('application/') ||
+        mimetype.includes('pdf') ||
+        mimetype.includes('document')
+      ) {
         type = 'document';
       } else if (extractedMediaUrl) {
         // Fallback: tem URL de mídia mas mimetype desconhecido - tentar inferir pela URL
         const urlLower = extractedMediaUrl.toLowerCase();
-        if (urlLower.includes('ptt') || urlLower.includes('audio') || urlLower.includes('.ogg') || urlLower.includes('.mp3') || urlLower.includes('.m4a')) {
+        if (
+          urlLower.includes('ptt') ||
+          urlLower.includes('audio') ||
+          urlLower.includes('.ogg') ||
+          urlLower.includes('.mp3') ||
+          urlLower.includes('.m4a')
+        ) {
           type = 'audio';
-        } else if (urlLower.includes('.jpg') || urlLower.includes('.jpeg') || urlLower.includes('.png') || urlLower.includes('.webp')) {
+        } else if (
+          urlLower.includes('.jpg') ||
+          urlLower.includes('.jpeg') ||
+          urlLower.includes('.png') ||
+          urlLower.includes('.webp')
+        ) {
           type = 'image';
-        } else if (urlLower.includes('.mp4') || urlLower.includes('.mov') || urlLower.includes('.avi')) {
+        } else if (
+          urlLower.includes('.mp4') ||
+          urlLower.includes('.mov') ||
+          urlLower.includes('.avi')
+        ) {
           type = 'video';
         } else {
           type = 'document'; // Default para mídia desconhecida
         }
       }
     }
-    
-    console.log('[whatsapp-webhook] Detecção de tipo - msg.type:', msgType, 'mimetype:', mimetype, 'hasMedia:', msg.hasMedia, 'type detectado:', type, 'mediaUrl:', extractedMediaUrl);
-    
+
+    console.log(
+      '[whatsapp-webhook] Detecção de tipo - msg.type:',
+      msgType,
+      'mimetype:',
+      mimetype,
+      'hasMedia:',
+      msg.hasMedia,
+      'type detectado:',
+      type,
+      'mediaUrl:',
+      extractedMediaUrl
+    );
+
     // Tem mídia se hasMedia = true ou se tem URL de mídia
     const hasRealMedia = (msg.hasMedia === true || !!extractedMediaUrl) && type !== 'text';
-    
+
     // ========== CORREÇÃO: Função para detectar base64 ==========
     const isBase64Content = (str: string): boolean => {
       if (!str || str.length < 100) return false;
       // Padrões comuns de início de base64 para diferentes tipos de mídia
       const base64Patterns = [
-        '/9j/',      // JPEG
-        'iVBOR',     // PNG
-        'R0lGOD',    // GIF
-        'UklGR',     // WEBP
-        'AAAA',      // Alguns formatos de vídeo/áudio
+        '/9j/', // JPEG
+        'iVBOR', // PNG
+        'R0lGOD', // GIF
+        'UklGR', // WEBP
+        'AAAA', // Alguns formatos de vídeo/áudio
         'data:image',
         'data:audio',
         'data:video',
       ];
-      return base64Patterns.some(pattern => str.startsWith(pattern)) || 
-             (str.length > 500 && !str.includes(' ') && /^[A-Za-z0-9+/=]+$/.test(str.substring(0, 100)));
+      return (
+        base64Patterns.some((pattern) => str.startsWith(pattern)) ||
+        (str.length > 500 && !str.includes(' ') && /^[A-Za-z0-9+/=]+$/.test(str.substring(0, 100)))
+      );
     };
-    
+
     // ========== CORREÇÃO: Extrair caption corretamente para mídia ==========
     // Para mensagens de mídia, usar caption em vez de body (que pode conter base64)
     let content = '';
-    
+
     if (hasRealMedia) {
       // Para mídia: priorizar caption, depois body APENAS se não for base64
-      const caption = (msg as any).caption || 
-                      (msg as any)._data?.caption ||
-                      '';
+      const caption = (msg as any).caption || (msg as any)._data?.caption || '';
       const bodyContent = msg.body || (msg as any)._data?.body || '';
-      
+
       if (caption && !isBase64Content(caption)) {
         content = caption;
       } else if (bodyContent && !isBase64Content(bodyContent)) {
         content = bodyContent;
       }
       // Se body for base64, content fica vazio (correto)
-      
-      console.log('[whatsapp-webhook] Mídia detectada - caption:', caption?.substring(0, 50), 'bodyIsBase64:', isBase64Content(bodyContent));
+
+      console.log(
+        '[whatsapp-webhook] Mídia detectada - caption:',
+        caption?.substring(0, 50),
+        'bodyIsBase64:',
+        isBase64Content(bodyContent)
+      );
     } else {
       // Para mensagens de texto: usar body normalmente
-      content = msg.body || 
-                (msg as any)._data?.body || 
-                (msg as any).text ||
-                '';
+      content = msg.body || (msg as any)._data?.body || (msg as any).text || '';
     }
-    
+
     // Log de debug se body estiver vazio
     if (!content) {
-      console.log('[whatsapp-webhook] Body vazio, detalhes:', JSON.stringify({
-        body: msg.body?.substring(0, 100),
-        _data_body: (msg as any)._data?.body?.substring(0, 100),
-        text: (msg as any).text,
-        caption: (msg as any).caption,
-        type: msg.type,
-        hasMedia: msg.hasMedia,
-      }));
+      console.log(
+        '[whatsapp-webhook] Body vazio, detalhes:',
+        JSON.stringify({
+          body: msg.body?.substring(0, 100),
+          _data_body: (msg as any)._data?.body?.substring(0, 100),
+          text: (msg as any).text,
+          caption: (msg as any).caption,
+          type: msg.type,
+          hasMedia: msg.hasMedia,
+        })
+      );
     }
-    
+
     // ========== CORREÇÃO: Placeholder para mídia sem caption ==========
     if (!content && hasRealMedia) {
       // Mídia sem caption - deixar content vazio (não usar placeholder)
@@ -1005,15 +1146,14 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
       // Mensagem vazia sem mídia - provavelmente notificação do sistema
       return { content: '', type: 'text', isSystemMessage: true };
     }
-    
+
     // ========== EXTRAIR QUOTED MESSAGE (REPLY) ==========
     let quotedMessage: QuotedMessageData | undefined;
-    
+
     // WAHA pode enviar quotedMsg em diferentes lugares
-    const quotedData = (msg as any).quotedMsg || 
-                       (msg as any)._data?.quotedMsg || 
-                       (msg as any)._data?.quotedMsgObj;
-    
+    const quotedData =
+      (msg as any).quotedMsg || (msg as any)._data?.quotedMsg || (msg as any)._data?.quotedMsgObj;
+
     if (quotedData) {
       // Extrair ID serializado da mensagem citada
       let quotedId = '';
@@ -1027,27 +1167,27 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
         const remote = quotedData.id.remote || quotedData.from || '';
         quotedId = `${fromMe}_${remote}_${quotedData.id.id}`;
       }
-      
+
       // Extrair remetente do quote
       let quotedFrom = quotedData.from || quotedData.participant || '';
       // Limpar sufixo @c.us/@s.whatsapp.net
       quotedFrom = quotedFrom.replace(/@c\.us$/, '').replace(/@s\.whatsapp\.net$/, '');
-      
+
       // Determinar tipo da mensagem citada
       let quotedType = quotedData.type || 'text';
       if (quotedType === 'chat') quotedType = 'text';
       if (quotedType === 'ptt') quotedType = 'audio';
-      
+
       quotedMessage = {
         id: quotedId,
         body: quotedData.body || quotedData.caption || quotedData.text || `[${quotedType}]`,
         from: quotedFrom,
         type: quotedType,
       };
-      
+
       console.log('[whatsapp-webhook] Quote detectado:', quotedMessage);
     }
-    
+
     return {
       content,
       type,
@@ -1057,20 +1197,21 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
   } else {
     const msg = payload as EvolutionMessage;
     const message = msg.message;
-    
+
     if (!message) {
       return { content: '[Mensagem vazia]', type: 'text' };
     }
-    
+
     // Para Evolution, extrair quoted do contextInfo (usando any para flexibilidade de tipos)
     let quotedMessage: QuotedMessageData | undefined;
     const msgAny = message as any;
-    const contextInfo = msgAny.extendedTextMessage?.contextInfo || 
-                        msgAny.imageMessage?.contextInfo ||
-                        msgAny.audioMessage?.contextInfo ||
-                        msgAny.videoMessage?.contextInfo ||
-                        msgAny.documentMessage?.contextInfo;
-    
+    const contextInfo =
+      msgAny.extendedTextMessage?.contextInfo ||
+      msgAny.imageMessage?.contextInfo ||
+      msgAny.audioMessage?.contextInfo ||
+      msgAny.videoMessage?.contextInfo ||
+      msgAny.documentMessage?.contextInfo;
+
     if (contextInfo?.quotedMessage) {
       const quoted = contextInfo.quotedMessage;
       quotedMessage = {
@@ -1080,15 +1221,15 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
         type: 'text',
       };
     }
-    
+
     if (message.conversation) {
       return { content: message.conversation, type: 'text', quotedMessage };
     }
-    
+
     if (message.extendedTextMessage?.text) {
       return { content: message.extendedTextMessage.text, type: 'text', quotedMessage };
     }
-    
+
     if (message.imageMessage) {
       return {
         content: message.imageMessage.caption || '[Imagem]',
@@ -1097,7 +1238,7 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
         quotedMessage,
       };
     }
-    
+
     if (message.audioMessage) {
       return {
         content: '[Áudio]',
@@ -1106,7 +1247,7 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
         quotedMessage,
       };
     }
-    
+
     if (message.videoMessage) {
       return {
         content: message.videoMessage.caption || '[Vídeo]',
@@ -1115,7 +1256,7 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
         quotedMessage,
       };
     }
-    
+
     if (message.documentMessage) {
       return {
         content: message.documentMessage.fileName || '[Documento]',
@@ -1124,30 +1265,30 @@ function getMessageContent(payload: WAHAMessage | EvolutionMessage, provider: 'w
         quotedMessage,
       };
     }
-    
+
     return { content: '[Mensagem não suportada]', type: 'text' };
   }
 }
 
 // Helper function to verify webhook signature using HMAC-SHA256
 async function verifyWebhookSignature(
-  rawBody: string, 
-  signature: string | null, 
+  rawBody: string,
+  signature: string | null,
   secret: string
 ): Promise<boolean> {
   if (!signature || !secret) {
     return false;
   }
-  
+
   try {
     // Clean the signature - remove any prefix like 'sha256='
     const cleanSignature = signature.replace(/^sha256=/, '').toLowerCase();
-    
+
     // Create HMAC-SHA256 hash
     const encoder = new TextEncoder();
     const keyData = encoder.encode(secret);
     const messageData = encoder.encode(rawBody);
-    
+
     const cryptoKey = await crypto.subtle.importKey(
       'raw',
       keyData,
@@ -1155,22 +1296,22 @@ async function verifyWebhookSignature(
       false,
       ['sign']
     );
-    
+
     const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
     const expectedSignature = Array.from(new Uint8Array(signatureBuffer))
-      .map(b => b.toString(16).padStart(2, '0'))
+      .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
-    
+
     // Constant-time comparison to prevent timing attacks
     if (cleanSignature.length !== expectedSignature.length) {
       return false;
     }
-    
+
     let mismatch = 0;
     for (let i = 0; i < cleanSignature.length; i++) {
       mismatch |= cleanSignature.charCodeAt(i) ^ expectedSignature.charCodeAt(i);
     }
-    
+
     return mismatch === 0;
   } catch (error) {
     console.error('[whatsapp-webhook] Error verifying signature:', error);
@@ -1185,10 +1326,10 @@ serve(async (req) => {
   }
 
   if (req.method !== 'POST') {
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   try {
@@ -1198,13 +1339,14 @@ serve(async (req) => {
 
     // Read raw body for signature verification
     const rawBody = await req.text();
-    
+
     // Get signature from various possible headers (different providers use different header names)
-    const signature = req.headers.get('x-webhook-signature') || 
-                     req.headers.get('x-hub-signature-256') || 
-                     req.headers.get('x-signature') ||
-                     req.headers.get('x-waha-signature');
-    
+    const signature =
+      req.headers.get('x-webhook-signature') ||
+      req.headers.get('x-hub-signature-256') ||
+      req.headers.get('x-signature') ||
+      req.headers.get('x-waha-signature');
+
     // Get active WhatsApp config to retrieve webhook_secret
     const { data: activeConfig } = await supabase
       .from('whatsapp_config')
@@ -1212,17 +1354,29 @@ serve(async (req) => {
       .eq('is_active', true)
       .limit(1)
       .maybeSingle();
-    
+
     // Soft validation: log warning but allow processing (WAHA may not be sending signatures correctly)
     if (activeConfig?.webhook_secret) {
-      const isValidSignature = await verifyWebhookSignature(rawBody, signature, activeConfig.webhook_secret);
-      
+      const isValidSignature = await verifyWebhookSignature(
+        rawBody,
+        signature,
+        activeConfig.webhook_secret
+      );
+
       if (!isValidSignature) {
         // Soft validation: log warning but continue processing
-        console.warn('[whatsapp-webhook] Invalid or missing webhook signature - processing anyway (soft validation)');
-        console.warn('[whatsapp-webhook] Signature received:', signature?.substring(0, 50) || 'none');
-        console.warn('[whatsapp-webhook] Headers:', JSON.stringify(Object.fromEntries(req.headers.entries())));
-        
+        console.warn(
+          '[whatsapp-webhook] Invalid or missing webhook signature - processing anyway (soft validation)'
+        );
+        console.warn(
+          '[whatsapp-webhook] Signature received:',
+          signature?.substring(0, 50) || 'none'
+        );
+        console.warn(
+          '[whatsapp-webhook] Headers:',
+          JSON.stringify(Object.fromEntries(req.headers.entries()))
+        );
+
         // TODO: Em produção com WAHA configurado corretamente, descomentar para rejeitar:
         // return new Response(
         //   JSON.stringify({ error: 'Invalid webhook signature' }),
@@ -1232,7 +1386,9 @@ serve(async (req) => {
         console.log('[whatsapp-webhook] Webhook signature verified successfully');
       }
     } else {
-      console.log('[whatsapp-webhook] No webhook_secret configured - signature verification skipped');
+      console.log(
+        '[whatsapp-webhook] No webhook_secret configured - signature verification skipped'
+      );
     }
 
     const body = JSON.parse(rawBody);
@@ -1253,22 +1409,27 @@ serve(async (req) => {
     if (body.event && body.session !== undefined) {
       provider = 'waha';
       event = body.event;
-      
+
       // Log completo para debug
       console.log('[whatsapp-webhook] Payload WAHA completo:', JSON.stringify(body));
-      
+
       // ========== WAHA: Evento de ACK (status delivered/read) ==========
       if (event === 'message.ack') {
         const payload = body.payload || {};
         // Extrair messageId - pode vir em vários formatos
-        let rawMessageId = payload.id || payload.key?.id || payload.ids?.[0];
+        const rawMessageId = payload.id || payload.key?.id || payload.ids?.[0];
         const ackName = payload.ackName || payload.receipt_type || payload.ack;
         const ackNumber = payload.ack;
-        
-        console.log('[whatsapp-webhook] ACK recebido:', { messageId: rawMessageId, ackName, ackNumber, payload: JSON.stringify(payload) });
-        
+
+        console.log('[whatsapp-webhook] ACK recebido:', {
+          messageId: rawMessageId,
+          ackName,
+          ackNumber,
+          payload: JSON.stringify(payload),
+        });
+
         let newStatus: 'delivered' | 'read' | null = null;
-        
+
         // WAHA usa ackName: 'DEVICE' (entregue), 'READ' (lida), 'PLAYED' (áudio reproduzido)
         // Ou ack: 2 (delivered), 3 (read)
         if (['DEVICE', 'delivered', 'DELIVERY_ACK'].includes(ackName) || ackNumber === 2) {
@@ -1276,7 +1437,7 @@ serve(async (req) => {
         } else if (['READ', 'read', 'PLAYED'].includes(ackName) || ackNumber === 3) {
           newStatus = 'read';
         }
-        
+
         if (newStatus && rawMessageId) {
           // Extrair o ID curto se vier no formato serializado
           // "true_554599957851@c.us_3EB0725EB8EE5F6CC14B33" → "3EB0725EB8EE5F6CC14B33"
@@ -1285,9 +1446,9 @@ serve(async (req) => {
             const parts = rawMessageId.split('_');
             shortId = parts[parts.length - 1]; // Último segmento é o ID curto
           }
-          
+
           console.log('[whatsapp-webhook] IDs para busca:', { rawMessageId, shortId });
-          
+
           // Tentar match com ID curto primeiro (formato novo)
           let found = false;
           if (shortId) {
@@ -1296,13 +1457,18 @@ serve(async (req) => {
               .update({ status: newStatus })
               .eq('external_id', shortId)
               .select('id');
-            
+
             if (!shortError && shortMatch && shortMatch.length > 0) {
-              console.log('[whatsapp-webhook] Status atualizado (match shortId) para:', newStatus, 'shortId:', shortId);
+              console.log(
+                '[whatsapp-webhook] Status atualizado (match shortId) para:',
+                newStatus,
+                'shortId:',
+                shortId
+              );
               found = true;
             }
           }
-          
+
           // Tentar match exato com ID completo (serializado)
           if (!found) {
             const { data: exactMatch, error: exactError } = await supabase
@@ -1310,68 +1476,91 @@ serve(async (req) => {
               .update({ status: newStatus })
               .eq('external_id', rawMessageId)
               .select('id');
-            
+
             if (!exactError && exactMatch && exactMatch.length > 0) {
-              console.log('[whatsapp-webhook] Status atualizado (match exato) para:', newStatus, 'messageId:', rawMessageId);
+              console.log(
+                '[whatsapp-webhook] Status atualizado (match exato) para:',
+                newStatus,
+                'messageId:',
+                rawMessageId
+              );
               found = true;
             }
           }
-          
+
           // Tentar busca parcial para formatos JSON antigos
           if (!found && shortId) {
             console.log('[whatsapp-webhook] Match exato não encontrou, tentando busca parcial...');
-            
+
             const { data: partialMatch, error: partialError } = await supabase
               .from('messages')
               .update({ status: newStatus })
               .like('external_id', `%${shortId}%`)
               .select('id');
-            
+
             if (!partialError && partialMatch && partialMatch.length > 0) {
-              console.log('[whatsapp-webhook] Status atualizado (match parcial) para:', newStatus, 'encontradas:', partialMatch.length);
+              console.log(
+                '[whatsapp-webhook] Status atualizado (match parcial) para:',
+                newStatus,
+                'encontradas:',
+                partialMatch.length
+              );
               found = true;
             }
           }
-          
+
           // ========== CRIAR MENSAGEM OUTBOUND VIA ACK SE NÃO EXISTIR ==========
           if (!found && payload?.fromMe === true) {
-            console.log('[whatsapp-webhook] Mensagem outbound não existe no banco, tentando criar via ACK...');
-            
+            console.log(
+              '[whatsapp-webhook] Mensagem outbound não existe no banco, tentando criar via ACK...'
+            );
+
             try {
               // Extrair phone do destinatário (to)
               const toField = payload.to || payload.chatId || '';
               const toPhone = normalizePhone(toField);
-              
+
               // ========== CORREÇÃO: Buscar lead pelo original_lid para LIDs ==========
               let resolvedToPhone = toPhone;
               let leadFromLid: { id: string; name: string; phone: string } | null = null;
-              
+
               if (isLID(toField)) {
                 const lidNumber = toField.replace('@lid', '').replace(/\D/g, '');
-                console.log('[whatsapp-webhook] ACK para LID detectado, buscando lead pelo original_lid:', lidNumber);
-                
+                console.log(
+                  '[whatsapp-webhook] ACK para LID detectado, buscando lead pelo original_lid:',
+                  lidNumber
+                );
+
                 // Buscar config para obter tenant_id
-                const wahaConfigForLid = await getWAHAConfigBySession(supabase, body.session || 'default');
+                const wahaConfigForLid = await getWAHAConfigBySession(
+                  supabase,
+                  body.session || 'default'
+                );
                 const tenantIdForLid = wahaConfigForLid?.tenantId;
-                
+
                 // Buscar lead pelo original_lid (com filtro de tenant se disponível)
                 let leadByLidQuery = supabase
                   .from('leads')
                   .select('id, phone, name')
                   .eq('original_lid', lidNumber);
-                
+
                 if (tenantIdForLid) {
                   leadByLidQuery = leadByLidQuery.eq('tenant_id', tenantIdForLid);
                 }
-                
-                const { data: existingLeadByLid, error: lidError } = await leadByLidQuery.maybeSingle();
-                
+
+                const { data: existingLeadByLid, error: lidError } =
+                  await leadByLidQuery.maybeSingle();
+
                 if (lidError) {
                   console.error('[whatsapp-webhook] Erro ao buscar lead por LID no ACK:', lidError);
                 }
-                
+
                 if (existingLeadByLid) {
-                  console.log('[whatsapp-webhook] ✅ Lead encontrado pelo original_lid no ACK:', existingLeadByLid.name, existingLeadByLid.phone);
+                  console.log(
+                    '[whatsapp-webhook] ✅ Lead encontrado pelo original_lid no ACK:',
+                    existingLeadByLid.name,
+                    existingLeadByLid.phone
+                  );
                   resolvedToPhone = normalizePhone(existingLeadByLid.phone);
                   leadFromLid = existingLeadByLid;
                 } else {
@@ -1384,182 +1573,255 @@ serve(async (req) => {
                       lidNumber
                     );
                     if (resolvedPhone) {
-                      console.log('[whatsapp-webhook] ✅ LID resolvido via API no ACK:', resolvedPhone);
+                      console.log(
+                        '[whatsapp-webhook] ✅ LID resolvido via API no ACK:',
+                        resolvedPhone
+                      );
                       resolvedToPhone = normalizePhone(resolvedPhone);
                     } else {
-                      console.log('[whatsapp-webhook] ⏭️ Ignorando ACK: LID não resolvido e sem lead associado:', lidNumber);
+                      console.log(
+                        '[whatsapp-webhook] ⏭️ Ignorando ACK: LID não resolvido e sem lead associado:',
+                        lidNumber
+                      );
                       return new Response(
-                        JSON.stringify({ success: true, ignored: true, reason: 'ack_for_unresolved_lid_no_lead', lid: toField }),
-                        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                        JSON.stringify({
+                          success: true,
+                          ignored: true,
+                          reason: 'ack_for_unresolved_lid_no_lead',
+                          lid: toField,
+                        }),
+                        {
+                          status: 200,
+                          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                        }
                       );
                     }
                   } else {
-                    console.log('[whatsapp-webhook] ⏭️ Ignorando ACK: LID sem config WAHA para resolver:', lidNumber);
+                    console.log(
+                      '[whatsapp-webhook] ⏭️ Ignorando ACK: LID sem config WAHA para resolver:',
+                      lidNumber
+                    );
                     return new Response(
-                      JSON.stringify({ success: true, ignored: true, reason: 'ack_for_unresolved_lid_no_config', lid: toField }),
-                      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                      JSON.stringify({
+                        success: true,
+                        ignored: true,
+                        reason: 'ack_for_unresolved_lid_no_config',
+                        lid: toField,
+                      }),
+                      {
+                        status: 200,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                      }
                     );
                   }
                 }
               }
-              
+
               // ========== VALIDAÇÃO: Ignorar se destinatário for o próprio número do WhatsApp ==========
-              const wahaConfigForAck = await getWAHAConfigBySession(supabase, body.session || 'default');
+              const wahaConfigForAck = await getWAHAConfigBySession(
+                supabase,
+                body.session || 'default'
+              );
               if (wahaConfigForAck) {
                 const { data: whatsappConfigData } = await supabase
                   .from('whatsapp_config')
                   .select('phone_number')
                   .eq('id', wahaConfigForAck.instanceId)
                   .maybeSingle();
-                
+
                 if (whatsappConfigData?.phone_number) {
                   const ownPhone = whatsappConfigData.phone_number.replace(/\D/g, '');
                   const toPhoneDigits = resolvedToPhone.replace(/\D/g, '');
                   // Comparar últimos 10 dígitos (ignora código do país)
                   if (toPhoneDigits.slice(-10) === ownPhone.slice(-10)) {
-                    console.log('[whatsapp-webhook] ⏭️ Ignorando: destinatário é o próprio número WhatsApp');
+                    console.log(
+                      '[whatsapp-webhook] ⏭️ Ignorando: destinatário é o próprio número WhatsApp'
+                    );
                     return new Response(
                       JSON.stringify({ success: true, ignored: true, reason: 'self_message_ack' }),
-                      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+                      {
+                        status: 200,
+                        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                      }
                     );
                   }
                 }
               }
-              
+
               // Usar lead já encontrado pelo LID ou buscar pelo phone
               let lead = leadFromLid;
               if (!lead && resolvedToPhone) {
                 console.log('[whatsapp-webhook] Buscando lead pelo phone:', resolvedToPhone);
                 lead = await findLeadByPhone(supabase, resolvedToPhone);
               }
-              
+
               if (lead) {
                 console.log('[whatsapp-webhook] Lead encontrado para ACK:', lead.id, lead.name);
-                  
-                  // Buscar ou criar conversa (filtrar por instância específica)
-                  const instanceId = wahaConfigForAck?.instanceId || null;
-                  let { data: conversation } = await supabase
+
+                // Buscar ou criar conversa (filtrar por instância específica)
+                const instanceId = wahaConfigForAck?.instanceId || null;
+                let { data: conversation } = await supabase
+                  .from('conversations')
+                  .select('id')
+                  .eq('lead_id', lead.id)
+                  .eq('whatsapp_instance_id', instanceId)
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+
+                if (!conversation) {
+                  const { data: newConv } = await supabase
                     .from('conversations')
+                    .insert({
+                      lead_id: lead.id,
+                      status: 'open',
+                      whatsapp_instance_id: instanceId,
+                    })
                     .select('id')
-                    .eq('lead_id', lead.id)
-                    .eq('whatsapp_instance_id', instanceId)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
+                    .single();
+                  conversation = newConv;
+                  console.log(
+                    '[whatsapp-webhook] Nova conversa criada para instância:',
+                    instanceId,
+                    '| conv:',
+                    conversation?.id
+                  );
+                }
+
+                if (conversation) {
+                  // Extrair conteúdo da mensagem
+                  const messageBody =
+                    payload.body ||
+                    (payload as any)._data?.body ||
+                    (payload as any).text ||
+                    (payload as any).caption ||
+                    '';
+
+                  // Detectar tipo de mensagem
+                  let msgType:
+                    | 'text'
+                    | 'image'
+                    | 'audio'
+                    | 'video'
+                    | 'document'
+                    | 'sticker'
+                    | 'location'
+                    | 'contact' = 'text';
+                  const rawType = (payload as any).type || (payload as any)._data?.type || '';
+                  if (
+                    rawType === 'image' ||
+                    (payload.hasMedia && (payload as any).media?.mimetype?.startsWith('image'))
+                  ) {
+                    msgType = 'image';
+                  } else if (rawType === 'ptt' || rawType === 'audio') {
+                    msgType = 'audio';
+                  } else if (rawType === 'video') {
+                    msgType = 'video';
+                  } else if (rawType === 'document') {
+                    msgType = 'document';
+                  } else if (rawType === 'sticker') {
+                    msgType = 'sticker';
+                  }
+
+                  const finalContent = messageBody || (msgType !== 'text' ? `[${msgType}]` : '');
+
+                  // Criar timestamp a partir do payload
+                  const msgTimestamp = payload.timestamp
+                    ? new Date(payload.timestamp * 1000).toISOString()
+                    : new Date().toISOString();
+
+                  // Verificar se mensagem já existe pelo waha_message_id antes de criar
+                  const { data: existingMsgByWaha } = await supabase
+                    .from('messages')
+                    .select('id')
+                    .eq('waha_message_id', shortId)
                     .maybeSingle();
-                  
-                  if (!conversation) {
-                    const { data: newConv } = await supabase
-                      .from('conversations')
+
+                  if (existingMsgByWaha) {
+                    console.log(
+                      '[whatsapp-webhook] Mensagem já existe (waha_message_id), atualizando status apenas:',
+                      existingMsgByWaha.id
+                    );
+                    // Apenas atualizar status se necessário
+                    await supabase
+                      .from('messages')
+                      .update({ status: newStatus || 'sent' })
+                      .eq('id', existingMsgByWaha.id);
+                    found = true;
+                  } else {
+                    // Criar mensagem COM waha_message_id para prevenir duplicação
+                    const { data: newMessage, error: insertError } = await supabase
+                      .from('messages')
                       .insert({
+                        conversation_id: conversation.id,
                         lead_id: lead.id,
-                        status: 'open',
-                        whatsapp_instance_id: instanceId,
+                        sender_id: null, // Outbound do celular - sem sender_id
+                        sender_type: 'agent',
+                        content: finalContent,
+                        type: msgType,
+                        direction: 'outbound',
+                        source: 'mobile',
+                        external_id: rawMessageId,
+                        waha_message_id: shortId, // Prevenir duplicação
+                        status: newStatus || 'sent',
+                        created_at: msgTimestamp,
                       })
                       .select('id')
                       .single();
-                    conversation = newConv;
-                    console.log('[whatsapp-webhook] Nova conversa criada para instância:', instanceId, '| conv:', conversation?.id);
-                  }
-                  
-                  if (conversation) {
-                    // Extrair conteúdo da mensagem
-                    const messageBody = payload.body || 
-                                        (payload as any)._data?.body || 
-                                        (payload as any).text ||
-                                        (payload as any).caption || '';
-                    
-                    // Detectar tipo de mensagem
-                    let msgType: 'text' | 'image' | 'audio' | 'video' | 'document' | 'sticker' | 'location' | 'contact' = 'text';
-                    const rawType = (payload as any).type || (payload as any)._data?.type || '';
-                    if (rawType === 'image' || payload.hasMedia && (payload as any).media?.mimetype?.startsWith('image')) {
-                      msgType = 'image';
-                    } else if (rawType === 'ptt' || rawType === 'audio') {
-                      msgType = 'audio';
-                    } else if (rawType === 'video') {
-                      msgType = 'video';
-                    } else if (rawType === 'document') {
-                      msgType = 'document';
-                    } else if (rawType === 'sticker') {
-                      msgType = 'sticker';
-                    }
-                    
-                    const finalContent = messageBody || (msgType !== 'text' ? `[${msgType}]` : '');
-                    
-                    // Criar timestamp a partir do payload
-                    const msgTimestamp = payload.timestamp 
-                      ? new Date(payload.timestamp * 1000).toISOString()
-                      : new Date().toISOString();
-                    
-                    // Verificar se mensagem já existe pelo waha_message_id antes de criar
-                    const { data: existingMsgByWaha } = await supabase
-                      .from('messages')
-                      .select('id')
-                      .eq('waha_message_id', shortId)
-                      .maybeSingle();
-                    
-                    if (existingMsgByWaha) {
-                      console.log('[whatsapp-webhook] Mensagem já existe (waha_message_id), atualizando status apenas:', existingMsgByWaha.id);
-                      // Apenas atualizar status se necessário
-                      await supabase
-                        .from('messages')
-                        .update({ status: newStatus || 'sent' })
-                        .eq('id', existingMsgByWaha.id);
-                      found = true;
+
+                    if (insertError) {
+                      console.error(
+                        '[whatsapp-webhook] Erro ao criar mensagem via ACK:',
+                        insertError
+                      );
                     } else {
-                      // Criar mensagem COM waha_message_id para prevenir duplicação
-                      const { data: newMessage, error: insertError } = await supabase
-                        .from('messages')
-                        .insert({
-                          conversation_id: conversation.id,
-                          lead_id: lead.id,
-                          sender_id: null, // Outbound do celular - sem sender_id
-                          sender_type: 'agent',
-                          content: finalContent,
-                          type: msgType,
-                          direction: 'outbound',
-                          source: 'mobile',
-                          external_id: rawMessageId,
-                          waha_message_id: shortId, // Prevenir duplicação
-                          status: newStatus || 'sent',
-                          created_at: msgTimestamp,
-                        })
-                        .select('id')
-                        .single();
-                      
-                      if (insertError) {
-                        console.error('[whatsapp-webhook] Erro ao criar mensagem via ACK:', insertError);
-                      } else {
-                        console.log('[whatsapp-webhook] ✅ Mensagem outbound criada via ACK:', newMessage?.id);
-                        found = true;
-                      }
+                      console.log(
+                        '[whatsapp-webhook] ✅ Mensagem outbound criada via ACK:',
+                        newMessage?.id
+                      );
+                      found = true;
                     }
                   }
-                } else {
-                  console.log('[whatsapp-webhook] Lead não encontrado para phone:', resolvedToPhone);
                 }
+              } else {
+                console.log('[whatsapp-webhook] Lead não encontrado para phone:', resolvedToPhone);
+              }
             } catch (createError) {
-              console.error('[whatsapp-webhook] Erro ao tentar criar mensagem via ACK:', createError);
+              console.error(
+                '[whatsapp-webhook] Erro ao tentar criar mensagem via ACK:',
+                createError
+              );
             }
           } else if (!found) {
-            console.warn('[whatsapp-webhook] Nenhuma mensagem encontrada para messageId:', rawMessageId, 'shortId:', shortId);
+            console.warn(
+              '[whatsapp-webhook] Nenhuma mensagem encontrada para messageId:',
+              rawMessageId,
+              'shortId:',
+              shortId
+            );
           }
         }
-        
+
         return new Response(
-          JSON.stringify({ success: true, event: 'ack', status: newStatus, messageId: rawMessageId }),
+          JSON.stringify({
+            success: true,
+            event: 'ack',
+            status: newStatus,
+            messageId: rawMessageId,
+          }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       // Eventos de mensagem do WAHA
       if (event === 'message' || event === 'message.any') {
         const payload = body.payload as WAHAMessage & { _data?: any };
-        
+
         // Processar TODAS as mensagens - tanto inbound quanto outbound
         // fromMe=true: enviada por nós (celular, CRM, bot)
         // fromMe=false: recebida do lead
         isFromMe = payload.fromMe || false;
-        
+
         // ========== CORREÇÃO: Usar telefone correto baseado em fromMe ==========
         // Para mensagens outbound (fromMe=true): o lead é o DESTINATÁRIO (to)
         // Para mensagens inbound (fromMe=false): o lead é o REMETENTE (from)
@@ -1573,7 +1835,7 @@ serve(async (req) => {
           rawContact = payload.from || payload.chatId || '';
           console.log('[whatsapp-webhook] Mensagem INBOUND - remetente:', rawContact);
         }
-        
+
         // ========== FILTRO DE GRUPOS - Ignorar mensagens de grupos ==========
         if (isGroupChat(rawContact)) {
           console.log('[whatsapp-webhook] Ignorando mensagem de grupo:', rawContact);
@@ -1582,7 +1844,7 @@ serve(async (req) => {
             { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        
+
         // ========== FILTRO DE STATUS/BROADCAST - Ignorar stories ==========
         if (isStatusBroadcast(rawContact)) {
           console.log('[whatsapp-webhook] Ignorando mensagem de status/broadcast:', rawContact);
@@ -1591,10 +1853,10 @@ serve(async (req) => {
             { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        
+
         messageData = payload;
         externalMessageId = payload.id || '';
-        
+
         // ========== LOG DE DEBUG DETALHADO ==========
         console.log('[whatsapp-webhook] ===== MENSAGEM RECEBIDA =====');
         console.log('[whatsapp-webhook] fromMe:', isFromMe);
@@ -1604,16 +1866,16 @@ serve(async (req) => {
         console.log('[whatsapp-webhook] type:', payload.type);
         console.log('[whatsapp-webhook] hasMedia:', payload.hasMedia);
         console.log('[whatsapp-webhook] ==============================');
-        
+
         // ========== Detectar LID e extrair número real ==========
         if (isLID(rawContact)) {
           console.log('[whatsapp-webhook] Detectado LID do Facebook, buscando número real...');
           isFromFacebookLid = true;
           originalLid = rawContact.replace('@lid', '').replace(/\D/g, '');
-          
+
           // Primeiro tenta extrair do payload
           let realPhone = extractRealPhoneFromPayload(body.payload);
-          
+
           // Se não conseguiu, tenta via API do WAHA
           if (!realPhone) {
             const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
@@ -1624,7 +1886,7 @@ serve(async (req) => {
                 wahaConfig.sessionName,
                 rawContact
               );
-              
+
               if (realPhone) {
                 isFromFacebookLid = false; // Conseguimos o número real!
                 console.log('[whatsapp-webhook] Número real resolvido via API WAHA:', realPhone);
@@ -1635,7 +1897,7 @@ serve(async (req) => {
           } else {
             isFromFacebookLid = false; // Conseguimos o número real do payload!
           }
-          
+
           if (realPhone) {
             senderPhone = normalizePhone(realPhone);
           } else {
@@ -1644,119 +1906,151 @@ serve(async (req) => {
             // tentar buscar um lead existente pelo original_lid no banco de dados
             if (isFromMe) {
               const lidNumber = rawContact.replace('@lid', '').replace(/\D/g, '');
-              console.log('[whatsapp-webhook] Buscando lead existente pelo original_lid:', lidNumber);
-              
+              console.log(
+                '[whatsapp-webhook] Buscando lead existente pelo original_lid:',
+                lidNumber
+              );
+
               // Buscar config para obter tenant_id
-              const wahaConfigForLid = await getWAHAConfigBySession(supabase, body.session || 'default');
+              const wahaConfigForLid = await getWAHAConfigBySession(
+                supabase,
+                body.session || 'default'
+              );
               const tenantIdForLid = wahaConfigForLid?.tenantId;
-              
+
               // Buscar lead pelo original_lid (com filtro de tenant se disponível)
               let leadByLidQuery = supabase
                 .from('leads')
                 .select('id, phone, name, country_code')
                 .eq('original_lid', lidNumber);
-              
+
               if (tenantIdForLid) {
                 leadByLidQuery = leadByLidQuery.eq('tenant_id', tenantIdForLid);
               }
-              
-              const { data: existingLeadByLid, error: lidError } = await leadByLidQuery.maybeSingle();
-              
+
+              const { data: existingLeadByLid, error: lidError } =
+                await leadByLidQuery.maybeSingle();
+
               if (lidError) {
                 console.error('[whatsapp-webhook] Erro ao buscar lead por LID:', lidError);
               }
-              
+
               if (existingLeadByLid) {
                 // Lead encontrado! Usar o telefone real do lead
-                console.log('[whatsapp-webhook] ✅ Lead encontrado pelo original_lid:', existingLeadByLid.name, existingLeadByLid.phone);
+                console.log(
+                  '[whatsapp-webhook] ✅ Lead encontrado pelo original_lid:',
+                  existingLeadByLid.name,
+                  existingLeadByLid.phone
+                );
                 senderPhone = normalizePhone(existingLeadByLid.phone);
                 senderName = existingLeadByLid.name || '';
                 isFromFacebookLid = true; // Marcar que veio de LID para manter consistência
               } else {
                 // Não encontrou lead - agora sim ignorar para evitar criar lead incorreto
-                console.log('[whatsapp-webhook] ⏭️ Ignorando outbound para LID sem lead associado:', lidNumber);
+                console.log(
+                  '[whatsapp-webhook] ⏭️ Ignorando outbound para LID sem lead associado:',
+                  lidNumber
+                );
                 return new Response(
-                  JSON.stringify({ 
-                    success: true, 
-                    ignored: true, 
+                  JSON.stringify({
+                    success: true,
+                    ignored: true,
                     reason: 'outbound_to_unresolved_lid_no_lead',
-                    lid: rawContact 
+                    lid: rawContact,
                   }),
                   { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
                 );
               }
             }
-            
+
             // Para mensagens inbound de LID não resolvido, continuar normalmente
-            console.warn('[whatsapp-webhook] Não foi possível extrair número real do LID, usando como identificador temporário');
+            console.warn(
+              '[whatsapp-webhook] Não foi possível extrair número real do LID, usando como identificador temporário'
+            );
             senderPhone = originalLid || normalizePhone(rawContact);
           }
         } else {
           senderPhone = normalizePhone(rawContact);
         }
-        
+
         // ========== PROTEÇÃO: Ignorar self-messages (mensagens para o próprio número da instância) ==========
         // Isso evita criar leads com o número do WhatsApp Business
-        const wahaConfigForSelfCheck = await getWAHAConfigBySession(supabase, body.session || 'default');
+        const wahaConfigForSelfCheck = await getWAHAConfigBySession(
+          supabase,
+          body.session || 'default'
+        );
         if (wahaConfigForSelfCheck) {
           const { data: instancePhoneData } = await supabase
             .from('whatsapp_config')
             .select('phone_number')
             .eq('id', wahaConfigForSelfCheck.instanceId)
             .maybeSingle();
-          
+
           if (instancePhoneData?.phone_number) {
             const instancePhone = instancePhoneData.phone_number.replace(/\D/g, '');
             const senderPhoneDigits = senderPhone.replace(/\D/g, '');
-            
+
             // Comparar últimos 10 dígitos (ignora código do país)
             if (senderPhoneDigits.slice(-10) === instancePhone.slice(-10)) {
-              console.log('[whatsapp-webhook] ⏭️ Ignorando self-message: telefone é o próprio número da instância:', senderPhone);
+              console.log(
+                '[whatsapp-webhook] ⏭️ Ignorando self-message: telefone é o próprio número da instância:',
+                senderPhone
+              );
               return new Response(
-                JSON.stringify({ 
-                  success: true, 
-                  ignored: true, 
+                JSON.stringify({
+                  success: true,
+                  ignored: true,
                   reason: 'self_message',
-                  phone: senderPhone 
+                  phone: senderPhone,
                 }),
                 { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
               );
             }
           }
         }
-        
+
         // ========== EXTRAÇÃO DO NOME DO CONTATO ==========
         // Para mensagens OUTBOUND (fromMe=true): pushName é o NOSSO nome, não do destinatário
         // Precisamos buscar o nome do destinatário via API
         if (isFromMe) {
           // Mensagem enviada por nós - buscar nome do DESTINATÁRIO via API
-          console.log('[whatsapp-webhook] Mensagem outbound - buscando nome do destinatário via API...');
-          
-          const wahaConfigForContact = await getWAHAConfigBySession(supabase, body.session || 'default');
+          console.log(
+            '[whatsapp-webhook] Mensagem outbound - buscando nome do destinatário via API...'
+          );
+
+          const wahaConfigForContact = await getWAHAConfigBySession(
+            supabase,
+            body.session || 'default'
+          );
           if (wahaConfigForContact) {
             // Buscar lead existente para obter country_code
             const existingLeadForContact = await findLeadByPhone(supabase, senderPhone);
-            const phoneWithCountry = getPhoneWithCountryCode(senderPhone, existingLeadForContact?.country_code);
-            
+            const phoneWithCountry = getPhoneWithCountryCode(
+              senderPhone,
+              existingLeadForContact?.country_code
+            );
+
             console.log('[whatsapp-webhook] Buscando contato para:', phoneWithCountry);
-            
+
             const contactInfo = await getContactInfo(
               wahaConfigForContact.baseUrl,
               wahaConfigForContact.apiKey,
               wahaConfigForContact.sessionName,
               phoneWithCountry
             );
-            
+
             // Prioridade: nome salvo nos contatos > pushname do WhatsApp
             senderName = contactInfo.name || contactInfo.pushname || '';
             console.log('[whatsapp-webhook] Nome do destinatário obtido via API:', senderName);
           } else {
             senderName = '';
-            console.log('[whatsapp-webhook] Config WAHA não encontrada para buscar nome do destinatário');
+            console.log(
+              '[whatsapp-webhook] Config WAHA não encontrada para buscar nome do destinatário'
+            );
           }
         } else {
           // Mensagem recebida - usar pushName do payload normalmente
-          senderName = 
+          senderName =
             payload.pushName ||
             (body.payload as any)?._data?.pushName ||
             (body.payload as any)?._data?.notifyName ||
@@ -1765,8 +2059,17 @@ serve(async (req) => {
             (body.payload as any)?.sender?.pushName ||
             '';
         }
-        
-        console.log('[whatsapp-webhook] Nome extraído:', senderName, 'phone normalizado:', senderPhone, 'isLID:', isFromFacebookLid, 'isFromMe:', isFromMe);
+
+        console.log(
+          '[whatsapp-webhook] Nome extraído:',
+          senderName,
+          'phone normalizado:',
+          senderPhone,
+          'isLID:',
+          isFromFacebookLid,
+          'isFromMe:',
+          isFromMe
+        );
       } else {
         console.log('[whatsapp-webhook] Evento não processado:', event);
         return new Response(
@@ -1779,47 +2082,52 @@ serve(async (req) => {
     else if (body.event && body.instance !== undefined) {
       provider = 'evolution';
       event = body.event;
-      
+
       // ========== Evolution: Evento de status update ==========
       if (event === 'messages.update') {
         const payload = body.data || {};
         const messageId = payload.key?.id || payload.id;
         const status = payload.update?.status || payload.status;
-        
+
         console.log('[whatsapp-webhook] Evolution status update:', { messageId, status });
-        
+
         let newStatus: 'delivered' | 'read' | null = null;
-        
+
         // Evolution usa: 2 = delivered, 3 = read (ou strings equivalentes)
         if (status === 2 || status === 'DELIVERY_ACK' || status === 'delivered') {
           newStatus = 'delivered';
         } else if (status === 3 || status === 'READ' || status === 'read') {
           newStatus = 'read';
         }
-        
+
         if (newStatus && messageId) {
           const { error: updateError } = await supabase
             .from('messages')
             .update({ status: newStatus })
             .eq('external_id', messageId);
-          
+
           if (updateError) {
             console.error('[whatsapp-webhook] Erro ao atualizar status Evolution:', updateError);
           } else {
-            console.log('[whatsapp-webhook] Status Evolution atualizado para:', newStatus, 'messageId:', messageId);
+            console.log(
+              '[whatsapp-webhook] Status Evolution atualizado para:',
+              newStatus,
+              'messageId:',
+              messageId
+            );
           }
         }
-        
+
         return new Response(
           JSON.stringify({ success: true, event: 'status_update', status: newStatus, messageId }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       if (event === 'messages.upsert') {
         const payload = body.data as EvolutionMessage;
         const remoteJid = payload.key?.remoteJid || '';
-        
+
         // ========== FILTRO DE GRUPOS - Ignorar mensagens de grupos ==========
         if (isGroupChat(remoteJid)) {
           console.log('[whatsapp-webhook] Ignorando mensagem de grupo Evolution:', remoteJid);
@@ -1828,11 +2136,11 @@ serve(async (req) => {
             { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        
+
         // Processar TODAS as mensagens - tanto inbound quanto outbound (Evolution)
         isFromMe = payload.key?.fromMe || false;
         console.log('[whatsapp-webhook] Evolution Mensagem fromMe:', isFromMe);
-        
+
         messageData = payload;
         externalMessageId = payload.key?.id || '';
         senderPhone = normalizePhone(remoteJid);
@@ -1849,18 +2157,21 @@ serve(async (req) => {
     // Formato desconhecido
     else {
       console.log('[whatsapp-webhook] Formato de payload desconhecido');
-      return new Response(
-        JSON.stringify({ success: false, error: 'Unknown payload format' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ success: false, error: 'Unknown payload format' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     if (!messageData || !senderPhone) {
-      console.log('[whatsapp-webhook] Dados inválidos:', { messageData: !!messageData, senderPhone });
-      return new Response(
-        JSON.stringify({ success: false, error: 'Invalid message data' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.log('[whatsapp-webhook] Dados inválidos:', {
+        messageData: !!messageData,
+        senderPhone,
+      });
+      return new Response(JSON.stringify({ success: false, error: 'Invalid message data' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // ========== CORREÇÃO DEFINITIVA: Verificar por waha_message_id (UNIQUE no banco) ==========
@@ -1876,9 +2187,14 @@ serve(async (req) => {
       } else {
         wahaMessageId = externalMessageId;
       }
-      
-      console.log('[whatsapp-webhook] 🔑 waha_message_id calculado:', wahaMessageId, '| original external_id:', externalMessageId);
-      
+
+      console.log(
+        '[whatsapp-webhook] 🔑 waha_message_id calculado:',
+        wahaMessageId,
+        '| original external_id:',
+        externalMessageId
+      );
+
       // ========== CORREÇÃO: Verificar duplicata usando AMBOS os formatos (curto e completo) ==========
       // O CRM salva no formato completo (true_554591570202@c.us_3EB...) mas o webhook extrai só o ID curto (3EB...)
       // Precisamos verificar ambos para evitar duplicação
@@ -1888,26 +2204,33 @@ serve(async (req) => {
         .or(`waha_message_id.eq.${wahaMessageId},waha_message_id.eq.${externalMessageId}`)
         .limit(1)
         .maybeSingle();
-      
+
       if (existingByWahaId) {
         // ========== CORREÇÃO CRÍTICA: Se a mensagem existe mas NÃO tem media_url, verificar se este evento tem mídia ==========
         // WAHA envia primeiro message.ack (sem mídia) e depois message.any (com mídia)
         // O primeiro evento cria a mensagem sem media_url, o segundo deve atualizar
-        const isMediaType = existingByWahaId.type && ['image', 'audio', 'video', 'document'].includes(existingByWahaId.type);
-        
+        const isMediaType =
+          existingByWahaId.type &&
+          ['image', 'audio', 'video', 'document'].includes(existingByWahaId.type);
+
         if (isMediaType && !existingByWahaId.media_url) {
-          console.log('[whatsapp-webhook] 📎 Mensagem de mídia existente sem media_url, tentando extrair mídia deste evento...');
-          
+          console.log(
+            '[whatsapp-webhook] 📎 Mensagem de mídia existente sem media_url, tentando extrair mídia deste evento...'
+          );
+
           // Extrair mídia deste evento
-          const { mediaUrl: eventMediaUrl, type: eventType } = getMessageContent(messageData, provider);
-          
+          const { mediaUrl: eventMediaUrl, type: eventType } = getMessageContent(
+            messageData,
+            provider
+          );
+
           if (eventMediaUrl) {
             console.log('[whatsapp-webhook] 📎 Mídia encontrada neste evento, fazendo upload...');
-            
+
             // Buscar lead e config para fazer upload
             const existingLead = await findLeadByPhone(supabase, senderPhone);
             const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
-            
+
             if (existingLead && wahaConfig) {
               try {
                 const finalMediaUrl = await uploadMediaToStorage(
@@ -1917,33 +2240,56 @@ serve(async (req) => {
                   existingLead.id,
                   wahaConfig
                 );
-                
+
                 if (finalMediaUrl) {
                   const { error: updateError } = await supabase
                     .from('messages')
                     .update({ media_url: finalMediaUrl })
                     .eq('id', existingByWahaId.id);
-                  
+
                   if (updateError) {
-                    console.error('[whatsapp-webhook] ❌ Erro ao atualizar media_url:', updateError);
+                    console.error(
+                      '[whatsapp-webhook] ❌ Erro ao atualizar media_url:',
+                      updateError
+                    );
                   } else {
-                    console.log('[whatsapp-webhook] ✅ media_url atualizado com sucesso:', finalMediaUrl.substring(0, 50));
+                    console.log(
+                      '[whatsapp-webhook] ✅ media_url atualizado com sucesso:',
+                      finalMediaUrl.substring(0, 50)
+                    );
                   }
                 }
               } catch (uploadError) {
                 console.error('[whatsapp-webhook] ❌ Erro no upload de mídia:', uploadError);
               }
             } else {
-              console.log('[whatsapp-webhook] ⚠️ Não foi possível fazer upload: lead ou config não encontrados');
+              console.log(
+                '[whatsapp-webhook] ⚠️ Não foi possível fazer upload: lead ou config não encontrados'
+              );
             }
           } else {
-            console.log('[whatsapp-webhook] 📎 Nenhuma mídia neste evento para atualizar mensagem existente');
+            console.log(
+              '[whatsapp-webhook] 📎 Nenhuma mídia neste evento para atualizar mensagem existente'
+            );
           }
         }
-        
-        console.log('[whatsapp-webhook] ⏭️ Mensagem já processada (waha_message_id):', wahaMessageId, 'ou', externalMessageId, '| matched:', existingByWahaId.waha_message_id);
+
+        console.log(
+          '[whatsapp-webhook] ⏭️ Mensagem já processada (waha_message_id):',
+          wahaMessageId,
+          'ou',
+          externalMessageId,
+          '| matched:',
+          existingByWahaId.waha_message_id
+        );
         return new Response(
-          JSON.stringify({ success: true, duplicate: true, existing_message_id: existingByWahaId.id, matched_by: 'waha_message_id', matched_value: existingByWahaId.waha_message_id }),
+          JSON.stringify({
+            success: true,
+            duplicate: true,
+            existing_message_id: existingByWahaId.id,
+            matched_by: 'waha_message_id',
+            matched_value: existingByWahaId.waha_message_id,
+          }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -1953,7 +2299,7 @@ serve(async (req) => {
 
     // Extrair conteúdo da mensagem
     const { content, type, mediaUrl, isSystemMessage } = getMessageContent(messageData, provider);
-    
+
     // Ignorar notificações do sistema
     if (isSystemMessage) {
       console.log('[whatsapp-webhook] Ignorando notificação do sistema');
@@ -1962,10 +2308,18 @@ serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
+
     // ========== CORREÇÃO: Validar conteúdo da mensagem ==========
     // Ignorar mensagens com conteúdo inválido/placeholder
-    const invalidContents = ['[text]', '[Text]', '[TEXT]', '[media]', '[Media]', '[MEDIA]', '[Mídia]'];
+    const invalidContents = [
+      '[text]',
+      '[Text]',
+      '[TEXT]',
+      '[media]',
+      '[Media]',
+      '[MEDIA]',
+      '[Mídia]',
+    ];
     if (!content && !mediaUrl) {
       console.log('[whatsapp-webhook] Ignorando mensagem sem conteúdo e sem mídia');
       return new Response(
@@ -1973,7 +2327,7 @@ serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
+
     if (content && invalidContents.includes(content)) {
       console.log('[whatsapp-webhook] Ignorando mensagem com placeholder inválido:', content);
       return new Response(
@@ -1981,21 +2335,30 @@ serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
-    console.log('[whatsapp-webhook] Conteúdo:', content.substring(0, 100), 'Tipo:', type, 'MediaUrl:', mediaUrl ? 'presente' : 'nenhum');
+
+    console.log(
+      '[whatsapp-webhook] Conteúdo:',
+      content.substring(0, 100),
+      'Tipo:',
+      type,
+      'MediaUrl:',
+      mediaUrl ? 'presente' : 'nenhum'
+    );
 
     // ========== BUSCA FLEXÍVEL DE LEAD POR TELEFONE ==========
     // Encontra lead mesmo com formato diferente (com/sem 55, com/sem 9° dígito)
     let existingLead = await findLeadByPhone(supabase, senderPhone);
-    
+
     // Fallback: se não encontrou por telefone, tentar por telefone + nome
     if (!existingLead && senderName) {
-      console.log('[whatsapp-webhook] Lead não encontrado por telefone, tentando por nome + telefone...');
+      console.log(
+        '[whatsapp-webhook] Lead não encontrado por telefone, tentando por nome + telefone...'
+      );
       existingLead = await findLeadByPhoneAndName(supabase, senderPhone, senderName);
     }
 
     let lead;
-    
+
     if (existingLead) {
       lead = existingLead;
       console.log('[whatsapp-webhook] Lead encontrado:', lead.id, '| nome:', lead.name);
@@ -2004,22 +2367,23 @@ serve(async (req) => {
       const updateData: Record<string, unknown> = {
         last_interaction_at: new Date().toISOString(),
       };
-      
+
       // Sempre atualizar whatsapp_name se receber um novo (pessoa pode mudar nome no WhatsApp)
       if (senderName) {
         updateData.whatsapp_name = senderName;
-        
+
         // Se o nome ainda é genérico, atualizar para o NotifyName real
-        const isGenericName = existingLead.name.startsWith('Lead ') || 
-                              existingLead.name.includes('via anúncio') ||
-                              existingLead.name.includes('(via anúncio)');
-        
+        const isGenericName =
+          existingLead.name.startsWith('Lead ') ||
+          existingLead.name.includes('via anúncio') ||
+          existingLead.name.includes('(via anúncio)');
+
         if (isGenericName) {
           updateData.name = senderName;
           console.log('[whatsapp-webhook] Atualizando nome genérico para NotifyName:', senderName);
         }
       }
-      
+
       // Se o lead existente era um LID e agora recebemos o número real, atualizar flag
       if (existingLead.is_facebook_lid && !isFromFacebookLid) {
         updateData.is_facebook_lid = false;
@@ -2036,7 +2400,7 @@ serve(async (req) => {
           // Senão, usar número com código do país
           let contactIdForAvatar: string;
           let isLidRequest = false;
-          
+
           if (isFromFacebookLid && originalLid) {
             contactIdForAvatar = `${originalLid}@lid`;
             isLidRequest = true;
@@ -2044,12 +2408,15 @@ serve(async (req) => {
           } else if (existingLead.original_lid && existingLead.is_facebook_lid) {
             contactIdForAvatar = `${existingLead.original_lid}@lid`;
             isLidRequest = true;
-            console.log('[whatsapp-webhook] 📷 Buscando avatar via LID existente:', contactIdForAvatar);
+            console.log(
+              '[whatsapp-webhook] 📷 Buscando avatar via LID existente:',
+              contactIdForAvatar
+            );
           } else {
             contactIdForAvatar = getPhoneWithCountryCode(senderPhone, existingLead.country_code);
             console.log('[whatsapp-webhook] 📷 Buscando avatar via telefone:', contactIdForAvatar);
           }
-          
+
           const avatarResult = await getProfilePictureWithReason(
             wahaConfig.baseUrl,
             wahaConfig.apiKey,
@@ -2057,7 +2424,7 @@ serve(async (req) => {
             contactIdForAvatar,
             isLidRequest
           );
-          
+
           if (avatarResult.url) {
             updateData.avatar_url = avatarResult.url;
             console.log('[whatsapp-webhook] 📷 Avatar atualizado para lead existente');
@@ -2074,14 +2441,17 @@ serve(async (req) => {
                 instance_id: wahaConfig.instanceId,
                 attempt: 1,
                 reason: avatarResult.reason,
-              }
+              },
             });
           }
         }
       }
-      
+
       // Se lead existe mas nome é genérico e não temos nome do WhatsApp, tentar buscar via API
-      if (!senderName && (existingLead.name.startsWith('Lead ') || existingLead.name.includes('via anúncio'))) {
+      if (
+        !senderName &&
+        (existingLead.name.startsWith('Lead ') || existingLead.name.includes('via anúncio'))
+      ) {
         console.log('[whatsapp-webhook] 📇 Lead com nome genérico, tentando buscar nome real...');
         const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
         if (wahaConfig) {
@@ -2101,19 +2471,16 @@ serve(async (req) => {
         }
       }
 
-      await supabase
-        .from('leads')
-        .update(updateData)
-        .eq('id', lead.id);
+      await supabase.from('leads').update(updateData).eq('id', lead.id);
     } else {
       // Criar novo lead com upsert (proteção adicional contra race condition)
       console.log('[whatsapp-webhook] Criando novo lead para:', senderPhone);
-      
+
       // Buscar config do WAHA para obter tenant_id
       const wahaConfigForLead = await getWAHAConfigBySession(supabase, body.session || 'default');
       const tenantIdForLead = wahaConfigForLead?.tenantId || null;
       console.log('[whatsapp-webhook] Tenant ID para novo lead:', tenantIdForLead);
-      
+
       const { data: firstStage } = await supabase
         .from('funnel_stages')
         .select('id')
@@ -2125,10 +2492,10 @@ serve(async (req) => {
       // Para LIDs, usamos o whatsapp_name se disponível, senão criamos identificador temporário
       let leadName = senderName || `Lead ${formatPhoneForDisplay(senderPhone)}`;
       let internalNoteForLid: string | null = null;
-      
+
       if (isFromFacebookLid) {
         if (senderName) {
-          leadName = senderName;  // Usar nome real sem "(via anúncio)" - menos poluição visual
+          leadName = senderName; // Usar nome real sem "(via anúncio)" - menos poluição visual
         } else {
           leadName = `Lead Facebook ${originalLid?.slice(-6) || Date.now().toString().slice(-6)}`;
         }
@@ -2140,23 +2507,35 @@ serve(async (req) => {
       // CORREÇÃO: Para leads LID, usar o original_lid com @lid para buscar foto
       let avatarUrl: string | null = null;
       let shouldScheduleAvatarRetry = false;
-      let avatarRetryData: { contact_id: string; is_lid: boolean; session: string; instance_id: string; reason?: string } | null = null;
-      
+      let avatarRetryData: {
+        contact_id: string;
+        is_lid: boolean;
+        session: string;
+        instance_id: string;
+        reason?: string;
+      } | null = null;
+
       if (wahaConfigForLead) {
         // Se é lead LID, usar o original_lid com sufixo @lid
         // Senão, usar número com código do país
         let contactIdForAvatar: string;
         let isLidRequest = false;
-        
+
         if (isFromFacebookLid && originalLid) {
           contactIdForAvatar = `${originalLid}@lid`;
           isLidRequest = true;
-          console.log('[whatsapp-webhook] 📷 Buscando avatar para novo lead via LID:', contactIdForAvatar);
+          console.log(
+            '[whatsapp-webhook] 📷 Buscando avatar para novo lead via LID:',
+            contactIdForAvatar
+          );
         } else {
           contactIdForAvatar = getPhoneWithCountryCode(senderPhone);
-          console.log('[whatsapp-webhook] 📷 Buscando avatar para novo lead via telefone:', contactIdForAvatar);
+          console.log(
+            '[whatsapp-webhook] 📷 Buscando avatar para novo lead via telefone:',
+            contactIdForAvatar
+          );
         }
-        
+
         const avatarResult = await getProfilePictureWithReason(
           wahaConfigForLead.baseUrl,
           wahaConfigForLead.apiKey,
@@ -2164,7 +2543,7 @@ serve(async (req) => {
           contactIdForAvatar,
           isLidRequest
         );
-        
+
         if (avatarResult.url) {
           avatarUrl = avatarResult.url;
           console.log('[whatsapp-webhook] ✅ Avatar encontrado para novo lead');
@@ -2178,49 +2557,59 @@ serve(async (req) => {
             instance_id: wahaConfigForLead.instanceId,
             reason: avatarResult.reason,
           };
-          console.log('[whatsapp-webhook] 📷 Avatar não encontrado, será agendado retry após criar lead');
+          console.log(
+            '[whatsapp-webhook] 📷 Avatar não encontrado, será agendado retry após criar lead'
+          );
         }
       }
 
       // Normalizar telefone separando código do país
       const phoneData = normalizePhoneForStorage(senderPhone);
-      console.log('[whatsapp-webhook] Normalizando telefone para salvar:', senderPhone, '->', phoneData);
-      
+      console.log(
+        '[whatsapp-webhook] Normalizando telefone para salvar:',
+        senderPhone,
+        '->',
+        phoneData
+      );
+
       // Para leads LID, usar o original_lid como phone temporário (garantir unicidade)
       // Isso evita conflitos já que cada LID é único
       const phoneForDb = isFromFacebookLid ? `LID_${originalLid}` : phoneData.localNumber;
-      
+
       const { data: upsertedLead, error: upsertError } = await supabase
         .from('leads')
-        .upsert({
-          name: leadName,
-          phone: phoneForDb, // Para LID: "LID_174621106159626", para normal: "45988428644"
-          country_code: isFromFacebookLid ? null : phoneData.countryCode, // LIDs não têm código de país
-          whatsapp_name: senderName || null,
-          source: isFromFacebookLid ? 'facebook_ads' : 'whatsapp',
-          temperature: 'warm',
-          stage_id: firstStage?.id,
-          status: 'active',
-          last_interaction_at: new Date().toISOString(),
-          is_facebook_lid: isFromFacebookLid,
-          original_lid: originalLid,
-          avatar_url: avatarUrl,
-          tenant_id: tenantIdForLead,
-          internal_notes: internalNoteForLid, // Nota explicando situação do LID
-        }, {
-          onConflict: 'phone',
-          ignoreDuplicates: false,
-        })
+        .upsert(
+          {
+            name: leadName,
+            phone: phoneForDb, // Para LID: "LID_174621106159626", para normal: "45988428644"
+            country_code: isFromFacebookLid ? null : phoneData.countryCode, // LIDs não têm código de país
+            whatsapp_name: senderName || null,
+            source: isFromFacebookLid ? 'facebook_ads' : 'whatsapp',
+            temperature: 'warm',
+            stage_id: firstStage?.id,
+            status: 'active',
+            last_interaction_at: new Date().toISOString(),
+            is_facebook_lid: isFromFacebookLid,
+            original_lid: originalLid,
+            avatar_url: avatarUrl,
+            tenant_id: tenantIdForLead,
+            internal_notes: internalNoteForLid, // Nota explicando situação do LID
+          },
+          {
+            onConflict: 'phone',
+            ignoreDuplicates: false,
+          }
+        )
         .select('*')
         .single();
 
       if (upsertError) {
         console.error('[whatsapp-webhook] Erro ao criar/upsert lead:', upsertError);
-        
+
         // Se falhou por conflito, tentar buscar o existente usando busca flexível
         if (upsertError.code === '23505') {
           const conflictLead = await findLeadByPhone(supabase, senderPhone);
-          
+
           if (conflictLead) {
             lead = conflictLead;
             console.log('[whatsapp-webhook] Lead encontrado após conflito:', lead.id);
@@ -2231,15 +2620,15 @@ serve(async (req) => {
             );
           }
         } else {
-          return new Response(
-            JSON.stringify({ success: false, error: 'Error creating lead' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ success: false, error: 'Error creating lead' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
       } else {
         lead = upsertedLead;
         console.log('[whatsapp-webhook] Lead criado/atualizado:', lead.id);
-        
+
         // Agendar retry de avatar se necessário (após ter o lead_id)
         if (shouldScheduleAvatarRetry && avatarRetryData && lead.id) {
           console.log('[whatsapp-webhook] 📷 Agendando retry de avatar para novo lead:', lead.id);
@@ -2253,7 +2642,7 @@ serve(async (req) => {
               instance_id: avatarRetryData.instance_id,
               attempt: 1,
               reason: avatarRetryData.reason,
-            }
+            },
           });
         }
       }
@@ -2263,13 +2652,18 @@ serve(async (req) => {
     let conversation;
     const wahaConfig = await getWAHAConfigBySession(supabase, body.session || 'default');
     const whatsappInstanceId = wahaConfig?.instanceId || null;
-    
-    console.log('[whatsapp-webhook] Buscando conversa para lead:', lead.id, 'instância:', whatsappInstanceId);
-    
+
+    console.log(
+      '[whatsapp-webhook] Buscando conversa para lead:',
+      lead.id,
+      'instância:',
+      whatsappInstanceId
+    );
+
     // Buscar conversa existente com match exato (lead_id + whatsapp_instance_id)
     // IMPORTANTE: Cada instância WhatsApp = canal separado, então NÃO usar fallback
     // Se o lead manda msg pelo número 8066, deve ter conversa separada do número 7851
-    let { data: existingConversation } = await supabase
+    const { data: existingConversation } = await supabase
       .from('conversations')
       .select('*')
       .eq('lead_id', lead.id)
@@ -2277,23 +2671,25 @@ serve(async (req) => {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
-    
+
     // Se não encontrou conversa para esta instância específica, será criada uma nova
     // NÃO fazer fallback para conversa de outra instância - são canais separados
 
     if (existingConversation) {
       conversation = existingConversation;
-      console.log('[whatsapp-webhook] ✅ Conversa encontrada:', conversation.id, 'status:', conversation.status);
+      console.log(
+        '[whatsapp-webhook] ✅ Conversa encontrada:',
+        conversation.id,
+        'status:',
+        conversation.status
+      );
 
       // Reabrir conversa se estava 'resolved' ou 'pending' e é mensagem INBOUND
       if (!isFromMe && (conversation.status === 'resolved' || conversation.status === 'pending')) {
         console.log('[whatsapp-webhook] Reabrindo conversa:', conversation.id);
-        await supabase
-          .from('conversations')
-          .update({ status: 'open' })
-          .eq('id', conversation.id);
+        await supabase.from('conversations').update({ status: 'open' }).eq('id', conversation.id);
       }
-      
+
       // Atualizar whatsapp_instance_id se ainda não estava definido
       if (!conversation.whatsapp_instance_id && whatsappInstanceId) {
         await supabase
@@ -2304,7 +2700,7 @@ serve(async (req) => {
     } else {
       // 3. Criar nova conversa (insert simples, sem upsert)
       console.log('[whatsapp-webhook] Criando nova conversa para lead:', lead.id);
-      
+
       const { data: newConversation, error: createConvError } = await supabase
         .from('conversations')
         .insert({
@@ -2318,8 +2714,12 @@ serve(async (req) => {
 
       if (createConvError) {
         // Race condition: outra requisição pode ter criado a conversa para ESTA instância
-        console.log('[whatsapp-webhook] ⚠️ Erro ao criar conversa, buscando existente para mesma instância:', createConvError.code, createConvError.message);
-        
+        console.log(
+          '[whatsapp-webhook] ⚠️ Erro ao criar conversa, buscando existente para mesma instância:',
+          createConvError.code,
+          createConvError.message
+        );
+
         const { data: fallbackConv } = await supabase
           .from('conversations')
           .select('*')
@@ -2328,10 +2728,13 @@ serve(async (req) => {
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
-        
+
         if (fallbackConv) {
           conversation = fallbackConv;
-          console.log('[whatsapp-webhook] ✅ Conversa encontrada após fallback (mesma instância):', conversation.id);
+          console.log(
+            '[whatsapp-webhook] ✅ Conversa encontrada após fallback (mesma instância):',
+            conversation.id
+          );
         } else {
           console.error('[whatsapp-webhook] ❌ Erro ao criar conversa:', createConvError);
           return new Response(
@@ -2341,42 +2744,56 @@ serve(async (req) => {
         }
       } else {
         conversation = newConversation;
-        console.log('[whatsapp-webhook] ✅ Conversa criada:', conversation.id, 'whatsapp_instance_id:', whatsappInstanceId);
+        console.log(
+          '[whatsapp-webhook] ✅ Conversa criada:',
+          conversation.id,
+          'whatsapp_instance_id:',
+          whatsappInstanceId
+        );
       }
     }
 
     // ========== CORREÇÃO: Se é mídia mas não veio URL, buscar via WAHA API ou usar base64 ==========
     let finalMediaUrl = mediaUrl;
-    
+
     // Buscar config do WAHA antecipadamente (pode ser usada para buscar mídia ou fazer upload)
     const wahaConfigForMedia = await getWAHAConfigBySession(supabase, body.session || 'default');
-    
+
     // ========== TRATAMENTO DE BASE64 DIRETO DO PAYLOAD ==========
     // Se tem base64 no payload mas não tem URL, fazer upload direto
-    const base64Data = (messageData as any)?._data?.media?.data || 
-                       (messageData as any)?.media?.data ||
-                       (messageData as any)?.mediaData ||
-                       (messageData as any)?._data?.body; // Alguns casos o base64 vem no body
-    
-    const base64Mimetype = (messageData as any)?._data?.media?.mimetype ||
-                           (messageData as any)?.media?.mimetype ||
-                           (messageData as any)?._data?.mimetype ||
-                           '';
-    
+    const base64Data =
+      (messageData as any)?._data?.media?.data ||
+      (messageData as any)?.media?.data ||
+      (messageData as any)?.mediaData ||
+      (messageData as any)?._data?.body; // Alguns casos o base64 vem no body
+
+    const base64Mimetype =
+      (messageData as any)?._data?.media?.mimetype ||
+      (messageData as any)?.media?.mimetype ||
+      (messageData as any)?._data?.mimetype ||
+      '';
+
     // Função auxiliar para detectar base64
     const isValidBase64 = (str: string): boolean => {
       if (!str || typeof str !== 'string' || str.length < 100) return false;
       // Padrões comuns de início de base64
       const base64Patterns = ['/9j/', 'iVBOR', 'R0lGOD', 'UklGR', 'AAAA', 'GkXf', 'T2dn'];
-      return base64Patterns.some(p => str.startsWith(p)) || 
-             (str.length > 500 && !str.includes(' ') && /^[A-Za-z0-9+/=]+$/.test(str.substring(0, 100)));
+      return (
+        base64Patterns.some((p) => str.startsWith(p)) ||
+        (str.length > 500 && !str.includes(' ') && /^[A-Za-z0-9+/=]+$/.test(str.substring(0, 100)))
+      );
     };
-    
+
     // Se é mídia sem URL mas tem base64 no payload
     if (!mediaUrl && type !== 'text' && base64Data && isValidBase64(base64Data)) {
       console.log('[whatsapp-webhook] 📁 Base64 encontrado no payload, fazendo upload direto...');
-      console.log('[whatsapp-webhook] 📁 Base64 length:', base64Data.length, 'mimetype:', base64Mimetype);
-      
+      console.log(
+        '[whatsapp-webhook] 📁 Base64 length:',
+        base64Data.length,
+        'mimetype:',
+        base64Mimetype
+      );
+
       try {
         // Converter base64 para ArrayBuffer
         const binaryString = atob(base64Data);
@@ -2384,7 +2801,7 @@ serve(async (req) => {
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
-        
+
         // Determinar extensão pelo mimetype ou tipo
         const extensionMap: Record<string, string> = {
           'image/jpeg': 'jpg',
@@ -2397,16 +2814,21 @@ serve(async (req) => {
           'video/mp4': 'mp4',
           'application/pdf': 'pdf',
         };
-        
+
         let extension = extensionMap[base64Mimetype];
         if (!extension) {
-          const typeExtMap: Record<string, string> = { image: 'jpg', audio: 'ogg', video: 'mp4', document: 'bin' };
+          const typeExtMap: Record<string, string> = {
+            image: 'jpg',
+            audio: 'ogg',
+            video: 'mp4',
+            document: 'bin',
+          };
           extension = typeExtMap[type] || 'bin';
         }
-        
+
         const fileName = `leads/${lead.id}/${Date.now()}.${extension}`;
         const contentType = base64Mimetype || 'application/octet-stream';
-        
+
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('message-attachments')
           .upload(fileName, bytes.buffer, {
@@ -2414,7 +2836,7 @@ serve(async (req) => {
             cacheControl: '31536000',
             upsert: false,
           });
-        
+
         if (uploadError) {
           console.error('[whatsapp-webhook] ❌ Erro upload base64:', uploadError);
         } else {
@@ -2425,55 +2847,63 @@ serve(async (req) => {
         console.error('[whatsapp-webhook] ❌ Erro ao processar base64:', b64Error);
       }
     }
-    
+
     // Se AINDA não tem mídia e é mídia, tentar buscar via WAHA API
     if (!finalMediaUrl && type !== 'text' && wahaConfigForMedia && externalMessageId) {
       console.log('[whatsapp-webhook] 📁 Mídia sem URL/base64, tentando buscar via WAHA API...');
-      
+
       // Extrair chatId e messageId para a chamada
-      const rawContact = isFromMe 
+      const rawContact = isFromMe
         ? (messageData as WAHAMessage)?.to || (messageData as WAHAMessage)?.chatId
         : (messageData as WAHAMessage)?.from || (messageData as WAHAMessage)?.chatId;
-      
+
       if (rawContact) {
         try {
           // GET /api/{session}/chats/{chatId}/messages/{messageId}?downloadMedia=true
           const cleanChatId = rawContact.includes('@') ? rawContact : `${rawContact}@c.us`;
           // IMPORTANTE: usar externalMessageId completo (ex: true_554599889851@c.us_3EB0...)
           const url = `${wahaConfigForMedia.baseUrl}/api/${wahaConfigForMedia.sessionName}/chats/${cleanChatId}/messages/${externalMessageId}?downloadMedia=true`;
-          
+
           console.log('[whatsapp-webhook] 📁 Chamando WAHA para obter mídia:', url);
-          
+
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
-          
+
           const mediaResponse = await fetch(url, {
             method: 'GET',
             headers: {
               'X-Api-Key': wahaConfigForMedia.apiKey,
-              'Authorization': `Bearer ${wahaConfigForMedia.apiKey}`,
+              Authorization: `Bearer ${wahaConfigForMedia.apiKey}`,
               'Content-Type': 'application/json',
             },
             signal: controller.signal,
           });
-          
+
           clearTimeout(timeoutId);
-          
+
           if (mediaResponse.ok) {
             const fetchedMediaData = await mediaResponse.json();
-            console.log('[whatsapp-webhook] 📁 Resposta WAHA mídia:', JSON.stringify(fetchedMediaData).substring(0, 500));
-            
+            console.log(
+              '[whatsapp-webhook] 📁 Resposta WAHA mídia:',
+              JSON.stringify(fetchedMediaData).substring(0, 500)
+            );
+
             // Extrair URL de mídia do resultado
-            const fetchedMediaUrl = fetchedMediaData?.media?.url || 
-                                     fetchedMediaData?.mediaUrl || 
-                                     fetchedMediaData?._data?.media?.url ||
-                                     fetchedMediaData?._data?.deprecatedMms3Url;
-            
+            const fetchedMediaUrl =
+              fetchedMediaData?.media?.url ||
+              fetchedMediaData?.mediaUrl ||
+              fetchedMediaData?._data?.media?.url ||
+              fetchedMediaData?._data?.deprecatedMms3Url;
+
             // Também checar se veio base64 na resposta da API
-            const fetchedBase64 = fetchedMediaData?.media?.data || fetchedMediaData?._data?.media?.data;
-            
+            const fetchedBase64 =
+              fetchedMediaData?.media?.data || fetchedMediaData?._data?.media?.data;
+
             if (fetchedMediaUrl) {
-              console.log('[whatsapp-webhook] 📁 URL de mídia recuperada via API:', fetchedMediaUrl.substring(0, 100));
+              console.log(
+                '[whatsapp-webhook] 📁 URL de mídia recuperada via API:',
+                fetchedMediaUrl.substring(0, 100)
+              );
               finalMediaUrl = fetchedMediaUrl;
             } else if (fetchedBase64 && isValidBase64(fetchedBase64)) {
               console.log('[whatsapp-webhook] 📁 Base64 recuperado via API, fazendo upload...');
@@ -2484,12 +2914,20 @@ serve(async (req) => {
                 for (let i = 0; i < binaryString.length; i++) {
                   bytes[i] = binaryString.charCodeAt(i);
                 }
-                
-                const fetchedMimetype = fetchedMediaData?.media?.mimetype || fetchedMediaData?._data?.media?.mimetype || '';
-                const extMap: Record<string, string> = { image: 'jpg', audio: 'ogg', video: 'mp4', document: 'bin' };
+
+                const fetchedMimetype =
+                  fetchedMediaData?.media?.mimetype ||
+                  fetchedMediaData?._data?.media?.mimetype ||
+                  '';
+                const extMap: Record<string, string> = {
+                  image: 'jpg',
+                  audio: 'ogg',
+                  video: 'mp4',
+                  document: 'bin',
+                };
                 const ext = extMap[type] || 'bin';
                 const fileName = `leads/${lead.id}/${Date.now()}.${ext}`;
-                
+
                 const { data: uploadData, error: uploadError } = await supabase.storage
                   .from('message-attachments')
                   .upload(fileName, bytes.buffer, {
@@ -2497,16 +2935,24 @@ serve(async (req) => {
                     cacheControl: '31536000',
                     upsert: false,
                   });
-                
+
                 if (!uploadError && uploadData) {
                   finalMediaUrl = `storage://message-attachments/${uploadData.path}`;
-                  console.log('[whatsapp-webhook] ✅ Base64 da API convertido e salvo:', finalMediaUrl);
+                  console.log(
+                    '[whatsapp-webhook] ✅ Base64 da API convertido e salvo:',
+                    finalMediaUrl
+                  );
                 }
               } catch (apiB64Error) {
-                console.error('[whatsapp-webhook] ❌ Erro ao processar base64 da API:', apiB64Error);
+                console.error(
+                  '[whatsapp-webhook] ❌ Erro ao processar base64 da API:',
+                  apiB64Error
+                );
               }
             } else {
-              console.log('[whatsapp-webhook] ⚠️ WAHA retornou mas sem media.url nem base64 válido');
+              console.log(
+                '[whatsapp-webhook] ⚠️ WAHA retornou mas sem media.url nem base64 válido'
+              );
             }
           } else {
             console.log('[whatsapp-webhook] ⚠️ WAHA API retornou erro:', mediaResponse.status);
@@ -2520,7 +2966,7 @@ serve(async (req) => {
         }
       }
     }
-    
+
     // Se tiver mídia (original ou recuperada), fazer upload para o storage permanente
     if (finalMediaUrl && type !== 'text') {
       console.log('[whatsapp-webhook] 📁 Processando mídia para storage:', {
@@ -2530,13 +2976,19 @@ serve(async (req) => {
         isLocalhost: finalMediaUrl?.includes('localhost'),
         hasProtocol: finalMediaUrl?.startsWith('http'),
       });
-      
+
       console.log('[whatsapp-webhook] 📁 WAHA config para mídia:', {
         hasConfig: !!wahaConfigForMedia,
         baseUrl: wahaConfigForMedia?.baseUrl?.substring(0, 50),
       });
-      
-      const storageUrl = await uploadMediaToStorage(supabase, finalMediaUrl, type, lead.id, wahaConfigForMedia);
+
+      const storageUrl = await uploadMediaToStorage(
+        supabase,
+        finalMediaUrl,
+        type,
+        lead.id,
+        wahaConfigForMedia
+      );
       if (storageUrl) {
         finalMediaUrl = storageUrl;
         console.log('[whatsapp-webhook] 📁 Mídia salva no storage:', storageUrl);
@@ -2550,26 +3002,28 @@ serve(async (req) => {
 
     // Extrair quote se houver (re-extrair do payload porque não está disponível aqui)
     const { quotedMessage } = getMessageContent(messageData, provider);
-    
+
     // ========== VERIFICAÇÃO DE SEGURANÇA: Garantir que temos conversa ==========
     if (!conversation || !conversation.id) {
-      console.error('[whatsapp-webhook] ❌ ERRO CRÍTICO: conversation é null/undefined antes de criar mensagem');
+      console.error(
+        '[whatsapp-webhook] ❌ ERRO CRÍTICO: conversation é null/undefined antes de criar mensagem'
+      );
       console.error('[whatsapp-webhook] Lead:', lead?.id, 'Content:', content?.substring(0, 50));
       return new Response(
         JSON.stringify({ success: false, error: 'No conversation found - cannot create message' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    
+
     // ========== DETERMINAR DIREÇÃO E TIPO DE REMETENTE ==========
     // isFromMe=true: mensagem enviada por nós (celular, CRM, bot)
     // isFromMe=false: mensagem recebida do lead
     const direction = isFromMe ? 'outbound' : 'inbound';
     const senderType = isFromMe ? 'agent' : 'lead';
     const source = isFromMe ? 'mobile' : 'lead'; // 'mobile' porque veio pelo celular (não pelo CRM)
-    
+
     console.log('[whatsapp-webhook] Direção:', direction, 'Sender:', senderType, 'Source:', source);
-    
+
     // Criar mensagem com dados de quote se existirem (usar upsert com waha_message_id)
     const messageInsertData: Record<string, unknown> = {
       conversation_id: conversation.id,
@@ -2585,14 +3039,14 @@ serve(async (req) => {
       external_id: externalMessageId || null,
       waha_message_id: wahaMessageId, // ← ID canônico para idempotência
     };
-    
+
     // Adicionar dados de quote se existir
     if (quotedMessage) {
       messageInsertData.reply_to_external_id = quotedMessage.id;
       messageInsertData.quoted_message = quotedMessage;
       console.log('[whatsapp-webhook] Salvando mensagem com quote:', quotedMessage.id);
     }
-    
+
     // Usar upsert para garantir idempotência (UNIQUE constraint no waha_message_id)
     let message;
     if (wahaMessageId) {
@@ -2604,7 +3058,7 @@ serve(async (req) => {
         })
         .select('*')
         .maybeSingle();
-      
+
       if (upsertMsgError) {
         // Se erro for de duplicata, buscar a mensagem existente
         if (upsertMsgError.code === '23505') {
@@ -2614,20 +3068,25 @@ serve(async (req) => {
             .select('id')
             .eq('waha_message_id', wahaMessageId)
             .maybeSingle();
-          
+
           return new Response(
-            JSON.stringify({ success: true, duplicate: true, existing_message_id: existingMsg?.id, matched_by: 'upsert_conflict' }),
+            JSON.stringify({
+              success: true,
+              duplicate: true,
+              existing_message_id: existingMsg?.id,
+              matched_by: 'upsert_conflict',
+            }),
             { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        
+
         console.error('[whatsapp-webhook] ❌ Erro ao criar mensagem:', upsertMsgError);
-        return new Response(
-          JSON.stringify({ success: false, error: 'Error creating message' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ success: false, error: 'Error creating message' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
-      
+
       message = upsertedMessage;
     } else {
       // Sem waha_message_id, usar insert normal
@@ -2636,15 +3095,15 @@ serve(async (req) => {
         .insert(messageInsertData)
         .select('*')
         .single();
-      
+
       if (insertMsgError) {
         console.error('[whatsapp-webhook] ❌ Erro ao criar mensagem:', insertMsgError);
-        return new Response(
-          JSON.stringify({ success: false, error: 'Error creating message' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ success: false, error: 'Error creating message' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
-      
+
       message = insertedMessage;
     }
 
@@ -2657,7 +3116,7 @@ serve(async (req) => {
         .select('id')
         .eq('waha_message_id', wahaMessageId)
         .maybeSingle();
-      
+
       if (existingMsg) {
         console.log('[whatsapp-webhook] ✅ Mensagem existente encontrada:', existingMsg.id);
         return new Response(
@@ -2675,7 +3134,12 @@ serve(async (req) => {
       }
     }
 
-    console.log('[whatsapp-webhook] ✅ Mensagem criada:', message?.id, 'waha_message_id:', wahaMessageId);
+    console.log(
+      '[whatsapp-webhook] ✅ Mensagem criada:',
+      message?.id,
+      'waha_message_id:',
+      wahaMessageId
+    );
 
     // Notificações de mensagens removidas - o sino é reservado para eventos importantes
     // Alertas de novas mensagens são tratados via toast/som no frontend (useInboxRealtime)
@@ -2693,11 +3157,13 @@ serve(async (req) => {
       }),
       { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error: unknown) {
     console.error('[whatsapp-webhook] Erro não tratado:', error);
     return new Response(
-      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Internal server error' }),
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : 'Internal server error',
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

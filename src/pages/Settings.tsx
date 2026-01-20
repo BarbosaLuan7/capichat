@@ -35,13 +35,38 @@ const NOTIFICATION_PREFS_KEY = 'notification-preferences';
 
 const settingsMenu = [
   { icon: Building2, label: 'Empresa', description: 'Informações da empresa', href: undefined },
-  { icon: Users, label: 'Usuários', description: 'Gerenciar membros da equipe', href: '/settings/users' },
+  {
+    icon: Users,
+    label: 'Usuários',
+    description: 'Gerenciar membros da equipe',
+    href: '/settings/users',
+  },
   { icon: Tag, label: 'Etiquetas', description: 'Configurar etiquetas', href: '/settings/labels' },
-  { icon: MessageSquare, label: 'Templates', description: 'Mensagens rápidas', href: '/settings/templates' },
+  {
+    icon: MessageSquare,
+    label: 'Templates',
+    description: 'Mensagens rápidas',
+    href: '/settings/templates',
+  },
   { icon: Zap, label: 'Automações', description: 'Regras automáticas', href: '/automations' },
-  { icon: Smartphone, label: 'WhatsApp', description: 'Gateway WAHA/Evolution/Z-API', href: '/settings/whatsapp' },
-  { icon: Key, label: 'API & Integrações', description: 'Chaves de API e documentação', href: '/settings/api' },
-  { icon: Database, label: 'Webhooks', description: 'Enviar dados para sistemas externos', href: '/settings/webhooks' },
+  {
+    icon: Smartphone,
+    label: 'WhatsApp',
+    description: 'Gateway WAHA/Evolution/Z-API',
+    href: '/settings/whatsapp',
+  },
+  {
+    icon: Key,
+    label: 'API & Integrações',
+    description: 'Chaves de API e documentação',
+    href: '/settings/api',
+  },
+  {
+    icon: Database,
+    label: 'Webhooks',
+    description: 'Enviar dados para sistemas externos',
+    href: '/settings/webhooks',
+  },
   { icon: Bell, label: 'Notificações', description: 'Preferências de alertas', href: undefined },
   { icon: Palette, label: 'Aparência', description: 'Tema e personalização', href: undefined },
 ];
@@ -75,7 +100,7 @@ const SettingsPage = () => {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6 p-6">
       <PageBreadcrumb items={[{ label: 'Configurações' }]} />
       {/* Header */}
       <div>
@@ -90,16 +115,20 @@ const SettingsPage = () => {
           <CardDescription>Suas informações pessoais</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-4 mb-6">
-            <Avatar className="w-20 h-20">
+          <div className="mb-6 flex items-center gap-4">
+            <Avatar className="h-20 w-20">
               <AvatarImage src={user?.avatar} />
               <AvatarFallback className="text-2xl">{user?.name?.charAt(0)}</AvatarFallback>
             </Avatar>
             <div>
-              <h3 className="font-semibold text-lg text-foreground">{user?.name}</h3>
+              <h3 className="text-lg font-semibold text-foreground">{user?.name}</h3>
               <p className="text-muted-foreground">{user?.email}</p>
-              <p className="text-sm text-primary capitalize mt-1">
-                {user?.role === 'admin' ? 'Administrador' : user?.role === 'manager' ? 'Gestor' : 'Atendente'}
+              <p className="mt-1 text-sm capitalize text-primary">
+                {user?.role === 'admin'
+                  ? 'Administrador'
+                  : user?.role === 'manager'
+                    ? 'Gestor'
+                    : 'Atendente'}
               </p>
             </div>
             <Button variant="outline" className="ml-auto">
@@ -109,7 +138,7 @@ const SettingsPage = () => {
 
           <Separator className="my-6" />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div className="space-y-2">
               <Label>Nome</Label>
               <Input defaultValue={user?.name} />
@@ -134,17 +163,17 @@ const SettingsPage = () => {
               <button
                 key={item.label}
                 onClick={() => item.href && navigate(item.href)}
-                className="w-full flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={!item.href}
               >
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <item.icon className="w-5 h-5 text-primary" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <item.icon className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1">
                   <p className="font-medium text-foreground">{item.label}</p>
                   <p className="text-sm text-muted-foreground">{item.description}</p>
                 </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </button>
             ))}
           </div>

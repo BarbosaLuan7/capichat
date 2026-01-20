@@ -25,12 +25,16 @@ const WEBHOOK_EVENTS = [
   { evento: 'task.completed', descricao: 'Tarefa concluída' },
 ];
 
-function safeErrorResponse(internalError: unknown, publicMessage: string, status: number = 500): Response {
+function safeErrorResponse(
+  internalError: unknown,
+  publicMessage: string,
+  status: number = 500
+): Response {
   console.error('Internal error:', internalError);
-  return new Response(
-    JSON.stringify({ success: false, error: publicMessage }),
-    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return new Response(JSON.stringify({ success: false, error: publicMessage }), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }
 
 // Helper to prefix IDs
@@ -59,13 +63,15 @@ Deno.serve(async (req) => {
     }
 
     const apiKey = authHeader.replace('Bearer ', '');
-    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', { key_value: apiKey });
+    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', {
+      key_value: apiKey,
+    });
 
     if (apiKeyError || !apiKeyId) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Invalid API key' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ success: false, error: 'Invalid API key' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log('[api-webhooks] API key validated');
@@ -77,10 +83,9 @@ Deno.serve(async (req) => {
 
     // GET /api-webhooks?action=eventos - List available events
     if (method === 'GET' && action === 'eventos') {
-      return new Response(
-        JSON.stringify(WEBHOOK_EVENTS),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify(WEBHOOK_EVENTS), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // GET /api-webhooks - List webhooks
@@ -100,15 +105,14 @@ Deno.serve(async (req) => {
         url: w.url,
         eventos: w.events,
         ativo: w.is_active,
-        criado_em: w.created_at
+        criado_em: w.created_at,
       }));
 
       console.log('[api-webhooks] Listed', transformed.length, 'webhooks');
 
-      return new Response(
-        JSON.stringify({ dados: transformed }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ dados: transformed }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // GET /api-webhooks?id=xxx - Get single webhook
@@ -124,10 +128,10 @@ Deno.serve(async (req) => {
       }
 
       if (!webhook) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'Webhook not found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ success: false, error: 'Webhook not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       return new Response(
@@ -138,7 +142,7 @@ Deno.serve(async (req) => {
           eventos: webhook.events,
           ativo: webhook.is_active,
           headers: webhook.headers,
-          criado_em: webhook.created_at
+          criado_em: webhook.created_at,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -159,14 +163,14 @@ Deno.serve(async (req) => {
       try {
         new URL(body.url);
       } catch {
-        return new Response(
-          JSON.stringify({ success: false, error: 'Invalid URL format' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ success: false, error: 'Invalid URL format' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // Validate events
-      const validEvents = WEBHOOK_EVENTS.map(e => e.evento);
+      const validEvents = WEBHOOK_EVENTS.map((e) => e.evento);
       const invalidEvents = body.events.filter((e: string) => !validEvents.includes(e));
       if (invalidEvents.length > 0) {
         return new Response(
@@ -183,7 +187,7 @@ Deno.serve(async (req) => {
           events: body.events,
           secret: body.secret || crypto.randomUUID(),
           headers: body.headers || {},
-          is_active: true
+          is_active: true,
         })
         .select()
         .single();
@@ -202,7 +206,7 @@ Deno.serve(async (req) => {
           eventos: newWebhook.events,
           ativo: newWebhook.is_active,
           segredo: newWebhook.secret,
-          criado_em: newWebhook.created_at
+          criado_em: newWebhook.created_at,
         }),
         { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -219,10 +223,10 @@ Deno.serve(async (req) => {
           new URL(body.url);
           updateData.url = body.url;
         } catch {
-          return new Response(
-            JSON.stringify({ success: false, error: 'Invalid URL format' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ success: false, error: 'Invalid URL format' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
       }
       if (body.events !== undefined) updateData.events = body.events;
@@ -251,8 +255,8 @@ Deno.serve(async (req) => {
             nome: updatedWebhook.name,
             url: updatedWebhook.url,
             eventos: updatedWebhook.events,
-            ativo: updatedWebhook.is_active
-          }
+            ativo: updatedWebhook.is_active,
+          },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -260,10 +264,7 @@ Deno.serve(async (req) => {
 
     // DELETE /api-webhooks?id=xxx - Delete webhook
     if (method === 'DELETE' && id) {
-      const { error } = await supabase
-        .from('webhooks')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('webhooks').delete().eq('id', id);
 
       if (error) {
         return safeErrorResponse(error, 'Error deleting webhook');
@@ -277,11 +278,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed or invalid action' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
+    return new Response(JSON.stringify({ error: 'Method not allowed or invalid action' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('[api-webhooks] Error:', error);
     return safeErrorResponse(error, 'Internal server error');

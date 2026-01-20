@@ -4,7 +4,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ExternalLink, FileJson, Copy, Check, ArrowLeft, LogIn, Book, Code, Terminal, Zap } from 'lucide-react';
+import {
+  ExternalLink,
+  FileJson,
+  Copy,
+  Check,
+  ArrowLeft,
+  LogIn,
+  Book,
+  Code,
+  Terminal,
+  Zap,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { Toaster } from '@/components/ui/sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -58,7 +69,7 @@ export default function ApiDocs() {
         if (!cancelled) {
           setSwaggerLoading(false);
           toast.error('Falha ao carregar a documentação interativa.');
-          // eslint-disable-next-line no-console
+
           console.error('Swagger UI load error', err);
         }
       }
@@ -103,25 +114,25 @@ export default function ApiDocs() {
     "telefone": "5521967200464",
     "tipo": "texto",
     "conteudo": "Olá! Como posso ajudar?"
-  }'`
+  }'`,
       },
       {
         title: 'Listar conversas abertas',
         code: `curl -X GET "${baseUrl}/api-conversations?status=open&page=1" \\
-  -H "Authorization: Bearer SUA_API_KEY"`
+  -H "Authorization: Bearer SUA_API_KEY"`,
       },
       {
         title: 'Buscar contato por telefone',
         code: `curl -X GET "${baseUrl}/api-leads?phone=5545999957851" \\
-  -H "Authorization: Bearer SUA_API_KEY"`
+  -H "Authorization: Bearer SUA_API_KEY"`,
       },
       {
         title: 'Mover lead para etapa do funil',
         code: `curl -X PUT "${baseUrl}/api-leads/5545999957851" \\
   -H "Authorization: Bearer SUA_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"stage_id": "uuid-da-etapa"}'`
-      }
+  -d '{"stage_id": "uuid-da-etapa"}'`,
+      },
     ],
     javascript: [
       {
@@ -130,7 +141,7 @@ export default function ApiDocs() {
   headers: { "Authorization": "Bearer SUA_API_KEY" }
 });
 const { data, total } = await response.json();
-console.log(\`Total: \${total} usuários\`);`
+console.log(\`Total: \${total} usuários\`);`,
       },
       {
         title: 'Criar tarefa',
@@ -148,7 +159,7 @@ console.log(\`Total: \${total} usuários\`);`
     due_date: "2026-01-10"
   })
 });
-const task = await response.json();`
+const task = await response.json();`,
       },
       {
         title: 'Buscar conversa por ID ou telefone',
@@ -160,7 +171,7 @@ const byId = await fetch("${baseUrl}/api-conversations?id=uuid-da-conversa", {
 // Por telefone do lead
 const byPhone = await fetch("${baseUrl}/api-conversations?lead_id=5545999957851", {
   headers: { "Authorization": "Bearer SUA_API_KEY" }
-});`
+});`,
       },
       {
         title: 'Enviar template com variáveis',
@@ -178,8 +189,8 @@ const byPhone = await fetch("${baseUrl}/api-conversations?lead_id=5545999957851"
       data_reuniao: "10/01/2026"
     }
   })
-});`
-      }
+});`,
+      },
     ],
     python: [
       {
@@ -198,7 +209,7 @@ response = requests.post(
     }
 )
 lead = response.json()
-print(f"Lead criado: {lead['lead']['id']}")`
+print(f"Lead criado: {lead['lead']['id']}")`,
       },
       {
         title: 'Listar etiquetas',
@@ -210,7 +221,7 @@ response = requests.get(
 )
 tags = response.json()
 for tag in tags["data"]:
-    print(f"{tag['name']} ({tag['category']})")`
+    print(f"{tag['name']} ({tag['category']})")`,
       },
       {
         title: 'Receber webhook de mensagem',
@@ -238,7 +249,7 @@ def handle_webhook():
     data = request.json
     print(f"Evento: {data['event']}")
     print(f"Lead: {data['payload']['lead']['name']}")
-    return "OK", 200`
+    return "OK", 200`,
       },
       {
         title: 'Atualizar temperatura do lead',
@@ -253,41 +264,41 @@ response = requests.put(
     json={"temperature": "hot"}
 )
 result = response.json()
-print(f"Temperatura atualizada: {result['lead']['temperature']}")`
-      }
-    ]
+print(f"Temperatura atualizada: {result['lead']['temperature']}")`,
+      },
+    ],
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Toaster />
-      
+
       {/* Header */}
-      <header className="border-b bg-card sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-50 border-b bg-card">
+        <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <div className="flex items-center gap-4">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">LB</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+              <span className="text-sm font-bold text-primary-foreground">LB</span>
             </div>
             <div>
               <h1 className="text-xl font-bold">LB ADV API</h1>
               <p className="text-sm text-muted-foreground">Documentação pública</p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <ApiStatusBadge baseUrl={baseUrl} />
-            
+
             {!loading && (
               <Button onClick={handleNavigate} variant="outline">
                 {isAuthenticated ? (
                   <>
-                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    <ArrowLeft className="mr-2 h-4 w-4" />
                     Voltar ao Sistema
                   </>
                 ) : (
                   <>
-                    <LogIn className="w-4 h-4 mr-2" />
+                    <LogIn className="mr-2 h-4 w-4" />
                     Fazer Login
                   </>
                 )}
@@ -298,49 +309,53 @@ print(f"Temperatura atualizada: {result['lead']['temperature']}")`
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-6 space-y-6">
+      <main className="container mx-auto space-y-6 px-4 py-6">
         {/* Hero Section */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-3xl font-bold tracking-tight">Documentação da API</h2>
-            <p className="text-muted-foreground mt-1">
+            <p className="mt-1 text-muted-foreground">
               Referência completa dos endpoints disponíveis para integração externa
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="gap-1.5">
-              <Zap className="w-3 h-3" />
+              <Zap className="h-3 w-3" />
               REST API v2.0
             </Badge>
             <Badge variant="outline" className="gap-1.5">
-              <Book className="w-3 h-3" />
+              <Book className="h-3 w-3" />
               OpenAPI 3.0
             </Badge>
           </div>
         </div>
 
         {/* Quick Reference Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <FileJson className="w-4 h-4" />
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <FileJson className="h-4 w-4" />
                 Base URL
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-2">
-                <code className="text-xs bg-muted px-2 py-1 rounded flex-1 truncate font-mono">
+                <code className="flex-1 truncate rounded bg-muted px-2 py-1 font-mono text-xs">
                   {baseUrl}
                 </code>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="h-8 w-8 shrink-0"
                   onClick={handleCopyBaseUrl}
                   aria-label="Copiar URL base"
                 >
-                  {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                  {copied ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </CardContent>
@@ -351,10 +366,10 @@ print(f"Temperatura atualizada: {result['lead']['temperature']}")`
               <CardTitle className="text-sm font-medium">Autenticação</CardTitle>
             </CardHeader>
             <CardContent>
-              <code className="text-xs bg-muted px-2 py-1 rounded block font-mono">
+              <code className="block rounded bg-muted px-2 py-1 font-mono text-xs">
                 Authorization: Bearer {'<api_key>'}
               </code>
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="mt-2 text-xs text-muted-foreground">
                 Obtenha sua API Key em Configurações → API
               </p>
             </CardContent>
@@ -366,13 +381,19 @@ print(f"Temperatura atualizada: {result['lead']['temperature']}")`
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground">
-                Use <strong>UUID</strong> ou <strong>telefone</strong> para identificar leads e conversas.
-                O sistema detecta automaticamente o formato.
+                Use <strong>UUID</strong> ou <strong>telefone</strong> para identificar leads e
+                conversas. O sistema detecta automaticamente o formato.
               </p>
-              <div className="flex gap-1 mt-2">
-                <Badge variant="secondary" className="text-xs">lead_id</Badge>
-                <Badge variant="secondary" className="text-xs">contato_id</Badge>
-                <Badge variant="secondary" className="text-xs">telefone</Badge>
+              <div className="mt-2 flex gap-1">
+                <Badge variant="secondary" className="text-xs">
+                  lead_id
+                </Badge>
+                <Badge variant="secondary" className="text-xs">
+                  contato_id
+                </Badge>
+                <Badge variant="secondary" className="text-xs">
+                  telefone
+                </Badge>
               </div>
             </CardContent>
           </Card>
@@ -385,7 +406,9 @@ print(f"Temperatura atualizada: {result['lead']['temperature']}")`
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="text-xs font-semibold">CORE</Badge>
+              <Badge variant="outline" className="text-xs font-semibold">
+                CORE
+              </Badge>
               <Badge variant="secondary">api-users</Badge>
               <Badge variant="secondary">api-teams</Badge>
               <Badge variant="secondary">api-leads</Badge>
@@ -394,7 +417,9 @@ print(f"Temperatura atualizada: {result['lead']['temperature']}")`
               <Badge variant="secondary">api-whatsapp-instances</Badge>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="text-xs font-semibold">CHAT</Badge>
+              <Badge variant="outline" className="text-xs font-semibold">
+                CHAT
+              </Badge>
               <Badge variant="secondary">api-conversations</Badge>
               <Badge variant="secondary">api-messages-send</Badge>
               <Badge variant="secondary">api-messages-receive</Badge>
@@ -402,7 +427,9 @@ print(f"Temperatura atualizada: {result['lead']['temperature']}")`
               <Badge variant="secondary">api-templates</Badge>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="text-xs font-semibold">CRM</Badge>
+              <Badge variant="outline" className="text-xs font-semibold">
+                CRM
+              </Badge>
               <Badge variant="secondary">api-funnels</Badge>
               <Badge variant="secondary">api-tasks</Badge>
               <Badge variant="secondary">api-oportunidades</Badge>
@@ -415,31 +442,33 @@ print(f"Temperatura atualizada: {result['lead']['temperature']}")`
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Code className="w-5 h-5" />
+              <Code className="h-5 w-5" />
               <div>
                 <CardTitle className="text-lg">Exemplos de Código</CardTitle>
-                <CardDescription>Código pronto para copiar e usar em sua integração</CardDescription>
+                <CardDescription>
+                  Código pronto para copiar e usar em sua integração
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="curl" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-4">
+              <TabsList className="mb-4 grid w-full grid-cols-3">
                 <TabsTrigger value="curl" className="gap-2">
-                  <Terminal className="w-4 h-4" />
+                  <Terminal className="h-4 w-4" />
                   cURL
                 </TabsTrigger>
                 <TabsTrigger value="javascript" className="gap-2">
-                  <Code className="w-4 h-4" />
+                  <Code className="h-4 w-4" />
                   JavaScript
                 </TabsTrigger>
                 <TabsTrigger value="python" className="gap-2">
-                  <Code className="w-4 h-4" />
+                  <Code className="h-4 w-4" />
                   Python
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="curl" className="space-y-4 mt-0">
+              <TabsContent value="curl" className="mt-0 space-y-4">
                 {codeExamples.curl.map((example, index) => (
                   <CodeExample
                     key={index}
@@ -450,7 +479,7 @@ print(f"Temperatura atualizada: {result['lead']['temperature']}")`
                 ))}
               </TabsContent>
 
-              <TabsContent value="javascript" className="space-y-4 mt-0">
+              <TabsContent value="javascript" className="mt-0 space-y-4">
                 {codeExamples.javascript.map((example, index) => (
                   <CodeExample
                     key={index}
@@ -461,7 +490,7 @@ print(f"Temperatura atualizada: {result['lead']['temperature']}")`
                 ))}
               </TabsContent>
 
-              <TabsContent value="python" className="space-y-4 mt-0">
+              <TabsContent value="python" className="mt-0 space-y-4">
                 {codeExamples.python.map((example, index) => (
                   <CodeExample
                     key={index}
@@ -485,7 +514,7 @@ print(f"Temperatura atualizada: {result['lead']['temperature']}")`
               </div>
               <Button variant="outline" size="sm" asChild>
                 <a href={specUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="w-4 h-4 mr-2" />
+                  <ExternalLink className="mr-2 h-4 w-4" />
                   OpenAPI Spec
                 </a>
               </Button>

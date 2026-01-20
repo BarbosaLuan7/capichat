@@ -32,9 +32,9 @@ interface ResultadoContato {
 }
 
 const temperatureMap: Record<string, string> = {
-  'frio': 'cold',
-  'morno': 'warm',
-  'quente': 'hot'
+  frio: 'cold',
+  morno: 'warm',
+  quente: 'hot',
 };
 
 function validatePhone(phone: string): { valid: boolean; normalized: string; error?: string } {
@@ -68,13 +68,15 @@ Deno.serve(async (req) => {
     }
 
     const apiKey = authHeader.replace('Bearer ', '');
-    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', { key_value: apiKey });
+    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', {
+      key_value: apiKey,
+    });
 
     if (apiKeyError || !apiKeyId) {
-      return new Response(
-        JSON.stringify({ sucesso: false, erro: 'API key inválida' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: false, erro: 'API key inválida' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     if (req.method !== 'POST') {
@@ -89,7 +91,10 @@ Deno.serve(async (req) => {
 
     if (!Array.isArray(contatos) || contatos.length === 0) {
       return new Response(
-        JSON.stringify({ sucesso: false, erro: 'Array "contatos" é obrigatório e não pode estar vazio' }),
+        JSON.stringify({
+          sucesso: false,
+          erro: 'Array "contatos" é obrigatório e não pode estar vazio',
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -116,13 +121,13 @@ Deno.serve(async (req) => {
 
     for (let i = 0; i < contatos.length; i++) {
       const contato = contatos[i];
-      
+
       // Validate required fields
       if (!contato.nome || !contato.telefone) {
         resultados.push({
           indice: i,
           sucesso: false,
-          erro: 'nome e telefone são obrigatórios'
+          erro: 'nome e telefone são obrigatórios',
         });
         erros++;
         continue;
@@ -134,7 +139,7 @@ Deno.serve(async (req) => {
         resultados.push({
           indice: i,
           sucesso: false,
-          erro: phoneValidation.error
+          erro: phoneValidation.error,
         });
         erros++;
         continue;
@@ -152,7 +157,7 @@ Deno.serve(async (req) => {
           indice: i,
           sucesso: true,
           id: existing.id,
-          duplicado: true
+          duplicado: true,
         });
         duplicados++;
         continue;
@@ -187,7 +192,7 @@ Deno.serve(async (req) => {
         resultados.push({
           indice: i,
           sucesso: false,
-          erro: 'Erro ao criar contato'
+          erro: 'Erro ao criar contato',
         });
         erros++;
         continue;
@@ -195,9 +200,9 @@ Deno.serve(async (req) => {
 
       // Add labels if provided
       if (contato.etiquetas && contato.etiquetas.length > 0 && newLead) {
-        const labelInserts = contato.etiquetas.map(labelId => ({
+        const labelInserts = contato.etiquetas.map((labelId) => ({
           lead_id: newLead.id,
-          label_id: labelId
+          label_id: labelId,
         }));
         await supabase.from('lead_labels').insert(labelInserts);
       }
@@ -205,12 +210,14 @@ Deno.serve(async (req) => {
       resultados.push({
         indice: i,
         sucesso: true,
-        id: newLead.id
+        id: newLead.id,
       });
       criados++;
     }
 
-    console.log(`[api-contatos-lote] Processados: ${contatos.length}, Criados: ${criados}, Duplicados: ${duplicados}, Erros: ${erros}`);
+    console.log(
+      `[api-contatos-lote] Processados: ${contatos.length}, Criados: ${criados}, Duplicados: ${duplicados}, Erros: ${erros}`
+    );
 
     return new Response(
       JSON.stringify({
@@ -219,18 +226,17 @@ Deno.serve(async (req) => {
           total: contatos.length,
           criados,
           duplicados,
-          erros
+          erros,
         },
-        resultados
+        resultados,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error) {
     console.error('[api-contatos-lote] Error:', error);
-    return new Response(
-      JSON.stringify({ sucesso: false, erro: 'Erro interno do servidor' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ sucesso: false, erro: 'Erro interno do servidor' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

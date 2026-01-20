@@ -23,7 +23,7 @@ function formatAgendamento(msg: any) {
     status: msg.status,
     enviado_em: msg.sent_at,
     erro: msg.error_message,
-    criado_em: msg.created_at
+    criado_em: msg.created_at,
   };
 }
 
@@ -47,13 +47,15 @@ Deno.serve(async (req) => {
     }
 
     const apiKey = authHeader.replace('Bearer ', '');
-    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', { key_value: apiKey });
+    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', {
+      key_value: apiKey,
+    });
 
     if (apiKeyError || !apiKeyId) {
-      return new Response(
-        JSON.stringify({ sucesso: false, erro: 'API key inválida' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: false, erro: 'API key inválida' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const url = new URL(req.url);
@@ -61,7 +63,9 @@ Deno.serve(async (req) => {
     const action = url.searchParams.get('action');
     const status = url.searchParams.get('status');
     const page = parseInt(url.searchParams.get('pagina') || url.searchParams.get('page') || '1');
-    const pageSize = parseInt(url.searchParams.get('por_pagina') || url.searchParams.get('page_size') || '50');
+    const pageSize = parseInt(
+      url.searchParams.get('por_pagina') || url.searchParams.get('page_size') || '50'
+    );
 
     // GET - List or get single
     if (req.method === 'GET') {
@@ -79,10 +83,9 @@ Deno.serve(async (req) => {
           );
         }
 
-        return new Response(
-          JSON.stringify(formatAgendamento(data)),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify(formatAgendamento(data)), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // List with filters
@@ -114,8 +117,8 @@ Deno.serve(async (req) => {
             pagina: page,
             por_pagina: pageSize,
             total: count || 0,
-            total_paginas: Math.ceil((count || 0) / pageSize)
-          }
+            total_paginas: Math.ceil((count || 0) / pageSize),
+          },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -151,7 +154,10 @@ Deno.serve(async (req) => {
 
       if (!body.contato_id || !body.conteudo || !body.agendar_para) {
         return new Response(
-          JSON.stringify({ sucesso: false, erro: 'contato_id, conteudo e agendar_para são obrigatórios' }),
+          JSON.stringify({
+            sucesso: false,
+            erro: 'contato_id, conteudo e agendar_para são obrigatórios',
+          }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -173,23 +179,23 @@ Deno.serve(async (req) => {
           content: body.conteudo,
           scheduled_for: body.agendar_para,
           template_id: body.template_id,
-          status: 'pending'
+          status: 'pending',
         })
         .select()
         .single();
 
       if (error) {
         console.error('[api-mensagens-agendadas] Create error:', error);
-        return new Response(
-          JSON.stringify({ sucesso: false, erro: 'Erro ao criar agendamento' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ sucesso: false, erro: 'Erro ao criar agendamento' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
-      return new Response(
-        JSON.stringify({ sucesso: true, agendamento: formatAgendamento(data) }),
-        { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: true, agendamento: formatAgendamento(data) }), {
+        status: 201,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // PUT - Update
@@ -231,10 +237,9 @@ Deno.serve(async (req) => {
         );
       }
 
-      return new Response(
-        JSON.stringify({ sucesso: true, agendamento: formatAgendamento(data) }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: true, agendamento: formatAgendamento(data) }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // DELETE - Delete pending
@@ -259,22 +264,20 @@ Deno.serve(async (req) => {
         );
       }
 
-      return new Response(
-        JSON.stringify({ sucesso: true }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    return new Response(
-      JSON.stringify({ sucesso: false, erro: 'Método não permitido' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
+    return new Response(JSON.stringify({ sucesso: false, erro: 'Método não permitido' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('[api-mensagens-agendadas] Error:', error);
-    return new Response(
-      JSON.stringify({ sucesso: false, erro: 'Erro interno do servidor' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ sucesso: false, erro: 'Erro interno do servidor' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

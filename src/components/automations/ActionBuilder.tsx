@@ -10,12 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useFunnelStages } from '@/hooks/useFunnelStages';
 import { useLabels } from '@/hooks/useLabels';
 import { useProfiles } from '@/hooks/useProfiles';
@@ -37,14 +32,38 @@ interface ActionBuilderProps {
 }
 
 const actionOptions: { value: AutomationAction; label: string; description: string }[] = [
-  { value: 'move_lead_to_stage', label: 'Mover lead para etapa', description: 'Move o lead para uma etapa específica do funil' },
-  { value: 'change_lead_temperature', label: 'Alterar temperatura', description: 'Muda a temperatura do lead (frio/morno/quente)' },
+  {
+    value: 'move_lead_to_stage',
+    label: 'Mover lead para etapa',
+    description: 'Move o lead para uma etapa específica do funil',
+  },
+  {
+    value: 'change_lead_temperature',
+    label: 'Alterar temperatura',
+    description: 'Muda a temperatura do lead (frio/morno/quente)',
+  },
   { value: 'add_label', label: 'Adicionar etiqueta', description: 'Adiciona uma etiqueta ao lead' },
   { value: 'remove_label', label: 'Remover etiqueta', description: 'Remove uma etiqueta do lead' },
-  { value: 'create_task', label: 'Criar tarefa', description: 'Cria uma nova tarefa vinculada ao lead' },
-  { value: 'notify_user', label: 'Notificar usuário', description: 'Envia uma notificação para um usuário' },
-  { value: 'assign_to_user', label: 'Atribuir a usuário', description: 'Atribui o lead a um usuário específico' },
-  { value: 'send_message', label: 'Enviar mensagem', description: 'Envia uma mensagem automática para o lead' },
+  {
+    value: 'create_task',
+    label: 'Criar tarefa',
+    description: 'Cria uma nova tarefa vinculada ao lead',
+  },
+  {
+    value: 'notify_user',
+    label: 'Notificar usuário',
+    description: 'Envia uma notificação para um usuário',
+  },
+  {
+    value: 'assign_to_user',
+    label: 'Atribuir a usuário',
+    description: 'Atribui o lead a um usuário específico',
+  },
+  {
+    value: 'send_message',
+    label: 'Enviar mensagem',
+    description: 'Envia uma mensagem automática para o lead',
+  },
 ];
 
 const placeholderHelp = {
@@ -53,12 +72,7 @@ const placeholderHelp = {
   general: '{{date}}, {{time}}',
 };
 
-export const ActionBuilder = ({
-  action,
-  index,
-  onUpdate,
-  onRemove,
-}: ActionBuilderProps) => {
+export const ActionBuilder = ({ action, index, onUpdate, onRemove }: ActionBuilderProps) => {
   const { data: funnelStages = [] } = useFunnelStages();
   const { data: labels = [] } = useLabels();
   const { data: profiles = [] } = useProfiles();
@@ -86,7 +100,7 @@ export const ActionBuilder = ({
                   <SelectItem key={stage.id} value={stage.id}>
                     <div className="flex items-center gap-2">
                       <div
-                        className="w-2 h-2 rounded-full"
+                        className="h-2 w-2 rounded-full"
                         style={{ backgroundColor: stage.color }}
                       />
                       {stage.name}
@@ -137,7 +151,7 @@ export const ActionBuilder = ({
                   <SelectItem key={label.id} value={label.id}>
                     <div className="flex items-center gap-2">
                       <div
-                        className="w-2 h-2 rounded-full"
+                        className="h-2 w-2 rounded-full"
                         style={{ backgroundColor: label.color }}
                       />
                       {label.name}
@@ -163,9 +177,13 @@ export const ActionBuilder = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="assigned">👤 Responsável atual do lead</SelectItem>
-                  {profiles.filter(u => u.is_active).map((user) => (
-                    <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                  ))}
+                  {profiles
+                    .filter((u) => u.is_active)
+                    .map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -175,7 +193,7 @@ export const ActionBuilder = ({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
-                      <Info className="w-3 h-3 text-muted-foreground" />
+                      <Info className="h-3 w-3 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p className="text-xs">Placeholders: {placeholderHelp.lead}</p>
@@ -213,9 +231,13 @@ export const ActionBuilder = ({
                 <SelectValue placeholder="Selecionar usuário" />
               </SelectTrigger>
               <SelectContent>
-                {profiles.filter(u => u.is_active).map((user) => (
-                  <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                ))}
+                {profiles
+                  .filter((u) => u.is_active)
+                  .map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
@@ -230,7 +252,7 @@ export const ActionBuilder = ({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
-                      <Info className="w-3 h-3 text-muted-foreground" />
+                      <Info className="h-3 w-3 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p className="text-xs">Placeholders: {placeholderHelp.lead}</p>
@@ -292,9 +314,13 @@ export const ActionBuilder = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="assigned">👤 Responsável do lead</SelectItem>
-                  {profiles.filter(u => u.is_active).map((user) => (
-                    <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                  ))}
+                  {profiles
+                    .filter((u) => u.is_active)
+                    .map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -309,7 +335,7 @@ export const ActionBuilder = ({
               <Select
                 value={action.params.templateId || ''}
                 onValueChange={(v) => {
-                  const template = templates.find(t => t.id === v);
+                  const template = templates.find((t) => t.id === v);
                   updateParams('templateId', v);
                   if (template) {
                     updateParams('content', template.content);
@@ -335,7 +361,7 @@ export const ActionBuilder = ({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
-                      <Info className="w-3 h-3 text-muted-foreground" />
+                      <Info className="h-3 w-3 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
                       <p className="text-xs">Placeholders: {placeholderHelp.lead}</p>
@@ -358,15 +384,15 @@ export const ActionBuilder = ({
     }
   };
 
-  const selectedAction = actionOptions.find(a => a.value === action.type);
+  const selectedAction = actionOptions.find((a) => a.value === action.type);
 
   return (
-    <div className="p-4 bg-muted/50 rounded-lg border border-border/50">
+    <div className="rounded-lg border border-border/50 bg-muted/50 p-4">
       <div className="flex items-start gap-3">
-        <div className="cursor-move text-muted-foreground mt-1">
-          <GripVertical className="w-4 h-4" />
+        <div className="mt-1 cursor-move text-muted-foreground">
+          <GripVertical className="h-4 w-4" />
         </div>
-        
+
         <div className="flex-1 space-y-3">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1">
@@ -396,7 +422,7 @@ export const ActionBuilder = ({
               onClick={() => onRemove(index)}
               className="shrink-0"
             >
-              <X className="w-4 h-4" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
 

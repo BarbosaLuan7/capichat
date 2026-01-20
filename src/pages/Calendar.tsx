@@ -11,15 +11,7 @@ import {
   subMonths,
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-  Clock,
-  User,
-  CheckCircle2,
-  Loader2,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Clock, User, CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -188,17 +180,17 @@ const Calendar = () => {
 
   if (tasksLoading) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="space-y-6 p-6">
         <PageBreadcrumb items={[{ label: 'Calendário' }]} />
         <div className="flex items-center justify-between">
           <div>
             <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-64 mt-2" />
+            <Skeleton className="mt-2 h-4 w-64" />
           </div>
           <Skeleton className="h-10 w-32" />
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Skeleton className="lg:col-span-2 h-[500px]" />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <Skeleton className="h-[500px] lg:col-span-2" />
           <Skeleton className="h-[500px]" />
         </div>
       </div>
@@ -206,29 +198,27 @@ const Calendar = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-6">
       <PageBreadcrumb items={[{ label: 'Calendário' }]} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Calendário</h1>
-          <p className="text-muted-foreground">
-            Visualize suas tarefas por data
-          </p>
+          <p className="text-muted-foreground">Visualize suas tarefas por data</p>
         </div>
-        <Button onClick={handleNewTask} className="gradient-primary text-primary-foreground gap-2">
-          <Plus className="w-4 h-4" />
+        <Button onClick={handleNewTask} className="gradient-primary gap-2 text-primary-foreground">
+          <Plus className="h-4 w-4" />
           Nova Tarefa
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Calendar Grid */}
         <Card className="lg:col-span-2">
           <CardContent className="p-6">
             {/* Month Navigation */}
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-foreground capitalize">
+            <div className="mb-6 flex items-center justify-between">
+              <h3 className="text-lg font-semibold capitalize text-foreground">
                 {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
               </h3>
               <div className="flex gap-1">
@@ -238,7 +228,7 @@ const Calendar = () => {
                   onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
                   aria-label="Mês anterior"
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
@@ -256,17 +246,17 @@ const Calendar = () => {
                   onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
                   aria-label="Próximo mês"
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
             {/* Week days header */}
-            <div className="grid grid-cols-7 gap-1 mb-2">
+            <div className="mb-2 grid grid-cols-7 gap-1">
               {weekDays.map((day) => (
                 <div
                   key={day}
-                  className="text-center text-sm font-medium text-muted-foreground py-2"
+                  className="py-2 text-center text-sm font-medium text-muted-foreground"
                 >
                   {day}
                 </div>
@@ -290,15 +280,15 @@ const Calendar = () => {
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setSelectedDate(day)}
                     className={cn(
-                      'aspect-square p-1 border rounded-lg transition-colors min-h-[80px] text-left',
-                      isSelected && 'ring-2 ring-primary border-primary',
-                      isToday(day) && !isSelected && 'bg-primary/5 border-primary/50',
+                      'aspect-square min-h-[80px] rounded-lg border p-1 text-left transition-colors',
+                      isSelected && 'border-primary ring-2 ring-primary',
+                      isToday(day) && !isSelected && 'border-primary/50 bg-primary/5',
                       !isToday(day) && !isSelected && 'border-border hover:bg-muted/50'
                     )}
                   >
                     <div
                       className={cn(
-                        'text-sm font-medium mb-1',
+                        'mb-1 text-sm font-medium',
                         isToday(day) ? 'text-primary' : 'text-foreground'
                       )}
                     >
@@ -311,7 +301,7 @@ const Calendar = () => {
                           <span
                             key={task.id}
                             className={cn(
-                              'w-1.5 h-1.5 rounded-full',
+                              'h-1.5 w-1.5 rounded-full',
                               getPriorityColor(task.priority)
                             )}
                           />
@@ -339,9 +329,7 @@ const Calendar = () => {
                   ? format(selectedDate, "dd 'de' MMMM", { locale: ptBR })
                   : 'Selecione um dia'}
               </span>
-              {selectedDate && (
-                <Badge variant="secondary">{selectedDayTasks.length} tarefas</Badge>
-              )}
+              {selectedDate && <Badge variant="secondary">{selectedDayTasks.length} tarefas</Badge>}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -350,66 +338,60 @@ const Calendar = () => {
                 <div className="space-y-3">
                   {selectedDayTasks.map((task) => {
                     const assignee = profiles?.find((u) => u.id === task.assigned_to);
-                    const lead = task.lead_id
-                      ? leads.find((l) => l.id === task.lead_id)
-                      : null;
+                    const lead = task.lead_id ? leads.find((l) => l.id === task.lead_id) : null;
 
                     return (
                       <motion.div
                         key={task.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="p-3 rounded-lg border border-border hover:shadow-md transition-shadow cursor-pointer"
+                        className="cursor-pointer rounded-lg border border-border p-3 transition-shadow hover:shadow-md"
                         onClick={() => handleEditTask(task)}
                       >
                         <div className="flex items-start gap-3">
                           <div
                             className={cn(
-                              'w-2 h-2 rounded-full mt-2 shrink-0',
+                              'mt-2 h-2 w-2 shrink-0 rounded-full',
                               getPriorityColor(task.priority)
                             )}
                           />
-                          <div className="flex-1 min-w-0">
+                          <div className="min-w-0 flex-1">
                             <h4
                               className={cn(
-                                'font-medium text-foreground mb-1',
-                                task.status === 'done' &&
-                                  'line-through text-muted-foreground'
+                                'mb-1 font-medium text-foreground',
+                                task.status === 'done' && 'text-muted-foreground line-through'
                               )}
                             >
                               {task.title}
                             </h4>
 
                             {task.description && (
-                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                              <p className="mb-2 line-clamp-2 text-sm text-muted-foreground">
                                 {task.description}
                               </p>
                             )}
 
-                            <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
-                              <Badge
-                                variant="outline"
-                                className="text-xs"
-                              >
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                              <Badge variant="outline" className="text-xs">
                                 {getPriorityLabel(task.priority)}
                               </Badge>
 
                               {task.due_date && (
                                 <span className="flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
+                                  <Clock className="h-3 w-3" />
                                   {format(new Date(task.due_date), 'HH:mm')}
                                 </span>
                               )}
 
                               {lead && (
                                 <span className="flex items-center gap-1">
-                                  <User className="w-3 h-3" />
+                                  <User className="h-3 w-3" />
                                   {lead.name}
                                 </span>
                               )}
 
                               {task.status === 'done' && (
-                                <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                                <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                               )}
                             </div>
                           </div>
@@ -419,18 +401,16 @@ const Calendar = () => {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle2 className="w-8 h-8 text-muted-foreground" />
+                <div className="py-12 text-center">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                    <CheckCircle2 className="h-8 w-8 text-muted-foreground" />
                   </div>
-                  <h3 className="font-medium text-foreground mb-2">
-                    Nenhuma tarefa
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <h3 className="mb-2 font-medium text-foreground">Nenhuma tarefa</h3>
+                  <p className="mb-4 text-sm text-muted-foreground">
                     Não há tarefas agendadas para este dia
                   </p>
                   <Button onClick={handleNewTask} variant="outline" size="sm">
-                    <Plus className="w-4 h-4 mr-2" />
+                    <Plus className="mr-2 h-4 w-4" />
                     Criar Tarefa
                   </Button>
                 </div>

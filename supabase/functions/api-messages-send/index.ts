@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,7 +26,7 @@ function normalizePhoneForSearch(phone: string): NormalizedPhone {
     withoutCountry,
     last11: digits.slice(-11),
     last10: digits.slice(-10),
-    ddd: withoutCountry.substring(0, 2)
+    ddd: withoutCountry.substring(0, 2),
   };
 }
 
@@ -56,8 +56,8 @@ function looksLikePhone(str: string): boolean {
 
 // Helper: Return safe error response (don't expose internal details)
 function safeErrorResponse(
-  internalError: unknown, 
-  publicMessage: string, 
+  internalError: unknown,
+  publicMessage: string,
   status: number = 500
 ): Response {
   console.error('[api-messages-send] Internal error:', internalError);
@@ -70,7 +70,7 @@ function safeErrorResponse(
 // Format phone for display
 function formatTelefone(phone: string | null): string | null {
   if (!phone) return null;
-  const clean = phone.replace(/\D/g, "");
+  const clean = phone.replace(/\D/g, '');
   if (clean.length >= 12) {
     return `+${clean.slice(0, 2)} (${clean.slice(2, 4)}) ${clean.slice(4, 9)}-${clean.slice(9)}`;
   }
@@ -82,13 +82,17 @@ function formatTelefone(phone: string | null): string | null {
 
 // Map temperature
 function mapTemperature(temp: string): string {
-  const map: Record<string, string> = { cold: "frio", warm: "morno", hot: "quente" };
+  const map: Record<string, string> = { cold: 'frio', warm: 'morno', hot: 'quente' };
   return map[temp] || temp;
 }
 
 // Map conversation status
 function mapConversationStatus(status: string): string {
-  const map: Record<string, string> = { open: "aberta", pending: "pendente", resolved: "finalizada" };
+  const map: Record<string, string> = {
+    open: 'aberta',
+    pending: 'pendente',
+    resolved: 'finalizada',
+  };
   return map[status] || status;
 }
 
@@ -183,31 +187,35 @@ function formatCPF(cpf: string | null | undefined): string {
 /**
  * Replaces template variables in message content
  */
-function replaceTemplateVariables(content: string, lead: LeadData | null, agentName?: string): string {
+function replaceTemplateVariables(
+  content: string,
+  lead: LeadData | null,
+  agentName?: string
+): string {
   let result = content;
-  
+
   const firstName = lead?.name ? lead.name.split(' ')[0] : '';
   const now = new Date();
-  
+
   const replacements: Record<string, string> = {
-    'nome': lead?.name || '',
-    'primeiro_nome': firstName,
-    'telefone': lead?.phone ? formatPhoneNumber(lead.phone) : '',
-    'valor': formatCurrency(lead?.estimated_value),
-    'data': now.toLocaleDateString('pt-BR'),
-    'hora': now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-    'data_inicio': formatDateBR(lead?.created_at) || now.toLocaleDateString('pt-BR'),
-    'beneficio': lead?.benefit_type || '',
-    'tipo_beneficio': lead?.benefit_type || '',
-    'atendente': agentName || '',
-    'cpf': lead?.cpf ? formatCPF(lead.cpf) : '',
-    'email': lead?.email || '',
+    nome: lead?.name || '',
+    primeiro_nome: firstName,
+    telefone: lead?.phone ? formatPhoneNumber(lead.phone) : '',
+    valor: formatCurrency(lead?.estimated_value),
+    data: now.toLocaleDateString('pt-BR'),
+    hora: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    data_inicio: formatDateBR(lead?.created_at) || now.toLocaleDateString('pt-BR'),
+    beneficio: lead?.benefit_type || '',
+    tipo_beneficio: lead?.benefit_type || '',
+    atendente: agentName || '',
+    cpf: lead?.cpf ? formatCPF(lead.cpf) : '',
+    email: lead?.email || '',
   };
-  
+
   for (const [key, value] of Object.entries(replacements)) {
     const doublePattern = new RegExp(`\\{\\{${key}\\}\\}`, 'gi');
     const singlePattern = new RegExp(`\\{${key}\\}`, 'gi');
-    
+
     if (value) {
       result = result.replace(doublePattern, value);
       result = result.replace(singlePattern, value);
@@ -216,10 +224,10 @@ function replaceTemplateVariables(content: string, lead: LeadData | null, agentN
       result = result.replace(singlePattern, '');
     }
   }
-  
+
   result = result.replace(/\{\{(\w+)\}\}/g, '');
   result = result.replace(/\{(\w+)\}/g, '');
-  
+
   return result;
 }
 
@@ -230,14 +238,14 @@ function normalizeUrl(url: string): string {
 
 // Tenta fazer request com múltiplos formatos de auth para WAHA
 async function wahaFetch(
-  url: string, 
-  apiKey: string, 
+  url: string,
+  apiKey: string,
   options: RequestInit = {}
 ): Promise<Response> {
   const authFormats: Array<{ name: string; headers: Record<string, string> }> = [
     { name: 'X-Api-Key', headers: { 'X-Api-Key': apiKey } },
-    { name: 'Bearer', headers: { 'Authorization': `Bearer ${apiKey}` } },
-    { name: 'ApiKey (sem Bearer)', headers: { 'Authorization': apiKey } },
+    { name: 'Bearer', headers: { Authorization: `Bearer ${apiKey}` } },
+    { name: 'ApiKey (sem Bearer)', headers: { Authorization: apiKey } },
   ];
 
   let lastResponse: Response | null = null;
@@ -246,12 +254,12 @@ async function wahaFetch(
   for (const authFormat of authFormats) {
     try {
       console.log(`[WAHA] Tentando ${options.method || 'GET'} ${url} com ${authFormat.name}`);
-      
+
       const mergedHeaders: Record<string, string> = {
-        ...(options.headers as Record<string, string> || {}),
+        ...((options.headers as Record<string, string>) || {}),
         ...authFormat.headers,
       };
-      
+
       const response = await fetch(url, {
         ...options,
         headers: mergedHeaders,
@@ -262,10 +270,9 @@ async function wahaFetch(
       if (response.ok || response.status !== 401) {
         return response;
       }
-      
+
       lastResponse = response;
       console.log(`[WAHA] ${authFormat.name} - Unauthorized, tentando próximo...`);
-      
     } catch (error: unknown) {
       console.error(`[WAHA] ${authFormat.name} - Erro:`, error);
       lastError = error instanceof Error ? error : new Error(String(error));
@@ -275,16 +282,19 @@ async function wahaFetch(
   if (lastResponse) {
     return lastResponse;
   }
-  
+
   throw lastError || new Error('Todos os formatos de autenticação falharam');
 }
 
 // Provider-specific message sending functions
-async function sendWAHA(config: WhatsAppConfig, payload: SendMessagePayload): Promise<{ success: boolean; messageId?: string; error?: string }> {
+async function sendWAHA(
+  config: WhatsAppConfig,
+  payload: SendMessagePayload
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const baseUrl = normalizeUrl(config.base_url);
   const chatId = payload.phone.replace(/\D/g, '') + '@c.us';
   const session = config.instance_name || 'default';
-  
+
   let endpoint = '/api/sendText';
   let body: Record<string, unknown> = {
     chatId,
@@ -329,7 +339,7 @@ async function sendWAHA(config: WhatsAppConfig, payload: SendMessagePayload): Pr
 
     const responseText = await response.text();
     console.log('[WAHA] Resposta:', response.status, responseText);
-    
+
     if (!response.ok) {
       try {
         const errorData = JSON.parse(responseText);
@@ -351,11 +361,14 @@ async function sendWAHA(config: WhatsAppConfig, payload: SendMessagePayload): Pr
   }
 }
 
-async function sendEvolution(config: WhatsAppConfig, payload: SendMessagePayload): Promise<{ success: boolean; messageId?: string; error?: string }> {
+async function sendEvolution(
+  config: WhatsAppConfig,
+  payload: SendMessagePayload
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const baseUrl = normalizeUrl(config.base_url);
   const number = payload.phone.replace(/\D/g, '');
   const instance = config.instance_name || 'default';
-  
+
   let endpoint = `/message/sendText/${instance}`;
   let body: Record<string, unknown> = {
     number,
@@ -388,19 +401,19 @@ async function sendEvolution(config: WhatsAppConfig, payload: SendMessagePayload
 
   try {
     console.log('[Evolution] Enviando mensagem:', { baseUrl, endpoint, number });
-    
+
     const response = await fetch(`${baseUrl}${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': config.api_key,
+        apikey: config.api_key,
       },
       body: JSON.stringify(body),
     });
 
     const data = await response.json();
     console.log('[Evolution] Resposta:', response.status, JSON.stringify(data));
-    
+
     if (!response.ok) {
       return { success: false, error: data.message || `Erro ${response.status}` };
     }
@@ -412,10 +425,13 @@ async function sendEvolution(config: WhatsAppConfig, payload: SendMessagePayload
   }
 }
 
-async function sendZAPI(config: WhatsAppConfig, payload: SendMessagePayload): Promise<{ success: boolean; messageId?: string; error?: string }> {
+async function sendZAPI(
+  config: WhatsAppConfig,
+  payload: SendMessagePayload
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const baseUrl = normalizeUrl(config.base_url);
   const phone = payload.phone.replace(/\D/g, '');
-  
+
   let endpoint = '/send-text';
   let body: Record<string, unknown> = {
     phone,
@@ -445,7 +461,7 @@ async function sendZAPI(config: WhatsAppConfig, payload: SendMessagePayload): Pr
 
   try {
     console.log('[Z-API] Enviando mensagem:', { baseUrl, endpoint, phone });
-    
+
     const response = await fetch(`${baseUrl}${endpoint}`, {
       method: 'POST',
       headers: {
@@ -457,7 +473,7 @@ async function sendZAPI(config: WhatsAppConfig, payload: SendMessagePayload): Pr
 
     const data = await response.json();
     console.log('[Z-API] Resposta:', response.status, JSON.stringify(data));
-    
+
     if (!response.ok) {
       return { success: false, error: data.message || `Erro ${response.status}` };
     }
@@ -469,17 +485,20 @@ async function sendZAPI(config: WhatsAppConfig, payload: SendMessagePayload): Pr
   }
 }
 
-async function sendCustom(config: WhatsAppConfig, payload: SendMessagePayload): Promise<{ success: boolean; messageId?: string; error?: string }> {
+async function sendCustom(
+  config: WhatsAppConfig,
+  payload: SendMessagePayload
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const baseUrl = normalizeUrl(config.base_url);
-  
+
   try {
     console.log('[Custom] Enviando mensagem:', { baseUrl });
-    
+
     const response = await fetch(baseUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.api_key}`,
+        Authorization: `Bearer ${config.api_key}`,
       },
       body: JSON.stringify({
         phone: payload.phone,
@@ -491,7 +510,7 @@ async function sendCustom(config: WhatsAppConfig, payload: SendMessagePayload): 
 
     const data = await response.json();
     console.log('[Custom] Resposta:', response.status, JSON.stringify(data));
-    
+
     if (!response.ok) {
       return { success: false, error: data.message || `Erro ${response.status}` };
     }
@@ -505,30 +524,28 @@ async function sendCustom(config: WhatsAppConfig, payload: SendMessagePayload): 
 
 // Get full lead data with labels, funnel stage, and assigned user
 async function getLeadFullData(supabase: any, leadId: string) {
-  const { data: lead } = await supabase
-    .from('leads')
-    .select('*')
-    .eq('id', leadId)
-    .single();
-  
+  const { data: lead } = await supabase.from('leads').select('*').eq('id', leadId).single();
+
   if (!lead) return null;
-  
+
   // Get labels
   const { data: leadLabels } = await supabase
     .from('lead_labels')
     .select('labels(id, name, color, category)')
     .eq('lead_id', leadId);
-  
-  const etiquetas = (leadLabels || []).map((ll: any) => ({
-    id: ll.labels?.id,
-    nome: ll.labels?.name,
-    name: ll.labels?.name,
-    cor: ll.labels?.color,
-    color: ll.labels?.color,
-    categoria: ll.labels?.category,
-    category: ll.labels?.category
-  })).filter((e: any) => e.id);
-  
+
+  const etiquetas = (leadLabels || [])
+    .map((ll: any) => ({
+      id: ll.labels?.id,
+      nome: ll.labels?.name,
+      name: ll.labels?.name,
+      cor: ll.labels?.color,
+      color: ll.labels?.color,
+      categoria: ll.labels?.category,
+      category: ll.labels?.category,
+    }))
+    .filter((e: any) => e.id);
+
   // Get funnel stage
   let etapaFunil = null;
   if (lead.stage_id) {
@@ -538,10 +555,16 @@ async function getLeadFullData(supabase: any, leadId: string) {
       .eq('id', lead.stage_id)
       .single();
     if (stage) {
-      etapaFunil = { id: stage.id, nome: stage.name, name: stage.name, cor: stage.color, color: stage.color };
+      etapaFunil = {
+        id: stage.id,
+        nome: stage.name,
+        name: stage.name,
+        cor: stage.color,
+        color: stage.color,
+      };
     }
   }
-  
+
   // Get assigned user
   let responsavel = null;
   if (lead.assigned_to) {
@@ -551,10 +574,15 @@ async function getLeadFullData(supabase: any, leadId: string) {
       .eq('id', lead.assigned_to)
       .single();
     if (profile) {
-      responsavel = { id: profile.id, nome: profile.name, name: profile.name, email: profile.email };
+      responsavel = {
+        id: profile.id,
+        nome: profile.name,
+        name: profile.name,
+        email: profile.email,
+      };
     }
   }
-  
+
   return {
     id: lead.id,
     nome: lead.name,
@@ -577,7 +605,7 @@ async function getLeadFullData(supabase: any, leadId: string) {
     benefit_type: lead.benefit_type,
     avatar_url: lead.avatar_url,
     criado_em: lead.created_at,
-    created_at: lead.created_at
+    created_at: lead.created_at,
   };
 }
 
@@ -603,38 +631,59 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
-        JSON.stringify({ error: 'Authorization header required', erro: 'Header de autorização obrigatório' }),
+        JSON.stringify({
+          error: 'Authorization header required',
+          erro: 'Header de autorização obrigatório',
+        }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const apiKey = authHeader.replace('Bearer ', '');
-    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', { key_value: apiKey });
+    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', {
+      key_value: apiKey,
+    });
 
     if (apiKeyError || !apiKeyId) {
       console.error('[api-messages-send] API key inválida:', apiKeyError);
       return new Response(
-        JSON.stringify({ error: 'Invalid or inactive API key', erro: 'API key inválida ou inativa' }),
+        JSON.stringify({
+          error: 'Invalid or inactive API key',
+          erro: 'API key inválida ou inativa',
+        }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Parse payload
     const payload: SendMessagePayload = await req.json();
-    console.log('[api-messages-send] Payload:', { ...payload, message: payload.message?.substring(0, 50) + '...' });
+    console.log('[api-messages-send] Payload:', {
+      ...payload,
+      message: payload.message?.substring(0, 50) + '...',
+    });
 
     // Validate phone format
     const phoneValidation = validatePhone(payload.phone);
     if (!phoneValidation.valid) {
       return new Response(
-        JSON.stringify({ success: false, sucesso: false, error: phoneValidation.error, erro: phoneValidation.error }),
+        JSON.stringify({
+          success: false,
+          sucesso: false,
+          error: phoneValidation.error,
+          erro: phoneValidation.error,
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     if (!payload.message) {
       return new Response(
-        JSON.stringify({ success: false, sucesso: false, error: 'message is required', erro: 'Mensagem é obrigatória' }),
+        JSON.stringify({
+          success: false,
+          sucesso: false,
+          error: 'message is required',
+          erro: 'Mensagem é obrigatória',
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -643,34 +692,38 @@ serve(async (req) => {
     let leadData: LeadData | null = null;
     let leadId = payload.lead_id;
     let conversationId = payload.conversation_id;
-    
+
     // Try to find lead by ID or phone
     if (payload.lead_id) {
       // Auto-detect: if lead_id looks like a phone (not UUID), treat as phone search
       if (!isValidUUID(payload.lead_id) && looksLikePhone(payload.lead_id)) {
-        console.log('[api-messages-send] lead_id looks like a phone number, treating as phone search:', payload.lead_id);
-        
+        console.log(
+          '[api-messages-send] lead_id looks like a phone number, treating as phone search:',
+          payload.lead_id
+        );
+
         const phone = normalizePhoneForSearch(payload.lead_id);
         const { data: lead } = await supabase
           .from('leads')
           .select('*')
-          .or(`phone.eq.${phone.withoutCountry},phone.eq.${phone.last11},phone.eq.${phone.last10},phone.ilike.%${phone.last10}`)
+          .or(
+            `phone.eq.${phone.withoutCountry},phone.eq.${phone.last11},phone.eq.${phone.last10},phone.ilike.%${phone.last10}`
+          )
           .limit(1)
           .maybeSingle();
-        
+
         if (lead) {
           leadData = lead;
           leadId = lead.id;
           console.log('[api-messages-send] Lead encontrado por telefone (auto-detected):', lead.id);
         }
-        
       } else if (isValidUUID(payload.lead_id)) {
         const { data: lead } = await supabase
           .from('leads')
           .select('*')
           .eq('id', payload.lead_id)
           .single();
-        
+
         if (lead) {
           leadData = lead;
           leadId = lead.id;
@@ -679,14 +732,16 @@ serve(async (req) => {
     } else if (payload.phone) {
       const phone = normalizePhoneForSearch(payload.phone);
       console.log('[api-messages-send] Buscando lead por telefone:', phone);
-      
+
       const { data: lead } = await supabase
         .from('leads')
         .select('*')
-        .or(`phone.eq.${phone.withoutCountry},phone.eq.${phone.last11},phone.eq.${phone.last10},phone.ilike.%${phone.last10}`)
+        .or(
+          `phone.eq.${phone.withoutCountry},phone.eq.${phone.last11},phone.eq.${phone.last10},phone.ilike.%${phone.last10}`
+        )
         .limit(1)
         .maybeSingle();
-      
+
       if (lead) {
         leadData = lead;
         leadId = lead.id;
@@ -696,11 +751,14 @@ serve(async (req) => {
 
     // Replace template variables in message
     const processedMessage = replaceTemplateVariables(payload.message, leadData);
-    console.log('[api-messages-send] Mensagem processada:', processedMessage.substring(0, 50) + '...');
+    console.log(
+      '[api-messages-send] Mensagem processada:',
+      processedMessage.substring(0, 50) + '...'
+    );
 
     // Get WhatsApp config
     let config: WhatsAppConfig | null = null;
-    
+
     if (payload.whatsapp_instance_id) {
       const { data: specificConfig, error: specificError } = await supabase
         .from('whatsapp_config')
@@ -708,15 +766,21 @@ serve(async (req) => {
         .eq('id', payload.whatsapp_instance_id)
         .eq('is_active', true)
         .single();
-      
+
       if (specificError || !specificConfig) {
-        console.error('[api-messages-send] Instância específica não encontrada:', payload.whatsapp_instance_id);
+        console.error(
+          '[api-messages-send] Instância específica não encontrada:',
+          payload.whatsapp_instance_id
+        );
         return new Response(
-          JSON.stringify({ error: 'WhatsApp instance not found or inactive', erro: 'Instância WhatsApp não encontrada ou inativa' }),
+          JSON.stringify({
+            error: 'WhatsApp instance not found or inactive',
+            erro: 'Instância WhatsApp não encontrada ou inativa',
+          }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       config = specificConfig as WhatsAppConfig;
     } else {
       const { data: configs, error: configError } = await supabase
@@ -727,15 +791,23 @@ serve(async (req) => {
 
       if (configError || !configs || configs.length === 0) {
         return new Response(
-          JSON.stringify({ error: 'No active WhatsApp gateway configured', erro: 'Nenhum gateway WhatsApp ativo configurado' }),
+          JSON.stringify({
+            error: 'No active WhatsApp gateway configured',
+            erro: 'Nenhum gateway WhatsApp ativo configurado',
+          }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       config = configs[0] as WhatsAppConfig;
     }
-    
-    console.log('[api-messages-send] Provider:', config.provider, 'Instance:', config.instance_name);
+
+    console.log(
+      '[api-messages-send] Provider:',
+      config.provider,
+      'Instance:',
+      config.instance_name
+    );
 
     // Create payload with processed message
     const processedPayload: SendMessagePayload = {
@@ -745,7 +817,7 @@ serve(async (req) => {
 
     // Send message based on provider
     let result: { success: boolean; messageId?: string; error?: string };
-    
+
     switch (config.provider) {
       case 'waha':
         result = await sendWAHA(config, processedPayload);
@@ -766,7 +838,13 @@ serve(async (req) => {
     if (!result.success) {
       console.error('[api-messages-send] Falha ao enviar:', result.error);
       return new Response(
-        JSON.stringify({ success: false, sucesso: false, error: result.error, erro: result.error, provider: config.provider }),
+        JSON.stringify({
+          success: false,
+          sucesso: false,
+          error: result.error,
+          erro: result.error,
+          provider: config.provider,
+        }),
         { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -831,7 +909,7 @@ serve(async (req) => {
         .select('*')
         .eq('id', conversationId)
         .single();
-      
+
       if (conv) {
         conversationData = {
           id: conv.id,
@@ -842,7 +920,7 @@ serve(async (req) => {
           ultima_mensagem_em: conv.last_message_at,
           last_message_at: conv.last_message_at,
           criada_em: conv.created_at,
-          created_at: conv.created_at
+          created_at: conv.created_at,
         };
       }
     }
@@ -864,14 +942,14 @@ serve(async (req) => {
         phone_number: config.phone_number,
         identificador: config.instance_name,
         instance_name: config.instance_name,
-        provider: config.provider
+        provider: config.provider,
       },
       whatsapp_instance: {
         id: config.id,
         name: config.name,
         phone_number: config.phone_number,
         instance_name: config.instance_name,
-        provider: config.provider
+        provider: config.provider,
       },
 
       mensagem: {
@@ -886,7 +964,7 @@ serve(async (req) => {
         sent_at: new Date().toISOString(),
         status: 'enviada',
         direcao: 'saida',
-        direction: 'outbound'
+        direction: 'outbound',
       },
       message: {
         id: messageId,
@@ -895,21 +973,20 @@ serve(async (req) => {
         media_url: payload.media_url,
         sent_at: new Date().toISOString(),
         status: 'sent',
-        direction: 'outbound'
+        direction: 'outbound',
       },
 
       lead: leadFullData,
       contato: leadFullData,
 
       conversa: conversationData,
-      conversation: conversationData
+      conversation: conversationData,
     };
 
-    return new Response(
-      JSON.stringify(response),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
+    return new Response(JSON.stringify(response), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error: unknown) {
     return safeErrorResponse(error, 'An unexpected error occurred');
   }

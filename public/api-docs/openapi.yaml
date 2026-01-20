@@ -153,12 +153,12 @@ paths:
             type: boolean
         - name: action
           in: query
-          description: "Ações: equipes (GET)"
+          description: 'Ações: equipes (GET)'
           schema:
             type: string
             enum: [equipes]
       responses:
-        "200":
+        '200':
           description: Lista de usuários ou usuário específico
           content:
             application/json:
@@ -168,9 +168,9 @@ paths:
                   dados:
                     type: array
                     items:
-                      $ref: "#/components/schemas/Usuario"
+                      $ref: '#/components/schemas/Usuario'
                   paginacao:
-                    $ref: "#/components/schemas/Paginacao"
+                    $ref: '#/components/schemas/Paginacao'
 
     post:
       tags: [Usuários]
@@ -219,7 +219,7 @@ paths:
                     disponivel:
                       type: boolean
       responses:
-        "200":
+        '200':
           description: Ação executada
 
     put:
@@ -237,9 +237,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AtualizarUsuarioRequest"
+              $ref: '#/components/schemas/AtualizarUsuarioRequest'
       responses:
-        "200":
+        '200':
           description: Usuário atualizado
 
     delete:
@@ -254,7 +254,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Usuário desativado
 
   # ============================================================================
@@ -274,12 +274,12 @@ paths:
             format: uuid
         - name: action
           in: query
-          description: "Ações: canais (GET lista canais da equipe)"
+          description: 'Ações: canais (GET lista canais da equipe)'
           schema:
             type: string
             enum: [canais]
       responses:
-        "200":
+        '200':
           description: Lista de equipes
           content:
             application/json:
@@ -289,7 +289,7 @@ paths:
                   dados:
                     type: array
                     items:
-                      $ref: "#/components/schemas/Equipe"
+                      $ref: '#/components/schemas/Equipe'
 
     post:
       tags: [Equipes]
@@ -300,9 +300,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CriarEquipeRequest"
+              $ref: '#/components/schemas/CriarEquipeRequest'
       responses:
-        "201":
+        '201':
           description: Equipe criada
 
     put:
@@ -330,7 +330,7 @@ paths:
           application/json:
             schema:
               oneOf:
-                - $ref: "#/components/schemas/AtualizarEquipeRequest"
+                - $ref: '#/components/schemas/AtualizarEquipeRequest'
                 - type: object
                   properties:
                     usuarios:
@@ -343,7 +343,7 @@ paths:
                           supervisor:
                             type: boolean
       responses:
-        "200":
+        '200':
           description: Equipe atualizada
 
     delete:
@@ -358,7 +358,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Equipe removida
 
   # ============================================================================
@@ -395,7 +395,7 @@ paths:
             type: integer
             default: 0
       responses:
-        "200":
+        '200':
           description: Lista de contatos
           content:
             application/json:
@@ -407,7 +407,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: "#/components/schemas/Contato"
+                      $ref: '#/components/schemas/Contato'
                   total:
                     type: integer
 
@@ -417,7 +417,7 @@ paths:
       operationId: criarContato
       description: |
         Sem action: Cria novo contato
-        
+
         Com action:
         - `lote`: Criar múltiplos contatos
         - `filtro`: Busca avançada com filtros
@@ -439,14 +439,14 @@ paths:
           application/json:
             schema:
               oneOf:
-                - $ref: "#/components/schemas/CriarContatoRequest"
-                - $ref: "#/components/schemas/CriarContatosLoteRequest"
-                - $ref: "#/components/schemas/FiltroAvancadoRequest"
-                - $ref: "#/components/schemas/GerenciarEtiquetasRequest"
+                - $ref: '#/components/schemas/CriarContatoRequest'
+                - $ref: '#/components/schemas/CriarContatosLoteRequest'
+                - $ref: '#/components/schemas/FiltroAvancadoRequest'
+                - $ref: '#/components/schemas/GerenciarEtiquetasRequest'
       responses:
-        "200":
+        '200':
           description: Sucesso
-        "201":
+        '201':
           description: Contato criado
 
     put:
@@ -464,9 +464,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AtualizarContatoRequest"
+              $ref: '#/components/schemas/AtualizarContatoRequest'
       responses:
-        "200":
+        '200':
           description: Contato atualizado
 
     delete:
@@ -481,7 +481,7 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Contato removido
 
   /api-contatos-lote:
@@ -502,9 +502,9 @@ paths:
                   type: array
                   maxItems: 100
                   items:
-                    $ref: "#/components/schemas/CriarContatoLoteItem"
+                    $ref: '#/components/schemas/CriarContatoLoteItem'
       responses:
-        "200":
+        '200':
           description: Resultado do lote
           content:
             application/json:
@@ -541,7 +541,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Lista de etiquetas
           content:
             application/json:
@@ -551,7 +551,7 @@ paths:
                   dados:
                     type: array
                     items:
-                      $ref: "#/components/schemas/Etiqueta"
+                      $ref: '#/components/schemas/Etiqueta'
 
     post:
       tags: [Etiquetas]
@@ -562,9 +562,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CriarEtiquetaRequest"
+              $ref: '#/components/schemas/CriarEtiquetaRequest'
       responses:
-        "201":
+        '201':
           description: Etiqueta criada
 
     put:
@@ -582,9 +582,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AtualizarEtiquetaRequest"
+              $ref: '#/components/schemas/AtualizarEtiquetaRequest'
       responses:
-        "200":
+        '200':
           description: Etiqueta atualizada
 
     delete:
@@ -599,7 +599,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Etiqueta removida
 
   # ============================================================================
@@ -622,7 +622,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Lista de campos
           content:
             application/json:
@@ -632,7 +632,7 @@ paths:
                   dados:
                     type: array
                     items:
-                      $ref: "#/components/schemas/CampoPersonalizado"
+                      $ref: '#/components/schemas/CampoPersonalizado'
 
     post:
       tags: [Campos Personalizados]
@@ -643,9 +643,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CriarCampoRequest"
+              $ref: '#/components/schemas/CriarCampoRequest'
       responses:
-        "201":
+        '201':
           description: Campo criado
 
     put:
@@ -663,9 +663,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AtualizarCampoRequest"
+              $ref: '#/components/schemas/AtualizarCampoRequest'
       responses:
-        "200":
+        '200':
           description: Campo atualizado
 
     delete:
@@ -680,7 +680,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Campo removido
 
   # ============================================================================
@@ -699,7 +699,7 @@ paths:
             format: uuid
         - name: action
           in: query
-          description: "contatos: Lista contatos da carteira"
+          description: 'contatos: Lista contatos da carteira'
           schema:
             type: string
             enum: [contatos]
@@ -719,7 +719,7 @@ paths:
             type: integer
             default: 50
       responses:
-        "200":
+        '200':
           description: Lista de carteiras
           content:
             application/json:
@@ -729,7 +729,7 @@ paths:
                   dados:
                     type: array
                     items:
-                      $ref: "#/components/schemas/Carteira"
+                      $ref: '#/components/schemas/Carteira'
 
     post:
       tags: [Carteiras]
@@ -756,7 +756,7 @@ paths:
           application/json:
             schema:
               oneOf:
-                - $ref: "#/components/schemas/CriarCarteiraRequest"
+                - $ref: '#/components/schemas/CriarCarteiraRequest'
                 - type: object
                   required: [contato_id]
                   properties:
@@ -764,7 +764,7 @@ paths:
                       type: string
                       format: uuid
       responses:
-        "201":
+        '201':
           description: Criado
 
     put:
@@ -782,9 +782,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AtualizarCarteiraRequest"
+              $ref: '#/components/schemas/AtualizarCarteiraRequest'
       responses:
-        "200":
+        '200':
           description: Carteira atualizada
 
     delete:
@@ -809,7 +809,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Removido
 
   # ============================================================================
@@ -828,12 +828,12 @@ paths:
             format: uuid
         - name: action
           in: query
-          description: "eventos: Lista eventos disponíveis"
+          description: 'eventos: Lista eventos disponíveis'
           schema:
             type: string
             enum: [eventos]
       responses:
-        "200":
+        '200':
           description: Lista de webhooks
           content:
             application/json:
@@ -843,7 +843,7 @@ paths:
                   dados:
                     type: array
                     items:
-                      $ref: "#/components/schemas/Webhook"
+                      $ref: '#/components/schemas/Webhook'
 
     post:
       tags: [Webhooks]
@@ -854,9 +854,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CriarWebhookRequest"
+              $ref: '#/components/schemas/CriarWebhookRequest'
       responses:
-        "201":
+        '201':
           description: Webhook criado
 
     put:
@@ -874,9 +874,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AtualizarWebhookRequest"
+              $ref: '#/components/schemas/AtualizarWebhookRequest'
       responses:
-        "200":
+        '200':
           description: Webhook atualizado
 
     delete:
@@ -891,7 +891,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Webhook removido
 
   # ============================================================================
@@ -914,7 +914,7 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: URL de upload
           content:
             application/json:
@@ -953,7 +953,7 @@ paths:
                 nome_original:
                   type: string
       responses:
-        "200":
+        '200':
           description: Upload confirmado
 
     delete:
@@ -967,7 +967,7 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Arquivo removido
 
   # ============================================================================
@@ -991,7 +991,7 @@ paths:
             type: string
         - name: action
           in: query
-          description: "notas: Lista notas da conversa"
+          description: 'notas: Lista notas da conversa'
           schema:
             type: string
             enum: [notas]
@@ -1045,14 +1045,14 @@ paths:
             type: integer
             default: 50
       responses:
-        "200":
+        '200':
           description: Conversa(s) encontrada(s)
           content:
             application/json:
               schema:
                 oneOf:
-                  - $ref: "#/components/schemas/ConversaDetalhadaResponse"
-                  - $ref: "#/components/schemas/ListaConversasResponse"
+                  - $ref: '#/components/schemas/ConversaDetalhadaResponse'
+                  - $ref: '#/components/schemas/ListaConversasResponse'
               examples:
                 conversa_unica:
                   summary: Conversa específica (com mensagens)
@@ -1060,69 +1060,69 @@ paths:
                     sucesso: true
                     success: true
                     conversa:
-                      id: "8454ff97-627b-4730-901e-b091ed5e5685"
-                      status: "open"
-                      status_pt: "aberta"
+                      id: '8454ff97-627b-4730-901e-b091ed5e5685'
+                      status: 'open'
+                      status_pt: 'aberta'
                       nao_lidas: 5
                       unread_count: 5
                       favorita: false
                       is_favorite: false
                       responsavel:
-                        id: "uuid-usuario"
-                        nome: "Maria Advogada"
-                        name: "Maria Advogada"
-                        email: "maria@email.com"
+                        id: 'uuid-usuario'
+                        nome: 'Maria Advogada'
+                        name: 'Maria Advogada'
+                        email: 'maria@email.com'
                       instancia_whatsapp:
-                        id: "uuid-instancia"
-                        nome: "WhatsApp Principal"
-                        telefone: "+55 (11) 99999-0001"
-                        identificador: "principal"
-                        provider: "waha"
-                      ultima_mensagem_em: "2026-01-05T14:30:00Z"
-                      criada_em: "2026-01-01T10:00:00Z"
+                        id: 'uuid-instancia'
+                        nome: 'WhatsApp Principal'
+                        telefone: '+55 (11) 99999-0001'
+                        identificador: 'principal'
+                        provider: 'waha'
+                      ultima_mensagem_em: '2026-01-05T14:30:00Z'
+                      criada_em: '2026-01-01T10:00:00Z'
                     lead:
-                      id: "uuid-lead"
-                      nome: "João Silva"
-                      name: "João Silva"
-                      telefone: "+55 (11) 99999-0002"
-                      phone: "11999990002"
-                      email: "joao@email.com"
-                      temperatura: "morno"
-                      temperature: "warm"
+                      id: 'uuid-lead'
+                      nome: 'João Silva'
+                      name: 'João Silva'
+                      telefone: '+55 (11) 99999-0002'
+                      phone: '11999990002'
+                      email: 'joao@email.com'
+                      temperatura: 'morno'
+                      temperature: 'warm'
                       etapa_funil:
-                        id: "uuid-etapa"
-                        nome: "Qualificação"
-                        cor: "#22c55e"
+                        id: 'uuid-etapa'
+                        nome: 'Qualificação'
+                        cor: '#22c55e'
                       etiquetas:
-                        - id: "uuid-etiqueta"
-                          nome: "BPC Idoso"
-                          cor: "#3b82f6"
+                        - id: 'uuid-etiqueta'
+                          nome: 'BPC Idoso'
+                          cor: '#3b82f6'
                       responsavel:
-                        id: "uuid-usuario"
-                        nome: "Maria Advogada"
+                        id: 'uuid-usuario'
+                        nome: 'Maria Advogada'
                     mensagens:
-                      - id: "uuid-msg"
-                        type: "text"
-                        content: "Olá, preciso de ajuda"
-                        direction: "inbound"
-                        status: "delivered"
-                        created_at: "2026-01-05T14:30:00Z"
+                      - id: 'uuid-msg'
+                        type: 'text'
+                        content: 'Olá, preciso de ajuda'
+                        direction: 'inbound'
+                        status: 'delivered'
+                        created_at: '2026-01-05T14:30:00Z'
                 lista_conversas:
                   summary: Lista de conversas
                   value:
                     sucesso: true
                     success: true
                     dados:
-                      - id: "uuid-conversa"
-                        status: "open"
-                        status_pt: "aberta"
+                      - id: 'uuid-conversa'
+                        status: 'open'
+                        status_pt: 'aberta'
                         nao_lidas: 3
-                        ultima_mensagem: "Preciso de ajuda"
+                        ultima_mensagem: 'Preciso de ajuda'
                         lead:
-                          id: "uuid-lead"
-                          nome: "João Silva"
-                          telefone: "+55 (11) 99999-0002"
-                          temperatura: "morno"
+                          id: 'uuid-lead'
+                          nome: 'João Silva'
+                          telefone: '+55 (11) 99999-0002'
+                          temperatura: 'morno'
                     paginacao:
                       pagina: 1
                       por_pagina: 50
@@ -1136,7 +1136,7 @@ paths:
       description: |
         Sem action: Cria nova conversa
         Com action=notas: Adiciona nota interna à conversa
-        
+
         O campo `lead_id`/`contato_id` aceita UUID ou telefone.
       parameters:
         - name: id
@@ -1155,30 +1155,30 @@ paths:
           application/json:
             schema:
               oneOf:
-                - $ref: "#/components/schemas/CriarConversaRequest"
-                - $ref: "#/components/schemas/CriarNotaRequest"
+                - $ref: '#/components/schemas/CriarConversaRequest'
+                - $ref: '#/components/schemas/CriarNotaRequest'
             examples:
               criar_conversa:
                 summary: Criar conversa (UUID)
                 value:
-                  lead_id: "8454ff97-627b-4730-901e-b091ed5e5685"
-                  status: "open"
+                  lead_id: '8454ff97-627b-4730-901e-b091ed5e5685'
+                  status: 'open'
               criar_conversa_telefone:
                 summary: Criar conversa (telefone)
                 value:
-                  contato_id: "5511999990001"
-                  status: "open"
+                  contato_id: '5511999990001'
+                  status: 'open'
               adicionar_nota:
                 summary: Adicionar nota (action=notas)
                 value:
-                  conteudo: "Cliente solicitou documentos"
+                  conteudo: 'Cliente solicitou documentos'
       responses:
-        "201":
+        '201':
           description: Criado
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConversaCriadaResponse"
+                $ref: '#/components/schemas/ConversaCriadaResponse'
 
     put:
       tags: [Conversas]
@@ -1186,7 +1186,7 @@ paths:
       operationId: atualizarConversa
       description: |
         O parâmetro `id` aceita UUID ou telefone.
-        
+
         Ações disponíveis:
         - `transferir`: Transfere para usuário ou equipe
         - `atribuir`: Atribui a um usuário
@@ -1208,14 +1208,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AtualizarConversaRequest"
+              $ref: '#/components/schemas/AtualizarConversaRequest'
       responses:
-        "200":
+        '200':
           description: Conversa atualizada
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConversaAtualizadaResponse"
+                $ref: '#/components/schemas/ConversaAtualizadaResponse'
 
     delete:
       tags: [Conversas]
@@ -1229,7 +1229,7 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Conversa removida
           content:
             application/json:
@@ -1255,11 +1255,11 @@ paths:
       operationId: enviarMensagem
       description: |
         Endpoint principal para envio de mensagens.
-        
+
         **Identificação do destinatário:**
         - `contato_id`: Aceita UUID ou telefone
         - `telefone`: Número de telefone (qualquer formato)
-        
+
         **Tipos de mensagem:**
         - `texto`: Mensagem de texto simples
         - `imagem`: Imagem com URL
@@ -1271,92 +1271,92 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/EnviarMensagemRequest"
+              $ref: '#/components/schemas/EnviarMensagemRequest'
             examples:
               enviar_por_uuid:
                 summary: Enviar por UUID
                 value:
-                  contato_id: "8454ff97-627b-4730-901e-b091ed5e5685"
-                  conteudo: "Olá! Como posso ajudar?"
-                  tipo: "texto"
+                  contato_id: '8454ff97-627b-4730-901e-b091ed5e5685'
+                  conteudo: 'Olá! Como posso ajudar?'
+                  tipo: 'texto'
               enviar_por_telefone:
                 summary: Enviar por telefone
                 value:
-                  contato_id: "5511999990001"
-                  conteudo: "Olá! Como posso ajudar?"
-                  tipo: "texto"
+                  contato_id: '5511999990001'
+                  conteudo: 'Olá! Como posso ajudar?'
+                  tipo: 'texto'
               enviar_imagem:
                 summary: Enviar imagem
                 value:
-                  telefone: "5511999990001"
-                  conteudo: "Confira a imagem"
-                  tipo: "imagem"
-                  midia_url: "https://exemplo.com/imagem.jpg"
+                  telefone: '5511999990001'
+                  conteudo: 'Confira a imagem'
+                  tipo: 'imagem'
+                  midia_url: 'https://exemplo.com/imagem.jpg'
       responses:
-        "200":
+        '200':
           description: Mensagem enviada
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MensagemEnviadaResponse"
+                $ref: '#/components/schemas/MensagemEnviadaResponse'
               example:
                 sucesso: true
                 success: true
-                request_id: "req_abc12345"
-                mensagem_id: "uuid-mensagem"
-                message_id: "uuid-mensagem"
+                request_id: 'req_abc12345'
+                mensagem_id: 'uuid-mensagem'
+                message_id: 'uuid-mensagem'
                 instancia_whatsapp:
-                  id: "uuid-instancia"
-                  nome: "WhatsApp Principal"
-                  telefone: "+55 (11) 99999-0001"
-                  identificador: "principal"
-                  provider: "waha"
+                  id: 'uuid-instancia'
+                  nome: 'WhatsApp Principal'
+                  telefone: '+55 (11) 99999-0001'
+                  identificador: 'principal'
+                  provider: 'waha'
                 whatsapp_instance:
-                  id: "uuid-instancia"
-                  name: "WhatsApp Principal"
-                  phone_number: "5511999990001"
-                  instance_name: "principal"
-                  provider: "waha"
+                  id: 'uuid-instancia'
+                  name: 'WhatsApp Principal'
+                  phone_number: '5511999990001'
+                  instance_name: 'principal'
+                  provider: 'waha'
                 mensagem:
-                  id: "uuid-mensagem"
-                  tipo: "texto"
-                  type: "text"
-                  conteudo: "Olá! Como posso ajudar?"
-                  content: "Olá! Como posso ajudar?"
-                  enviada_em: "2026-01-05T14:30:00Z"
-                  sent_at: "2026-01-05T14:30:00Z"
-                  status: "enviada"
-                  direcao: "saida"
-                  direction: "outbound"
+                  id: 'uuid-mensagem'
+                  tipo: 'texto'
+                  type: 'text'
+                  conteudo: 'Olá! Como posso ajudar?'
+                  content: 'Olá! Como posso ajudar?'
+                  enviada_em: '2026-01-05T14:30:00Z'
+                  sent_at: '2026-01-05T14:30:00Z'
+                  status: 'enviada'
+                  direcao: 'saida'
+                  direction: 'outbound'
                 lead:
-                  id: "uuid-lead"
-                  nome: "João Silva"
-                  name: "João Silva"
-                  telefone: "+55 (11) 99999-0002"
-                  phone: "11999990002"
-                  email: "joao@email.com"
-                  temperatura: "morno"
-                  temperature: "warm"
+                  id: 'uuid-lead'
+                  nome: 'João Silva'
+                  name: 'João Silva'
+                  telefone: '+55 (11) 99999-0002'
+                  phone: '11999990002'
+                  email: 'joao@email.com'
+                  temperatura: 'morno'
+                  temperature: 'warm'
                   etapa_funil:
-                    id: "uuid-etapa"
-                    nome: "Qualificação"
-                    name: "Qualificação"
-                    cor: "#22c55e"
-                    color: "#22c55e"
+                    id: 'uuid-etapa'
+                    nome: 'Qualificação'
+                    name: 'Qualificação'
+                    cor: '#22c55e'
+                    color: '#22c55e'
                   etiquetas:
-                    - id: "uuid-etiqueta"
-                      nome: "BPC Idoso"
-                      name: "BPC Idoso"
-                      cor: "#3b82f6"
-                      color: "#3b82f6"
+                    - id: 'uuid-etiqueta'
+                      nome: 'BPC Idoso'
+                      name: 'BPC Idoso'
+                      cor: '#3b82f6'
+                      color: '#3b82f6'
                   responsavel:
-                    id: "uuid-usuario"
-                    nome: "Maria Advogada"
-                    name: "Maria Advogada"
+                    id: 'uuid-usuario'
+                    nome: 'Maria Advogada'
+                    name: 'Maria Advogada'
                 conversa:
-                  id: "uuid-conversa"
-                  status: "open"
-                  status_pt: "aberta"
+                  id: 'uuid-conversa'
+                  status: 'open'
+                  status_pt: 'aberta'
                   nao_lidas: 0
                   unread_count: 0
 
@@ -1367,11 +1367,11 @@ paths:
       operationId: enviarMensagemAlt
       description: |
         Endpoint alternativo para envio de mensagens (em inglês).
-        
+
         **Identificação do destinatário:**
         - `lead_id`: Aceita UUID ou telefone
         - `phone`: Número de telefone
-        
+
         **Variáveis de template:**
         O conteúdo da mensagem pode incluir variáveis que serão substituídas:
         - `{{nome}}`: Nome do contato
@@ -1386,25 +1386,25 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SendMessageRequest"
+              $ref: '#/components/schemas/SendMessageRequest'
             examples:
               enviar_simples:
                 summary: Enviar mensagem simples
                 value:
-                  phone: "5511999990001"
-                  message: "Olá {{primeiro_nome}}! Como posso ajudar?"
+                  phone: '5511999990001'
+                  message: 'Olá {{primeiro_nome}}! Como posso ajudar?'
               enviar_com_lead:
                 summary: Enviar com lead_id (telefone)
                 value:
-                  lead_id: "11999990001"
-                  message: "Olá! Seu benefício de {{beneficio}} está em andamento."
+                  lead_id: '11999990001'
+                  message: 'Olá! Seu benefício de {{beneficio}} está em andamento.'
       responses:
-        "200":
+        '200':
           description: Mensagem enviada
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MensagemEnviadaResponse"
+                $ref: '#/components/schemas/MensagemEnviadaResponse'
 
   /api-messages-receive:
     post:
@@ -1413,7 +1413,7 @@ paths:
       operationId: receberMensagem
       description: |
         Endpoint para receber mensagens (geralmente chamado por webhooks de provedores WhatsApp).
-        
+
         - Cria lead automaticamente se não existir
         - Cria conversa automaticamente se não existir
         - Atualiza contadores de não lidas
@@ -1423,62 +1423,62 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ReceiveMessageRequest"
+              $ref: '#/components/schemas/ReceiveMessageRequest'
             example:
-              phone: "5511999990001"
-              message: "Olá, preciso de ajuda com meu benefício"
-              type: "text"
-              sender_name: "João Silva"
-              timestamp: "2026-01-05T14:30:00Z"
+              phone: '5511999990001'
+              message: 'Olá, preciso de ajuda com meu benefício'
+              type: 'text'
+              sender_name: 'João Silva'
+              timestamp: '2026-01-05T14:30:00Z'
       responses:
-        "201":
+        '201':
           description: Mensagem recebida
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MensagemRecebidaResponse"
+                $ref: '#/components/schemas/MensagemRecebidaResponse'
               example:
                 sucesso: true
                 success: true
-                request_id: "req_abc12345"
-                mensagem_id: "uuid-mensagem"
-                message_id: "uuid-mensagem"
+                request_id: 'req_abc12345'
+                mensagem_id: 'uuid-mensagem'
+                message_id: 'uuid-mensagem'
                 instancia_whatsapp:
-                  id: "uuid-instancia"
-                  nome: "WhatsApp Principal"
-                  telefone: "+55 (11) 99999-0001"
+                  id: 'uuid-instancia'
+                  nome: 'WhatsApp Principal'
+                  telefone: '+55 (11) 99999-0001'
                 mensagem:
-                  id: "uuid-mensagem"
-                  tipo: "texto"
-                  type: "text"
-                  conteudo: "Olá, preciso de ajuda com meu benefício"
-                  content: "Olá, preciso de ajuda com meu benefício"
-                  recebida_em: "2026-01-05T14:30:00Z"
-                  received_at: "2026-01-05T14:30:00Z"
-                  status: "entregue"
-                  direcao: "entrada"
-                  direction: "inbound"
+                  id: 'uuid-mensagem'
+                  tipo: 'texto'
+                  type: 'text'
+                  conteudo: 'Olá, preciso de ajuda com meu benefício'
+                  content: 'Olá, preciso de ajuda com meu benefício'
+                  recebida_em: '2026-01-05T14:30:00Z'
+                  received_at: '2026-01-05T14:30:00Z'
+                  status: 'entregue'
+                  direcao: 'entrada'
+                  direction: 'inbound'
                   remetente:
-                    tipo: "lead"
-                    id: "uuid-lead"
-                    nome: "João Silva"
+                    tipo: 'lead'
+                    id: 'uuid-lead'
+                    nome: 'João Silva'
                 lead:
-                  id: "uuid-lead"
-                  nome: "João Silva"
-                  name: "João Silva"
-                  telefone: "+55 (11) 99999-0001"
-                  phone: "11999990001"
-                  temperatura: "morno"
-                  temperature: "warm"
+                  id: 'uuid-lead'
+                  nome: 'João Silva'
+                  name: 'João Silva'
+                  telefone: '+55 (11) 99999-0001'
+                  phone: '11999990001'
+                  temperatura: 'morno'
+                  temperature: 'warm'
                   is_new: true
                   etapa_funil:
-                    id: "uuid-etapa"
-                    nome: "Novo Lead"
+                    id: 'uuid-etapa'
+                    nome: 'Novo Lead'
                   etiquetas: []
                 conversa:
-                  id: "uuid-conversa"
-                  status: "open"
-                  status_pt: "aberta"
+                  id: 'uuid-conversa'
+                  status: 'open'
+                  status_pt: 'aberta'
                   nao_lidas: 1
                   unread_count: 1
                   is_new: true
@@ -1507,7 +1507,7 @@ paths:
             format: uuid
         - name: action
           in: query
-          description: "status: Retorna status de entrega"
+          description: 'status: Retorna status de entrega'
           schema:
             type: string
             enum: [status]
@@ -1522,7 +1522,7 @@ paths:
             type: integer
             default: 50
       responses:
-        "200":
+        '200':
           description: Mensagem(ns) encontrada(s)
           content:
             application/json:
@@ -1532,9 +1532,9 @@ paths:
                   dados:
                     type: array
                     items:
-                      $ref: "#/components/schemas/Mensagem"
+                      $ref: '#/components/schemas/Mensagem'
                   paginacao:
-                    $ref: "#/components/schemas/Paginacao"
+                    $ref: '#/components/schemas/Paginacao'
 
     delete:
       tags: [Mensagens]
@@ -1548,7 +1548,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Mensagem apagada
 
   # ============================================================================
@@ -1586,7 +1586,7 @@ paths:
             type: integer
             default: 50
       responses:
-        "200":
+        '200':
           description: Lista de mensagens agendadas
           content:
             application/json:
@@ -1596,9 +1596,9 @@ paths:
                   dados:
                     type: array
                     items:
-                      $ref: "#/components/schemas/MensagemAgendada"
+                      $ref: '#/components/schemas/MensagemAgendada'
                   paginacao:
-                    $ref: "#/components/schemas/Paginacao"
+                    $ref: '#/components/schemas/Paginacao'
 
     post:
       tags: [Mensagens Agendadas]
@@ -1620,9 +1620,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AgendarMensagemRequest"
+              $ref: '#/components/schemas/AgendarMensagemRequest'
       responses:
-        "201":
+        '201':
           description: Mensagem agendada
 
     put:
@@ -1648,7 +1648,7 @@ paths:
                   type: string
                   format: date-time
       responses:
-        "200":
+        '200':
           description: Mensagem atualizada
 
   # ============================================================================
@@ -1666,7 +1666,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Lista de templates
           content:
             application/json:
@@ -1676,7 +1676,7 @@ paths:
                   dados:
                     type: array
                     items:
-                      $ref: "#/components/schemas/Template"
+                      $ref: '#/components/schemas/Template'
 
     post:
       tags: [Templates]
@@ -1687,9 +1687,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CriarTemplateRequest"
+              $ref: '#/components/schemas/CriarTemplateRequest'
       responses:
-        "201":
+        '201':
           description: Template criado
 
     put:
@@ -1707,9 +1707,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AtualizarTemplateRequest"
+              $ref: '#/components/schemas/AtualizarTemplateRequest'
       responses:
-        "200":
+        '200':
           description: Template atualizado
 
     delete:
@@ -1724,7 +1724,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Template removido
 
   # ============================================================================
@@ -1742,7 +1742,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Lista de canais
           content:
             application/json:
@@ -1752,7 +1752,7 @@ paths:
                   dados:
                     type: array
                     items:
-                      $ref: "#/components/schemas/Canal"
+                      $ref: '#/components/schemas/Canal'
 
   # ============================================================================
   # CHATBOTS
@@ -1773,7 +1773,7 @@ paths:
           schema:
             type: boolean
       responses:
-        "200":
+        '200':
           description: Lista de chatbots
           content:
             application/json:
@@ -1783,7 +1783,7 @@ paths:
                   dados:
                     type: array
                     items:
-                      $ref: "#/components/schemas/Chatbot"
+                      $ref: '#/components/schemas/Chatbot'
 
     post:
       tags: [Chatbots]
@@ -1801,7 +1801,7 @@ paths:
           application/json:
             schema:
               oneOf:
-                - $ref: "#/components/schemas/CriarChatbotRequest"
+                - $ref: '#/components/schemas/CriarChatbotRequest'
                 - type: object
                   required: [chatbot_id, contato_id]
                   properties:
@@ -1812,7 +1812,7 @@ paths:
                       type: string
                       format: uuid
       responses:
-        "201":
+        '201':
           description: Criado
 
     put:
@@ -1830,9 +1830,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AtualizarChatbotRequest"
+              $ref: '#/components/schemas/AtualizarChatbotRequest'
       responses:
-        "200":
+        '200':
           description: Chatbot atualizado
 
     delete:
@@ -1847,7 +1847,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Chatbot removido
 
   # ============================================================================
@@ -1866,7 +1866,7 @@ paths:
             format: uuid
         - name: action
           in: query
-          description: "notas: Lista notas da oportunidade"
+          description: 'notas: Lista notas da oportunidade'
           schema:
             type: string
             enum: [notas]
@@ -1896,7 +1896,7 @@ paths:
             type: integer
             default: 50
       responses:
-        "200":
+        '200':
           description: Lista de oportunidades
           content:
             application/json:
@@ -1906,9 +1906,9 @@ paths:
                   dados:
                     type: array
                     items:
-                      $ref: "#/components/schemas/Oportunidade"
+                      $ref: '#/components/schemas/Oportunidade'
                   paginacao:
-                    $ref: "#/components/schemas/Paginacao"
+                    $ref: '#/components/schemas/Paginacao'
 
     post:
       tags: [Oportunidades]
@@ -1932,14 +1932,14 @@ paths:
           application/json:
             schema:
               oneOf:
-                - $ref: "#/components/schemas/CriarOportunidadeRequest"
+                - $ref: '#/components/schemas/CriarOportunidadeRequest'
                 - type: object
                   required: [conteudo]
                   properties:
                     conteudo:
                       type: string
       responses:
-        "201":
+        '201':
           description: Criado
 
     put:
@@ -1963,7 +1963,7 @@ paths:
           application/json:
             schema:
               oneOf:
-                - $ref: "#/components/schemas/AtualizarOportunidadeRequest"
+                - $ref: '#/components/schemas/AtualizarOportunidadeRequest'
                 - type: object
                   required: [etapa_id]
                   properties:
@@ -1973,7 +1973,7 @@ paths:
                     ordem:
                       type: integer
       responses:
-        "200":
+        '200':
           description: Oportunidade atualizada
 
     delete:
@@ -1988,7 +1988,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Oportunidade removida
 
   # ============================================================================
@@ -2007,7 +2007,7 @@ paths:
             type: string
         - name: action
           in: query
-          description: "campos-personalizados: Retorna campos do funil"
+          description: 'campos-personalizados: Retorna campos do funil'
           schema:
             type: string
             enum: [campos-personalizados]
@@ -2017,7 +2017,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Lista de funis
           content:
             application/json:
@@ -2027,7 +2027,7 @@ paths:
                   dados:
                     type: array
                     items:
-                      $ref: "#/components/schemas/Funil"
+                      $ref: '#/components/schemas/Funil'
 
   # ============================================================================
   # TAREFAS
@@ -2069,7 +2069,7 @@ paths:
             type: integer
             default: 50
       responses:
-        "200":
+        '200':
           description: Lista de tarefas
           content:
             application/json:
@@ -2079,9 +2079,9 @@ paths:
                   dados:
                     type: array
                     items:
-                      $ref: "#/components/schemas/Tarefa"
+                      $ref: '#/components/schemas/Tarefa'
                   paginacao:
-                    $ref: "#/components/schemas/Paginacao"
+                    $ref: '#/components/schemas/Paginacao'
 
     post:
       tags: [Tarefas]
@@ -2092,9 +2092,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CriarTarefaRequest"
+              $ref: '#/components/schemas/CriarTarefaRequest'
       responses:
-        "201":
+        '201':
           description: Tarefa criada
 
     put:
@@ -2112,9 +2112,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AtualizarTarefaRequest"
+              $ref: '#/components/schemas/AtualizarTarefaRequest'
       responses:
-        "200":
+        '200':
           description: Tarefa atualizada
 
     delete:
@@ -2129,7 +2129,7 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        '200':
           description: Tarefa removida
 
   # ============================================================================
@@ -2142,7 +2142,7 @@ paths:
       operationId: obterResumoCaso
       description: |
         Retorna o resumo de qualificação do caso.
-        
+
         Identifique o contato por `lead_id` OU `phone` (aceita UUID ou telefone).
       parameters:
         - name: lead_id
@@ -2156,7 +2156,7 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Resumo do caso
           content:
             application/json:
@@ -2202,7 +2202,7 @@ paths:
                   type: string
                   description: Resumo formatado do caso
       responses:
-        "200":
+        '200':
           description: Resumo atualizado
 
     delete:
@@ -2221,7 +2221,7 @@ paths:
           schema:
             type: string
       responses:
-        "200":
+        '200':
           description: Resumo removido
 
 components:
@@ -2357,21 +2357,21 @@ components:
           type: string
           enum: [cold, warm, hot]
         etapa_funil:
-          $ref: "#/components/schemas/EtapaFunil"
+          $ref: '#/components/schemas/EtapaFunil'
         funnel_stage:
-          $ref: "#/components/schemas/EtapaFunil"
+          $ref: '#/components/schemas/EtapaFunil'
         etiquetas:
           type: array
           items:
-            $ref: "#/components/schemas/EtiquetaCompleta"
+            $ref: '#/components/schemas/EtiquetaCompleta'
         labels:
           type: array
           items:
-            $ref: "#/components/schemas/EtiquetaCompleta"
+            $ref: '#/components/schemas/EtiquetaCompleta'
         responsavel:
-          $ref: "#/components/schemas/Responsavel"
+          $ref: '#/components/schemas/Responsavel'
         assigned_to:
-          $ref: "#/components/schemas/Responsavel"
+          $ref: '#/components/schemas/Responsavel'
         origem:
           type: string
         source:
@@ -2418,13 +2418,13 @@ components:
         nova:
           type: boolean
         responsavel:
-          $ref: "#/components/schemas/Responsavel"
+          $ref: '#/components/schemas/Responsavel'
         assigned_to:
-          $ref: "#/components/schemas/Responsavel"
+          $ref: '#/components/schemas/Responsavel'
         instancia_whatsapp:
-          $ref: "#/components/schemas/InstanciaWhatsApp"
+          $ref: '#/components/schemas/InstanciaWhatsApp'
         whatsapp_instance:
-          $ref: "#/components/schemas/InstanciaWhatsApp"
+          $ref: '#/components/schemas/InstanciaWhatsApp'
         ultima_mensagem_em:
           type: string
           format: date-time
@@ -2509,21 +2509,21 @@ components:
         success:
           type: boolean
         conversa:
-          $ref: "#/components/schemas/ConversaCompleta"
+          $ref: '#/components/schemas/ConversaCompleta'
         conversation:
-          $ref: "#/components/schemas/ConversaCompleta"
+          $ref: '#/components/schemas/ConversaCompleta'
         lead:
-          $ref: "#/components/schemas/LeadCompleto"
+          $ref: '#/components/schemas/LeadCompleto'
         contato:
-          $ref: "#/components/schemas/LeadCompleto"
+          $ref: '#/components/schemas/LeadCompleto'
         mensagens:
           type: array
           items:
-            $ref: "#/components/schemas/Mensagem"
+            $ref: '#/components/schemas/Mensagem'
         messages:
           type: array
           items:
-            $ref: "#/components/schemas/Mensagem"
+            $ref: '#/components/schemas/Mensagem'
 
     ListaConversasResponse:
       type: object
@@ -2535,15 +2535,15 @@ components:
         dados:
           type: array
           items:
-            $ref: "#/components/schemas/ConversaResumo"
+            $ref: '#/components/schemas/ConversaResumo'
         data:
           type: array
           items:
-            $ref: "#/components/schemas/ConversaResumo"
+            $ref: '#/components/schemas/ConversaResumo'
         paginacao:
-          $ref: "#/components/schemas/Paginacao"
+          $ref: '#/components/schemas/Paginacao'
         pagination:
-          $ref: "#/components/schemas/PaginationEN"
+          $ref: '#/components/schemas/PaginationEN'
 
     ConversaResumo:
       type: object
@@ -2644,9 +2644,9 @@ components:
               type: string
               format: date-time
         lead:
-          $ref: "#/components/schemas/LeadCompleto"
+          $ref: '#/components/schemas/LeadCompleto'
         contato:
-          $ref: "#/components/schemas/LeadCompleto"
+          $ref: '#/components/schemas/LeadCompleto'
 
     ConversaAtualizadaResponse:
       type: object
@@ -2699,9 +2699,9 @@ components:
             id:
               type: string
         lead:
-          $ref: "#/components/schemas/LeadCompleto"
+          $ref: '#/components/schemas/LeadCompleto'
         contato:
-          $ref: "#/components/schemas/LeadCompleto"
+          $ref: '#/components/schemas/LeadCompleto'
 
     # ============================================================================
     # RESPONSES DE MENSAGENS
@@ -2724,21 +2724,21 @@ components:
           type: string
           description: ID da mensagem no provedor WhatsApp
         instancia_whatsapp:
-          $ref: "#/components/schemas/InstanciaWhatsApp"
+          $ref: '#/components/schemas/InstanciaWhatsApp'
         whatsapp_instance:
-          $ref: "#/components/schemas/InstanciaWhatsApp"
+          $ref: '#/components/schemas/InstanciaWhatsApp'
         mensagem:
-          $ref: "#/components/schemas/MensagemCompleta"
+          $ref: '#/components/schemas/MensagemCompleta'
         message:
-          $ref: "#/components/schemas/MensagemCompleta"
+          $ref: '#/components/schemas/MensagemCompleta'
         lead:
-          $ref: "#/components/schemas/LeadCompleto"
+          $ref: '#/components/schemas/LeadCompleto'
         contato:
-          $ref: "#/components/schemas/LeadCompleto"
+          $ref: '#/components/schemas/LeadCompleto'
         conversa:
-          $ref: "#/components/schemas/ConversaCompleta"
+          $ref: '#/components/schemas/ConversaCompleta'
         conversation:
-          $ref: "#/components/schemas/ConversaCompleta"
+          $ref: '#/components/schemas/ConversaCompleta'
 
     MensagemRecebidaResponse:
       type: object
@@ -2754,21 +2754,21 @@ components:
         message_id:
           type: string
         instancia_whatsapp:
-          $ref: "#/components/schemas/InstanciaWhatsApp"
+          $ref: '#/components/schemas/InstanciaWhatsApp'
         whatsapp_instance:
-          $ref: "#/components/schemas/InstanciaWhatsApp"
+          $ref: '#/components/schemas/InstanciaWhatsApp'
         mensagem:
-          $ref: "#/components/schemas/MensagemCompleta"
+          $ref: '#/components/schemas/MensagemCompleta'
         message:
-          $ref: "#/components/schemas/MensagemCompleta"
+          $ref: '#/components/schemas/MensagemCompleta'
         lead:
-          $ref: "#/components/schemas/LeadCompleto"
+          $ref: '#/components/schemas/LeadCompleto'
         contato:
-          $ref: "#/components/schemas/LeadCompleto"
+          $ref: '#/components/schemas/LeadCompleto'
         conversa:
-          $ref: "#/components/schemas/ConversaCompleta"
+          $ref: '#/components/schemas/ConversaCompleta'
         conversation:
-          $ref: "#/components/schemas/ConversaCompleta"
+          $ref: '#/components/schemas/ConversaCompleta'
 
     # ============================================================================
     # REQUESTS
@@ -3223,7 +3223,18 @@ components:
           type: string
         categoria:
           type: string
-          enum: [origem, interesse, prioridade, status, beneficio, condicao_saude, desqualificacao, situacao, perda]
+          enum:
+            [
+              origem,
+              interesse,
+              prioridade,
+              status,
+              beneficio,
+              condicao_saude,
+              desqualificacao,
+              situacao,
+              perda,
+            ]
 
     CriarEtiquetaRequest:
       type: object
@@ -3814,10 +3825,10 @@ components:
                 example: false
               erro:
                 type: string
-                example: "API key inválida"
+                example: 'API key inválida'
               error:
                 type: string
-                example: "Invalid API key"
+                example: 'Invalid API key'
 
     RequisicaoInvalida:
       description: Dados inválidos
@@ -3852,7 +3863,7 @@ components:
                 example: false
               erro:
                 type: string
-                example: "Recurso não encontrado"
+                example: 'Recurso não encontrado'
               error:
                 type: string
-                example: "Resource not found"
+                example: 'Resource not found'

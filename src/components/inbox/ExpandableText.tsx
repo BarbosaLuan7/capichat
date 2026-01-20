@@ -10,27 +10,25 @@ interface ExpandableTextProps {
 
 function ExpandableTextComponent({ text, maxLength = 150, className }: ExpandableTextProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  
+
   if (!text || text.length <= maxLength) {
     return <span className={className}>{text}</span>;
   }
 
   return (
-    <div className={cn("relative", className)}>
-      <span>
-        {isExpanded ? text : `${text.substring(0, maxLength)}...`}
-      </span>
+    <div className={cn('relative', className)}>
+      <span>{isExpanded ? text : `${text.substring(0, maxLength)}...`}</span>
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="inline-flex items-center gap-0.5 ml-1 text-primary text-xs font-medium hover:underline"
+        className="ml-1 inline-flex items-center gap-0.5 text-xs font-medium text-primary hover:underline"
       >
         {isExpanded ? (
           <>
-            Ver menos <ChevronUp className="w-3 h-3" />
+            Ver menos <ChevronUp className="h-3 w-3" />
           </>
         ) : (
           <>
-            Ver mais <ChevronDown className="w-3 h-3" />
+            Ver mais <ChevronDown className="h-3 w-3" />
           </>
         )}
       </button>
@@ -38,7 +36,7 @@ function ExpandableTextComponent({ text, maxLength = 150, className }: Expandabl
   );
 }
 
-export const ExpandableText = memo(ExpandableTextComponent, (prev, next) =>
-  prev.text === next.text &&
-  prev.maxLength === next.maxLength
+export const ExpandableText = memo(
+  ExpandableTextComponent,
+  (prev, next) => prev.text === next.text && prev.maxLength === next.maxLength
 );

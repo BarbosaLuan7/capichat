@@ -20,7 +20,8 @@ export function useMessageSearch(searchTerm: string, enabled = true) {
       // Search messages containing the term
       const { data: messages, error } = await supabase
         .from('messages')
-        .select(`
+        .select(
+          `
           id,
           content,
           conversation_id,
@@ -32,7 +33,8 @@ export function useMessageSearch(searchTerm: string, enabled = true) {
               phone
             )
           )
-        `)
+        `
+        )
         .ilike('content', `%${searchTerm}%`)
         .eq('type', 'text')
         .order('created_at', { ascending: false })

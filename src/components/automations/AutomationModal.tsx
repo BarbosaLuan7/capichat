@@ -3,12 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Plus, Trash2, Loader2, Info } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Form,
   FormControl,
@@ -31,12 +26,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ConditionBuilder, AutomationCondition } from './ConditionBuilder';
 import { ActionBuilder, AutomationActionConfig } from './ActionBuilder';
 import type { Database } from '@/integrations/supabase/types';
@@ -71,22 +61,50 @@ interface AutomationModalProps {
 }
 
 const triggerOptions: { value: AutomationTrigger; label: string; description: string }[] = [
-  { value: 'lead_created', label: 'Novo lead criado', description: 'Quando um novo lead é cadastrado no sistema' },
-  { value: 'lead_stage_changed', label: 'Lead mudou de etapa', description: 'Quando um lead muda de etapa no funil' },
-  { value: 'lead_temperature_changed', label: 'Temperatura alterada', description: 'Quando a temperatura do lead muda' },
-  { value: 'lead_no_response', label: 'Lead sem resposta', description: 'Quando um lead não responde há X horas' },
-  { value: 'lead_label_added', label: 'Etiqueta adicionada', description: 'Quando uma etiqueta é adicionada ao lead' },
-  { value: 'task_overdue', label: 'Tarefa vencida', description: 'Quando uma tarefa passa da data de vencimento' },
-  { value: 'conversation_no_response', label: 'Conversa sem resposta', description: 'Quando uma conversa fica sem resposta' },
+  {
+    value: 'lead_created',
+    label: 'Novo lead criado',
+    description: 'Quando um novo lead é cadastrado no sistema',
+  },
+  {
+    value: 'lead_stage_changed',
+    label: 'Lead mudou de etapa',
+    description: 'Quando um lead muda de etapa no funil',
+  },
+  {
+    value: 'lead_temperature_changed',
+    label: 'Temperatura alterada',
+    description: 'Quando a temperatura do lead muda',
+  },
+  {
+    value: 'lead_no_response',
+    label: 'Lead sem resposta',
+    description: 'Quando um lead não responde há X horas',
+  },
+  {
+    value: 'lead_label_added',
+    label: 'Etiqueta adicionada',
+    description: 'Quando uma etiqueta é adicionada ao lead',
+  },
+  {
+    value: 'task_overdue',
+    label: 'Tarefa vencida',
+    description: 'Quando uma tarefa passa da data de vencimento',
+  },
+  {
+    value: 'conversation_no_response',
+    label: 'Conversa sem resposta',
+    description: 'Quando uma conversa fica sem resposta',
+  },
 ];
 
-export const AutomationModal = ({ 
-  open, 
-  onOpenChange, 
-  automation, 
-  onSave, 
+export const AutomationModal = ({
+  open,
+  onOpenChange,
+  automation,
+  onSave,
   onDelete,
-  isSaving = false 
+  isSaving = false,
 }: AutomationModalProps) => {
   const [conditions, setConditions] = useState<AutomationCondition[]>([]);
   const [actions, setActions] = useState<AutomationActionConfig[]>([]);
@@ -111,10 +129,10 @@ export const AutomationModal = ({
         is_active: automation.is_active,
         trigger: automation.trigger,
       });
-      const parsedConditions = Array.isArray(automation.conditions) 
+      const parsedConditions = Array.isArray(automation.conditions)
         ? (automation.conditions as unknown as AutomationCondition[])
         : [];
-      const parsedActions = Array.isArray(automation.actions) 
+      const parsedActions = Array.isArray(automation.actions)
         ? (automation.actions as unknown as AutomationActionConfig[])
         : [];
       setConditions(parsedConditions);
@@ -144,14 +162,11 @@ export const AutomationModal = ({
   };
 
   const addCondition = () => {
-    setConditions([
-      ...conditions,
-      { field: 'stage_id', operator: 'equals', value: '' },
-    ]);
+    setConditions([...conditions, { field: 'stage_id', operator: 'equals', value: '' }]);
   };
 
   const updateCondition = (index: number, updates: Partial<AutomationCondition>) => {
-    setConditions(conditions.map((c, i) => i === index ? { ...c, ...updates } : c));
+    setConditions(conditions.map((c, i) => (i === index ? { ...c, ...updates } : c)));
   };
 
   const removeCondition = (index: number) => {
@@ -159,26 +174,23 @@ export const AutomationModal = ({
   };
 
   const addAction = () => {
-    setActions([
-      ...actions,
-      { type: 'notify_user', params: {} },
-    ]);
+    setActions([...actions, { type: 'notify_user', params: {} }]);
   };
 
   const updateAction = (index: number, updates: Partial<AutomationActionConfig>) => {
-    setActions(actions.map((a, i) => i === index ? { ...a, ...updates } : a));
+    setActions(actions.map((a, i) => (i === index ? { ...a, ...updates } : a)));
   };
 
   const removeAction = (index: number) => {
     setActions(actions.filter((_, i) => i !== index));
   };
 
-  const selectedTrigger = triggerOptions.find(t => t.value === watchTrigger);
+  const selectedTrigger = triggerOptions.find((t) => t.value === watchTrigger);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="px-6 pt-6 pb-4">
+      <DialogContent className="flex max-h-[90vh] flex-col p-0 sm:max-w-[800px]">
+        <DialogHeader className="px-6 pb-4 pt-6">
           <DialogTitle className="text-xl">
             {automation ? 'Editar Automação' : 'Nova Automação'}
           </DialogTitle>
@@ -188,7 +200,7 @@ export const AutomationModal = ({
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 pb-6">
               {/* Status Toggle */}
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
                 <div className="flex items-center gap-2">
                   <FormField
                     control={form.control}
@@ -200,7 +212,9 @@ export const AutomationModal = ({
                         </FormControl>
                         <FormLabel className="!mt-0 font-normal">
                           {field.value ? (
-                            <Badge variant="default" className="bg-success">Ativa</Badge>
+                            <Badge variant="default" className="bg-success">
+                              Ativa
+                            </Badge>
                           ) : (
                             <Badge variant="secondary">Inativa</Badge>
                           )}
@@ -217,7 +231,7 @@ export const AutomationModal = ({
                     className="text-destructive hover:text-destructive"
                     onClick={() => onDelete(automation.id)}
                   >
-                    <Trash2 className="w-4 h-4 mr-1" />
+                    <Trash2 className="mr-1 h-4 w-4" />
                     Excluir
                   </Button>
                 )}
@@ -268,10 +282,10 @@ export const AutomationModal = ({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
-                        <Info className="w-4 h-4 text-muted-foreground" />
+                        <Info className="h-4 w-4 text-muted-foreground" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p className="text-xs max-w-xs">
+                        <p className="max-w-xs text-xs">
                           O gatilho define quando a automação será executada
                         </p>
                       </TooltipContent>
@@ -295,7 +309,9 @@ export const AutomationModal = ({
                             <SelectItem key={opt.value} value={opt.value}>
                               <div>
                                 <div className="font-medium">{opt.label}</div>
-                                <div className="text-xs text-muted-foreground">{opt.description}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {opt.description}
+                                </div>
                               </div>
                             </SelectItem>
                           ))}
@@ -307,7 +323,7 @@ export const AutomationModal = ({
                 />
 
                 {selectedTrigger && (
-                  <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                  <p className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
                     💡 {selectedTrigger.description}
                   </p>
                 )}
@@ -320,17 +336,20 @@ export const AutomationModal = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <h3 className="text-base font-semibold">Condições</h3>
-                    <Badge variant="secondary" className="text-xs">Opcional</Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      Opcional
+                    </Badge>
                   </div>
                   <Button type="button" variant="outline" size="sm" onClick={addCondition}>
-                    <Plus className="w-4 h-4 mr-1" />
+                    <Plus className="mr-1 h-4 w-4" />
                     Adicionar condição
                   </Button>
                 </div>
 
                 {conditions.length === 0 ? (
-                  <div className="text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg text-center">
-                    Nenhuma condição definida. A automação será executada sempre que o gatilho ocorrer.
+                  <div className="rounded-lg bg-muted/50 p-4 text-center text-sm text-muted-foreground">
+                    Nenhuma condição definida. A automação será executada sempre que o gatilho
+                    ocorrer.
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -346,7 +365,8 @@ export const AutomationModal = ({
                     ))}
                     {conditions.length > 1 && (
                       <p className="text-xs text-muted-foreground">
-                        ⚠️ Todas as condições devem ser verdadeiras para a automação executar (E lógico)
+                        ⚠️ Todas as condições devem ser verdadeiras para a automação executar (E
+                        lógico)
                       </p>
                     )}
                   </div>
@@ -360,16 +380,18 @@ export const AutomationModal = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <h3 className="text-base font-semibold">Ações</h3>
-                    <Badge variant="default" className="text-xs">Obrigatório</Badge>
+                    <Badge variant="default" className="text-xs">
+                      Obrigatório
+                    </Badge>
                   </div>
                   <Button type="button" variant="outline" size="sm" onClick={addAction}>
-                    <Plus className="w-4 h-4 mr-1" />
+                    <Plus className="mr-1 h-4 w-4" />
                     Adicionar ação
                   </Button>
                 </div>
 
                 {actions.length === 0 ? (
-                  <div className="text-sm text-muted-foreground bg-amber-500/10 border border-amber-500/20 p-4 rounded-lg text-center">
+                  <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4 text-center text-sm text-muted-foreground">
                     ⚠️ Adicione pelo menos uma ação para a automação funcionar
                   </div>
                 ) : (
@@ -396,7 +418,7 @@ export const AutomationModal = ({
         </ScrollArea>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t bg-muted/30">
+        <div className="flex items-center justify-end gap-2 border-t bg-muted/30 px-6 py-4">
           <Button
             type="button"
             variant="outline"
@@ -412,7 +434,7 @@ export const AutomationModal = ({
           >
             {isSaving ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Salvando...
               </>
             ) : (

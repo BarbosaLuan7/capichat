@@ -4,23 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger';
-import {
-  Search,
-  Plus,
-  ArrowUpDown,
-  Upload,
-} from 'lucide-react';
+import { Search, Plus, ArrowUpDown, Upload } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,8 +42,12 @@ import {
 } from '@/components/ui/pagination';
 
 // Lazy load heavy modals
-const LeadModal = lazy(() => import('@/components/leads/LeadModal').then(m => ({ default: m.LeadModal })));
-const LeadImportModal = lazy(() => import('@/components/leads/LeadImportModal').then(m => ({ default: m.LeadImportModal })));
+const LeadModal = lazy(() =>
+  import('@/components/leads/LeadModal').then((m) => ({ default: m.LeadModal }))
+);
+const LeadImportModal = lazy(() =>
+  import('@/components/leads/LeadImportModal').then((m) => ({ default: m.LeadImportModal }))
+);
 
 const PAGE_SIZE = 50;
 
@@ -66,12 +59,12 @@ const Leads = () => {
   const leads = leadsData?.leads || [];
   const totalCount = leadsData?.totalCount || 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-  
+
   const { data: funnelStages } = useFunnelStages();
   const { data: allLabels } = useLabels();
   const { data: profiles } = useProfiles();
   const deleteLead = useDeleteLead();
-  
+
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -93,14 +86,14 @@ const Leads = () => {
 
   const filteredLeads = useMemo(() => {
     if (!leads) return [];
-    
+
     return leads.filter((lead) => {
       // Search filter (using debounced value)
       const matchesSearch =
         lead.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
         lead.phone.includes(debouncedSearchQuery) ||
         lead.email?.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
-      
+
       if (!matchesSearch) return false;
 
       // Stage filter
@@ -123,8 +116,10 @@ const Leads = () => {
       if (filters.dateRange?.from) {
         const leadDate = new Date(lead.created_at);
         const from = startOfDay(filters.dateRange.from);
-        const to = filters.dateRange.to ? endOfDay(filters.dateRange.to) : endOfDay(filters.dateRange.from);
-        
+        const to = filters.dateRange.to
+          ? endOfDay(filters.dateRange.to)
+          : endOfDay(filters.dateRange.from);
+
         if (!isWithinInterval(leadDate, { start: from, end: to })) return false;
       }
 
@@ -147,10 +142,8 @@ const Leads = () => {
   }, [selectedLeads.length, filteredLeads]);
 
   const handleToggleSelect = useCallback((leadId: string) => {
-    setSelectedLeads(prev => 
-      prev.includes(leadId) 
-        ? prev.filter((id) => id !== leadId)
-        : [...prev, leadId]
+    setSelectedLeads((prev) =>
+      prev.includes(leadId) ? prev.filter((id) => id !== leadId) : [...prev, leadId]
     );
   }, []);
 
@@ -190,40 +183,43 @@ const Leads = () => {
     setLeadToDelete(null);
   };
 
-  const handleOpenConversation = useCallback(async (leadId: string) => {
-    try {
-      // Check for existing conversation
-      const { data: existingConv } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('lead_id', leadId)
-        .maybeSingle();
-
-      if (existingConv) {
-        navigate(`/inbox?conversation=${existingConv.id}`);
-      } else {
-        // Create new conversation
-        const { data: newConv, error } = await supabase
+  const handleOpenConversation = useCallback(
+    async (leadId: string) => {
+      try {
+        // Check for existing conversation
+        const { data: existingConv } = await supabase
           .from('conversations')
-          .insert({
-            lead_id: leadId,
-            status: 'open',
-            assigned_to: user?.id,
-          })
           .select('id')
-          .single();
+          .eq('lead_id', leadId)
+          .maybeSingle();
 
-        if (error) throw error;
-        navigate(`/inbox?conversation=${newConv.id}`);
+        if (existingConv) {
+          navigate(`/inbox?conversation=${existingConv.id}`);
+        } else {
+          // Create new conversation
+          const { data: newConv, error } = await supabase
+            .from('conversations')
+            .insert({
+              lead_id: leadId,
+              status: 'open',
+              assigned_to: user?.id,
+            })
+            .select('id')
+            .single();
+
+          if (error) throw error;
+          navigate(`/inbox?conversation=${newConv.id}`);
+        }
+      } catch (error) {
+        logger.error('Error opening conversation:', error);
+        toast.error('Erro ao abrir conversa');
       }
-    } catch (error) {
-      logger.error('Error opening conversation:', error);
-      toast.error('Erro ao abrir conversa');
-    }
-  }, [navigate, user?.id]);
+    },
+    [navigate, user?.id]
+  );
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-6">
       <PageBreadcrumb items={[{ label: 'Leads' }]} />
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -235,11 +231,14 @@ const Leads = () => {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setImportModalOpen(true)} className="gap-2">
-            <Upload className="w-4 h-4" />
+            <Upload className="h-4 w-4" />
             Importar CSV
           </Button>
-          <Button onClick={handleNewLead} className="gradient-primary text-primary-foreground gap-2">
-            <Plus className="w-4 h-4" />
+          <Button
+            onClick={handleNewLead}
+            className="gradient-primary gap-2 text-primary-foreground"
+          >
+            <Plus className="h-4 w-4" />
             Novo Lead
           </Button>
         </div>
@@ -247,14 +246,17 @@ const Leads = () => {
 
       {/* Filters */}
       <Card className="p-4">
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex flex-wrap items-center gap-4">
           <div className="relative min-w-[200px] max-w-xs" role="search">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
+            <Search
+              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
             <Input
               placeholder="Buscar..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9"
+              className="h-9 pl-9"
               aria-label="Buscar leads por nome, telefone ou email"
             />
           </div>
@@ -270,10 +272,7 @@ const Leads = () => {
       </Card>
 
       {/* Bulk Actions Bar */}
-      <BulkActionsBar
-        selectedIds={selectedLeads}
-        onClearSelection={() => setSelectedLeads([])}
-      />
+      <BulkActionsBar selectedIds={selectedLeads} onClearSelection={() => setSelectedLeads([])} />
 
       {/* Table */}
       <Card>
@@ -282,15 +281,17 @@ const Leads = () => {
             <TableRow>
               <TableHead className="w-12">
                 <Checkbox
-                  checked={selectedLeads.length === filteredLeads.length && filteredLeads.length > 0}
+                  checked={
+                    selectedLeads.length === filteredLeads.length && filteredLeads.length > 0
+                  }
                   onCheckedChange={toggleSelectAll}
                   aria-label="Selecionar todos os leads"
                 />
               </TableHead>
               <TableHead>
-                <Button variant="ghost" className="gap-2 -ml-4 font-semibold">
+                <Button variant="ghost" className="-ml-4 gap-2 font-semibold">
                   Lead
-                  <ArrowUpDown className="w-4 h-4" />
+                  <ArrowUpDown className="h-4 w-4" />
                 </Button>
               </TableHead>
               <TableHead>Contato</TableHead>
@@ -328,20 +329,23 @@ const Leads = () => {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+          <div className="flex items-center justify-between border-t border-border px-4 py-3">
             <p className="text-sm text-muted-foreground">
-              Mostrando {((currentPage - 1) * PAGE_SIZE) + 1}-{Math.min(currentPage * PAGE_SIZE, totalCount)} de {totalCount}
+              Mostrando {(currentPage - 1) * PAGE_SIZE + 1}-
+              {Math.min(currentPage * PAGE_SIZE, totalCount)} de {totalCount}
             </p>
             <Pagination>
               <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    className={
+                      currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'
+                    }
                     aria-label="Página anterior"
                   />
                 </PaginationItem>
-                
+
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   let pageNum: number;
                   if (totalPages <= 5) {
@@ -365,11 +369,15 @@ const Leads = () => {
                     </PaginationItem>
                   );
                 })}
-                
+
                 <PaginationItem>
                   <PaginationNext
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    className={
+                      currentPage === totalPages
+                        ? 'pointer-events-none opacity-50'
+                        : 'cursor-pointer'
+                    }
                     aria-label="Próxima página"
                   />
                 </PaginationItem>
@@ -394,10 +402,7 @@ const Leads = () => {
       {/* Import Modal - Lazy loaded */}
       <Suspense fallback={null}>
         {importModalOpen && (
-          <LeadImportModal
-            open={importModalOpen}
-            onOpenChange={setImportModalOpen}
-          />
+          <LeadImportModal open={importModalOpen} onOpenChange={setImportModalOpen} />
         )}
       </Suspense>
 
@@ -412,7 +417,10 @@ const Leads = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground"
+            >
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -1,6 +1,15 @@
 import { useState, memo } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, ThermometerSun, Tag, Check, X, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import {
+  Sparkles,
+  ThermometerSun,
+  Tag,
+  Check,
+  X,
+  ChevronDown,
+  ChevronUp,
+  RefreshCw,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -39,8 +48,9 @@ function AIClassificationSuggestionComponent({
 }: AIClassificationSuggestionProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isDismissed, setIsDismissed] = useState(false);
-  
-  const { classification, isLoading, fetchClassification, clearClassification } = useAIClassification();
+
+  const { classification, isLoading, fetchClassification, clearClassification } =
+    useAIClassification();
   const { data: availableLabels } = useLabels();
   const addLeadLabel = useAddLeadLabel();
   const updateLead = useUpdateLead();
@@ -88,7 +98,7 @@ function AIClassificationSuggestionComponent({
 
   const handleApplyAll = async () => {
     if (!classification) return;
-    
+
     try {
       // Apply temperature
       if (classification.suggestedTemperature !== lead.temperature) {
@@ -97,15 +107,15 @@ function AIClassificationSuggestionComponent({
           temperature: classification.suggestedTemperature,
         });
       }
-      
+
       // Apply labels
-      const currentLabelNames = lead.labels?.map(l => l.name) || [];
+      const currentLabelNames = lead.labels?.map((l) => l.name) || [];
       const newLabels = classification.suggestedLabels.filter(
-        name => !currentLabelNames.includes(name)
+        (name) => !currentLabelNames.includes(name)
       );
-      
+
       for (const labelName of newLabels) {
-        const label = availableLabels?.find(l => l.name === labelName);
+        const label = availableLabels?.find((l) => l.name === labelName);
         if (label) {
           await addLeadLabel.mutateAsync({
             leadId: lead.id,
@@ -113,7 +123,7 @@ function AIClassificationSuggestionComponent({
           });
         }
       }
-      
+
       toast.success('Todas as sugestões aplicadas');
       onApplyClassification?.();
       clearClassification();
@@ -129,10 +139,10 @@ function AIClassificationSuggestionComponent({
 
   if (isDismissed || (!isLoading && !classification)) {
     return (
-      <div className="p-3 rounded-lg bg-muted/50 border border-border">
+      <div className="rounded-lg border border-border bg-muted/50 p-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Tag className="w-4 h-4" />
+            <Tag className="h-4 w-4" />
             <span>Classificação IA</span>
           </div>
           <Button
@@ -142,14 +152,12 @@ function AIClassificationSuggestionComponent({
             onClick={handleRefresh}
             disabled={!messages || messages.length === 0}
           >
-            <RefreshCw className="w-3 h-3 mr-1" />
+            <RefreshCw className="mr-1 h-3 w-3" />
             Analisar
           </Button>
         </div>
         {(!messages || messages.length === 0) && (
-          <p className="text-xs text-muted-foreground mt-2">
-            Sem mensagens para analisar
-          </p>
+          <p className="mt-2 text-xs text-muted-foreground">Sem mensagens para analisar</p>
         )}
       </div>
     );
@@ -157,9 +165,9 @@ function AIClassificationSuggestionComponent({
 
   if (isLoading) {
     return (
-      <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Sparkles className="w-4 h-4 animate-pulse text-primary" />
+          <Sparkles className="h-4 w-4 animate-pulse text-primary" />
           <span>Analisando conversa...</span>
         </div>
       </div>
@@ -170,10 +178,10 @@ function AIClassificationSuggestionComponent({
     return null;
   }
 
-  const currentLabelNames = lead.labels?.map(l => l.name) || [];
+  const currentLabelNames = lead.labels?.map((l) => l.name) || [];
   const temperatureChanged = classification.suggestedTemperature !== lead.temperature;
   const newLabels = classification.suggestedLabels.filter(
-    name => !currentLabelNames.includes(name)
+    (name) => !currentLabelNames.includes(name)
   );
   const hasChanges = temperatureChanged || newLabels.length > 0;
 
@@ -182,14 +190,17 @@ function AIClassificationSuggestionComponent({
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
-      className="p-3 rounded-lg bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20"
+      className="rounded-lg border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 p-3"
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-primary" />
+          <Sparkles className="h-4 w-4 text-primary" />
           <span className="text-xs font-medium text-primary">Classificação IA</span>
-          <Badge variant="outline" className={cn('text-xs px-2', confidenceLabels[classification.confidence].color)}>
+          <Badge
+            variant="outline"
+            className={cn('px-2 text-xs', confidenceLabels[classification.confidence].color)}
+          >
             Confiança: {confidenceLabels[classification.confidence].label}
           </Badge>
         </div>
@@ -201,7 +212,7 @@ function AIClassificationSuggestionComponent({
             onClick={handleRefresh}
             title="Reanalisar"
           >
-            <RefreshCw className="w-3 h-3" />
+            <RefreshCw className="h-3 w-3" />
           </Button>
           <Button
             variant="ghost"
@@ -210,7 +221,11 @@ function AIClassificationSuggestionComponent({
             onClick={() => setIsExpanded(!isExpanded)}
             title={isExpanded ? 'Recolher' : 'Expandir'}
           >
-            {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            {isExpanded ? (
+              <ChevronUp className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5" />
+            )}
           </Button>
           <Button
             variant="ghost"
@@ -219,17 +234,13 @@ function AIClassificationSuggestionComponent({
             onClick={handleDismiss}
             title="Dispensar sugestão"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
 
       {isExpanded && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="space-y-3"
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
           {/* Benefit suggestion */}
           {classification.suggestedBenefit && (
             <div className="text-sm">
@@ -242,11 +253,14 @@ function AIClassificationSuggestionComponent({
           {temperatureChanged && (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ThermometerSun className="w-3.5 h-3.5 text-muted-foreground" />
+                <ThermometerSun className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-sm">Temperatura:</span>
-                <Badge 
-                  variant="outline" 
-                  className={cn('text-xs', temperatureLabels[classification.suggestedTemperature].color)}
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'text-xs',
+                    temperatureLabels[classification.suggestedTemperature].color
+                  )}
                 >
                   {temperatureLabels[classification.suggestedTemperature].label}
                 </Badge>
@@ -257,7 +271,7 @@ function AIClassificationSuggestionComponent({
                 className="h-6 px-2 text-xs text-primary"
                 onClick={() => handleApplyTemperature(classification.suggestedTemperature)}
               >
-                <Check className="w-3 h-3 mr-1" />
+                <Check className="mr-1 h-3 w-3" />
                 Aplicar
               </Button>
             </div>
@@ -267,7 +281,7 @@ function AIClassificationSuggestionComponent({
           {newLabels.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Tag className="w-3.5 h-3.5 text-muted-foreground" />
+                <Tag className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-sm">Etiquetas sugeridas:</span>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -277,12 +291,12 @@ function AIClassificationSuggestionComponent({
                   return (
                     <Badge
                       key={label.id}
-                      className="text-xs cursor-pointer hover:opacity-80 border-0 gap-1"
+                      className="cursor-pointer gap-1 border-0 text-xs hover:opacity-80"
                       style={{ backgroundColor: label.color, color: 'white' }}
                       onClick={() => handleApplyLabel(label.id)}
                     >
                       {label.name}
-                      <Check className="w-2.5 h-2.5" />
+                      <Check className="h-2.5 w-2.5" />
                     </Badge>
                   );
                 })}
@@ -299,18 +313,16 @@ function AIClassificationSuggestionComponent({
           )}
 
           {/* Reasoning */}
-          <p className="text-xs text-muted-foreground italic">
-            {classification.reasoning}
-          </p>
+          <p className="text-xs italic text-muted-foreground">{classification.reasoning}</p>
 
           {/* Apply all button */}
           {hasChanges && (
             <Button
               size="sm"
-              className="w-full text-xs gradient-primary text-primary-foreground"
+              className="gradient-primary w-full text-xs text-primary-foreground"
               onClick={handleApplyAll}
             >
-              <Sparkles className="w-3 h-3 mr-1" />
+              <Sparkles className="mr-1 h-3 w-3" />
               Aplicar Todas as Sugestões
             </Button>
           )}
@@ -320,7 +332,7 @@ function AIClassificationSuggestionComponent({
   );
 }
 
-export const AIClassificationSuggestion = memo(AIClassificationSuggestionComponent, (prev, next) =>
-  prev.lead.id === next.lead.id &&
-  prev.messages?.length === next.messages?.length
+export const AIClassificationSuggestion = memo(
+  AIClassificationSuggestionComponent,
+  (prev, next) => prev.lead.id === next.lead.id && prev.messages?.length === next.messages?.length
 );

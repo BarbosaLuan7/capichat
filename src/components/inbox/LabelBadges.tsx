@@ -1,11 +1,6 @@
 import { memo } from 'react';
 import { Badge } from '@/components/ui/badge';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn, getContrastTextColor } from '@/lib/utils';
 
 interface Label {
@@ -27,12 +22,11 @@ function LabelBadgesComponent({ labels, maxVisible = 2, size = 'sm' }: LabelBadg
   const hiddenLabels = labels.slice(maxVisible);
   const hasHidden = hiddenLabels.length > 0;
 
-  const badgeClasses = size === 'sm' 
-    ? 'text-2xs px-1.5 py-0 h-5 border-0' 
-    : 'text-xs px-2 py-0.5 border-0';
+  const badgeClasses =
+    size === 'sm' ? 'text-2xs px-1.5 py-0 h-5 border-0' : 'text-xs px-2 py-0.5 border-0';
 
   return (
-    <div className="flex items-center gap-1 flex-wrap">
+    <div className="flex flex-wrap items-center gap-1">
       {visibleLabels.map((label) => (
         <Badge
           key={label.id}
@@ -45,7 +39,7 @@ function LabelBadgesComponent({ labels, maxVisible = 2, size = 'sm' }: LabelBadg
           {label.name}
         </Badge>
       ))}
-      
+
       {hasHidden && (
         <TooltipProvider delayDuration={200}>
           <Tooltip>
@@ -60,7 +54,7 @@ function LabelBadgesComponent({ labels, maxVisible = 2, size = 'sm' }: LabelBadg
                   <Badge
                     key={label.id}
                     className={cn(
-                      "text-2xs px-1.5 py-0 border-0",
+                      'text-2xs border-0 px-1.5 py-0',
                       getContrastTextColor(label.color)
                     )}
                     style={{
@@ -79,9 +73,11 @@ function LabelBadgesComponent({ labels, maxVisible = 2, size = 'sm' }: LabelBadg
   );
 }
 
-export const LabelBadges = memo(LabelBadgesComponent, (prev, next) =>
-  prev.maxVisible === next.maxVisible &&
-  prev.size === next.size &&
-  prev.labels?.length === next.labels?.length &&
-  (prev.labels || []).every((l, i) => l.id === next.labels?.[i]?.id)
+export const LabelBadges = memo(
+  LabelBadgesComponent,
+  (prev, next) =>
+    prev.maxVisible === next.maxVisible &&
+    prev.size === next.size &&
+    prev.labels?.length === next.labels?.length &&
+    (prev.labels || []).every((l, i) => l.id === next.labels?.[i]?.id)
 );

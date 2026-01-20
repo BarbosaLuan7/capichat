@@ -3,12 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Eye, EyeOff, RefreshCw, Copy, Check } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Form,
   FormControl,
@@ -34,16 +29,18 @@ import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
-const createUserSchema = z.object({
-  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
-  confirmPassword: z.string(),
-  role: z.enum(['admin', 'manager', 'agent', 'viewer']),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'Senhas não conferem',
-  path: ['confirmPassword'],
-});
+const createUserSchema = z
+  .object({
+    name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+    email: z.string().email('Email inválido'),
+    password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
+    confirmPassword: z.string(),
+    role: z.enum(['admin', 'manager', 'agent', 'viewer']),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Senhas não conferem',
+    path: ['confirmPassword'],
+  });
 
 type CreateUserFormData = z.infer<typeof createUserSchema>;
 
@@ -173,7 +170,11 @@ export const CreateUserModal = ({ open, onOpenChange }: CreateUserModalProps) =>
                           className="absolute right-0 top-0 h-full"
                           onClick={() => setShowPassword(!showPassword)}
                         >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
                     </FormControl>
@@ -193,7 +194,11 @@ export const CreateUserModal = ({ open, onOpenChange }: CreateUserModalProps) =>
                       onClick={handleCopyPassword}
                       title="Copiar senha"
                     >
-                      {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                      {copied ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                   <FormMessage />
@@ -238,7 +243,7 @@ export const CreateUserModal = ({ open, onOpenChange }: CreateUserModalProps) =>
                         <SelectItem key={role} value={role}>
                           <div className="flex flex-col items-start py-1">
                             <span className="font-medium">{getRoleLabel(role)}</span>
-                            <span className="text-xs text-muted-foreground max-w-[300px] whitespace-normal">
+                            <span className="max-w-[300px] whitespace-normal text-xs text-muted-foreground">
                               {getRoleDescription(role)}
                             </span>
                           </div>
@@ -253,11 +258,7 @@ export const CreateUserModal = ({ open, onOpenChange }: CreateUserModalProps) =>
 
             {/* Botões */}
             <div className="flex justify-end gap-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={createUser.isPending}>

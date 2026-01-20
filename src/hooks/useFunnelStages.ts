@@ -9,7 +9,7 @@ type FunnelStageUpdate = Database['public']['Tables']['funnel_stages']['Update']
 
 export function useFunnelStages() {
   const { currentTenant, tenants } = useTenant();
-  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map(t => t.id);
+  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map((t) => t.id);
 
   return useQuery({
     queryKey: ['funnel_stages', currentTenant?.id || 'all'],
@@ -25,7 +25,7 @@ export function useFunnelStages() {
       }
 
       const { data, error } = await queryBuilder;
-      
+
       if (error) throw error;
       return data as FunnelStage[];
     },
@@ -41,12 +41,8 @@ export function useCreateFunnelStage() {
 
   return useMutation({
     mutationFn: async (stage: FunnelStageInsert) => {
-      const { data, error } = await supabase
-        .from('funnel_stages')
-        .insert(stage)
-        .select()
-        .single();
-      
+      const { data, error } = await supabase.from('funnel_stages').insert(stage).select().single();
+
       if (error) throw error;
       return data;
     },
@@ -67,7 +63,7 @@ export function useUpdateFunnelStage() {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -82,11 +78,8 @@ export function useDeleteFunnelStage() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('funnel_stages')
-        .delete()
-        .eq('id', id);
-      
+      const { error } = await supabase.from('funnel_stages').delete().eq('id', id);
+
       if (error) throw error;
     },
     onSuccess: () => {

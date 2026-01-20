@@ -29,7 +29,11 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { useUpdateProfile, useUpdateUserRole, type ProfileWithRelations } from '@/hooks/useProfiles';
+import {
+  useUpdateProfile,
+  useUpdateUserRole,
+  type ProfileWithRelations,
+} from '@/hooks/useProfiles';
 import { getRoleLabel, getRoleDescription, SELECTABLE_ROLES } from '@/lib/permissions';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -52,12 +56,7 @@ interface UserEditModalProps {
   userRole: AppRole;
 }
 
-export const UserEditModal = ({
-  open,
-  onOpenChange,
-  user,
-  userRole,
-}: UserEditModalProps) => {
+export const UserEditModal = ({ open, onOpenChange, user, userRole }: UserEditModalProps) => {
   const updateProfile = useUpdateProfile();
   const updateUserRole = useUpdateUserRole();
 
@@ -115,7 +114,7 @@ export const UserEditModal = ({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg p-0 flex flex-col">
+      <SheetContent className="flex w-full flex-col p-0 sm:max-w-lg">
         <SheetHeader className="p-6 pb-0">
           <SheetTitle>Informações do usuário</SheetTitle>
           <SheetDescription>Editar dados e perfil de acesso do usuário</SheetDescription>
@@ -123,7 +122,7 @@ export const UserEditModal = ({
 
         <ScrollArea className="flex-1">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="p-6 space-y-5">
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5 p-6">
               {/* Nome */}
               <FormField
                 control={form.control}
@@ -195,11 +194,11 @@ export const UserEditModal = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {SELECTABLE_ROLES.map(role => (
+                        {SELECTABLE_ROLES.map((role) => (
                           <SelectItem key={role} value={role} className="py-3">
                             <div className="flex flex-col items-start">
                               <span className="font-medium">{getRoleLabel(role)}</span>
-                              <span className="text-xs text-muted-foreground max-w-[280px] whitespace-normal">
+                              <span className="max-w-[280px] whitespace-normal text-xs text-muted-foreground">
                                 {getRoleDescription(role)}
                               </span>
                             </div>
@@ -213,7 +212,7 @@ export const UserEditModal = ({
               />
 
               {/* ID (readonly) */}
-              <div className="pt-4 border-t">
+              <div className="border-t pt-4">
                 <p className="text-xs text-muted-foreground">
                   Id: <span className="font-mono">{user?.id}</span>
                 </p>
@@ -221,8 +220,8 @@ export const UserEditModal = ({
 
               {/* Botões */}
               <div className="flex justify-end gap-2 pt-4">
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={() => onOpenChange(false)}
                   disabled={isLoading}
@@ -230,7 +229,7 @@ export const UserEditModal = ({
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={isLoading}>
-                  {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Salvar
                 </Button>
               </div>

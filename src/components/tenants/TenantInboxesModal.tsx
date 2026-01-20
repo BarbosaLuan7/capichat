@@ -51,35 +51,35 @@ export function TenantInboxesModal({ open, onOpenChange, tenant }: TenantInboxes
   const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
   const [configToRemove, setConfigToRemove] = useState<{ id: string; name: string } | null>(null);
 
-  const { data: tenantInboxes, isLoading: loadingTenantInboxes } = useTenantWhatsAppConfigs(tenant?.id);
+  const { data: tenantInboxes, isLoading: loadingTenantInboxes } = useTenantWhatsAppConfigs(
+    tenant?.id
+  );
   const { data: allConfigs, isLoading: loadingAllConfigs } = useWhatsAppConfigs();
   const assignWhatsApp = useAssignWhatsAppToTenant();
 
   // Filter configs that are not assigned to any tenant
-  const availableConfigs = (allConfigs || []).filter(
-    (config) => !(config as any).tenant_id
-  );
+  const availableConfigs = (allConfigs || []).filter((config) => !(config as any).tenant_id);
 
   const handleAssignInbox = async () => {
     if (!tenant || !selectedConfigId) return;
-    
+
     await assignWhatsApp.mutateAsync({
       configId: selectedConfigId,
       tenantId: tenant.id,
     });
-    
+
     setAddingInbox(false);
     setSelectedConfigId('');
   };
 
   const handleRemoveInbox = async () => {
     if (!configToRemove) return;
-    
+
     await assignWhatsApp.mutateAsync({
       configId: configToRemove.id,
       tenantId: null,
     });
-    
+
     setRemoveConfirmOpen(false);
     setConfigToRemove(null);
   };
@@ -94,7 +94,7 @@ export function TenantInboxesModal({ open, onOpenChange, tenant }: TenantInboxes
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="flex max-h-[80vh] flex-col overflow-hidden sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MessageCircle className="h-5 w-5" />
@@ -105,10 +105,10 @@ export function TenantInboxesModal({ open, onOpenChange, tenant }: TenantInboxes
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-auto space-y-4">
+          <div className="flex-1 space-y-4 overflow-auto">
             {/* Add Inbox Section */}
             {addingInbox ? (
-              <div className="flex flex-col sm:flex-row gap-2 p-3 rounded-lg border bg-muted/50">
+              <div className="flex flex-col gap-2 rounded-lg border bg-muted/50 p-3 sm:flex-row">
                 <Select value={selectedConfigId} onValueChange={setSelectedConfigId}>
                   <SelectTrigger className="flex-1">
                     <SelectValue placeholder="Selecione uma caixa de entrada" />
@@ -129,9 +129,7 @@ export function TenantInboxesModal({ open, onOpenChange, tenant }: TenantInboxes
                             <Phone className="h-4 w-4 text-muted-foreground" />
                             <span>{config.name}</span>
                             {config.phone_number && (
-                              <span className="text-muted-foreground">
-                                ({config.phone_number})
-                              </span>
+                              <span className="text-muted-foreground">({config.phone_number})</span>
                             )}
                           </div>
                         </SelectItem>
@@ -141,27 +139,23 @@ export function TenantInboxesModal({ open, onOpenChange, tenant }: TenantInboxes
                 </Select>
 
                 <div className="flex gap-2">
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     onClick={handleAssignInbox}
                     disabled={!selectedConfigId || assignWhatsApp.isPending}
                   >
-                    {assignWhatsApp.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    {assignWhatsApp.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Associar
                   </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={() => setAddingInbox(false)}
-                  >
+                  <Button size="sm" variant="outline" onClick={() => setAddingInbox(false)}>
                     Cancelar
                   </Button>
                 </div>
               </div>
             ) : (
-              <Button 
-                variant="outline" 
-                className="w-full gap-2" 
+              <Button
+                variant="outline"
+                className="w-full gap-2"
                 onClick={() => setAddingInbox(true)}
               >
                 <Plus className="h-4 w-4" />
@@ -176,7 +170,7 @@ export function TenantInboxesModal({ open, onOpenChange, tenant }: TenantInboxes
                 <Skeleton className="h-12 w-full" />
               </div>
             ) : tenantInboxes?.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="py-8 text-center text-muted-foreground">
                 Nenhuma caixa de entrada associada a esta empresa
               </div>
             ) : (
@@ -195,12 +189,10 @@ export function TenantInboxesModal({ open, onOpenChange, tenant }: TenantInboxes
                     <TableRow key={config.id}>
                       <TableCell className="font-medium">{config.name}</TableCell>
                       <TableCell>
-                        {config.phone_number || (
-                          <span className="text-muted-foreground">-</span>
-                        )}
+                        {config.phone_number || <span className="text-muted-foreground">-</span>}
                       </TableCell>
                       <TableCell>
-                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
                           {config.provider}
                         </code>
                       </TableCell>
@@ -234,8 +226,8 @@ export function TenantInboxesModal({ open, onOpenChange, tenant }: TenantInboxes
           <AlertDialogHeader>
             <AlertDialogTitle>Remover caixa de entrada?</AlertDialogTitle>
             <AlertDialogDescription>
-              Deseja desassociar <strong>{configToRemove?.name}</strong> desta empresa?
-              A caixa ficará disponível para associar a outra empresa.
+              Deseja desassociar <strong>{configToRemove?.name}</strong> desta empresa? A caixa
+              ficará disponível para associar a outra empresa.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

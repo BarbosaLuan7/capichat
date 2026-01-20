@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,14 +40,14 @@ function normalizePhoneForSearch(phone: string): NormalizedPhone {
     withoutCountry,
     last11: digits.slice(-11),
     last10: digits.slice(-10),
-    ddd: withoutCountry.substring(0, 2)
+    ddd: withoutCountry.substring(0, 2),
   };
 }
 
 // Formatar telefone para exibição
 function formatTelefone(phone: string | null): string | null {
   if (!phone) return null;
-  const clean = phone.replace(/\D/g, "");
+  const clean = phone.replace(/\D/g, '');
   if (clean.length >= 12) {
     return `+${clean.slice(0, 2)} (${clean.slice(2, 4)}) ${clean.slice(4, 9)}-${clean.slice(9)}`;
   }
@@ -59,13 +59,17 @@ function formatTelefone(phone: string | null): string | null {
 
 // Mapear temperatura
 function mapTemperature(temp: string): string {
-  const map: Record<string, string> = { cold: "frio", warm: "morno", hot: "quente" };
+  const map: Record<string, string> = { cold: 'frio', warm: 'morno', hot: 'quente' };
   return map[temp] || temp;
 }
 
 // Mapear status da conversa
 function mapConversationStatus(status: string): string {
-  const map: Record<string, string> = { open: "aberta", pending: "pendente", resolved: "finalizada" };
+  const map: Record<string, string> = {
+    open: 'aberta',
+    pending: 'pendente',
+    resolved: 'finalizada',
+  };
   return map[status] || status;
 }
 
@@ -74,19 +78,21 @@ async function resolveLeadId(supabase: any, identifier: string): Promise<string 
   if (isValidUUID(identifier)) {
     return identifier;
   }
-  
+
   if (looksLikePhone(identifier)) {
     const phone = normalizePhoneForSearch(identifier);
     const { data: lead } = await supabase
       .from('leads')
       .select('id')
-      .or(`phone.eq.${phone.withoutCountry},phone.eq.${phone.last11},phone.eq.${phone.last10},phone.ilike.%${phone.last10}%`)
+      .or(
+        `phone.eq.${phone.withoutCountry},phone.eq.${phone.last11},phone.eq.${phone.last10},phone.ilike.%${phone.last10}%`
+      )
       .limit(1)
       .maybeSingle();
-    
+
     return lead?.id || null;
   }
-  
+
   return null;
 }
 
@@ -95,7 +101,7 @@ async function resolveConversationId(supabase: any, identifier: string): Promise
   if (isValidUUID(identifier)) {
     return identifier;
   }
-  
+
   if (looksLikePhone(identifier)) {
     const leadId = await resolveLeadId(supabase, identifier);
     if (leadId) {
@@ -106,37 +112,35 @@ async function resolveConversationId(supabase: any, identifier: string): Promise
         .order('last_message_at', { ascending: false })
         .limit(1)
         .maybeSingle();
-      
+
       return conv?.id || null;
     }
   }
-  
+
   return null;
 }
 
 // Buscar dados completos do lead
 async function getLeadFullData(supabase: any, leadId: string) {
-  const { data: lead } = await supabase
-    .from('leads')
-    .select('*')
-    .eq('id', leadId)
-    .single();
-  
+  const { data: lead } = await supabase.from('leads').select('*').eq('id', leadId).single();
+
   if (!lead) return null;
-  
+
   // Buscar etiquetas
   const { data: leadLabels } = await supabase
     .from('lead_labels')
     .select('labels(id, name, color, category)')
     .eq('lead_id', leadId);
-  
-  const etiquetas = (leadLabels || []).map((ll: any) => ({
-    id: ll.labels?.id,
-    nome: ll.labels?.name,
-    cor: ll.labels?.color,
-    categoria: ll.labels?.category
-  })).filter((e: any) => e.id);
-  
+
+  const etiquetas = (leadLabels || [])
+    .map((ll: any) => ({
+      id: ll.labels?.id,
+      nome: ll.labels?.name,
+      cor: ll.labels?.color,
+      categoria: ll.labels?.category,
+    }))
+    .filter((e: any) => e.id);
+
   // Buscar etapa do funil
   let etapaFunil = null;
   if (lead.stage_id) {
@@ -149,7 +153,7 @@ async function getLeadFullData(supabase: any, leadId: string) {
       etapaFunil = { id: stage.id, nome: stage.name, cor: stage.color };
     }
   }
-  
+
   // Buscar responsável
   let responsavel = null;
   if (lead.assigned_to) {
@@ -162,7 +166,7 @@ async function getLeadFullData(supabase: any, leadId: string) {
       responsavel = { id: profile.id, nome: profile.name, email: profile.email };
     }
   }
-  
+
   return {
     id: lead.id,
     nome: lead.name,
@@ -186,7 +190,7 @@ async function getLeadFullData(supabase: any, leadId: string) {
     criado_em: lead.created_at,
     created_at: lead.created_at,
     atualizado_em: lead.updated_at,
-    updated_at: lead.updated_at
+    updated_at: lead.updated_at,
   };
 }
 
@@ -205,28 +209,36 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
-        JSON.stringify({ erro: 'Header de autorização ausente ou inválido', error: 'Missing or invalid Authorization header' }),
+        JSON.stringify({
+          erro: 'Header de autorização ausente ou inválido',
+          error: 'Missing or invalid Authorization header',
+        }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const apiKey = authHeader.replace('Bearer ', '');
-    const { data: keyId, error: keyError } = await supabase.rpc('validate_api_key', { key_value: apiKey });
+    const { data: keyId, error: keyError } = await supabase.rpc('validate_api_key', {
+      key_value: apiKey,
+    });
 
     if (keyError || !keyId) {
-      return new Response(
-        JSON.stringify({ erro: 'API key inválida', error: 'Invalid API key' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ erro: 'API key inválida', error: 'Invalid API key' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const url = new URL(req.url);
     let id = url.searchParams.get('id');
     const status = url.searchParams.get('status');
-    const assignedTo = url.searchParams.get('assigned_to') || url.searchParams.get('responsavel_id');
+    const assignedTo =
+      url.searchParams.get('assigned_to') || url.searchParams.get('responsavel_id');
     let leadIdParam = url.searchParams.get('lead_id') || url.searchParams.get('contato_id');
     const page = parseInt(url.searchParams.get('page') || url.searchParams.get('pagina') || '1');
-    const pageSize = parseInt(url.searchParams.get('page_size') || url.searchParams.get('por_pagina') || '50');
+    const pageSize = parseInt(
+      url.searchParams.get('page_size') || url.searchParams.get('por_pagina') || '50'
+    );
     const action = url.searchParams.get('action');
 
     // Resolver ID de conversa (pode ser UUID ou telefone)
@@ -243,7 +255,10 @@ serve(async (req) => {
 
     // Resolver lead_id (pode ser UUID ou telefone)
     if (leadIdParam && !isValidUUID(leadIdParam)) {
-      console.log('[api-conversations] lead_id não é UUID, tentando resolver como telefone:', leadIdParam);
+      console.log(
+        '[api-conversations] lead_id não é UUID, tentando resolver como telefone:',
+        leadIdParam
+      );
       const resolvedLeadId = await resolveLeadId(supabase, leadIdParam);
       if (resolvedLeadId) {
         console.log('[api-conversations] lead_id resolvido:', resolvedLeadId);
@@ -258,18 +273,20 @@ serve(async (req) => {
       if (req.method === 'GET') {
         const { data, error } = await supabase
           .from('internal_notes')
-          .select(`
+          .select(
+            `
             *,
             author:profiles!internal_notes_author_id_fkey(id, name)
-          `)
+          `
+          )
           .eq('conversation_id', id)
           .order('created_at', { ascending: false });
 
         if (error) {
-          return new Response(
-            JSON.stringify({ erro: error.message, error: error.message }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ erro: error.message, error: error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
         const notes = (data || []).map((n: any) => ({
@@ -279,7 +296,7 @@ serve(async (req) => {
           autor: n.author ? { id: n.author.id, nome: n.author.name } : null,
           author: n.author ? { id: n.author.id, name: n.author.name } : null,
           criada_em: n.created_at,
-          created_at: n.created_at
+          created_at: n.created_at,
         }));
 
         return new Response(
@@ -290,10 +307,13 @@ serve(async (req) => {
 
       if (req.method === 'POST') {
         const body = await req.json();
-        
+
         if (!body.conteudo && !body.content) {
           return new Response(
-            JSON.stringify({ erro: 'Campo conteudo é obrigatório', error: 'content field is required' }),
+            JSON.stringify({
+              erro: 'Campo conteudo é obrigatório',
+              error: 'content field is required',
+            }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
@@ -303,16 +323,16 @@ serve(async (req) => {
           .insert({
             conversation_id: id,
             content: body.conteudo || body.content,
-            author_id: body.author_id || null
+            author_id: body.author_id || null,
           })
           .select()
           .single();
 
         if (error) {
-          return new Response(
-            JSON.stringify({ erro: error.message, error: error.message }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ erro: error.message, error: error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
         return new Response(
@@ -324,8 +344,8 @@ serve(async (req) => {
               conteudo: data.content,
               content: data.content,
               criada_em: data.created_at,
-              created_at: data.created_at
-            }
+              created_at: data.created_at,
+            },
           }),
           { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -338,10 +358,12 @@ serve(async (req) => {
         // Get single conversation with messages
         const { data: conversation, error: convError } = await supabase
           .from('conversations')
-          .select(`
+          .select(
+            `
             *,
             lead:leads(id, name, phone, avatar_url, country_code, temperature, stage_id, assigned_to)
-          `)
+          `
+          )
           .eq('id', id)
           .single();
 
@@ -360,7 +382,9 @@ serve(async (req) => {
           .order('created_at', { ascending: true });
 
         // Get full lead data
-        const leadFullData = conversation.lead_id ? await getLeadFullData(supabase, conversation.lead_id) : null;
+        const leadFullData = conversation.lead_id
+          ? await getLeadFullData(supabase, conversation.lead_id)
+          : null;
 
         // Get WhatsApp instance
         let instanciaWhatsapp = null;
@@ -379,7 +403,7 @@ serve(async (req) => {
               phone_number: whatsapp.phone_number,
               identificador: whatsapp.instance_name,
               instance_name: whatsapp.instance_name,
-              provider: whatsapp.provider
+              provider: whatsapp.provider,
             };
           }
         }
@@ -393,7 +417,12 @@ serve(async (req) => {
             .eq('id', conversation.assigned_to)
             .single();
           if (profile) {
-            responsavel = { id: profile.id, nome: profile.name, name: profile.name, email: profile.email };
+            responsavel = {
+              id: profile.id,
+              nome: profile.name,
+              name: profile.name,
+              email: profile.email,
+            };
           }
         }
 
@@ -417,7 +446,7 @@ serve(async (req) => {
             ultima_mensagem: conversation.last_message_content,
             last_message_content: conversation.last_message_content,
             criada_em: conversation.created_at,
-            created_at: conversation.created_at
+            created_at: conversation.created_at,
           },
           conversation: {
             id: conversation.id,
@@ -428,27 +457,27 @@ serve(async (req) => {
             whatsapp_instance: instanciaWhatsapp,
             last_message_at: conversation.last_message_at,
             last_message_content: conversation.last_message_content,
-            created_at: conversation.created_at
+            created_at: conversation.created_at,
           },
           lead: leadFullData,
           contato: leadFullData,
           mensagens: messages || [],
-          messages: messages || []
+          messages: messages || [],
         };
 
-        return new Response(
-          JSON.stringify(response),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify(response), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // List conversations with filters
-      let query = supabase
-        .from('conversations')
-        .select(`
+      let query = supabase.from('conversations').select(
+        `
           *,
           lead:leads(id, name, phone, avatar_url, country_code, temperature)
-        `, { count: 'exact' });
+        `,
+        { count: 'exact' }
+      );
 
       if (status) query = query.eq('status', status);
       if (assignedTo) query = query.eq('assigned_to', assignedTo);
@@ -462,10 +491,10 @@ serve(async (req) => {
         .range(from, to);
 
       if (error) {
-        return new Response(
-          JSON.stringify({ erro: error.message, error: error.message }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ erro: error.message, error: error.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       console.log('[api-conversations] Retornando', data?.length || 0, 'conversas');
@@ -483,25 +512,29 @@ serve(async (req) => {
         last_message_at: c.last_message_at,
         ultima_mensagem: c.last_message_content,
         last_message_content: c.last_message_content,
-        lead: c.lead ? {
-          id: c.lead.id,
-          nome: c.lead.name,
-          name: c.lead.name,
-          telefone: formatTelefone(`${c.lead.country_code || '55'}${c.lead.phone}`),
-          phone: c.lead.phone,
-          avatar_url: c.lead.avatar_url,
-          temperatura: mapTemperature(c.lead.temperature || 'cold'),
-          temperature: c.lead.temperature
-        } : null,
-        contato: c.lead ? {
-          id: c.lead.id,
-          nome: c.lead.name,
-          telefone: formatTelefone(`${c.lead.country_code || '55'}${c.lead.phone}`),
-          avatar_url: c.lead.avatar_url,
-          temperatura: mapTemperature(c.lead.temperature || 'cold')
-        } : null,
+        lead: c.lead
+          ? {
+              id: c.lead.id,
+              nome: c.lead.name,
+              name: c.lead.name,
+              telefone: formatTelefone(`${c.lead.country_code || '55'}${c.lead.phone}`),
+              phone: c.lead.phone,
+              avatar_url: c.lead.avatar_url,
+              temperatura: mapTemperature(c.lead.temperature || 'cold'),
+              temperature: c.lead.temperature,
+            }
+          : null,
+        contato: c.lead
+          ? {
+              id: c.lead.id,
+              nome: c.lead.name,
+              telefone: formatTelefone(`${c.lead.country_code || '55'}${c.lead.phone}`),
+              avatar_url: c.lead.avatar_url,
+              temperatura: mapTemperature(c.lead.temperature || 'cold'),
+            }
+          : null,
         criada_em: c.created_at,
-        created_at: c.created_at
+        created_at: c.created_at,
       }));
 
       return new Response(
@@ -514,14 +547,14 @@ serve(async (req) => {
             pagina: page,
             por_pagina: pageSize,
             total: count,
-            total_paginas: Math.ceil((count || 0) / pageSize)
+            total_paginas: Math.ceil((count || 0) / pageSize),
           },
           pagination: {
             page,
             page_size: pageSize,
             total: count,
-            total_pages: Math.ceil((count || 0) / pageSize)
-          }
+            total_pages: Math.ceil((count || 0) / pageSize),
+          },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -534,7 +567,10 @@ serve(async (req) => {
 
       if (!contatoId) {
         return new Response(
-          JSON.stringify({ erro: 'Campo lead_id ou contato_id é obrigatório', error: 'lead_id or contato_id is required' }),
+          JSON.stringify({
+            erro: 'Campo lead_id ou contato_id é obrigatório',
+            error: 'lead_id or contato_id is required',
+          }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -547,7 +583,10 @@ serve(async (req) => {
           contatoId = resolvedId;
         } else {
           return new Response(
-            JSON.stringify({ erro: 'Lead não encontrado para o telefone informado', error: 'Lead not found for provided phone' }),
+            JSON.stringify({
+              erro: 'Lead não encontrado para o telefone informado',
+              error: 'Lead not found for provided phone',
+            }),
             { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
@@ -559,16 +598,16 @@ serve(async (req) => {
           lead_id: contatoId,
           assigned_to: body.assigned_to || body.responsavel_id || null,
           status: body.status || 'open',
-          whatsapp_instance_id: body.whatsapp_instance_id || body.instancia_id || null
+          whatsapp_instance_id: body.whatsapp_instance_id || body.instancia_id || null,
         })
         .select()
         .single();
 
       if (error) {
-        return new Response(
-          JSON.stringify({ erro: error.message, error: error.message }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ erro: error.message, error: error.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // Get full lead data
@@ -585,15 +624,15 @@ serve(async (req) => {
             status: data.status,
             status_pt: mapConversationStatus(data.status),
             criada_em: data.created_at,
-            created_at: data.created_at
+            created_at: data.created_at,
           },
           conversation: {
             id: data.id,
             status: data.status,
-            created_at: data.created_at
+            created_at: data.created_at,
           },
           lead: leadFullData,
-          contato: leadFullData
+          contato: leadFullData,
         }),
         { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -613,7 +652,7 @@ serve(async (req) => {
       // Helper para retornar resposta de ação
       const buildActionResponse = async (data: any, actionType: string) => {
         const leadFullData = data.lead_id ? await getLeadFullData(supabase, data.lead_id) : null;
-        
+
         return {
           sucesso: true,
           success: true,
@@ -623,22 +662,22 @@ serve(async (req) => {
             id: data.id,
             status: data.status,
             status_pt: mapConversationStatus(data.status),
-            atualizada_em: new Date().toISOString()
+            atualizada_em: new Date().toISOString(),
           },
           conversation: {
             id: data.id,
             status: data.status,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           },
           lead: leadFullData,
-          contato: leadFullData
+          contato: leadFullData,
         };
       };
 
       // PUT /api-conversations?id=xxx&action=transferir
       if (action === 'transferir') {
         const updateData: Record<string, unknown> = {};
-        
+
         if (body.tipo === 'usuario' && (body.usuario_id || body.responsavel_id)) {
           updateData.assigned_to = body.usuario_id || body.responsavel_id;
         } else if (body.tipo === 'equipe' && body.equipe_id) {
@@ -653,27 +692,27 @@ serve(async (req) => {
           .single();
 
         if (error) {
-          return new Response(
-            JSON.stringify({ erro: error.message, error: error.message }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ erro: error.message, error: error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
         const baseResponse = await buildActionResponse(data, 'transferir');
-        const transferInfo = body.tipo === 'usuario' 
-          ? { tipo: 'usuario', id: body.usuario_id || body.responsavel_id }
-          : { tipo: 'equipe', id: body.equipe_id };
-        
+        const transferInfo =
+          body.tipo === 'usuario'
+            ? { tipo: 'usuario', id: body.usuario_id || body.responsavel_id }
+            : { tipo: 'equipe', id: body.equipe_id };
+
         const response = {
           ...baseResponse,
           transferido_para: transferInfo,
-          transferred_to: transferInfo
+          transferred_to: transferInfo,
         };
 
-        return new Response(
-          JSON.stringify(response),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify(response), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // PUT /api-conversations?id=xxx&action=atribuir
@@ -687,16 +726,15 @@ serve(async (req) => {
           .single();
 
         if (error) {
-          return new Response(
-            JSON.stringify({ erro: error.message, error: error.message }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ erro: error.message, error: error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
-        return new Response(
-          JSON.stringify(await buildActionResponse(data, 'atribuir')),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify(await buildActionResponse(data, 'atribuir')), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // PUT /api-conversations?id=xxx&action=finalizar
@@ -709,16 +747,15 @@ serve(async (req) => {
           .single();
 
         if (error) {
-          return new Response(
-            JSON.stringify({ erro: error.message, error: error.message }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ erro: error.message, error: error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
-        return new Response(
-          JSON.stringify(await buildActionResponse(data, 'finalizar')),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify(await buildActionResponse(data, 'finalizar')), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // PUT /api-conversations?id=xxx&action=reabrir
@@ -736,16 +773,15 @@ serve(async (req) => {
           .single();
 
         if (error) {
-          return new Response(
-            JSON.stringify({ erro: error.message, error: error.message }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ erro: error.message, error: error.message }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
-        return new Response(
-          JSON.stringify(await buildActionResponse(data, 'reabrir')),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify(await buildActionResponse(data, 'reabrir')), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // Default PUT - update conversation fields
@@ -765,16 +801,15 @@ serve(async (req) => {
         .single();
 
       if (error) {
-        return new Response(
-          JSON.stringify({ erro: error.message, error: error.message }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ erro: error.message, error: error.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
-      return new Response(
-        JSON.stringify(await buildActionResponse(data, 'atualizar')),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify(await buildActionResponse(data, 'atualizar')), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // DELETE - Delete conversation
@@ -786,20 +821,22 @@ serve(async (req) => {
         );
       }
 
-      const { error } = await supabase
-        .from('conversations')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('conversations').delete().eq('id', id);
 
       if (error) {
-        return new Response(
-          JSON.stringify({ erro: error.message, error: error.message }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ erro: error.message, error: error.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       return new Response(
-        JSON.stringify({ sucesso: true, success: true, mensagem: 'Conversa removida com sucesso', message: 'Conversation deleted successfully' }),
+        JSON.stringify({
+          sucesso: true,
+          success: true,
+          mensagem: 'Conversa removida com sucesso',
+          message: 'Conversation deleted successfully',
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -808,13 +845,12 @@ serve(async (req) => {
       JSON.stringify({ erro: 'Método não permitido', error: 'Method not allowed' }),
       { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error) {
     console.error('[api-conversations] Erro:', error);
     const message = error instanceof Error ? error.message : 'Erro interno do servidor';
-    return new Response(
-      JSON.stringify({ erro: message, error: message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ erro: message, error: message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

@@ -12,26 +12,23 @@ interface PageBreadcrumbProps {
 
 export function PageBreadcrumb({ items }: PageBreadcrumbProps) {
   return (
-    <nav className="flex items-center gap-1.5 text-sm text-muted-foreground mb-4">
+    <nav className="mb-4 flex items-center gap-1.5 text-sm text-muted-foreground">
       <Link
         to="/dashboard"
-        className="flex items-center gap-1 hover:text-foreground transition-colors"
+        className="flex items-center gap-1 transition-colors hover:text-foreground"
       >
-        <Home className="w-4 h-4" />
+        <Home className="h-4 w-4" />
       </Link>
-      
+
       {items.map((item, index) => (
         <div key={index} className="flex items-center gap-1.5">
-          <ChevronRight className="w-3.5 h-3.5" />
+          <ChevronRight className="h-3.5 w-3.5" />
           {item.href ? (
-            <Link
-              to={item.href}
-              className="hover:text-foreground transition-colors"
-            >
+            <Link to={item.href} className="transition-colors hover:text-foreground">
               {item.label}
             </Link>
           ) : (
-            <span className="text-foreground font-medium">{item.label}</span>
+            <span className="font-medium text-foreground">{item.label}</span>
           )}
         </div>
       ))}

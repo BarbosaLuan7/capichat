@@ -39,24 +39,20 @@ export function useAvatarUpload() {
       const fileName = `${userId}/${Date.now()}.${fileExt}`;
 
       // Delete old avatars for this user
-      const { data: existingFiles } = await supabase.storage
-        .from('avatars')
-        .list(userId);
+      const { data: existingFiles } = await supabase.storage.from('avatars').list(userId);
 
       if (existingFiles && existingFiles.length > 0) {
-        const filesToDelete = existingFiles.map(f => `${userId}/${f.name}`);
+        const filesToDelete = existingFiles.map((f) => `${userId}/${f.name}`);
         await supabase.storage.from('avatars').remove(filesToDelete);
       }
 
       setProgress(30);
 
       // Upload new avatar
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: true,
-        });
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: true,
+      });
 
       if (uploadError) {
         throw uploadError;
@@ -65,9 +61,7 @@ export function useAvatarUpload() {
       setProgress(70);
 
       // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(fileName);
+      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
 
       // Update profile with new avatar URL
       const { error: updateError } = await supabase
@@ -81,7 +75,7 @@ export function useAvatarUpload() {
 
       setProgress(100);
       toast.success('Foto de perfil atualizada!');
-      
+
       return { url: urlData.publicUrl, error: null };
     } catch (error: any) {
       const errorMessage = error.message || 'Erro ao fazer upload da foto';
@@ -97,12 +91,10 @@ export function useAvatarUpload() {
     setUploading(true);
     try {
       // Delete all avatars for this user
-      const { data: existingFiles } = await supabase.storage
-        .from('avatars')
-        .list(userId);
+      const { data: existingFiles } = await supabase.storage.from('avatars').list(userId);
 
       if (existingFiles && existingFiles.length > 0) {
-        const filesToDelete = existingFiles.map(f => `${userId}/${f.name}`);
+        const filesToDelete = existingFiles.map((f) => `${userId}/${f.name}`);
         await supabase.storage.from('avatars').remove(filesToDelete);
       }
 

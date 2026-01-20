@@ -15,18 +15,19 @@ function DateSeparatorComponent({ date }: DateSeparatorProps) {
   };
 
   return (
-    <div className="flex items-center gap-3 my-4">
-      <div className="flex-1 h-px bg-border" />
-      <span className="text-xs text-muted-foreground font-medium px-2 capitalize">
+    <div className="my-4 flex items-center gap-3">
+      <div className="h-px flex-1 bg-border" />
+      <span className="px-2 text-xs font-medium capitalize text-muted-foreground">
         {formatDateLabel(date)}
       </span>
-      <div className="flex-1 h-px bg-border" />
+      <div className="h-px flex-1 bg-border" />
     </div>
   );
 }
 
 DateSeparatorComponent.displayName = 'DateSeparator';
 
-export const DateSeparator = memo(DateSeparatorComponent, (prev, next) => 
-  prev.date.getTime() === next.date.getTime()
+export const DateSeparator = memo(
+  DateSeparatorComponent,
+  (prev, next) => prev.date.getTime() === next.date.getTime()
 );

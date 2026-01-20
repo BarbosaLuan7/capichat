@@ -20,74 +20,81 @@ interface ConversationStatusTabsProps {
 }
 
 const tabs = [
-  { 
-    value: 'pending', 
-    label: 'Pendentes (não lidas)', 
+  {
+    value: 'pending',
+    label: 'Pendentes (não lidas)',
     shortLabel: 'Pend.',
-    icon: Clock, 
-    colorClass: 'text-destructive', 
-    badgeClass: 'bg-destructive/15 text-destructive' 
+    icon: Clock,
+    colorClass: 'text-destructive',
+    badgeClass: 'bg-destructive/15 text-destructive',
   },
-  { 
-    value: 'open', 
-    label: 'Abertas (lidas)', 
+  {
+    value: 'open',
+    label: 'Abertas (lidas)',
     shortLabel: 'Abertas',
-    icon: MessageCircle, 
-    colorClass: 'text-success', 
-    badgeClass: 'bg-success/15 text-success' 
+    icon: MessageCircle,
+    colorClass: 'text-success',
+    badgeClass: 'bg-success/15 text-success',
   },
-  { 
-    value: 'resolved', 
-    label: 'Resolvidas', 
+  {
+    value: 'resolved',
+    label: 'Resolvidas',
     shortLabel: 'Resolv.',
-    icon: CheckCircle2, 
-    colorClass: 'text-muted-foreground', 
-    badgeClass: 'bg-muted text-muted-foreground' 
+    icon: CheckCircle2,
+    colorClass: 'text-muted-foreground',
+    badgeClass: 'bg-muted text-muted-foreground',
   },
-  { 
-    value: 'all', 
-    label: 'Todas', 
+  {
+    value: 'all',
+    label: 'Todas',
     shortLabel: 'Todas',
-    icon: Inbox, 
-    colorClass: 'text-foreground', 
-    badgeClass: 'bg-muted text-muted-foreground' 
+    icon: Inbox,
+    colorClass: 'text-foreground',
+    badgeClass: 'bg-muted text-muted-foreground',
   },
 ] as const;
 
 function ConversationStatusTabsComponent({ value, onChange, counts }: ConversationStatusTabsProps) {
   const getCount = (tabValue: string) => {
     switch (tabValue) {
-      case 'all': return counts.all;
-      case 'open': return counts.open;
-      case 'pending': return counts.pending;
-      case 'resolved': return counts.resolved;
-      default: return 0;
+      case 'all':
+        return counts.all;
+      case 'open':
+        return counts.open;
+      case 'pending':
+        return counts.pending;
+      case 'resolved':
+        return counts.resolved;
+      default:
+        return 0;
     }
   };
 
   return (
     <Tabs value={value} onValueChange={(v) => onChange(v as ConversationStatus | 'all')}>
-      <TabsList className="grid grid-cols-4 w-full bg-muted h-auto p-1 gap-1">
+      <TabsList className="grid h-auto w-full grid-cols-4 gap-1 bg-muted p-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const count = getCount(tab.value);
           const isActive = value === tab.value;
-          
+
           return (
             <Tooltip key={tab.value}>
               <TooltipTrigger asChild>
-                <TabsTrigger 
-                  value={tab.value} 
+                <TabsTrigger
+                  value={tab.value}
                   aria-label={`${tab.label}: ${count} ${count === 1 ? 'conversa' : 'conversas'}`}
                   className={cn(
-                    "flex items-center justify-center gap-1 px-2 py-2 text-xs font-medium transition-all",
-                    "hover:bg-background/50 active:scale-[0.98]",
-                    "data-[state=active]:bg-background data-[state=active]:shadow-sm",
-                    (tab.value === 'pending' && count > 0) ? tab.colorClass : (isActive && tab.colorClass)
+                    'flex items-center justify-center gap-1 px-2 py-2 text-xs font-medium transition-all',
+                    'hover:bg-background/50 active:scale-[0.98]',
+                    'data-[state=active]:bg-background data-[state=active]:shadow-sm',
+                    tab.value === 'pending' && count > 0
+                      ? tab.colorClass
+                      : isActive && tab.colorClass
                   )}
                 >
-                  <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-                  <span className="hidden sm:inline text-[10px] font-medium">{tab.shortLabel}</span>
+                  <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span className="hidden text-[10px] font-medium sm:inline">{tab.shortLabel}</span>
                   <span className="font-semibold tabular-nums">{count}</span>
                 </TabsTrigger>
               </TooltipTrigger>
@@ -103,12 +110,15 @@ function ConversationStatusTabsComponent({ value, onChange, counts }: Conversati
 }
 
 // Memoize to prevent re-renders when parent updates
-export const ConversationStatusTabs = memo(ConversationStatusTabsComponent, (prevProps, nextProps) => {
-  return (
-    prevProps.value === nextProps.value &&
-    prevProps.counts.all === nextProps.counts.all &&
-    prevProps.counts.open === nextProps.counts.open &&
-    prevProps.counts.pending === nextProps.counts.pending &&
-    prevProps.counts.resolved === nextProps.counts.resolved
-  );
-});
+export const ConversationStatusTabs = memo(
+  ConversationStatusTabsComponent,
+  (prevProps, nextProps) => {
+    return (
+      prevProps.value === nextProps.value &&
+      prevProps.counts.all === nextProps.counts.all &&
+      prevProps.counts.open === nextProps.counts.open &&
+      prevProps.counts.pending === nextProps.counts.pending &&
+      prevProps.counts.resolved === nextProps.counts.resolved
+    );
+  }
+);

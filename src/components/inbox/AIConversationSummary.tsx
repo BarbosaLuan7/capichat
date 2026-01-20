@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Sparkles, 
-  RefreshCw, 
-  ChevronDown, 
+import {
+  Sparkles,
+  RefreshCw,
+  ChevronDown,
   ChevronUp,
   FileText,
   Heart,
@@ -12,7 +12,7 @@ import {
   Lightbulb,
   Save,
   Check,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,7 +31,7 @@ interface AIConversationSummaryProps {
     phone?: string;
     source?: string;
     funnel_stages?: { name: string } | null;
-    ai_summary?: string | null;  // Campo do resumo salvo no banco
+    ai_summary?: string | null; // Campo do resumo salvo no banco
   };
   onSummaryGenerated?: () => void;
   className?: string;
@@ -48,7 +48,7 @@ function AIConversationSummaryComponent({
   const [isSaving, setIsSaving] = useState(false);
   const [showingSavedSummary, setShowingSavedSummary] = useState(false);
   const previousLeadIdRef = useRef<string>(lead.id);
-  
+
   const { summaryResult, isLoading, fetchSummary, clearSummary } = useAISummary();
   const updateLead = useUpdateLead();
 
@@ -67,28 +67,31 @@ function AIConversationSummaryComponent({
     }
   };
 
-  const handleSave = useCallback(async (summary: string, isAuto = false) => {
-    if (isSaving) return;
-    setIsSaving(true);
-    try {
-      await updateLead.mutateAsync({
-        id: lead.id,
-        ai_summary: summary,
-      });
-      if (isAuto) {
-        setAutoSaved(true);
-      } else {
-        toast.success('Resumo salvo no lead');
+  const handleSave = useCallback(
+    async (summary: string, isAuto = false) => {
+      if (isSaving) return;
+      setIsSaving(true);
+      try {
+        await updateLead.mutateAsync({
+          id: lead.id,
+          ai_summary: summary,
+        });
+        if (isAuto) {
+          setAutoSaved(true);
+        } else {
+          toast.success('Resumo salvo no lead');
+        }
+        onSummaryGenerated?.();
+      } catch (error) {
+        if (!isAuto) {
+          toast.error('Erro ao salvar resumo');
+        }
+      } finally {
+        setIsSaving(false);
       }
-      onSummaryGenerated?.();
-    } catch (error) {
-      if (!isAuto) {
-        toast.error('Erro ao salvar resumo');
-      }
-    } finally {
-      setIsSaving(false);
-    }
-  }, [lead.id, updateLead, onSummaryGenerated, isSaving]);
+    },
+    [lead.id, updateLead, onSummaryGenerated, isSaving]
+  );
 
   // Reset autoSaved when lead changes
   useEffect(() => {
@@ -105,7 +108,7 @@ function AIConversationSummaryComponent({
       setShowingSavedSummary(false);
       return;
     }
-    
+
     // Se o lead tem resumo salvo no banco, mostrar ele
     setShowingSavedSummary(!!lead.ai_summary);
   }, [lead.id, lead.ai_summary, summaryResult]);
@@ -122,9 +125,9 @@ function AIConversationSummaryComponent({
 
   if (isLoading) {
     return (
-      <div className={cn("p-3 rounded-lg bg-primary/5 border border-primary/20", className)}>
+      <div className={cn('rounded-lg border border-primary/20 bg-primary/5 p-3', className)}>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Sparkles className="w-4 h-4 animate-pulse text-primary" />
+          <Sparkles className="h-4 w-4 animate-pulse text-primary" />
           <span>Gerando resumo...</span>
         </div>
       </div>
@@ -136,19 +139,17 @@ function AIConversationSummaryComponent({
     // Se tem resumo salvo no lead, mostrar ele com badge "Salvo"
     if (lead.ai_summary && showingSavedSummary) {
       return (
-        <Collapsible 
-          open={isExpanded} 
-          onOpenChange={setIsExpanded}
-          className={className}
-        >
-          <div className="rounded-lg bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 overflow-hidden">
+        <Collapsible open={isExpanded} onOpenChange={setIsExpanded} className={className}>
+          <div className="overflow-hidden rounded-lg border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
             {/* Header */}
             <CollapsibleTrigger className="w-full">
-              <div className="flex items-center justify-between p-3 hover:bg-primary/5 transition-colors">
+              <div className="flex items-center justify-between p-3 transition-colors hover:bg-primary/5">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-primary" />
+                  <Sparkles className="h-4 w-4 text-primary" />
                   <span className="text-sm font-medium text-primary">Resumo IA</span>
-                  <Badge variant="secondary" className="text-xs">Salvo</Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    Salvo
+                  </Badge>
                 </div>
                 <div className="flex items-center gap-1">
                   <Button
@@ -161,12 +162,12 @@ function AIConversationSummaryComponent({
                     }}
                     title="Gerar novo resumo"
                   >
-                    <RefreshCw className="w-3 h-3" />
+                    <RefreshCw className="h-3 w-3" />
                   </Button>
                   {isExpanded ? (
-                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
                   ) : (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   )}
                 </div>
               </div>
@@ -175,7 +176,7 @@ function AIConversationSummaryComponent({
             <CollapsibleContent>
               <ScrollArea className="max-h-80">
                 <div className="p-3 pt-0">
-                  <p className="text-sm text-foreground whitespace-pre-wrap">{lead.ai_summary}</p>
+                  <p className="whitespace-pre-wrap text-sm text-foreground">{lead.ai_summary}</p>
                 </div>
               </ScrollArea>
             </CollapsibleContent>
@@ -183,13 +184,13 @@ function AIConversationSummaryComponent({
         </Collapsible>
       );
     }
-    
+
     // Se não tem nenhum resumo (nem gerado, nem salvo), mostrar botão para gerar
     return (
-      <div className={cn("p-3 rounded-lg bg-muted/50 border border-border", className)}>
+      <div className={cn('rounded-lg border border-border bg-muted/50 p-3', className)}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Sparkles className="w-4 h-4" />
+            <Sparkles className="h-4 w-4" />
             <span>Resumo IA</span>
           </div>
           <Button
@@ -199,14 +200,12 @@ function AIConversationSummaryComponent({
             onClick={handleRefresh}
             disabled={!messages || messages.length === 0}
           >
-            <RefreshCw className="w-3 h-3 mr-1" />
+            <RefreshCw className="mr-1 h-3 w-3" />
             Gerar
           </Button>
         </div>
         {(!messages || messages.length === 0) && (
-          <p className="text-xs text-muted-foreground mt-2">
-            Sem mensagens para analisar
-          </p>
+          <p className="mt-2 text-xs text-muted-foreground">Sem mensagens para analisar</p>
         )}
       </div>
     );
@@ -215,17 +214,13 @@ function AIConversationSummaryComponent({
   const { summary, structured } = summaryResult;
 
   return (
-    <Collapsible 
-      open={isExpanded} 
-      onOpenChange={setIsExpanded}
-      className={className}
-    >
-      <div className="rounded-lg bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20 overflow-hidden">
+    <Collapsible open={isExpanded} onOpenChange={setIsExpanded} className={className}>
+      <div className="overflow-hidden rounded-lg border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
         {/* Header */}
         <CollapsibleTrigger className="w-full">
-          <div className="flex items-center justify-between p-3 hover:bg-primary/5 transition-colors">
+          <div className="flex items-center justify-between p-3 transition-colors hover:bg-primary/5">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
+              <Sparkles className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium text-primary">Resumo IA</span>
             </div>
             <div className="flex items-center gap-1">
@@ -239,16 +234,22 @@ function AIConversationSummaryComponent({
                 }}
                 title="Atualizar resumo"
               >
-                <RefreshCw className="w-3 h-3" />
+                <RefreshCw className="h-3 w-3" />
               </Button>
               {autoSaved ? (
-                <div className="flex items-center gap-1 px-2 text-xs text-success" title="Salvo automaticamente">
-                  <Check className="w-3 h-3" />
+                <div
+                  className="flex items-center gap-1 px-2 text-xs text-success"
+                  title="Salvo automaticamente"
+                >
+                  <Check className="h-3 w-3" />
                   <span>Salvo</span>
                 </div>
               ) : isSaving ? (
-                <div className="flex items-center gap-1 px-2 text-xs text-muted-foreground" title="Salvando...">
-                  <Loader2 className="w-3 h-3 animate-spin" />
+                <div
+                  className="flex items-center gap-1 px-2 text-xs text-muted-foreground"
+                  title="Salvando..."
+                >
+                  <Loader2 className="h-3 w-3 animate-spin" />
                   <span>Salvando</span>
                 </div>
               ) : (
@@ -262,13 +263,13 @@ function AIConversationSummaryComponent({
                   }}
                   title="Salvar no lead"
                 >
-                  <Save className="w-3 h-3" />
+                  <Save className="h-3 w-3" />
                 </Button>
               )}
               {isExpanded ? (
-                <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
               ) : (
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               )}
             </div>
           </div>
@@ -276,7 +277,7 @@ function AIConversationSummaryComponent({
 
         <CollapsibleContent>
           <ScrollArea className="max-h-80">
-            <div className="p-3 pt-0 space-y-3">
+            <div className="space-y-3 p-3 pt-0">
               {/* Quick summary */}
               <p className="text-sm text-foreground">{summary}</p>
 
@@ -284,13 +285,13 @@ function AIConversationSummaryComponent({
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="space-y-3 pt-2 border-t border-primary/20"
+                  className="space-y-3 border-t border-primary/20 pt-2"
                 >
                   {/* Situation */}
                   {structured.situation && (
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                        <FileText className="w-3 h-3" />
+                        <FileText className="h-3 w-3" />
                         SITUAÇÃO
                       </div>
                       <p className="text-sm">{structured.situation}</p>
@@ -300,7 +301,7 @@ function AIConversationSummaryComponent({
                   {/* Benefit */}
                   {structured.benefit && (
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs bg-primary/10 border-primary/20">
+                      <Badge variant="outline" className="border-primary/20 bg-primary/10 text-xs">
                         {structured.benefit}
                       </Badge>
                     </div>
@@ -310,7 +311,7 @@ function AIConversationSummaryComponent({
                   {structured.healthConditions && structured.healthConditions.length > 0 && (
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                        <Heart className="w-3 h-3" />
+                        <Heart className="h-3 w-3" />
                         CONDIÇÕES
                       </div>
                       <div className="flex flex-wrap gap-1">
@@ -324,11 +325,11 @@ function AIConversationSummaryComponent({
                   )}
 
                   {/* Documents */}
-                  {((structured.documentsReceived && structured.documentsReceived.length > 0) || 
+                  {((structured.documentsReceived && structured.documentsReceived.length > 0) ||
                     (structured.documentsPending && structured.documentsPending.length > 0)) && (
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                        <FileText className="w-3 h-3" />
+                        <FileText className="h-3 w-3" />
                         DOCUMENTOS
                       </div>
                       {structured.documentsReceived && structured.documentsReceived.length > 0 && (
@@ -350,7 +351,7 @@ function AIConversationSummaryComponent({
                   {structured.importantDates && structured.importantDates.length > 0 && (
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                        <Calendar className="w-3 h-3" />
+                        <Calendar className="h-3 w-3" />
                         DATAS
                       </div>
                       <div className="space-y-0.5">
@@ -367,10 +368,10 @@ function AIConversationSummaryComponent({
                   {structured.nextSteps && structured.nextSteps.length > 0 && (
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                        <AlertCircle className="w-3 h-3" />
+                        <AlertCircle className="h-3 w-3" />
                         PRÓXIMOS PASSOS
                       </div>
-                      <ul className="text-xs space-y-0.5 list-disc list-inside">
+                      <ul className="list-inside list-disc space-y-0.5 text-xs">
                         {structured.nextSteps.map((step, i) => (
                           <li key={i}>{step}</li>
                         ))}
@@ -382,10 +383,10 @@ function AIConversationSummaryComponent({
                   {structured.observations && (
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                        <Lightbulb className="w-3 h-3" />
+                        <Lightbulb className="h-3 w-3" />
                         OBSERVAÇÕES
                       </div>
-                      <p className="text-xs text-muted-foreground italic">
+                      <p className="text-xs italic text-muted-foreground">
                         {structured.observations}
                       </p>
                     </div>
@@ -400,8 +401,10 @@ function AIConversationSummaryComponent({
   );
 }
 
-export const AIConversationSummary = memo(AIConversationSummaryComponent, (prev, next) =>
-  prev.lead.id === next.lead.id &&
-  prev.messages?.length === next.messages?.length &&
-  prev.className === next.className
+export const AIConversationSummary = memo(
+  AIConversationSummaryComponent,
+  (prev, next) =>
+    prev.lead.id === next.lead.id &&
+    prev.messages?.length === next.messages?.length &&
+    prev.className === next.className
 );

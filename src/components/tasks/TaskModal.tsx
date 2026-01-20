@@ -5,12 +5,7 @@ import { z } from 'zod';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, Plus, X, Trash2, Loader2 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,11 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -75,7 +66,14 @@ interface TaskModalProps {
   isLoading?: boolean;
 }
 
-export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete, isLoading = false }: TaskModalProps) => {
+export const TaskModal = ({
+  open,
+  onOpenChange,
+  task,
+  onSave,
+  onDelete,
+  isLoading = false,
+}: TaskModalProps) => {
   const [subtasks, setSubtasks] = useState<Subtask[]>(task?.subtasks || []);
   const [newSubtask, setNewSubtask] = useState('');
 
@@ -150,13 +148,11 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete, isLoadin
   };
 
   const toggleSubtask = (id: string) => {
-    setSubtasks(subtasks.map(st => 
-      st.id === id ? { ...st, completed: !st.completed } : st
-    ));
+    setSubtasks(subtasks.map((st) => (st.id === id ? { ...st, completed: !st.completed } : st)));
   };
 
   const removeSubtask = (id: string) => {
-    setSubtasks(subtasks.filter(st => st.id !== id));
+    setSubtasks(subtasks.filter((st) => st.id !== id));
   };
 
   const priorityOptions = [
@@ -172,11 +168,11 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete, isLoadin
     { value: 'done', label: 'Concluída' },
   ];
 
-  const activeProfiles = profiles?.filter(p => p.is_active) || [];
+  const activeProfiles = profiles?.filter((p) => p.is_active) || [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>{task ? 'Editar Tarefa' : 'Nova Tarefa'}</DialogTitle>
         </DialogHeader>
@@ -239,7 +235,7 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete, isLoadin
                             Nenhum usuário disponível
                           </div>
                         ) : (
-                          activeProfiles.map(profile => (
+                          activeProfiles.map((profile) => (
                             <SelectItem key={profile.id} value={profile.id}>
                               {profile.name}
                             </SelectItem>
@@ -271,7 +267,7 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete, isLoadin
                             <Skeleton className="h-5 w-full" />
                           </div>
                         ) : (
-                          leads.map(lead => (
+                          leads.map((lead) => (
                             <SelectItem key={lead.id} value={lead.id}>
                               {lead.name}
                             </SelectItem>
@@ -303,7 +299,7 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete, isLoadin
                             )}
                           >
                             {field.value ? (
-                              format(field.value, "dd/MM/yyyy", { locale: ptBR })
+                              format(field.value, 'dd/MM/yyyy', { locale: ptBR })
                             ) : (
                               <span>Selecionar</span>
                             )}
@@ -339,7 +335,7 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete, isLoadin
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {priorityOptions.map(opt => (
+                        {priorityOptions.map((opt) => (
                           <SelectItem key={opt.value} value={opt.value}>
                             {opt.label}
                           </SelectItem>
@@ -364,7 +360,7 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete, isLoadin
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {statusOptions.map(opt => (
+                        {statusOptions.map((opt) => (
                           <SelectItem key={opt.value} value={opt.value}>
                             {opt.label}
                           </SelectItem>
@@ -381,16 +377,15 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete, isLoadin
             <div className="space-y-3">
               <FormLabel>Subtarefas</FormLabel>
               <div className="space-y-2">
-                {subtasks.map(st => (
-                  <div key={st.id} className="flex items-center gap-2 group">
-                    <Checkbox
-                      checked={st.completed}
-                      onCheckedChange={() => toggleSubtask(st.id)}
-                    />
-                    <span className={cn(
-                      'flex-1 text-sm',
-                      st.completed && 'line-through text-muted-foreground'
-                    )}>
+                {subtasks.map((st) => (
+                  <div key={st.id} className="group flex items-center gap-2">
+                    <Checkbox checked={st.completed} onCheckedChange={() => toggleSubtask(st.id)} />
+                    <span
+                      className={cn(
+                        'flex-1 text-sm',
+                        st.completed && 'text-muted-foreground line-through'
+                      )}
+                    >
                       {st.title}
                     </span>
                     <Button
@@ -401,7 +396,7 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete, isLoadin
                       onClick={() => removeSubtask(st.id)}
                       aria-label={`Remover subtarefa: ${st.title}`}
                     >
-                      <X className="w-3 h-3" />
+                      <X className="h-3 w-3" />
                     </Button>
                   </div>
                 ))}
@@ -410,13 +405,13 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete, isLoadin
                 <Input
                   placeholder="Adicionar subtarefa"
                   value={newSubtask}
-                  onChange={e => setNewSubtask(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addSubtask())}
+                  onChange={(e) => setNewSubtask(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSubtask())}
                 />
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button type="button" variant="outline" size="icon" onClick={addSubtask}>
-                      <Plus className="w-4 h-4" />
+                      <Plus className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Adicionar subtarefa</TooltipContent>
@@ -429,7 +424,7 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete, isLoadin
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button type="button" variant="destructive">
-                      <Trash2 className="w-4 h-4 mr-2" />
+                      <Trash2 className="mr-2 h-4 w-4" />
                       Excluir
                     </Button>
                   </AlertDialogTrigger>
@@ -437,7 +432,8 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete, isLoadin
                     <AlertDialogHeader>
                       <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Esta ação não pode ser desfeita. A tarefa "{task.title}" será permanentemente removida.
+                        Esta ação não pode ser desfeita. A tarefa "{task.title}" será
+                        permanentemente removida.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -455,12 +451,16 @@ export const TaskModal = ({ open, onOpenChange, task, onSave, onDelete, isLoadin
                   </AlertDialogContent>
                 </AlertDialog>
               )}
-              <div className="flex gap-2 ml-auto">
+              <div className="ml-auto flex gap-2">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" className="gradient-primary text-primary-foreground" disabled={isLoading}>
-                  {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                <Button
+                  type="submit"
+                  className="gradient-primary text-primary-foreground"
+                  disabled={isLoading}
+                >
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {task ? 'Salvar' : 'Criar Tarefa'}
                 </Button>
               </div>

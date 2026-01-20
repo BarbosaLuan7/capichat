@@ -9,15 +9,12 @@ type TemplateUpdate = Database['public']['Tables']['templates']['Update'];
 
 export function useTemplates(enabled: boolean = true) {
   const { currentTenant, tenants } = useTenant();
-  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map(t => t.id);
+  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map((t) => t.id);
 
   return useQuery({
     queryKey: ['templates', currentTenant?.id || 'all'],
     queryFn: async () => {
-      let queryBuilder = supabase
-        .from('templates')
-        .select('*')
-        .order('name');
+      let queryBuilder = supabase.from('templates').select('*').order('name');
 
       // Filter by tenant (includes global templates where tenant_id is null)
       if (tenantIds.length > 0) {
@@ -25,7 +22,7 @@ export function useTemplates(enabled: boolean = true) {
       }
 
       const { data, error } = await queryBuilder;
-      
+
       if (error) throw error;
       return data as Template[];
     },
@@ -42,12 +39,8 @@ export function useCreateTemplate() {
 
   return useMutation({
     mutationFn: async (template: TemplateInsert) => {
-      const { data, error } = await supabase
-        .from('templates')
-        .insert(template)
-        .select()
-        .single();
-      
+      const { data, error } = await supabase.from('templates').insert(template).select().single();
+
       if (error) throw error;
       return data;
     },
@@ -68,7 +61,7 @@ export function useUpdateTemplate() {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -83,11 +76,8 @@ export function useDeleteTemplate() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('templates')
-        .delete()
-        .eq('id', id);
-      
+      const { error } = await supabase.from('templates').delete().eq('id', id);
+
       if (error) throw error;
     },
     onSuccess: () => {

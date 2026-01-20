@@ -9,7 +9,7 @@ type LabelUpdate = Database['public']['Tables']['labels']['Update'];
 
 export function useLabels() {
   const { currentTenant, tenants } = useTenant();
-  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map(t => t.id);
+  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map((t) => t.id);
 
   return useQuery({
     queryKey: ['labels', currentTenant?.id || 'all'],
@@ -26,7 +26,7 @@ export function useLabels() {
       }
 
       const { data, error } = await queryBuilder;
-      
+
       if (error) throw error;
       return data as Label[];
     },
@@ -42,12 +42,8 @@ export function useCreateLabel() {
 
   return useMutation({
     mutationFn: async (label: LabelInsert) => {
-      const { data, error } = await supabase
-        .from('labels')
-        .insert(label)
-        .select()
-        .single();
-      
+      const { data, error } = await supabase.from('labels').insert(label).select().single();
+
       if (error) throw error;
       return data;
     },
@@ -68,7 +64,7 @@ export function useUpdateLabel() {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -83,11 +79,8 @@ export function useDeleteLabel() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('labels')
-        .delete()
-        .eq('id', id);
-      
+      const { error } = await supabase.from('labels').delete().eq('id', id);
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -103,12 +96,14 @@ export function useLeadLabels(leadId: string | undefined) {
       if (!leadId) return [];
       const { data, error } = await supabase
         .from('lead_labels')
-        .select(`
+        .select(
+          `
           *,
           labels (id, name, color, category)
-        `)
+        `
+        )
         .eq('lead_id', leadId);
-      
+
       if (error) throw error;
       return data;
     },
@@ -128,7 +123,7 @@ export function useAddLeadLabel() {
         .insert({ lead_id: leadId, label_id: labelId })
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -150,7 +145,7 @@ export function useRemoveLeadLabel() {
         .delete()
         .eq('lead_id', leadId)
         .eq('label_id', labelId);
-      
+
       if (error) throw error;
     },
     onSuccess: (_, variables) => {

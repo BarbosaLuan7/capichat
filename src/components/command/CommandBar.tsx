@@ -18,7 +18,6 @@ import {
   CalendarDays,
   Zap,
   Bot,
-  
   Settings,
   Plus,
   Search,
@@ -47,9 +46,12 @@ export function CommandBar({ open, onOpenChange, onNewLead, onNewTask }: Command
   const leads = leadsData?.leads || [];
   const tasks = tasksData?.tasks || [];
   const [search, setSearch] = useState('');
-  
+
   // Search messages when search term is >= 3 chars
-  const { data: messageResults = [], isLoading: isSearchingMessages } = useMessageSearch(search, open);
+  const { data: messageResults = [], isLoading: isSearchingMessages } = useMessageSearch(
+    search,
+    open
+  );
 
   // Reset search when dialog closes
   useEffect(() => {
@@ -73,8 +75,22 @@ export function CommandBar({ open, onOpenChange, onNewLead, onNewTask }: Command
 
   // Quick actions
   const quickActions = [
-    { icon: Plus, label: 'Novo Lead', action: () => { onNewLead?.(); onOpenChange(false); } },
-    { icon: Plus, label: 'Nova Tarefa', action: () => { onNewTask?.(); onOpenChange(false); } },
+    {
+      icon: Plus,
+      label: 'Novo Lead',
+      action: () => {
+        onNewLead?.();
+        onOpenChange(false);
+      },
+    },
+    {
+      icon: Plus,
+      label: 'Nova Tarefa',
+      action: () => {
+        onNewTask?.();
+        onOpenChange(false);
+      },
+    },
   ];
 
   // Filter leads by search
@@ -82,10 +98,11 @@ export function CommandBar({ open, onOpenChange, onNewLead, onNewTask }: Command
     if (!search || search.length < 2) return [];
     const lowerSearch = search.toLowerCase();
     return leads
-      .filter((lead) =>
-        lead.name.toLowerCase().includes(lowerSearch) ||
-        lead.phone.includes(lowerSearch) ||
-        lead.email?.toLowerCase().includes(lowerSearch)
+      .filter(
+        (lead) =>
+          lead.name.toLowerCase().includes(lowerSearch) ||
+          lead.phone.includes(lowerSearch) ||
+          lead.email?.toLowerCase().includes(lowerSearch)
       )
       .slice(0, 5);
   }, [leads, search]);
@@ -95,9 +112,10 @@ export function CommandBar({ open, onOpenChange, onNewLead, onNewTask }: Command
     if (!search || search.length < 2) return [];
     const lowerSearch = search.toLowerCase();
     return tasks
-      .filter((task) =>
-        task.title.toLowerCase().includes(lowerSearch) ||
-        task.description?.toLowerCase().includes(lowerSearch)
+      .filter(
+        (task) =>
+          task.title.toLowerCase().includes(lowerSearch) ||
+          task.description?.toLowerCase().includes(lowerSearch)
       )
       .slice(0, 5);
   }, [tasks, search]);
@@ -123,7 +141,7 @@ export function CommandBar({ open, onOpenChange, onNewLead, onNewTask }: Command
     const parts = text.split(new RegExp(`(${term})`, 'gi'));
     return parts.map((part, i) =>
       part.toLowerCase() === term.toLowerCase() ? (
-        <mark key={i} className="bg-primary/20 text-primary px-0.5 rounded">
+        <mark key={i} className="rounded bg-primary/20 px-0.5 text-primary">
           {part}
         </mark>
       ) : (
@@ -135,8 +153,9 @@ export function CommandBar({ open, onOpenChange, onNewLead, onNewTask }: Command
   // Truncate message content around the search term
   const truncateContent = (content: string, term: string, maxLength = 60) => {
     const index = content.toLowerCase().indexOf(term.toLowerCase());
-    if (index === -1) return content.slice(0, maxLength) + (content.length > maxLength ? '...' : '');
-    
+    if (index === -1)
+      return content.slice(0, maxLength) + (content.length > maxLength ? '...' : '');
+
     const start = Math.max(0, index - 20);
     const end = Math.min(content.length, index + term.length + 40);
     let result = content.slice(start, end);
@@ -164,10 +183,10 @@ export function CommandBar({ open, onOpenChange, onNewLead, onNewTask }: Command
                 onSelect={() => handleSelectLead(lead.id)}
                 className="flex items-center gap-3"
               >
-                <User className="w-4 h-4 text-muted-foreground" />
+                <User className="h-4 w-4 text-muted-foreground" />
                 <div className="flex-1">
                   <span className="font-medium">{lead.name}</span>
-                  <span className="ml-2 text-muted-foreground text-sm">{lead.phone}</span>
+                  <span className="ml-2 text-sm text-muted-foreground">{lead.phone}</span>
                 </div>
                 <Badge variant="outline" className="text-xs">
                   {lead.temperature === 'hot' ? '🔥' : lead.temperature === 'warm' ? '🌡️' : '❄️'}
@@ -186,7 +205,7 @@ export function CommandBar({ open, onOpenChange, onNewLead, onNewTask }: Command
                 onSelect={() => handleNavigate('/tasks')}
                 className="flex items-center gap-3"
               >
-                <CheckSquare className="w-4 h-4 text-muted-foreground" />
+                <CheckSquare className="h-4 w-4 text-muted-foreground" />
                 <div className="flex-1">
                   <span className="font-medium">{task.title}</span>
                 </div>
@@ -194,7 +213,11 @@ export function CommandBar({ open, onOpenChange, onNewLead, onNewTask }: Command
                   variant={task.status === 'done' ? 'default' : 'secondary'}
                   className="text-xs"
                 >
-                  {task.status === 'done' ? 'Concluída' : task.status === 'in_progress' ? 'Em Progresso' : 'Pendente'}
+                  {task.status === 'done'
+                    ? 'Concluída'
+                    : task.status === 'in_progress'
+                      ? 'Em Progresso'
+                      : 'Pendente'}
                 </Badge>
               </CommandItem>
             ))}
@@ -210,14 +233,14 @@ export function CommandBar({ open, onOpenChange, onNewLead, onNewTask }: Command
                 onSelect={() => handleSelectConversation(result.conversationId)}
                 className="flex flex-col items-start gap-1 py-2"
               >
-                <div className="flex items-center gap-2 w-full">
-                  <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <span className="font-medium text-sm">{result.leadName}</span>
-                  <span className="text-xs text-muted-foreground ml-auto">
+                <div className="flex w-full items-center gap-2">
+                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="text-sm font-medium">{result.leadName}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">
                     {format(new Date(result.createdAt), 'dd/MM HH:mm', { locale: ptBR })}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground ml-6 line-clamp-1">
+                <p className="ml-6 line-clamp-1 text-xs text-muted-foreground">
                   {highlightText(truncateContent(result.content, search), search)}
                 </p>
               </CommandItem>
@@ -229,7 +252,7 @@ export function CommandBar({ open, onOpenChange, onNewLead, onNewTask }: Command
         {isSearchingMessages && search.length >= 3 && (
           <CommandGroup heading="Mensagens">
             <CommandItem disabled className="text-muted-foreground">
-              <Search className="w-4 h-4 mr-2 animate-pulse" />
+              <Search className="mr-2 h-4 w-4 animate-pulse" />
               Buscando mensagens...
             </CommandItem>
           </CommandGroup>
@@ -245,7 +268,7 @@ export function CommandBar({ open, onOpenChange, onNewLead, onNewTask }: Command
               onSelect={action.action}
               className="flex items-center gap-3"
             >
-              <action.icon className="w-4 h-4" />
+              <action.icon className="h-4 w-4" />
               <span>{action.label}</span>
             </CommandItem>
           ))}
@@ -260,7 +283,7 @@ export function CommandBar({ open, onOpenChange, onNewLead, onNewTask }: Command
               onSelect={() => handleNavigate(item.path)}
               className="flex items-center gap-3"
             >
-              <item.icon className="w-4 h-4" />
+              <item.icon className="h-4 w-4" />
               <span>{item.label}</span>
             </CommandItem>
           ))}

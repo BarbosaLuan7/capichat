@@ -1,11 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -33,16 +28,21 @@ export function TransferLeadModal({
   const { data: profiles, isLoading } = useProfiles();
 
   // All active users except current assignee
-  const availableProfiles = useMemo(() => profiles?.filter(
-    (p) => p.id !== currentAssignee && p.is_active
-  ) || [], [profiles, currentAssignee]);
+  const availableProfiles = useMemo(
+    () => profiles?.filter((p) => p.id !== currentAssignee && p.is_active) || [],
+    [profiles, currentAssignee]
+  );
 
   // Filtered by search (using debounced value)
-  const filteredProfiles = useMemo(() => availableProfiles.filter(
-    (p) =>
-      p.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      p.email.toLowerCase().includes(debouncedSearch.toLowerCase())
-  ), [availableProfiles, debouncedSearch]);
+  const filteredProfiles = useMemo(
+    () =>
+      availableProfiles.filter(
+        (p) =>
+          p.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          p.email.toLowerCase().includes(debouncedSearch.toLowerCase())
+      ),
+    [availableProfiles, debouncedSearch]
+  );
 
   const handleTransfer = (userId: string) => {
     onTransfer(userId);
@@ -54,14 +54,14 @@ export function TransferLeadModal({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="w-5 h-5" />
+            <UserPlus className="h-5 w-5" />
             Transferir Lead
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar usuário..."
               value={search}
@@ -72,16 +72,14 @@ export function TransferLeadModal({
 
           <ScrollArea className="max-h-64">
             {isLoading ? (
-              <div className="p-4 text-center text-muted-foreground">
-                Carregando...
-              </div>
+              <div className="p-4 text-center text-muted-foreground">Carregando...</div>
             ) : availableProfiles.length === 0 ? (
               // No other active users in the system
-              <div className="p-6 text-center space-y-3">
-                <UsersRound className="w-10 h-10 text-muted-foreground mx-auto" />
+              <div className="space-y-3 p-6 text-center">
+                <UsersRound className="mx-auto h-10 w-10 text-muted-foreground" />
                 <div>
                   <p className="font-medium text-foreground">Nenhum usuário disponível</p>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     Não há outros usuários ativos para transferir este lead.
                   </p>
                 </div>
@@ -94,17 +92,15 @@ export function TransferLeadModal({
                   }}
                   className="gap-2"
                 >
-                  <UserPlus className="w-4 h-4" />
+                  <UserPlus className="h-4 w-4" />
                   Cadastrar usuário
                 </Button>
               </div>
             ) : filteredProfiles.length === 0 ? (
               // Search returned no results
-              <div className="p-4 text-center space-y-2">
-                <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto" />
-                <p className="text-muted-foreground">
-                  Nenhum usuário encontrado para "{search}"
-                </p>
+              <div className="space-y-2 p-4 text-center">
+                <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground" />
+                <p className="text-muted-foreground">Nenhum usuário encontrado para "{search}"</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -112,11 +108,16 @@ export function TransferLeadModal({
                   <Button
                     key={profile.id}
                     variant="ghost"
-                    className="w-full justify-start gap-3 h-auto py-3"
+                    className="h-auto w-full justify-start gap-3 py-3"
                     onClick={() => handleTransfer(profile.id)}
                   >
-                    <Avatar className="w-10 h-10">
-                      <AvatarImage src={profile.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.name}`} />
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage
+                        src={
+                          profile.avatar ||
+                          `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.name}`
+                        }
+                      />
                       <AvatarFallback>{profile.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="text-left">

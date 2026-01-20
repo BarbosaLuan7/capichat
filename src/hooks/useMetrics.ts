@@ -1,6 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, format, differenceInMinutes } from 'date-fns';
+import {
+  startOfDay,
+  endOfDay,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  subDays,
+  format,
+  differenceInMinutes,
+} from 'date-fns';
 
 export type PeriodFilter = 'today' | 'week' | 'month' | 'quarter';
 
@@ -11,12 +21,15 @@ export interface MetricsFilters {
 
 function getDateRange(period: PeriodFilter) {
   const now = new Date();
-  
+
   switch (period) {
     case 'today':
       return { start: startOfDay(now), end: endOfDay(now) };
     case 'week':
-      return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
+      return {
+        start: startOfWeek(now, { weekStartsOn: 1 }),
+        end: endOfWeek(now, { weekStartsOn: 1 }),
+      };
     case 'month':
       return { start: startOfMonth(now), end: endOfMonth(now) };
     case 'quarter':
@@ -30,7 +43,7 @@ function getDateRange(period: PeriodFilter) {
 function getPreviousPeriodDates(period: PeriodFilter) {
   const { start, end } = getDateRange(period);
   const duration = end.getTime() - start.getTime();
-  
+
   return {
     start: new Date(start.getTime() - duration),
     end: new Date(start.getTime() - 1), // 1ms before current period starts
@@ -77,7 +90,7 @@ export function useLeadMetrics(period: PeriodFilter, tenantId?: string | null) {
 
       const currentCount = leads?.length || 0;
       const previousCount = previousLeads?.length || 0;
-      
+
       // Calcular variação percentual
       let changePercent = 0;
       if (previousCount > 0) {
@@ -87,17 +100,19 @@ export function useLeadMetrics(period: PeriodFilter, tenantId?: string | null) {
       }
 
       // Leads por fonte (via labels de origem)
-      const leadIds = leads?.map(l => l.id) || [];
-      
+      const leadIds = leads?.map((l) => l.id) || [];
+
       let leadsBySource: { name: string; value: number; color: string }[] = [];
-      
+
       if (leadIds.length > 0) {
         const { data: leadLabels, error: labelsError } = await supabase
           .from('lead_labels')
-          .select(`
+          .select(
+            `
             lead_id,
             labels!inner(name, category, color)
-          `)
+          `
+          )
           .eq('labels.category', 'origem')
           .in('lead_id', leadIds);
 
@@ -131,9 +146,9 @@ export function useLeadMetrics(period: PeriodFilter, tenantId?: string | null) {
         previousPeriodLeads: previousCount,
         changePercent: parseFloat(changePercent.toFixed(1)),
         leadsByTemperature: {
-          cold: leads?.filter(l => l.temperature === 'cold').length || 0,
-          warm: leads?.filter(l => l.temperature === 'warm').length || 0,
-          hot: leads?.filter(l => l.temperature === 'hot').length || 0,
+          cold: leads?.filter((l) => l.temperature === 'cold').length || 0,
+          warm: leads?.filter((l) => l.temperature === 'warm').length || 0,
+          hot: leads?.filter((l) => l.temperature === 'hot').length || 0,
         },
         leadsBySource,
         rawLeads: leads || [],
@@ -181,16 +196,17 @@ export function useFunnelMetrics(period: PeriodFilter, tenantId?: string | null)
       if (leadsError) throw leadsError;
 
       // Contar leads por etapa
-      const funnelData = stages?.map(stage => {
-        const count = leads?.filter(l => l.stage_id === stage.id).length || 0;
-        return {
-          id: stage.id,
-          stage: stage.name,
-          color: stage.color,
-          grupo: stage.grupo,
-          count,
-        };
-      }) || [];
+      const funnelData =
+        stages?.map((stage) => {
+          const count = leads?.filter((l) => l.stage_id === stage.id).length || 0;
+          return {
+            id: stage.id,
+            stage: stage.name,
+            color: stage.color,
+            grupo: stage.grupo,
+            count,
+          };
+        }) || [];
 
       // Calcular taxas de conversão
       const totalLeadsInFunnel = funnelData.reduce((sum, s) => sum + s.count, 0);
@@ -218,14 +234,16 @@ export function useAgentPerformance(period: PeriodFilter, tenantId?: string | nu
     queryFn: async () => {
       // Buscar perfis (se tenant especificado, filtrar por user_tenants)
       let profiles: any[] = [];
-      
+
       if (tenantId) {
         const { data: userTenants, error: utError } = await supabase
           .from('user_tenants')
-          .select(`
+          .select(
+            `
             user_id,
             profiles:user_id(id, name, avatar, email)
-          `)
+          `
+          )
           .eq('tenant_id', tenantId)
           .eq('is_active', true);
 
@@ -256,7 +274,7 @@ export function useAgentPerformance(period: PeriodFilter, tenantId?: string | nu
       if (leadsError) throw leadsError;
 
       // Get lead IDs to filter conversations
-      const leadIds = leads?.map(l => l.id) || [];
+      const leadIds = leads?.map((l) => l.id) || [];
 
       // Buscar conversas
       let conversationsQuery = supabase
@@ -274,7 +292,7 @@ export function useAgentPerformance(period: PeriodFilter, tenantId?: string | nu
       if (convsError) throw convsError;
 
       // Get conversation IDs
-      const conversationIds = conversations?.map(c => c.id) || [];
+      const conversationIds = conversations?.map((c) => c.id) || [];
 
       // Buscar mensagens para calcular tempo de resposta
       let messagesQuery = supabase
@@ -293,50 +311,64 @@ export function useAgentPerformance(period: PeriodFilter, tenantId?: string | nu
       if (msgsError) throw msgsError;
 
       // Calcular métricas por atendente
-      const agentMetrics = profiles?.map(profile => {
-        const agentLeads = leads?.filter(l => l.assigned_to === profile.id).length || 0;
-        const agentConversations = conversations?.filter(c => c.assigned_to === profile.id) || [];
-        const resolvedConversations = agentConversations.filter(c => c.status === 'resolved').length;
-        
-        // Calcular tempo médio de resposta
-        let totalResponseTime = 0;
-        let responseCount = 0;
+      const agentMetrics =
+        profiles
+          ?.map((profile) => {
+            const agentLeads = leads?.filter((l) => l.assigned_to === profile.id).length || 0;
+            const agentConversations =
+              conversations?.filter((c) => c.assigned_to === profile.id) || [];
+            const resolvedConversations = agentConversations.filter(
+              (c) => c.status === 'resolved'
+            ).length;
 
-        agentConversations.forEach(conv => {
-          const convMessages = messages?.filter(m => m.conversation_id === conv.id) || [];
-          for (let i = 1; i < convMessages.length; i++) {
-            const prev = convMessages[i - 1];
-            const curr = convMessages[i];
-            if (prev.sender_type === 'lead' && curr.sender_type === 'agent') {
-              const diff = differenceInMinutes(new Date(curr.created_at), new Date(prev.created_at));
-              if (diff >= 0 && diff < 1440) {
-                totalResponseTime += diff;
-                responseCount++;
+            // Calcular tempo médio de resposta
+            let totalResponseTime = 0;
+            let responseCount = 0;
+
+            agentConversations.forEach((conv) => {
+              const convMessages = messages?.filter((m) => m.conversation_id === conv.id) || [];
+              for (let i = 1; i < convMessages.length; i++) {
+                const prev = convMessages[i - 1];
+                const curr = convMessages[i];
+                if (prev.sender_type === 'lead' && curr.sender_type === 'agent') {
+                  const diff = differenceInMinutes(
+                    new Date(curr.created_at),
+                    new Date(prev.created_at)
+                  );
+                  if (diff >= 0 && diff < 1440) {
+                    totalResponseTime += diff;
+                    responseCount++;
+                  }
+                }
               }
-            }
-          }
-        });
+            });
 
-        const avgResponseTime = responseCount > 0 ? Math.round(totalResponseTime / responseCount) : 0;
+            const avgResponseTime =
+              responseCount > 0 ? Math.round(totalResponseTime / responseCount) : 0;
 
-        return {
-          id: profile.id,
-          name: profile.name,
-          avatar: profile.avatar,
-          email: profile.email,
-          leads: agentLeads,
-          conversations: agentConversations.length,
-          resolved: resolvedConversations,
-          responseRate: agentConversations.length > 0 
-            ? parseFloat(((resolvedConversations / agentConversations.length) * 100).toFixed(1))
-            : 0,
-          avgResponseTime: avgResponseTime,
-          avgResponseTimeFormatted: avgResponseTime < 60 
-            ? `${avgResponseTime}min` 
-            : `${Math.floor(avgResponseTime / 60)}h ${avgResponseTime % 60}min`,
-        };
-      }).filter(a => a.leads > 0 || a.conversations > 0)
-        .sort((a, b) => b.leads - a.leads) || [];
+            return {
+              id: profile.id,
+              name: profile.name,
+              avatar: profile.avatar,
+              email: profile.email,
+              leads: agentLeads,
+              conversations: agentConversations.length,
+              resolved: resolvedConversations,
+              responseRate:
+                agentConversations.length > 0
+                  ? parseFloat(
+                      ((resolvedConversations / agentConversations.length) * 100).toFixed(1)
+                    )
+                  : 0,
+              avgResponseTime: avgResponseTime,
+              avgResponseTimeFormatted:
+                avgResponseTime < 60
+                  ? `${avgResponseTime}min`
+                  : `${Math.floor(avgResponseTime / 60)}h ${avgResponseTime % 60}min`,
+            };
+          })
+          .filter((a) => a.leads > 0 || a.conversations > 0)
+          .sort((a, b) => b.leads - a.leads) || [];
 
       return {
         agents: agentMetrics,
@@ -372,7 +404,7 @@ export function useDailyEvolution(period: PeriodFilter, tenantId?: string | null
 
       // Agrupar por dia
       const dailyData: Record<string, number> = {};
-      leads?.forEach(lead => {
+      leads?.forEach((lead) => {
         const day = format(new Date(lead.created_at), 'dd/MM');
         dailyData[day] = (dailyData[day] || 0) + 1;
       });
@@ -408,7 +440,7 @@ export function useConversationMetrics(period: PeriodFilter, tenantId?: string |
 
         if (leadsError) throw leadsError;
 
-        const leadIds = leads?.map(l => l.id) || [];
+        const leadIds = leads?.map((l) => l.id) || [];
 
         if (leadIds.length > 0) {
           const { data: convsData, error: convsError } = await supabase
@@ -432,9 +464,9 @@ export function useConversationMetrics(period: PeriodFilter, tenantId?: string |
         conversations = convsData || [];
       }
 
-      const open = conversations.filter(c => c.status === 'open').length;
-      const pending = conversations.filter(c => c.status === 'pending').length;
-      const resolved = conversations.filter(c => c.status === 'resolved').length;
+      const open = conversations.filter((c) => c.status === 'open').length;
+      const pending = conversations.filter((c) => c.status === 'pending').length;
+      const resolved = conversations.filter((c) => c.status === 'resolved').length;
       const total = conversations.length;
 
       return {

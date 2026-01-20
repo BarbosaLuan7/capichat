@@ -48,10 +48,10 @@ interface ConversationsPage {
 export function useConversationsInfinite() {
   const queryClient = useQueryClient();
   const { currentTenant, tenants } = useTenant();
-  
+
   // Get tenant IDs to filter by
-  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map(t => t.id);
-  
+  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map((t) => t.id);
+
   // Consistent query key for all cache operations
   const queryKey = ['conversations-infinite', currentTenant?.id || 'all'];
 
@@ -60,7 +60,8 @@ export function useConversationsInfinite() {
     queryFn: async ({ pageParam }): Promise<ConversationsPage> => {
       let queryBuilder = supabase
         .from('conversations')
-        .select(`
+        .select(
+          `
           *,
           leads!inner (
             id, 
@@ -82,7 +83,8 @@ export function useConversationsInfinite() {
             phone_number,
             tenant_id
           )
-        `)
+        `
+        )
         .order('last_message_at', { ascending: false })
         .limit(PAGE_SIZE + 1); // +1 para verificar se há mais
 
@@ -102,16 +104,15 @@ export function useConversationsInfinite() {
 
       const conversations = (data || []) as unknown as ConversationData[];
       const hasMore = conversations.length > PAGE_SIZE;
-      
+
       // Remover item extra usado para verificar hasMore
-      const pageConversations = hasMore 
-        ? conversations.slice(0, PAGE_SIZE) 
-        : conversations;
-      
+      const pageConversations = hasMore ? conversations.slice(0, PAGE_SIZE) : conversations;
+
       // O cursor é o last_message_at da conversa mais antiga desta página
-      const nextCursor = hasMore && pageConversations.length > 0
-        ? pageConversations[pageConversations.length - 1].last_message_at
-        : null;
+      const nextCursor =
+        hasMore && pageConversations.length > 0
+          ? pageConversations[pageConversations.length - 1].last_message_at
+          : null;
 
       return {
         conversations: pageConversations,
@@ -126,29 +127,26 @@ export function useConversationsInfinite() {
   });
 
   // Flatten todas as páginas em uma única lista
-  const allConversations = query.data?.pages
-    .flatMap(page => page.conversations)
-    // Remover duplicatas por ID
-    .filter((conv, index, self) => 
-      index === self.findIndex(c => c.id === conv.id)
-    )
-    ?? [];
+  const allConversations =
+    query.data?.pages
+      .flatMap((page) => page.conversations)
+      // Remover duplicatas por ID
+      .filter((conv, index, self) => index === self.findIndex((c) => c.id === conv.id)) ?? [];
 
   // Função para atualizar uma conversa otimisticamente
-  const updateConversationOptimistically = useCallback((
-    conversationId: string, 
-    updates: Partial<ConversationData> & { unread_count_increment?: number }
-  ) => {
-    queryClient.setQueryData(
-      queryKey,
-      (oldData: typeof query.data) => {
+  const updateConversationOptimistically = useCallback(
+    (
+      conversationId: string,
+      updates: Partial<ConversationData> & { unread_count_increment?: number }
+    ) => {
+      queryClient.setQueryData(queryKey, (oldData: typeof query.data) => {
         if (!oldData) return oldData;
-        
-        const newPages = oldData.pages.map(page => ({
+
+        const newPages = oldData.pages.map((page) => ({
           ...page,
-          conversations: page.conversations.map(conv => {
+          conversations: page.conversations.map((conv) => {
             if (conv.id !== conversationId) return conv;
-            
+
             // Handle unread_count_increment specially
             const { unread_count_increment, ...rest } = updates;
             let newUnreadCount = conv.unread_count;
@@ -158,39 +156,40 @@ export function useConversationsInfinite() {
             if (typeof rest.unread_count === 'number') {
               newUnreadCount = rest.unread_count;
             }
-            
+
             return { ...conv, ...rest, unread_count: newUnreadCount };
           }),
         }));
-        
+
         return { ...oldData, pages: newPages };
-      }
-    );
-  }, [queryClient, queryKey]);
+      });
+    },
+    [queryClient, queryKey]
+  );
 
   // Função para adicionar nova conversa no topo
-  const addConversationOptimistically = useCallback((newConversation: ConversationData) => {
-    queryClient.setQueryData(
-      queryKey,
-      (oldData: typeof query.data) => {
+  const addConversationOptimistically = useCallback(
+    (newConversation: ConversationData) => {
+      queryClient.setQueryData(queryKey, (oldData: typeof query.data) => {
         if (!oldData) return oldData;
-        
+
         const newPages = [...oldData.pages];
         if (newPages.length > 0) {
           const firstPage = newPages[0];
           // Verificar se já existe
-          if (!firstPage.conversations.some(c => c.id === newConversation.id)) {
+          if (!firstPage.conversations.some((c) => c.id === newConversation.id)) {
             newPages[0] = {
               ...firstPage,
               conversations: [newConversation, ...firstPage.conversations],
             };
           }
         }
-        
+
         return { ...oldData, pages: newPages };
-      }
-    );
-  }, [queryClient, queryKey]);
+      });
+    },
+    [queryClient, queryKey]
+  );
 
   return {
     conversations: allConversations,

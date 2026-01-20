@@ -75,11 +75,11 @@ function LeadTableRowComponent({
           <LeadAvatar lead={lead} size="md" />
           <div>
             <p className="font-medium text-foreground">{lead.name}</p>
-            <div className="flex items-center gap-1 mt-1">
+            <div className="mt-1 flex items-center gap-1">
               {labels.slice(0, 2).map((label) => (
                 <Badge
                   key={label.id}
-                  className="text-xs h-5 border-0"
+                  className="h-5 border-0 text-xs"
                   style={{ backgroundColor: label.color, color: getContrastColor(label.color) }}
                 >
                   {label.name}
@@ -92,13 +92,13 @@ function LeadTableRowComponent({
       <TableCell>
         <div className="space-y-1 text-sm">
           <div className="flex items-center gap-2 text-muted-foreground">
-            <Phone className="w-3.5 h-3.5" />
+            <Phone className="h-3.5 w-3.5" />
             {lead.phone}
           </div>
           {lead.email && (
             <div className="flex items-center gap-2 text-muted-foreground">
-              <Mail className="w-3.5 h-3.5" />
-              <span className="truncate max-w-[150px]">{lead.email}</span>
+              <Mail className="h-3.5 w-3.5" />
+              <span className="max-w-[150px] truncate">{lead.email}</span>
             </div>
           )}
         </div>
@@ -120,7 +120,11 @@ function LeadTableRowComponent({
             lead.temperature === 'cold' && 'bg-primary/10 text-primary'
           )}
         >
-          {lead.temperature === 'hot' ? '🔥 Quente' : lead.temperature === 'warm' ? '🌡️ Morno' : '❄️ Frio'}
+          {lead.temperature === 'hot'
+            ? '🔥 Quente'
+            : lead.temperature === 'warm'
+              ? '🌡️ Morno'
+              : '❄️ Frio'}
         </Badge>
       </TableCell>
       <TableCell>
@@ -137,38 +141,38 @@ function LeadTableRowComponent({
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Calendar className="w-3.5 h-3.5" />
-          {format(new Date(lead.created_at), "dd/MM/yyyy", { locale: ptBR })}
+          <Calendar className="h-3.5 w-3.5" />
+          {format(new Date(lead.created_at), 'dd/MM/yyyy', { locale: ptBR })}
         </div>
       </TableCell>
       <TableCell>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="opacity-0 group-hover:opacity-100"
               aria-label="Mais opções"
             >
-              <MoreVertical className="w-4 h-4" />
+              <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem className="gap-2" onClick={() => onView(lead.id)}>
-              <Eye className="w-4 h-4" />
+              <Eye className="h-4 w-4" />
               Ver detalhes
             </DropdownMenuItem>
             <DropdownMenuItem className="gap-2" onClick={() => onOpenConversation(lead.id)}>
-              <MessageSquare className="w-4 h-4" />
+              <MessageSquare className="h-4 w-4" />
               Abrir conversa
             </DropdownMenuItem>
             <DropdownMenuItem className="gap-2" onClick={() => onEdit(lead.id)}>
-              <Pencil className="w-4 h-4" />
+              <Pencil className="h-4 w-4" />
               Editar
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="gap-2 text-destructive" onClick={() => onDelete(lead.id)}>
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="h-4 w-4" />
               Excluir
             </DropdownMenuItem>
           </DropdownMenuContent>

@@ -24,11 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRecentAutomationLogs, useAutomationStats } from '@/hooks/useAutomationLogs';
 import { useAutomations } from '@/hooks/useAutomations';
@@ -115,21 +111,23 @@ const LogItem = ({ log }: LogItemProps) => {
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger asChild>
-        <div className="flex items-center gap-3 p-3 hover:bg-muted/50 rounded-lg cursor-pointer transition-colors">
-          <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', config.bg)}>
-            <StatusIcon className={cn('w-4 h-4', config.color)} />
+        <div className="flex cursor-pointer items-center gap-3 rounded-lg p-3 transition-colors hover:bg-muted/50">
+          <div className={cn('flex h-8 w-8 items-center justify-center rounded-lg', config.bg)}>
+            <StatusIcon className={cn('h-4 w-4', config.color)} />
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-sm truncate">
+              <span className="truncate text-sm font-medium">
                 {log.automations?.name || 'Automação removida'}
               </span>
-              <Badge variant="outline" className="text-xs shrink-0">
+              <Badge variant="outline" className="shrink-0 text-xs">
                 {triggerLabels[log.trigger_event] || log.trigger_event}
               </Badge>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>{formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR })}</span>
+              <span>
+                {formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ptBR })}
+              </span>
               {log.execution_time_ms && (
                 <>
                   <span>·</span>
@@ -139,9 +137,9 @@ const LogItem = ({ log }: LogItemProps) => {
             </div>
           </div>
           {isOpen ? (
-            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
           )}
         </div>
       </CollapsibleTrigger>
@@ -150,7 +148,7 @@ const LogItem = ({ log }: LogItemProps) => {
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
-          className="pl-11 pr-3 pb-3 space-y-3"
+          className="space-y-3 pb-3 pl-11 pr-3"
         >
           {/* Conditions */}
           {log.conditions_evaluated && log.conditions_evaluated.length > 0 && (
@@ -160,11 +158,11 @@ const LogItem = ({ log }: LogItemProps) => {
                 {log.conditions_evaluated.map((cond, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
                     {cond.result ? (
-                      <CheckCircle2 className="w-3 h-3 text-success" />
+                      <CheckCircle2 className="h-3 w-3 text-success" />
                     ) : (
-                      <XCircle className="w-3 h-3 text-destructive" />
+                      <XCircle className="h-3 w-3 text-destructive" />
                     )}
-                    <code className="bg-muted px-1 py-0.5 rounded text-xs">
+                    <code className="rounded bg-muted px-1 py-0.5 text-xs">
                       {cond.field} {cond.operator} "{cond.value}"
                     </code>
                   </div>
@@ -181,14 +179,12 @@ const LogItem = ({ log }: LogItemProps) => {
                 {log.actions_executed.map((action, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
                     {action.success ? (
-                      <CheckCircle2 className="w-3 h-3 text-success" />
+                      <CheckCircle2 className="h-3 w-3 text-success" />
                     ) : (
-                      <XCircle className="w-3 h-3 text-destructive" />
+                      <XCircle className="h-3 w-3 text-destructive" />
                     )}
                     <span>{actionLabels[action.type] || action.type}</span>
-                    {action.error && (
-                      <span className="text-destructive">({action.error})</span>
-                    )}
+                    {action.error && <span className="text-destructive">({action.error})</span>}
                   </div>
                 ))}
               </div>
@@ -197,7 +193,7 @@ const LogItem = ({ log }: LogItemProps) => {
 
           {/* Error */}
           {log.error_message && (
-            <div className="bg-destructive/10 text-destructive text-xs p-2 rounded">
+            <div className="rounded bg-destructive/10 p-2 text-xs text-destructive">
               {log.error_message}
             </div>
           )}
@@ -214,12 +210,12 @@ const LogItem = ({ log }: LogItemProps) => {
 export const AutomationExecutionLogs = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [automationFilter, setAutomationFilter] = useState<string>('all');
-  
+
   const { data: logs = [], isLoading, refetch, isRefetching } = useRecentAutomationLogs(50);
   const { data: stats } = useAutomationStats();
   const { data: automations = [] } = useAutomations();
 
-  const filteredLogs = logs.filter(log => {
+  const filteredLogs = logs.filter((log) => {
     if (statusFilter !== 'all' && log.status !== statusFilter) return false;
     if (automationFilter !== 'all' && log.automation_id !== automationFilter) return false;
     return true;
@@ -229,17 +225,12 @@ export const AutomationExecutionLogs = () => {
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Zap className="w-5 h-5 text-primary" />
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Zap className="h-5 w-5 text-primary" />
             Execuções Recentes
           </CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isRefetching}
-          >
-            <RefreshCw className={cn('w-4 h-4', isRefetching && 'animate-spin')} />
+          <Button variant="ghost" size="sm" onClick={() => refetch()} disabled={isRefetching}>
+            <RefreshCw className={cn('h-4 w-4', isRefetching && 'animate-spin')} />
           </Button>
         </div>
 
@@ -264,8 +255,8 @@ export const AutomationExecutionLogs = () => {
         {/* Filters */}
         <div className="flex gap-2 pt-2">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[130px] h-8 text-xs">
-              <Filter className="w-3 h-3 mr-1" />
+            <SelectTrigger className="h-8 w-[130px] text-xs">
+              <Filter className="mr-1 h-3 w-3" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -276,13 +267,15 @@ export const AutomationExecutionLogs = () => {
             </SelectContent>
           </Select>
           <Select value={automationFilter} onValueChange={setAutomationFilter}>
-            <SelectTrigger className="w-[180px] h-8 text-xs">
+            <SelectTrigger className="h-8 w-[180px] text-xs">
               <SelectValue placeholder="Automação" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas automações</SelectItem>
-              {automations.map(auto => (
-                <SelectItem key={auto.id} value={auto.id}>{auto.name}</SelectItem>
+              {automations.map((auto) => (
+                <SelectItem key={auto.id} value={auto.id}>
+                  {auto.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -294,7 +287,7 @@ export const AutomationExecutionLogs = () => {
             <div className="space-y-2">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="flex items-center gap-3 p-3">
-                  <Skeleton className="w-8 h-8 rounded-lg" />
+                  <Skeleton className="h-8 w-8 rounded-lg" />
                   <div className="flex-1 space-y-1">
                     <Skeleton className="h-4 w-48" />
                     <Skeleton className="h-3 w-24" />
@@ -311,9 +304,9 @@ export const AutomationExecutionLogs = () => {
               </div>
             </AnimatePresence>
           ) : (
-            <div className="flex flex-col items-center justify-center h-[300px] text-center">
-              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
-                <Clock className="w-6 h-6 text-muted-foreground" />
+            <div className="flex h-[300px] flex-col items-center justify-center text-center">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                <Clock className="h-6 w-6 text-muted-foreground" />
               </div>
               <p className="font-medium text-foreground">Nenhuma execução ainda</p>
               <p className="text-sm text-muted-foreground">

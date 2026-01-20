@@ -14,7 +14,7 @@ export function useAutomations() {
         .from('automations')
         .select('*')
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       return data;
     },
@@ -34,7 +34,7 @@ export function useAutomation(id: string | undefined) {
         .select('*')
         .eq('id', id)
         .maybeSingle();
-      
+
       if (error) throw error;
       return data;
     },
@@ -55,7 +55,7 @@ export function useCreateAutomation() {
         .insert(automation)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -76,7 +76,7 @@ export function useUpdateAutomation() {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -92,11 +92,8 @@ export function useDeleteAutomation() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('automations')
-        .delete()
-        .eq('id', id);
-      
+      const { error } = await supabase.from('automations').delete().eq('id', id);
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -116,22 +113,22 @@ export function useToggleAutomation() {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
     onMutate: async ({ id, isActive }) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['automations'] });
-      
+
       // Snapshot previous value
       const previousAutomations = queryClient.getQueryData<Automation[]>(['automations']);
-      
+
       // Optimistically update
-      queryClient.setQueryData<Automation[]>(['automations'], (old) => 
-        old?.map(a => a.id === id ? { ...a, is_active: isActive } : a)
+      queryClient.setQueryData<Automation[]>(['automations'], (old) =>
+        old?.map((a) => (a.id === id ? { ...a, is_active: isActive } : a))
       );
-      
+
       return { previousAutomations };
     },
     onError: (_, __, context) => {

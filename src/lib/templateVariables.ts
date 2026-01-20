@@ -13,15 +13,55 @@ export interface TemplateVariable {
 }
 
 export const TEMPLATE_VARIABLES: TemplateVariable[] = [
-  { key: '{{nome}}', label: 'Nome do Lead', description: 'Nome completo do cliente', aliases: ['{nome}'] },
-  { key: '{{primeiro_nome}}', label: 'Primeiro Nome', description: 'Primeiro nome do cliente', aliases: ['{primeiro_nome}'] },
-  { key: '{{telefone}}', label: 'Telefone', description: 'Telefone do cliente', aliases: ['{telefone}'] },
-  { key: '{{valor}}', label: 'Valor Estimado', description: 'Valor estimado do benefício', aliases: ['{valor}'] },
-  { key: '{{data}}', label: 'Data Atual', description: 'Data de hoje (DD/MM/AAAA)', aliases: ['{data}'] },
+  {
+    key: '{{nome}}',
+    label: 'Nome do Lead',
+    description: 'Nome completo do cliente',
+    aliases: ['{nome}'],
+  },
+  {
+    key: '{{primeiro_nome}}',
+    label: 'Primeiro Nome',
+    description: 'Primeiro nome do cliente',
+    aliases: ['{primeiro_nome}'],
+  },
+  {
+    key: '{{telefone}}',
+    label: 'Telefone',
+    description: 'Telefone do cliente',
+    aliases: ['{telefone}'],
+  },
+  {
+    key: '{{valor}}',
+    label: 'Valor Estimado',
+    description: 'Valor estimado do benefício',
+    aliases: ['{valor}'],
+  },
+  {
+    key: '{{data}}',
+    label: 'Data Atual',
+    description: 'Data de hoje (DD/MM/AAAA)',
+    aliases: ['{data}'],
+  },
   { key: '{{hora}}', label: 'Hora Atual', description: 'Hora atual (HH:MM)', aliases: ['{hora}'] },
-  { key: '{{data_inicio}}', label: 'Data de Início', description: 'Data de criação do lead', aliases: ['{data_inicio}'] },
-  { key: '{{beneficio}}', label: 'Tipo de Benefício', description: 'Tipo de benefício pretendido', aliases: ['{beneficio}', '{tipo_beneficio}', '{{tipo_beneficio}}'] },
-  { key: '{{atendente}}', label: 'Nome do Atendente', description: 'Nome do atendente responsável', aliases: ['{atendente}'] },
+  {
+    key: '{{data_inicio}}',
+    label: 'Data de Início',
+    description: 'Data de criação do lead',
+    aliases: ['{data_inicio}'],
+  },
+  {
+    key: '{{beneficio}}',
+    label: 'Tipo de Benefício',
+    description: 'Tipo de benefício pretendido',
+    aliases: ['{beneficio}', '{tipo_beneficio}', '{{tipo_beneficio}}'],
+  },
+  {
+    key: '{{atendente}}',
+    label: 'Nome do Atendente',
+    description: 'Nome do atendente responsável',
+    aliases: ['{atendente}'],
+  },
   { key: '{{cpf}}', label: 'CPF', description: 'CPF do cliente', aliases: ['{cpf}'] },
   { key: '{{email}}', label: 'Email', description: 'Email do cliente', aliases: ['{email}'] },
 ];
@@ -72,32 +112,32 @@ function formatDate(dateStr: string | null | undefined): string {
  */
 export function replaceTemplateVariables(content: string, options: ReplaceOptions = {}): string {
   let result = content;
-  
+
   const lead = options.lead || {};
   const firstName = lead.name ? lead.name.split(' ')[0] : '';
   const now = new Date();
-  
+
   // Build replacements map
   const replacements: Record<string, string> = {
-    'nome': lead.name || '',
-    'primeiro_nome': firstName,
-    'telefone': lead.phone ? formatPhoneNumber(lead.phone) : '',
-    'valor': formatCurrency(lead.estimated_value),
-    'data': now.toLocaleDateString('pt-BR'),
-    'hora': now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-    'data_inicio': formatDate(lead.created_at) || now.toLocaleDateString('pt-BR'),
-    'beneficio': lead.benefit_type || '',
-    'tipo_beneficio': lead.benefit_type || '',
-    'atendente': options.agentName || '',
-    'cpf': lead.cpf ? formatCPF(lead.cpf) : '',
-    'email': lead.email || '',
+    nome: lead.name || '',
+    primeiro_nome: firstName,
+    telefone: lead.phone ? formatPhoneNumber(lead.phone) : '',
+    valor: formatCurrency(lead.estimated_value),
+    data: now.toLocaleDateString('pt-BR'),
+    hora: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    data_inicio: formatDate(lead.created_at) || now.toLocaleDateString('pt-BR'),
+    beneficio: lead.benefit_type || '',
+    tipo_beneficio: lead.benefit_type || '',
+    atendente: options.agentName || '',
+    cpf: lead.cpf ? formatCPF(lead.cpf) : '',
+    email: lead.email || '',
   };
-  
+
   // Replace {{variable}} and {variable} patterns
   for (const [key, value] of Object.entries(replacements)) {
     const doublePattern = new RegExp(`\\{\\{${key}\\}\\}`, 'gi');
     const singlePattern = new RegExp(`\\{${key}\\}`, 'gi');
-    
+
     if (value) {
       result = result.replace(doublePattern, value);
       result = result.replace(singlePattern, value);
@@ -110,7 +150,7 @@ export function replaceTemplateVariables(content: string, options: ReplaceOption
       result = result.replace(singlePattern, `[${key}]`);
     }
   }
-  
+
   // Handle any remaining unmatched variables
   if (options.removeUnmatched) {
     result = result.replace(/\{\{(\w+)\}\}/g, '');
@@ -119,7 +159,7 @@ export function replaceTemplateVariables(content: string, options: ReplaceOption
     result = result.replace(/\{\{(\w+)\}\}/g, '[$1]');
     result = result.replace(/\{(\w+)\}/g, '[$1]');
   }
-  
+
   return result;
 }
 
@@ -136,7 +176,7 @@ export function getTemplatePreview(content: string): string {
     email: 'maria@email.com',
     created_at: new Date().toISOString(),
   };
-  
+
   return replaceTemplateVariables(content, {
     lead: sampleLead,
     agentName: 'Dra. Ana',

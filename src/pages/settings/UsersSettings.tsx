@@ -43,26 +43,27 @@ const UsersSettings = () => {
   const debouncedSearch = useDebounce(search, 300);
 
   const getUserRole = (userId: string): AppRole => {
-    const role = userRoles?.find(r => r.user_id === userId);
+    const role = userRoles?.find((r) => r.user_id === userId);
     return role?.role || 'agent';
   };
 
   const filteredUsers = useMemo(() => {
     let result = profiles || [];
-    
+
     // Filtro de busca
     if (debouncedSearch) {
-      result = result.filter(user =>
-        user.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-        user.email.toLowerCase().includes(debouncedSearch.toLowerCase())
+      result = result.filter(
+        (user) =>
+          user.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+          user.email.toLowerCase().includes(debouncedSearch.toLowerCase())
       );
     }
-    
+
     // Filtro de role
     if (roleFilter !== 'all') {
-      result = result.filter(user => getUserRole(user.id) === roleFilter);
+      result = result.filter((user) => getUserRole(user.id) === roleFilter);
     }
-    
+
     return result;
   }, [profiles, debouncedSearch, roleFilter, userRoles]);
 
@@ -86,18 +87,20 @@ const UsersSettings = () => {
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6">
-        <PageBreadcrumb items={[{ label: 'Configurações', href: '/settings' }, { label: 'Usuários' }]} />
+      <div className="space-y-6 p-6">
+        <PageBreadcrumb
+          items={[{ label: 'Configurações', href: '/settings' }, { label: 'Usuários' }]}
+        />
         <div className="flex items-center justify-between">
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-10 w-24" />
         </div>
         <div className="flex gap-4">
-          <Skeleton className="h-10 flex-1 max-w-md" />
+          <Skeleton className="h-10 max-w-md flex-1" />
           <Skeleton className="h-10 w-40" />
         </div>
         <div className="space-y-2">
-          {[1, 2, 3, 4, 5].map(i => (
+          {[1, 2, 3, 4, 5].map((i) => (
             <Skeleton key={i} className="h-16" />
           ))}
         </div>
@@ -106,9 +109,11 @@ const UsersSettings = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <PageBreadcrumb items={[{ label: 'Configurações', href: '/settings' }, { label: 'Usuários' }]} />
-      
+    <div className="space-y-6 p-6">
+      <PageBreadcrumb
+        items={[{ label: 'Configurações', href: '/settings' }, { label: 'Usuários' }]}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -119,16 +124,12 @@ const UsersSettings = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => refetch()}
-          >
+          <Button variant="ghost" size="icon" onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4" />
           </Button>
           {isAdmin && (
             <Button onClick={() => setCreateModalOpen(true)} className="gap-2">
-              <Plus className="w-4 h-4" />
+              <Plus className="h-4 w-4" />
               Novo
             </Button>
           )}
@@ -137,13 +138,13 @@ const UsersSettings = () => {
 
       {/* Filtros */}
       <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <div className="relative max-w-md flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por nome ou email..."
             className="pl-9"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <Select value={roleFilter} onValueChange={setRoleFilter}>
@@ -152,7 +153,7 @@ const UsersSettings = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os perfis</SelectItem>
-            {SELECTABLE_ROLES.map(role => (
+            {SELECTABLE_ROLES.map((role) => (
               <SelectItem key={role} value={role}>
                 {getRoleLabel(role)}
               </SelectItem>
@@ -165,7 +166,7 @@ const UsersSettings = () => {
       <div className="space-y-1">
         {filteredUsers.map((user, index) => {
           const role = getUserRole(user.id);
-          
+
           return (
             <motion.div
               key={user.id}
@@ -173,7 +174,7 @@ const UsersSettings = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.03 }}
               onClick={() => handleUserClick(user)}
-              className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+              className="flex cursor-pointer items-center justify-between rounded-lg p-3 transition-colors hover:bg-muted/50"
             >
               <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10">
@@ -188,24 +189,23 @@ const UsersSettings = () => {
               <div className="flex items-center gap-2">
                 {/* Badge especial para dono da conta */}
                 {user.is_account_owner && (
-                  <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+                  <Badge
+                    variant="outline"
+                    className="border-amber-500/20 bg-amber-500/10 text-amber-600"
+                  >
                     Administrador da conta
                   </Badge>
                 )}
-                
+
                 {/* Badge de role */}
-                <Badge className={cn(getRoleColor(role))}>
-                  {getRoleLabel(role)}
-                </Badge>
+                <Badge className={cn(getRoleColor(role))}>{getRoleLabel(role)}</Badge>
               </div>
             </motion.div>
           );
         })}
 
         {filteredUsers.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            Nenhum usuário encontrado
-          </div>
+          <div className="py-12 text-center text-muted-foreground">Nenhum usuário encontrado</div>
         )}
       </div>
 
@@ -228,17 +228,10 @@ const UsersSettings = () => {
       />
 
       {/* Modal de Equipes */}
-      <UserTeamsModal
-        open={teamsModalOpen}
-        onOpenChange={setTeamsModalOpen}
-        user={selectedUser}
-      />
+      <UserTeamsModal open={teamsModalOpen} onOpenChange={setTeamsModalOpen} user={selectedUser} />
 
       {/* Modal de Criar Usuário */}
-      <CreateUserModal
-        open={createModalOpen}
-        onOpenChange={setCreateModalOpen}
-      />
+      <CreateUserModal open={createModalOpen} onOpenChange={setCreateModalOpen} />
     </div>
   );
 };

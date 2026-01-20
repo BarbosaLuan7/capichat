@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,9 +23,10 @@ serve(async (req) => {
     console.log('Messages count:', messages?.length);
 
     // Build conversation context
-    const conversationContext = messages
-      ?.map((m: any) => `${m.sender_type === 'lead' ? 'Cliente' : 'Atendente'}: ${m.content}`)
-      .join('\n') || 'Nenhuma mensagem ainda';
+    const conversationContext =
+      messages
+        ?.map((m: any) => `${m.sender_type === 'lead' ? 'Cliente' : 'Atendente'}: ${m.content}`)
+        .join('\n') || 'Nenhuma mensagem ainda';
 
     // Group labels by category
     const labelsByCategory: Record<string, string[]> = {};
@@ -55,7 +56,9 @@ Tipos de benefícios que trabalhamos:
 - Auxílio-Reclusão
 
 Etiquetas disponíveis por categoria:
-${Object.entries(labelsByCategory).map(([cat, labels]) => `- ${cat}: ${labels.join(', ')}`).join('\n')}
+${Object.entries(labelsByCategory)
+  .map(([cat, labels]) => `- ${cat}: ${labels.join(', ')}`)
+  .join('\n')}
 
 REGRAS:
 1. Sugira apenas benefícios mencionados ou claramente aplicáveis
@@ -76,14 +79,14 @@ Analise e sugira classificações.`;
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
+          { role: 'user', content: userPrompt },
         ],
         tools: [
           {
@@ -94,58 +97,64 @@ Analise e sugira classificações.`;
               parameters: {
                 type: 'object',
                 properties: {
-                  suggestedBenefit: { 
-                    type: 'string', 
-                    description: 'Tipo de benefício provável (ex: BPC Idoso, Aposentadoria, etc)' 
+                  suggestedBenefit: {
+                    type: 'string',
+                    description: 'Tipo de benefício provável (ex: BPC Idoso, Aposentadoria, etc)',
                   },
-                  suggestedTemperature: { 
-                    type: 'string', 
+                  suggestedTemperature: {
+                    type: 'string',
                     enum: ['cold', 'warm', 'hot'],
-                    description: 'Temperatura sugerida baseada no interesse demonstrado' 
+                    description: 'Temperatura sugerida baseada no interesse demonstrado',
                   },
-                  suggestedLabels: { 
-                    type: 'array', 
+                  suggestedLabels: {
+                    type: 'array',
                     items: { type: 'string' },
-                    description: 'Nomes das etiquetas sugeridas (das disponíveis)' 
+                    description: 'Nomes das etiquetas sugeridas (das disponíveis)',
                   },
                   healthConditions: {
                     type: 'array',
                     items: { type: 'string' },
-                    description: 'Condições de saúde mencionadas'
+                    description: 'Condições de saúde mencionadas',
                   },
-                  reasoning: { 
-                    type: 'string', 
-                    description: 'Breve justificativa das sugestões (1-2 frases)' 
+                  reasoning: {
+                    type: 'string',
+                    description: 'Breve justificativa das sugestões (1-2 frases)',
                   },
                   confidence: {
                     type: 'string',
                     enum: ['low', 'medium', 'high'],
-                    description: 'Nível de confiança nas sugestões'
-                  }
+                    description: 'Nível de confiança nas sugestões',
+                  },
                 },
-                required: ['suggestedTemperature', 'suggestedLabels', 'reasoning', 'confidence']
-              }
-            }
-          }
+                required: ['suggestedTemperature', 'suggestedLabels', 'reasoning', 'confidence'],
+              },
+            },
+          },
         ],
-        tool_choice: { type: 'function', function: { name: 'classify_lead' } }
+        tool_choice: { type: 'function', function: { name: 'classify_lead' } },
       }),
     });
 
     if (!response.ok) {
       if (response.status === 429) {
         console.error('Rate limit exceeded');
-        return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+          {
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
       }
       if (response.status === 402) {
         console.error('Payment required');
-        return new Response(JSON.stringify({ error: 'AI credits exhausted. Please add more credits.' }), {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return new Response(
+          JSON.stringify({ error: 'AI credits exhausted. Please add more credits.' }),
+          {
+            status: 402,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
       }
       const errorText = await response.text();
       console.error('AI gateway error:', response.status, errorText);
@@ -166,15 +175,17 @@ Analise e sugira classificações.`;
     }
 
     // Fallback
-    return new Response(JSON.stringify({ 
-      suggestedTemperature: 'warm',
-      suggestedLabels: [],
-      reasoning: 'Não foi possível determinar classificação específica.',
-      confidence: 'low'
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
+    return new Response(
+      JSON.stringify({
+        suggestedTemperature: 'warm',
+        suggestedLabels: [],
+        reasoning: 'Não foi possível determinar classificação específica.',
+        confidence: 'low',
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
   } catch (error: unknown) {
     console.error('Error in ai-classify-lead:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

@@ -1,14 +1,6 @@
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { 
-  Lock, 
-  Unlock,
-  Trash2, 
-  Edit, 
-  CheckCircle2,
-  XCircle,
-  Users
-} from 'lucide-react';
+import { Lock, Unlock, Trash2, Edit, CheckCircle2, XCircle, Users } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -23,7 +15,11 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { useToggleUserBlock, useUpdateAvailability, type ProfileWithRelations } from '@/hooks/useProfiles';
+import {
+  useToggleUserBlock,
+  useUpdateAvailability,
+  type ProfileWithRelations,
+} from '@/hooks/useProfiles';
 import { getRoleLabel, getRoleColor } from '@/lib/permissions';
 import { cn } from '@/lib/utils';
 import type { Database } from '@/integrations/supabase/types';
@@ -54,9 +50,9 @@ export const UserDetailsSheet = ({
 
   const handleBlock = async () => {
     try {
-      await toggleBlock.mutateAsync({ 
-        id: user.id, 
-        isActive: !user.is_active 
+      await toggleBlock.mutateAsync({
+        id: user.id,
+        isActive: !user.is_active,
       });
       toast.success(user.is_active ? 'Usuário bloqueado' : 'Usuário desbloqueado');
     } catch (error) {
@@ -80,40 +76,48 @@ export const UserDetailsSheet = ({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg p-0 flex flex-col">
+      <SheetContent className="flex w-full flex-col p-0 sm:max-w-lg">
         <SheetHeader className="sr-only">
           <SheetTitle>Detalhes do usuário</SheetTitle>
           <SheetDescription>Visualizar informações do usuário {user.name}</SheetDescription>
         </SheetHeader>
-        
+
         <ScrollArea className="flex-1">
-          <div className="p-6 space-y-6">
+          <div className="space-y-6 p-6">
             {/* Header com Avatar e Ações */}
             <div className="flex items-start gap-4">
               <Avatar className="h-20 w-20">
                 <AvatarImage src={user.avatar || undefined} alt={user.name} />
-                <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                <AvatarFallback className="bg-primary/10 text-2xl text-primary">
                   {user.name.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
 
-              <div className="flex-1 flex flex-col gap-2">
+              <div className="flex flex-1 flex-col gap-2">
                 <div className="flex flex-wrap gap-2">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={handleBlock}
                     disabled={toggleBlock.isPending}
                   >
-                    {user.is_active ? <Lock className="h-3.5 w-3.5 mr-1" /> : <Unlock className="h-3.5 w-3.5 mr-1" />}
+                    {user.is_active ? (
+                      <Lock className="mr-1 h-3.5 w-3.5" />
+                    ) : (
+                      <Unlock className="mr-1 h-3.5 w-3.5" />
+                    )}
                     {user.is_active ? 'Bloquear' : 'Desbloquear'}
                   </Button>
-                  <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-                    <Trash2 className="h-3.5 w-3.5 mr-1" />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="mr-1 h-3.5 w-3.5" />
                     Excluir
                   </Button>
                   <Button variant="default" size="sm" onClick={onEdit}>
-                    <Edit className="h-3.5 w-3.5 mr-1" />
+                    <Edit className="mr-1 h-3.5 w-3.5" />
                     Alterar
                   </Button>
                 </div>
@@ -127,12 +131,11 @@ export const UserDetailsSheet = ({
                   Id: <span className="font-mono">{user.id}</span>
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Data criação: {format(new Date(user.created_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}
+                  Data criação:{' '}
+                  {format(new Date(user.created_at), 'dd/MM/yyyy HH:mm:ss', { locale: ptBR })}
                 </p>
               </div>
-              <Badge className={cn(getRoleColor(userRole))}>
-                {getRoleLabel(userRole)}
-              </Badge>
+              <Badge className={cn(getRoleColor(userRole))}>{getRoleLabel(userRole)}</Badge>
             </div>
 
             <Separator />
@@ -140,22 +143,24 @@ export const UserDetailsSheet = ({
             {/* Informações Básicas */}
             <div className="space-y-4">
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Nome</p>
+                <p className="mb-1 text-xs text-muted-foreground">Nome</p>
                 <p className="font-medium">{user.name}</p>
               </div>
 
               <div>
-                <p className="text-xs text-muted-foreground mb-1">E-mail</p>
+                <p className="mb-1 text-xs text-muted-foreground">E-mail</p>
                 <p className="font-medium">{user.email}</p>
               </div>
 
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Telefone</p>
+                <p className="mb-1 text-xs text-muted-foreground">Telefone</p>
                 <p className="font-medium">{user.phone || 'Não informado'}</p>
               </div>
 
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Apelido utilizado no atendimento</p>
+                <p className="mb-1 text-xs text-muted-foreground">
+                  Apelido utilizado no atendimento
+                </p>
                 <p className="font-medium">{user.nickname || 'Indefinido'}</p>
               </div>
             </div>
@@ -164,8 +169,8 @@ export const UserDetailsSheet = ({
 
             {/* Disponibilidade */}
             <div>
-              <p className="text-sm font-medium mb-3">Disponibilidade</p>
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <p className="mb-3 text-sm font-medium">Disponibilidade</p>
+              <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
                 <div className="flex items-center gap-2">
                   {user.is_available ? (
                     <>
@@ -179,7 +184,7 @@ export const UserDetailsSheet = ({
                     </>
                   )}
                 </div>
-                <Switch 
+                <Switch
                   checked={user.is_available ?? true}
                   onCheckedChange={handleToggleAvailability}
                   disabled={updateAvailability.isPending}
@@ -191,10 +196,10 @@ export const UserDetailsSheet = ({
 
             {/* Equipes */}
             <div>
-              <div className="flex items-center justify-between mb-3">
+              <div className="mb-3 flex items-center justify-between">
                 <p className="text-sm font-medium">Equipes</p>
                 <Button variant="ghost" size="sm" onClick={onEditTeams}>
-                  <Users className="h-3.5 w-3.5 mr-1" />
+                  <Users className="mr-1 h-3.5 w-3.5" />
                   Alterar
                 </Button>
               </div>
@@ -203,16 +208,20 @@ export const UserDetailsSheet = ({
                 <p className="text-sm text-muted-foreground">Nenhuma equipe atribuída</p>
               ) : (
                 <div className="space-y-2">
-                  {teamMemberships.map(tm => (
-                    <div 
+                  {teamMemberships.map((tm) => (
+                    <div
                       key={tm.id}
-                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                      className="flex items-center justify-between rounded-lg bg-muted/50 p-3"
                     >
-                      <span className="font-medium text-sm">{tm.team?.name}</span>
+                      <span className="text-sm font-medium">{tm.team?.name}</span>
                       <div className="flex gap-1">
-                        <Badge variant="outline" className="text-xs">Usuário</Badge>
+                        <Badge variant="outline" className="text-xs">
+                          Usuário
+                        </Badge>
                         {tm.is_supervisor && (
-                          <Badge variant="secondary" className="text-xs">Supervisor</Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            Supervisor
+                          </Badge>
                         )}
                       </div>
                     </div>

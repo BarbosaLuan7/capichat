@@ -22,9 +22,7 @@ export function useReportExport() {
   const [isExporting, setIsExporting] = useState(false);
 
   const exportLeadsReport = async (filters: ReportFilters, format: ReportFormat) => {
-    let query = supabase
-      .from('leads')
-      .select(`
+    let query = supabase.from('leads').select(`
         id, name, phone, email, cpf, source, temperature, status, created_at, updated_at,
         stage:funnel_stages(name),
         assigned:profiles!leads_assigned_to_fkey(name)
@@ -49,7 +47,7 @@ export function useReportExport() {
     const { data, error } = await query;
     if (error) throw error;
 
-    return (data || []).map(lead => ({
+    return (data || []).map((lead) => ({
       Nome: lead.name,
       Telefone: lead.phone,
       Email: lead.email || '',
@@ -57,16 +55,22 @@ export function useReportExport() {
       Origem: lead.source,
       Etapa: (lead.stage as any)?.name || '',
       Responsável: (lead.assigned as any)?.name || '',
-      Temperatura: lead.temperature === 'hot' ? 'Quente' : lead.temperature === 'warm' ? 'Morno' : 'Frio',
-      Status: lead.status === 'active' ? 'Ativo' : lead.status === 'converted' ? 'Convertido' : lead.status === 'lost' ? 'Perdido' : 'Arquivado',
+      Temperatura:
+        lead.temperature === 'hot' ? 'Quente' : lead.temperature === 'warm' ? 'Morno' : 'Frio',
+      Status:
+        lead.status === 'active'
+          ? 'Ativo'
+          : lead.status === 'converted'
+            ? 'Convertido'
+            : lead.status === 'lost'
+              ? 'Perdido'
+              : 'Arquivado',
       'Data Criação': formatDate(new Date(lead.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
     }));
   };
 
   const exportConversationsReport = async (filters: ReportFilters, reportFormat: ReportFormat) => {
-    let query = supabase
-      .from('conversations')
-      .select(`
+    let query = supabase.from('conversations').select(`
         id, status, unread_count, created_at, last_message_at,
         lead:leads(name, phone),
         assigned:profiles!conversations_assigned_to_fkey(name)
@@ -82,14 +86,17 @@ export function useReportExport() {
     const { data, error } = await query;
     if (error) throw error;
 
-    return (data || []).map(conv => ({
+    return (data || []).map((conv) => ({
       Lead: (conv.lead as any)?.name || '',
       Telefone: (conv.lead as any)?.phone || '',
       Responsável: (conv.assigned as any)?.name || '',
-      Status: conv.status === 'open' ? 'Aberta' : conv.status === 'pending' ? 'Pendente' : 'Resolvida',
+      Status:
+        conv.status === 'open' ? 'Aberta' : conv.status === 'pending' ? 'Pendente' : 'Resolvida',
       'Não Lidas': conv.unread_count,
       'Data Criação': formatDate(new Date(conv.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
-      'Última Mensagem': formatDate(new Date(conv.last_message_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
+      'Última Mensagem': formatDate(new Date(conv.last_message_at), 'dd/MM/yyyy HH:mm', {
+        locale: ptBR,
+      }),
     }));
   };
 
@@ -100,25 +107,30 @@ export function useReportExport() {
 
     if (agentsError) throw agentsError;
 
-    const results = await Promise.all((agents || []).map(async (agent) => {
-      const [leadsResult, convsResult] = await Promise.all([
-        supabase.from('leads').select('id', { count: 'exact' }).eq('assigned_to', agent.id),
-        supabase.from('conversations').select('id, status', { count: 'exact' }).eq('assigned_to', agent.id),
-      ]);
+    const results = await Promise.all(
+      (agents || []).map(async (agent) => {
+        const [leadsResult, convsResult] = await Promise.all([
+          supabase.from('leads').select('id', { count: 'exact' }).eq('assigned_to', agent.id),
+          supabase
+            .from('conversations')
+            .select('id, status', { count: 'exact' })
+            .eq('assigned_to', agent.id),
+        ]);
 
-      const resolved = (convsResult.data || []).filter(c => c.status === 'resolved').length;
-      const total = convsResult.count || 0;
+        const resolved = (convsResult.data || []).filter((c) => c.status === 'resolved').length;
+        const total = convsResult.count || 0;
 
-      return {
-        Nome: agent.name,
-        Email: agent.email,
-        Status: agent.is_active ? 'Ativo' : 'Inativo',
-        'Leads Atribuídos': leadsResult.count || 0,
-        'Conversas Totais': total,
-        'Conversas Resolvidas': resolved,
-        'Taxa de Resolução': total > 0 ? `${Math.round((resolved / total) * 100)}%` : '0%',
-      };
-    }));
+        return {
+          Nome: agent.name,
+          Email: agent.email,
+          Status: agent.is_active ? 'Ativo' : 'Inativo',
+          'Leads Atribuídos': leadsResult.count || 0,
+          'Conversas Totais': total,
+          'Conversas Resolvidas': resolved,
+          'Taxa de Resolução': total > 0 ? `${Math.round((resolved / total) * 100)}%` : '0%',
+        };
+      })
+    );
 
     return results;
   };
@@ -131,37 +143,44 @@ export function useReportExport() {
 
     if (stagesError) throw stagesError;
 
-    const results = await Promise.all((stages || []).map(async (stage) => {
-      let query = supabase.from('leads').select('id', { count: 'exact' }).eq('stage_id', stage.id);
+    const results = await Promise.all(
+      (stages || []).map(async (stage) => {
+        let query = supabase
+          .from('leads')
+          .select('id', { count: 'exact' })
+          .eq('stage_id', stage.id);
 
-      if (filters.startDate) {
-        query = query.gte('created_at', filters.startDate.toISOString());
-      }
-      if (filters.endDate) {
-        query = query.lte('created_at', filters.endDate.toISOString());
-      }
+        if (filters.startDate) {
+          query = query.gte('created_at', filters.startDate.toISOString());
+        }
+        if (filters.endDate) {
+          query = query.lte('created_at', filters.endDate.toISOString());
+        }
 
-      const { count } = await query;
+        const { count } = await query;
 
-      return {
-        Etapa: stage.name,
-        Grupo: stage.grupo || '',
-        'Quantidade de Leads': count || 0,
-      };
-    }));
+        return {
+          Etapa: stage.name,
+          Grupo: stage.grupo || '',
+          'Quantidade de Leads': count || 0,
+        };
+      })
+    );
 
     return results;
   };
 
   const convertToCSV = (data: Record<string, any>[]) => {
     if (data.length === 0) return '';
-    
+
     const headers = Object.keys(data[0]);
     const csvRows = [
       headers.join(';'),
-      ...data.map(row => headers.map(h => `"${String(row[h] || '').replace(/"/g, '""')}"`).join(';')),
+      ...data.map((row) =>
+        headers.map((h) => `"${String(row[h] || '').replace(/"/g, '""')}"`).join(';')
+      ),
     ];
-    
+
     return '\ufeff' + csvRows.join('\n'); // BOM for Excel UTF-8
   };
 
@@ -177,7 +196,11 @@ export function useReportExport() {
     URL.revokeObjectURL(url);
   };
 
-  const exportReport = async (type: ReportType, reportFormat: ReportFormat, filters: ReportFilters = {}) => {
+  const exportReport = async (
+    type: ReportType,
+    reportFormat: ReportFormat,
+    filters: ReportFilters = {}
+  ) => {
     setIsExporting(true);
     try {
       let data: Record<string, any>[] = [];

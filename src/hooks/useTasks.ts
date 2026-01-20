@@ -14,7 +14,7 @@ interface PaginatedTasksResult {
 
 export function useTasks(page: number = 1, pageSize: number = 50) {
   const { currentTenant, tenants } = useTenant();
-  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map(t => t.id);
+  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map((t) => t.id);
 
   return useQuery({
     queryKey: ['tasks', page, pageSize, currentTenant?.id || 'all'],
@@ -34,7 +34,7 @@ export function useTasks(page: number = 1, pageSize: number = 50) {
       }
 
       const { data, error, count } = await queryBuilder;
-      
+
       if (error) throw error;
       return { tasks: data || [], totalCount: count || 0 };
     },
@@ -48,15 +48,12 @@ export function useTasks(page: number = 1, pageSize: number = 50) {
 // Hook to get ALL tasks (for calendar/kanban view without pagination)
 export function useAllTasks() {
   const { currentTenant, tenants } = useTenant();
-  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map(t => t.id);
+  const tenantIds = currentTenant ? [currentTenant.id] : tenants.map((t) => t.id);
 
   return useQuery({
     queryKey: ['tasks-all', currentTenant?.id || 'all'],
     queryFn: async () => {
-      let queryBuilder = supabase
-        .from('tasks')
-        .select('*')
-        .order('due_date', { ascending: true });
+      let queryBuilder = supabase.from('tasks').select('*').order('due_date', { ascending: true });
 
       // Filter by tenant
       if (tenantIds.length > 0) {
@@ -64,7 +61,7 @@ export function useAllTasks() {
       }
 
       const { data, error } = await queryBuilder;
-      
+
       if (error) throw error;
       return data;
     },
@@ -80,12 +77,8 @@ export function useTask(id: string | undefined) {
     queryKey: ['tasks', id],
     queryFn: async () => {
       if (!id) return null;
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
-      
+      const { data, error } = await supabase.from('tasks').select('*').eq('id', id).maybeSingle();
+
       if (error) throw error;
       return data;
     },
@@ -101,12 +94,8 @@ export function useCreateTask() {
 
   return useMutation({
     mutationFn: async (task: TaskInsert) => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .insert(task)
-        .select()
-        .single();
-      
+      const { data, error } = await supabase.from('tasks').insert(task).select().single();
+
       if (error) throw error;
       return data;
     },
@@ -127,7 +116,7 @@ export function useUpdateTask() {
         .eq('id', id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -143,11 +132,8 @@ export function useDeleteTask() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('id', id);
-      
+      const { error } = await supabase.from('tasks').delete().eq('id', id);
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -160,14 +146,20 @@ export function useUpdateTaskStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ taskId, status }: { taskId: string; status: Database['public']['Enums']['task_status'] }) => {
+    mutationFn: async ({
+      taskId,
+      status,
+    }: {
+      taskId: string;
+      status: Database['public']['Enums']['task_status'];
+    }) => {
       const { data, error } = await supabase
         .from('tasks')
         .update({ status })
         .eq('id', taskId)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -175,25 +167,25 @@ export function useUpdateTaskStatus() {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['tasks'] });
       await queryClient.cancelQueries({ queryKey: ['tasks-all'] });
-      
+
       // Snapshot previous values
       const previousTasks = queryClient.getQueryData(['tasks']);
       const previousAllTasks = queryClient.getQueryData(['tasks-all']);
-      
+
       // Optimistically update paginated query
       queryClient.setQueryData(['tasks'], (old: PaginatedTasksResult | undefined) => {
         if (!old) return old;
         return {
           ...old,
-          tasks: old.tasks.map(t => t.id === taskId ? { ...t, status } : t)
+          tasks: old.tasks.map((t) => (t.id === taskId ? { ...t, status } : t)),
         };
       });
-      
+
       // Optimistically update all tasks query
-      queryClient.setQueryData(['tasks-all'], (old: Task[] | undefined) => 
-        old?.map(t => t.id === taskId ? { ...t, status } : t)
+      queryClient.setQueryData(['tasks-all'], (old: Task[] | undefined) =>
+        old?.map((t) => (t.id === taskId ? { ...t, status } : t))
       );
-      
+
       return { previousTasks, previousAllTasks };
     },
     onError: (_, __, context) => {

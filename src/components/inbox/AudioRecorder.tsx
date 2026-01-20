@@ -14,45 +14,37 @@ interface AudioRecorderProps {
   onSend: () => void;
 }
 
-export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(function AudioRecorder({
-  isRecording,
-  duration,
-  audioUrl,
-  formatDuration,
-  onStart,
-  onStop,
-  onCancel,
-  onSend,
-}, ref) {
+export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(function AudioRecorder(
+  { isRecording, duration, audioUrl, formatDuration, onStart, onStop, onCancel, onSend },
+  ref
+) {
   // Generate stable bar heights once to prevent layout thrashing
-  const barHeights = useMemo(() => 
-    [...Array(20)].map(() => Math.random() * 20 + 8),
-    []
-  );
+  const barHeights = useMemo(() => [...Array(20)].map(() => Math.random() * 20 + 8), []);
 
   if (!isRecording && !audioUrl) {
     return null;
   }
 
   return (
-    <div ref={ref} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border">
+    <div
+      ref={ref}
+      className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3"
+    >
       {isRecording ? (
         <>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-destructive animate-pulse" />
-            <span className="text-sm font-medium text-foreground">
-              {formatDuration(duration)}
-            </span>
+            <div className="h-3 w-3 animate-pulse rounded-full bg-destructive" />
+            <span className="text-sm font-medium text-foreground">{formatDuration(duration)}</span>
           </div>
-          
-          <div className="flex-1 flex items-center justify-center">
+
+          <div className="flex flex-1 items-center justify-center">
             <div className="flex items-center gap-1" aria-hidden="true" role="presentation">
               {barHeights.map((height, i) => (
                 <div
                   key={i}
                   className={cn(
-                    "w-1 bg-primary rounded-full transition-all duration-150",
-                    isRecording && "animate-pulse"
+                    'w-1 rounded-full bg-primary transition-all duration-150',
+                    isRecording && 'animate-pulse'
                   )}
                   style={{
                     height: `${height}px`,
@@ -68,10 +60,10 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(func
               variant="ghost"
               size="icon"
               onClick={onCancel}
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
               aria-label="Cancelar gravação"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="h-4 w-4" />
             </Button>
             <Button
               variant="default"
@@ -80,23 +72,23 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(func
               className="bg-primary hover:bg-primary/90"
               aria-label="Parar gravação"
             >
-              <Square className="w-4 h-4" />
+              <Square className="h-4 w-4" />
             </Button>
           </div>
         </>
       ) : audioUrl ? (
         <>
-          <audio src={audioUrl} controls className="flex-1 h-10" />
-          
+          <audio src={audioUrl} controls className="h-10 flex-1" />
+
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
               onClick={onCancel}
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
               aria-label="Descartar áudio"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="h-4 w-4" />
             </Button>
             <Button
               variant="default"
@@ -105,7 +97,7 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(func
               className="gradient-primary"
               aria-label="Enviar áudio"
             >
-              <Send className="w-4 h-4" />
+              <Send className="h-4 w-4" />
             </Button>
           </div>
         </>

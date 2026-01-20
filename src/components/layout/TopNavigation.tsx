@@ -90,8 +90,8 @@ const TopNavigation = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isActive = (path: string) => location.pathname === path;
-  const isGroupActive = (items: { path: string }[]) => 
-    items.some(item => location.pathname.startsWith(item.path));
+  const isGroupActive = (items: { path: string }[]) =>
+    items.some((item) => location.pathname.startsWith(item.path));
 
   // Mobile menu content - reorganized with Dashboard in secondary section
   const MobileMenuContent = () => (
@@ -101,23 +101,23 @@ const TopNavigation = () => {
         {primaryNavItems.map((item) => {
           const active = isActive(item.path);
           const badge = item.badgeKey ? badges[item.badgeKey] : undefined;
-          
+
           return (
             <Link
               key={item.path}
               to={item.path}
               className={cn(
-                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full',
+                'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
                 active
                   ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-foreground hover:text-foreground hover:bg-primary/10'
+                  : 'text-foreground hover:bg-primary/10 hover:text-foreground'
               )}
               onClick={() => setMobileMenuOpen(false)}
             >
-              <item.icon className="w-4 h-4" />
+              <item.icon className="h-4 w-4" />
               <span>{item.label}</span>
               {badge !== undefined && badge > 0 && (
-                <Badge className="ml-1 h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0 hover:bg-warning">
+                <Badge className="ml-1 h-5 min-w-5 border-0 bg-warning px-1 text-xs text-warning-foreground hover:bg-warning">
                   {badge}
                 </Badge>
               )}
@@ -128,28 +128,30 @@ const TopNavigation = () => {
 
       {/* CRM */}
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">CRM</p>
+        <p className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          CRM
+        </p>
         <div className="space-y-1">
           {crmItems.map((item) => {
             const active = isActive(item.path);
             const badge = item.badgeKey ? badges[item.badgeKey] : undefined;
-            
+
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full',
+                  'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
                   active
                     ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-foreground hover:text-foreground hover:bg-primary/10'
+                    : 'text-foreground hover:bg-primary/10 hover:text-foreground'
                 )}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <item.icon className="w-4 h-4" />
+                <item.icon className="h-4 w-4" />
                 <span>{item.label}</span>
                 {badge !== undefined && badge > 0 && (
-                  <Badge className="ml-1 h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0 hover:bg-warning">
+                  <Badge className="ml-1 h-5 min-w-5 border-0 bg-warning px-1 text-xs text-warning-foreground hover:bg-warning">
                     {badge}
                   </Badge>
                 )}
@@ -162,19 +164,21 @@ const TopNavigation = () => {
       {/* Dashboard - only for account owners */}
       {isAccountOwner && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">Visão Geral</p>
+          <p className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Visão Geral
+          </p>
           <div className="space-y-1">
             <Link
               to="/dashboard"
               className={cn(
-                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full',
+                'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
                 isActive('/dashboard')
                   ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-foreground hover:text-foreground hover:bg-primary/10'
+                  : 'text-foreground hover:bg-primary/10 hover:text-foreground'
               )}
               onClick={() => setMobileMenuOpen(false)}
             >
-              <LayoutDashboard className="w-4 h-4" />
+              <LayoutDashboard className="h-4 w-4" />
               <span>Dashboard</span>
             </Link>
           </div>
@@ -183,24 +187,26 @@ const TopNavigation = () => {
 
       {/* Tools */}
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">Ferramentas</p>
+        <p className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Ferramentas
+        </p>
         <div className="space-y-1">
           {toolsItems.map((item) => {
             const active = isActive(item.path);
-            
+
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full',
+                  'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
                   active
                     ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-foreground hover:text-foreground hover:bg-primary/10'
+                    : 'text-foreground hover:bg-primary/10 hover:text-foreground'
                 )}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <item.icon className="w-4 h-4" />
+                <item.icon className="h-4 w-4" />
                 <span>{item.label}</span>
               </Link>
             );
@@ -211,24 +217,26 @@ const TopNavigation = () => {
       {/* Admin Settings - only for account owners */}
       {isAccountOwner && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">Configurações</p>
+          <p className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Configurações
+          </p>
           <div className="space-y-1">
             {adminSettingsItems.map((item) => {
               const active = isActive(item.path);
-              
+
               return (
                 <Link
                   key={item.path}
                   to={item.path}
                   className={cn(
-                    'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full',
+                    'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
                     active
                       ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-foreground hover:text-foreground hover:bg-primary/10'
+                      : 'text-foreground hover:bg-primary/10 hover:text-foreground'
                   )}
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  <item.icon className="w-4 h-4" />
+                  <item.icon className="h-4 w-4" />
                   <span>{item.label}</span>
                 </Link>
               );
@@ -240,21 +248,18 @@ const TopNavigation = () => {
   );
 
   return (
-    <header className="h-16 bg-sidebar border-b border-sidebar-border flex items-center px-4 sticky top-0 z-50" role="banner">
+    <header
+      className="sticky top-0 z-50 flex h-16 items-center border-b border-sidebar-border bg-sidebar px-4"
+      role="banner"
+    >
       {/* Logo */}
-      <Link to="/inbox" className="flex items-center gap-2.5 mr-4 shrink-0">
-        <img 
-          src={lbAdvLogo} 
-          alt="LB ADV" 
-          className="h-14 w-14 object-contain"
-        />
-        <span className="text-lg font-bold text-white hidden sm:block">
-          LB ADV
-        </span>
+      <Link to="/inbox" className="mr-4 flex shrink-0 items-center gap-2.5">
+        <img src={lbAdvLogo} alt="LB ADV" className="h-14 w-14 object-contain" />
+        <span className="hidden text-lg font-bold text-white sm:block">LB ADV</span>
       </Link>
 
       {/* Tenant Selector */}
-      <div className="hidden md:block mr-4">
+      <div className="mr-4 hidden md:block">
         <TenantSelector />
       </div>
 
@@ -264,22 +269,22 @@ const TopNavigation = () => {
           {primaryNavItems.map((item) => {
             const active = isActive(item.path);
             const badge = item.badgeKey ? badges[item.badgeKey] : undefined;
-            
+
             return (
               <NavigationMenuItem key={item.path}>
                 <Link
                   to={item.path}
                   className={cn(
-                    'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                    'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
                     active
                       ? 'bg-white text-primary shadow-sm'
-                      : 'text-white/80 hover:text-white hover:bg-white/10'
+                      : 'text-white/80 hover:bg-white/10 hover:text-white'
                   )}
                 >
-                  <item.icon className="w-4 h-4" />
+                  <item.icon className="h-4 w-4" />
                   <span>{item.label}</span>
                   {badge !== undefined && badge > 0 && (
-                    <Badge className="ml-1 h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0 hover:bg-warning">
+                    <Badge className="ml-1 h-5 min-w-5 border-0 bg-warning px-1 text-xs text-warning-foreground hover:bg-warning">
                       {badge}
                     </Badge>
                   )}
@@ -291,7 +296,7 @@ const TopNavigation = () => {
       </NavigationMenu>
 
       {/* CRM Items - Inline for non-account owners, Dropdown for account owners */}
-      <div className="hidden md:flex items-center">
+      <div className="hidden items-center md:flex">
         {isAccountOwner ? (
           // Dropdown for account owners (more compact)
           <DropdownMenu>
@@ -299,14 +304,14 @@ const TopNavigation = () => {
               <Button
                 variant="ghost"
                 className={cn(
-                  'px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10',
+                  'px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white',
                   isGroupActive(crmItems) && 'bg-white/20 text-white'
                 )}
               >
-                <Users className="w-4 h-4 mr-2" />
+                <Users className="mr-2 h-4 w-4" />
                 CRM
                 {badges.tasks > 0 && (
-                  <Badge className="ml-1 h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0 hover:bg-warning">
+                  <Badge className="ml-1 h-5 min-w-5 border-0 bg-warning px-1 text-xs text-warning-foreground hover:bg-warning">
                     {badges.tasks}
                   </Badge>
                 )}
@@ -316,11 +321,11 @@ const TopNavigation = () => {
             <DropdownMenuContent align="start" className="w-56">
               {crmItems.map((item) => (
                 <DropdownMenuItem key={item.path} asChild>
-                  <Link to={item.path} className="flex items-center gap-3 cursor-pointer">
-                    <item.icon className="w-4 h-4" />
+                  <Link to={item.path} className="flex cursor-pointer items-center gap-3">
+                    <item.icon className="h-4 w-4" />
                     <span className="flex-1">{item.label}</span>
                     {item.badgeKey && badges[item.badgeKey] > 0 && (
-                      <Badge className="h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0">
+                      <Badge className="h-5 min-w-5 border-0 bg-warning px-1 text-xs text-warning-foreground">
                         {badges[item.badgeKey]}
                       </Badge>
                     )}
@@ -336,22 +341,22 @@ const TopNavigation = () => {
               {crmItems.map((item) => {
                 const active = isActive(item.path);
                 const badge = item.badgeKey ? badges[item.badgeKey] : undefined;
-                
+
                 return (
                   <NavigationMenuItem key={item.path}>
                     <Link
                       to={item.path}
                       className={cn(
-                        'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                        'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
                         active
                           ? 'bg-white text-primary shadow-sm'
-                          : 'text-white/80 hover:text-white hover:bg-white/10'
+                          : 'text-white/80 hover:bg-white/10 hover:text-white'
                       )}
                     >
-                      <item.icon className="w-4 h-4" />
+                      <item.icon className="h-4 w-4" />
                       <span>{item.label}</span>
                       {badge !== undefined && badge > 0 && (
-                        <Badge className="ml-1 h-5 min-w-5 px-1 text-xs bg-warning text-warning-foreground border-0 hover:bg-warning">
+                        <Badge className="ml-1 h-5 min-w-5 border-0 bg-warning px-1 text-xs text-warning-foreground hover:bg-warning">
                           {badge}
                         </Badge>
                       )}
@@ -365,19 +370,19 @@ const TopNavigation = () => {
       </div>
 
       {/* Secondary Navigation - Only visible on lg+ */}
-      <div className="hidden lg:flex items-center">
+      <div className="hidden items-center lg:flex">
         {/* Dashboard Link - only for account owners */}
         {isAccountOwner && (
           <Link
             to="/dashboard"
             className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+              'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
               isActive('/dashboard')
                 ? 'bg-white text-primary shadow-sm'
-                : 'text-white/80 hover:text-white hover:bg-white/10'
+                : 'text-white/80 hover:bg-white/10 hover:text-white'
             )}
           >
-            <LayoutDashboard className="w-4 h-4" />
+            <LayoutDashboard className="h-4 w-4" />
             <span>Dashboard</span>
           </Link>
         )}
@@ -388,11 +393,11 @@ const TopNavigation = () => {
             <Button
               variant="ghost"
               className={cn(
-                'px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10',
+                'px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white',
                 isGroupActive(toolsItems) && 'bg-white/20 text-white'
               )}
             >
-              <Workflow className="w-4 h-4 mr-2" />
+              <Workflow className="mr-2 h-4 w-4" />
               Ferramentas
               <ChevronDown className="ml-1 h-3 w-3" />
             </Button>
@@ -400,8 +405,8 @@ const TopNavigation = () => {
           <DropdownMenuContent align="start" className="w-56">
             {toolsItems.map((item) => (
               <DropdownMenuItem key={item.path} asChild>
-                <Link to={item.path} className="flex items-center gap-3 cursor-pointer">
-                  <item.icon className="w-4 h-4" />
+                <Link to={item.path} className="flex cursor-pointer items-center gap-3">
+                  <item.icon className="h-4 w-4" />
                   <span>{item.label}</span>
                 </Link>
               </DropdownMenuItem>
@@ -416,11 +421,11 @@ const TopNavigation = () => {
               <Button
                 variant="ghost"
                 className={cn(
-                  'px-3 py-2 text-sm font-medium text-white/80 hover:text-white hover:bg-white/10',
+                  'px-3 py-2 text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white',
                   isGroupActive(adminSettingsItems) && 'bg-white/20 text-white'
                 )}
               >
-                <Settings className="w-4 h-4 mr-2" />
+                <Settings className="mr-2 h-4 w-4" />
                 Configurações
                 <ChevronDown className="ml-1 h-3 w-3" />
               </Button>
@@ -428,8 +433,8 @@ const TopNavigation = () => {
             <DropdownMenuContent align="start" className="w-56">
               {adminSettingsItems.map((item) => (
                 <DropdownMenuItem key={item.path} asChild>
-                  <Link to={item.path} className="flex items-center gap-3 cursor-pointer">
-                    <item.icon className="w-4 h-4" />
+                  <Link to={item.path} className="flex cursor-pointer items-center gap-3">
+                    <item.icon className="h-4 w-4" />
                     <span>{item.label}</span>
                   </Link>
                 </DropdownMenuItem>
@@ -445,41 +450,41 @@ const TopNavigation = () => {
       {/* Right side */}
       <div className="flex items-center gap-2">
         {/* Search - Desktop */}
-        <div className="hidden md:flex items-center">
+        <div className="hidden items-center md:flex">
           {searchOpen ? (
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Buscar..."
-                className="w-64 pl-9 pr-8 h-9 bg-white"
+                className="h-9 w-64 bg-white pl-9 pr-8"
                 autoFocus
                 onBlur={() => setSearchOpen(false)}
               />
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2"
                 onClick={() => setSearchOpen(false)}
                 aria-label="Fechar busca"
               >
-                <X className="w-3 h-3" />
+                <X className="h-3 w-3" />
               </Button>
             </div>
           ) : (
             <Button
               variant="ghost"
               size="icon"
-              className="text-white/70 hover:text-white hover:bg-white/10"
+              className="text-white/70 hover:bg-white/10 hover:text-white"
               onClick={() => setSearchOpen(true)}
               aria-label="Buscar"
             >
-              <Search className="w-5 h-5" />
+              <Search className="h-5 w-5" />
             </Button>
           )}
         </div>
 
         {/* Notifications */}
-        <div className="[&_button]:text-white/70 [&_button]:hover:text-white [&_button]:hover:bg-white/10">
+        <div className="[&_button]:text-white/70 [&_button]:hover:bg-white/10 [&_button]:hover:text-white">
           <NotificationCenter userId={user?.id} />
         </div>
 
@@ -489,7 +494,7 @@ const TopNavigation = () => {
             <Button variant="ghost" className="relative h-9 w-9 rounded-full hover:bg-white/10">
               <Avatar className="h-8 w-8 ring-2 ring-white/20">
                 <AvatarImage src={user?.avatar} alt={user?.name} />
-                <AvatarFallback className="bg-white/20 text-white text-sm">
+                <AvatarFallback className="bg-white/20 text-sm text-white">
                   {user?.name?.charAt(0)}
                 </AvatarFallback>
               </Avatar>
@@ -499,23 +504,18 @@ const TopNavigation = () => {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">{user?.name}</p>
-                <p className="text-xs leading-none text-muted-foreground">
-                  {user?.email}
-                </p>
+                <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={() => navigate('/account')}
-              className="cursor-pointer"
-            >
+            <DropdownMenuItem onClick={() => navigate('/account')} className="cursor-pointer">
               <User className="mr-2 h-4 w-4" />
               <span>Minha Conta</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
+            <DropdownMenuItem
               onClick={() => signOut()}
-              className="text-destructive focus:text-destructive cursor-pointer"
+              className="cursor-pointer text-destructive focus:text-destructive"
             >
               <LogOut className="mr-2 h-4 w-4" />
               <span>Sair</span>
@@ -526,20 +526,22 @@ const TopNavigation = () => {
         {/* Mobile Menu Button */}
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="lg:hidden text-white/80 hover:text-white hover:bg-white/10">
-              <Menu className="w-5 h-5" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white/80 hover:bg-white/10 hover:text-white lg:hidden"
+            >
+              <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-72 p-0">
             {/* Mobile Header - LB ADV theme */}
-            <div className="h-14 flex items-center gap-2.5 px-4 border-b border-sidebar-border bg-sidebar">
+            <div className="flex h-14 items-center gap-2.5 border-b border-sidebar-border bg-sidebar px-4">
               <img src={lbAdvLogo} alt="LB ADV" className="h-10 w-10 object-contain" />
-              <span className="text-base font-bold text-white">
-                LB ADV
-              </span>
+              <span className="text-base font-bold text-white">LB ADV</span>
             </div>
             {/* Mobile Menu */}
-            <div className="overflow-y-auto h-[calc(100vh-3.5rem)]">
+            <div className="h-[calc(100vh-3.5rem)] overflow-y-auto">
               <MobileMenuContent />
             </div>
           </SheetContent>

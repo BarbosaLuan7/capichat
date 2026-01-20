@@ -21,12 +21,12 @@ interface TenantIndicatorCardProps {
   onSelectTenant: (tenant: Tenant | null) => void;
 }
 
-function TenantIndicatorCardComponent({ 
-  tenant, 
-  tenants, 
-  stats, 
+function TenantIndicatorCardComponent({
+  tenant,
+  tenants,
+  stats,
   isLoading,
-  onSelectTenant 
+  onSelectTenant,
 }: TenantIndicatorCardProps) {
   // Don't render if user has only one tenant
   if (tenants.length <= 1) {
@@ -38,23 +38,21 @@ function TenantIndicatorCardComponent({
     const tenantStats = stats[tenant.id];
     const initials = tenant.name
       .split(' ')
-      .map(w => w[0])
+      .map((w) => w[0])
       .join('')
       .substring(0, 2)
       .toUpperCase();
 
     return (
-      <Card className="bg-primary/5 border-primary/20 shadow-sm">
+      <Card className="border-primary/20 bg-primary/5 shadow-sm">
         <CardContent className="flex items-center gap-4 p-4">
           <Avatar className="h-12 w-12 ring-2 ring-primary/20">
-            {tenant.logo_url ? (
-              <AvatarImage src={tenant.logo_url} alt={tenant.name} />
-            ) : null}
-            <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+            {tenant.logo_url ? <AvatarImage src={tenant.logo_url} alt={tenant.name} /> : null}
+            <AvatarFallback className="bg-primary/10 font-semibold text-primary">
               {initials}
             </AvatarFallback>
           </Avatar>
-          
+
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-foreground">{tenant.name}</h3>
@@ -63,9 +61,9 @@ function TenantIndicatorCardComponent({
               </Badge>
             </div>
             {isLoading ? (
-              <div className="h-4 w-48 bg-muted animate-pulse rounded mt-1" />
+              <div className="mt-1 h-4 w-48 animate-pulse rounded bg-muted" />
             ) : tenantStats ? (
-              <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+              <div className="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Users className="h-4 w-4" />
                   {tenantStats.totalLeads} leads
@@ -74,21 +72,21 @@ function TenantIndicatorCardComponent({
                   <MessageCircle className="h-4 w-4" />
                   {tenantStats.openConversations} conversas abertas
                 </span>
-                <span className="text-primary font-medium">
+                <span className="font-medium text-primary">
                   {tenantStats.resolutionRate}% resolução
                 </span>
               </div>
             ) : null}
           </div>
-          
-          <Button 
-            variant="ghost" 
+
+          <Button
+            variant="ghost"
             size="sm"
             onClick={() => onSelectTenant(null)}
             className="text-muted-foreground hover:text-foreground"
           >
             Ver todas empresas
-            <ArrowRight className="h-4 w-4 ml-1" />
+            <ArrowRight className="ml-1 h-4 w-4" />
           </Button>
         </CardContent>
       </Card>
@@ -105,8 +103,8 @@ function TenantIndicatorCardComponent({
           {tenants.length} empresas
         </Badge>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         {tenants.map((t) => (
           <TenantMiniCard
             key={t.id}

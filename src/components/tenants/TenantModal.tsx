@@ -27,7 +27,8 @@ import type { Tenant } from '@/contexts/TenantContext';
 
 const tenantSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  slug: z.string()
+  slug: z
+    .string()
     .min(2, 'Slug deve ter pelo menos 2 caracteres')
     .regex(/^[a-z0-9-]+$/, 'Slug deve conter apenas letras minúsculas, números e hífens'),
   logo_url: z.string().url('URL inválida').optional().or(z.literal('')),
@@ -112,8 +113,8 @@ export function TenantModal({
             {isEditing ? 'Editar Empresa' : 'Nova Empresa'}
           </DialogTitle>
           <DialogDescription>
-            {isEditing 
-              ? 'Altere os dados da empresa abaixo.' 
+            {isEditing
+              ? 'Altere os dados da empresa abaixo.'
               : 'Preencha os dados para criar uma nova empresa.'}
           </DialogDescription>
         </DialogHeader>
@@ -141,11 +142,7 @@ export function TenantModal({
                 <FormItem>
                   <FormLabel>Slug</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="identificador-unico" 
-                      {...field} 
-                      disabled={isEditing}
-                    />
+                    <Input placeholder="identificador-unico" {...field} disabled={isEditing} />
                   </FormControl>
                   <FormDescription>
                     Identificador único para a empresa (não pode ser alterado depois)
@@ -162,14 +159,9 @@ export function TenantModal({
                 <FormItem>
                   <FormLabel>URL do Logo</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="https://exemplo.com/logo.png" 
-                      {...field} 
-                    />
+                    <Input placeholder="https://exemplo.com/logo.png" {...field} />
                   </FormControl>
-                  <FormDescription>
-                    URL da imagem do logo (opcional)
-                  </FormDescription>
+                  <FormDescription>URL da imagem do logo (opcional)</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -181,29 +173,20 @@ export function TenantModal({
               render={({ field }) => (
                 <FormItem className="flex items-center justify-between rounded-lg border p-3">
                   <div className="space-y-0.5">
-                    <FormLabel className="text-base cursor-pointer">
-                      Ativo
-                    </FormLabel>
+                    <FormLabel className="cursor-pointer text-base">Ativo</FormLabel>
                     <FormDescription>
                       Empresas inativas não aparecem para os usuários
                     </FormDescription>
                   </div>
                   <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
                   </FormControl>
                 </FormItem>
               )}
             />
 
             <DialogFooter className="pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={isLoading}>

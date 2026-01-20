@@ -22,7 +22,7 @@ function formatChatbot(bot: any) {
     connections: bot.connections || [],
     ativo: bot.is_active,
     criado_em: bot.created_at,
-    atualizado_em: bot.updated_at
+    atualizado_em: bot.updated_at,
   };
 }
 
@@ -46,13 +46,15 @@ Deno.serve(async (req) => {
     }
 
     const apiKey = authHeader.replace('Bearer ', '');
-    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', { key_value: apiKey });
+    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', {
+      key_value: apiKey,
+    });
 
     if (apiKeyError || !apiKeyId) {
-      return new Response(
-        JSON.stringify({ sucesso: false, erro: 'API key inválida' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: false, erro: 'API key inválida' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const url = new URL(req.url);
@@ -69,16 +71,15 @@ Deno.serve(async (req) => {
           .single();
 
         if (error) {
-          return new Response(
-            JSON.stringify({ sucesso: false, erro: 'Chatbot não encontrado' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ sucesso: false, erro: 'Chatbot não encontrado' }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
-        return new Response(
-          JSON.stringify(formatChatbot(data)),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify(formatChatbot(data)), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       const { data, error } = await supabase
@@ -87,16 +88,15 @@ Deno.serve(async (req) => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        return new Response(
-          JSON.stringify({ sucesso: false, erro: 'Erro ao listar chatbots' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ sucesso: false, erro: 'Erro ao listar chatbots' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
-      return new Response(
-        JSON.stringify({ dados: (data || []).map(formatChatbot) }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ dados: (data || []).map(formatChatbot) }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // POST - Create or trigger
@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
       // POST /api-chatbots?action=enviar - Trigger chatbot for contact
       if (action === 'enviar') {
         const body = await req.json();
-        
+
         if (!body.chatbot_id || !body.contato_id) {
           return new Response(
             JSON.stringify({ sucesso: false, erro: 'chatbot_id e contato_id são obrigatórios' }),
@@ -135,10 +135,10 @@ Deno.serve(async (req) => {
           .single();
 
         if (leadError || !lead) {
-          return new Response(
-            JSON.stringify({ sucesso: false, erro: 'Contato não encontrado' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return new Response(JSON.stringify({ sucesso: false, erro: 'Contato não encontrado' }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
         // TODO: Implement actual chatbot execution logic
@@ -146,11 +146,11 @@ Deno.serve(async (req) => {
         console.log(`[api-chatbots] Triggering chatbot ${chatbot.name} for lead ${lead.name}`);
 
         return new Response(
-          JSON.stringify({ 
-            sucesso: true, 
+          JSON.stringify({
+            sucesso: true,
             mensagem: 'Fluxo iniciado',
             chatbot: formatChatbot(chatbot),
-            contato: { id: lead.id, nome: lead.name }
+            contato: { id: lead.id, nome: lead.name },
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -160,10 +160,10 @@ Deno.serve(async (req) => {
       const body: ChatbotPayload = await req.json();
 
       if (!body.nome) {
-        return new Response(
-          JSON.stringify({ sucesso: false, erro: 'nome é obrigatório' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ sucesso: false, erro: 'nome é obrigatório' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       const { data, error } = await supabase
@@ -173,23 +173,23 @@ Deno.serve(async (req) => {
           description: body.descricao,
           nodes: body.nodes || [],
           connections: body.connections || [],
-          is_active: body.ativo ?? false
+          is_active: body.ativo ?? false,
         })
         .select()
         .single();
 
       if (error) {
         console.error('[api-chatbots] Create error:', error);
-        return new Response(
-          JSON.stringify({ sucesso: false, erro: 'Erro ao criar chatbot' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ sucesso: false, erro: 'Erro ao criar chatbot' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
-      return new Response(
-        JSON.stringify({ sucesso: true, chatbot: formatChatbot(data) }),
-        { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: true, chatbot: formatChatbot(data) }), {
+        status: 201,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // PUT - Update
@@ -218,16 +218,15 @@ Deno.serve(async (req) => {
         .single();
 
       if (error) {
-        return new Response(
-          JSON.stringify({ sucesso: false, erro: 'Erro ao atualizar chatbot' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ sucesso: false, erro: 'Erro ao atualizar chatbot' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
-      return new Response(
-        JSON.stringify({ sucesso: true, chatbot: formatChatbot(data) }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: true, chatbot: formatChatbot(data) }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // DELETE
@@ -239,34 +238,29 @@ Deno.serve(async (req) => {
         );
       }
 
-      const { error } = await supabase
-        .from('chatbot_flows')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('chatbot_flows').delete().eq('id', id);
 
       if (error) {
-        return new Response(
-          JSON.stringify({ sucesso: false, erro: 'Erro ao remover chatbot' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ sucesso: false, erro: 'Erro ao remover chatbot' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
-      return new Response(
-        JSON.stringify({ sucesso: true }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    return new Response(
-      JSON.stringify({ sucesso: false, erro: 'Método não permitido' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
+    return new Response(JSON.stringify({ sucesso: false, erro: 'Método não permitido' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('[api-chatbots] Error:', error);
-    return new Response(
-      JSON.stringify({ sucesso: false, erro: 'Erro interno do servidor' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ sucesso: false, erro: 'Erro interno do servidor' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,33 +16,38 @@ async function resolvePhoneFromLID(
   try {
     const cleanLid = lid.replace('@lid', '').replace(/\D/g, '');
     const url = `${wahaBaseUrl}/api/${sessionName}/lids/${cleanLid}`;
-    
+
     console.log('[resolve-lids] Tentando resolver LID:', cleanLid);
-    
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
         'X-Api-Key': apiKey,
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!response.ok) {
       console.log('[resolve-lids] API retornou:', response.status);
       return null;
     }
-    
+
     const data = await response.json();
     console.log('[resolve-lids] Resposta da API:', JSON.stringify(data));
-    
+
     // Campo 'pn' é o mais comum na resposta do WAHA
-    const realPhone = data?.pn?.replace('@c.us', '') || data?.phone || data?.number || data?.jid?.replace('@c.us', '') || data?.id?.replace('@c.us', '');
-    
+    const realPhone =
+      data?.pn?.replace('@c.us', '') ||
+      data?.phone ||
+      data?.number ||
+      data?.jid?.replace('@c.us', '') ||
+      data?.id?.replace('@c.us', '');
+
     if (realPhone && !realPhone.includes('lid')) {
       return realPhone;
     }
-    
+
     return null;
   } catch (error) {
     console.error('[resolve-lids] Erro ao resolver LID:', error);
@@ -56,11 +61,11 @@ function normalizePhone(phone: string): string {
     .replace('@s.whatsapp.net', '')
     .replace('@lid', '')
     .replace(/\D/g, '');
-  
+
   if (numbers.startsWith('55') && numbers.length >= 12) {
     numbers = numbers.substring(2);
   }
-  
+
   return numbers;
 }
 
@@ -74,30 +79,30 @@ async function getProfilePicture(
   try {
     const phoneWithCountry = phone.startsWith('55') ? phone : `55${phone}`;
     const url = `${wahaBaseUrl}/api/contacts/profile-picture?contactId=${phoneWithCountry}&session=${sessionName}&refresh=true`;
-    
+
     console.log('[resolve-lids] Buscando avatar para:', phoneWithCountry);
-    
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
         'X-Api-Key': apiKey,
-        'Authorization': `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
     });
-    
+
     if (!response.ok) {
       console.log('[resolve-lids] Avatar não encontrado:', response.status);
       return null;
     }
-    
+
     const data = await response.json();
     const avatarUrl = data?.profilePictureURL || data?.profilePicture || data?.url;
-    
+
     if (avatarUrl) {
       console.log('[resolve-lids] Avatar encontrado');
       return avatarUrl;
     }
-    
+
     return null;
   } catch (error) {
     console.error('[resolve-lids] Erro ao buscar avatar:', error);
@@ -149,10 +154,10 @@ serve(async (req) => {
 
     if (fetchError) {
       console.error('[resolve-lids] Erro ao buscar leads:', fetchError);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Error fetching leads' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ success: false, error: 'Error fetching leads' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     if (!pendingLeads || pendingLeads.length === 0) {
@@ -179,7 +184,7 @@ serve(async (req) => {
 
         if (realPhone) {
           const normalizedPhone = normalizePhone(realPhone);
-          
+
           // Verificar se já existe um lead com esse telefone
           const { data: existingLead } = await supabase
             .from('leads')
@@ -190,32 +195,39 @@ serve(async (req) => {
 
           if (existingLead) {
             // Já existe outro lead com esse número - marcar para merge manual
-            console.log(`[resolve-lids] Lead ${lead.id}: número ${normalizedPhone} já existe em outro lead (${existingLead.id})`);
+            console.log(
+              `[resolve-lids] Lead ${lead.id}: número ${normalizedPhone} já existe em outro lead (${existingLead.id})`
+            );
             results.push({ leadId: lead.id, status: 'duplicate', phone: normalizedPhone });
-            
+
             // Atualizar o lead atual com nota sobre duplicidade (preservar notas anteriores)
             const existingNotes = lead.internal_notes || '';
             const duplicateNote = `\n\n⚠️ Número resolvido: ${normalizedPhone}\nJá existe lead com este número (ID: ${existingLead.id}).\nVerificar merge manual.`;
-            
+
             await supabase
               .from('leads')
               .update({
-                internal_notes: existingNotes + duplicateNote
+                internal_notes: existingNotes + duplicateNote,
               })
               .eq('id', lead.id);
           } else {
             // Atualizar o lead com o número real
             // Limpar nome genérico do LID
-            const cleanName = lead.whatsapp_name || 
-              lead.name.replace(/^Lead Facebook [A-Za-z0-9]+$/, `Lead ${normalizedPhone}`)
-                       .replace(' (via anúncio)', '')
-                       .replace(/Lead via anúncio \d+/, `Lead ${normalizedPhone}`);
-            
+            const cleanName =
+              lead.whatsapp_name ||
+              lead.name
+                .replace(/^Lead Facebook [A-Za-z0-9]+$/, `Lead ${normalizedPhone}`)
+                .replace(' (via anúncio)', '')
+                .replace(/Lead via anúncio \d+/, `Lead ${normalizedPhone}`);
+
             // Limpar notas internas - remover aviso de LID pendente
             const cleanNotes = (lead.internal_notes || '')
-              .replace(/⚠️ Número Privado \(Facebook Ads\)[\s\S]*?conversar normalmente com o cliente\./g, '')
+              .replace(
+                /⚠️ Número Privado \(Facebook Ads\)[\s\S]*?conversar normalmente com o cliente\./g,
+                ''
+              )
               .trim();
-            
+
             // Buscar avatar do WhatsApp
             const avatarUrl = await getProfilePicture(
               baseUrl,
@@ -223,7 +235,7 @@ serve(async (req) => {
               sessionName,
               normalizedPhone
             );
-            
+
             const { error: updateError } = await supabase
               .from('leads')
               .update({
@@ -250,8 +262,7 @@ serve(async (req) => {
         }
 
         // Pequeno delay entre chamadas para não sobrecarregar a API
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
+        await new Promise((resolve) => setTimeout(resolve, 500));
       } catch (error) {
         console.error(`[resolve-lids] Erro processando lead ${lead.id}:`, error);
         results.push({ leadId: lead.id, status: 'error' });
@@ -265,15 +276,17 @@ serve(async (req) => {
         success: true,
         total: pendingLeads.length,
         resolved,
-        results
+        results,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error: unknown) {
     console.error('[resolve-lids] Erro não tratado:', error);
     return new Response(
-      JSON.stringify({ success: false, error: error instanceof Error ? error.message : 'Internal server error' }),
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : 'Internal server error',
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { 
-  Plus, 
-  Smartphone, 
-  MoreVertical, 
-  Trash2, 
-  Edit, 
+import {
+  Plus,
+  Smartphone,
+  MoreVertical,
+  Trash2,
+  Edit,
   Play,
   CheckCircle2,
   XCircle,
@@ -19,30 +19,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { 
+import {
   Accordion,
   AccordionContent,
   AccordionItem,
@@ -51,10 +51,10 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PageBreadcrumb } from '@/components/layout/PageBreadcrumb';
 import { toast } from 'sonner';
-import { 
-  useWhatsAppConfigs, 
-  useCreateWhatsAppConfig, 
-  useUpdateWhatsAppConfig, 
+import {
+  useWhatsAppConfigs,
+  useCreateWhatsAppConfig,
+  useUpdateWhatsAppConfig,
   useDeleteWhatsAppConfig,
   useTestWhatsAppConnection,
   useTestWhatsAppMessage,
@@ -63,27 +63,27 @@ import {
 } from '@/hooks/useWhatsAppConfig';
 
 const PROVIDERS = [
-  { 
-    value: 'waha', 
-    label: 'WAHA (WhatsApp HTTP API)', 
+  {
+    value: 'waha',
+    label: 'WAHA (WhatsApp HTTP API)',
     description: 'Open source, self-hosted',
     docs: 'https://waha.devlike.pro/docs/',
   },
-  { 
-    value: 'evolution', 
-    label: 'Evolution API', 
+  {
+    value: 'evolution',
+    label: 'Evolution API',
     description: 'Open source, multi-device',
     docs: 'https://doc.evolution-api.com/',
   },
-  { 
-    value: 'z-api', 
-    label: 'Z-API', 
+  {
+    value: 'z-api',
+    label: 'Z-API',
     description: 'Serviço brasileiro pago',
     docs: 'https://developer.z-api.io/',
   },
-  { 
-    value: 'custom', 
-    label: 'Gateway Customizado', 
+  {
+    value: 'custom',
+    label: 'Gateway Customizado',
     description: 'Endpoint HTTP personalizado',
     docs: null,
   },
@@ -110,7 +110,11 @@ const WhatsAppSettings = () => {
   });
 
   // Test message modal state
-  const [testMessageModal, setTestMessageModal] = useState<{ open: boolean; instanceId: string; instanceName: string }>({
+  const [testMessageModal, setTestMessageModal] = useState<{
+    open: boolean;
+    instanceId: string;
+    instanceName: string;
+  }>({
     open: false,
     instanceId: '',
     instanceName: '',
@@ -191,15 +195,18 @@ const WhatsAppSettings = () => {
       toast.error('Digite um número de telefone');
       return;
     }
-    testMessageMutation.mutate({
-      whatsapp_instance_id: testMessageModal.instanceId,
-      phone: testPhone,
-    }, {
-      onSuccess: () => {
-        setTestMessageModal({ open: false, instanceId: '', instanceName: '' });
-        setTestPhone('');
+    testMessageMutation.mutate(
+      {
+        whatsapp_instance_id: testMessageModal.instanceId,
+        phone: testPhone,
       },
-    });
+      {
+        onSuccess: () => {
+          setTestMessageModal({ open: false, instanceId: '', instanceName: '' });
+          setTestPhone('');
+        },
+      }
+    );
   };
 
   const copyToClipboard = (text: string) => {
@@ -207,22 +214,28 @@ const WhatsAppSettings = () => {
     toast.success('Copiado para área de transferência');
   };
 
-  const providerInfo = PROVIDERS.find(p => p.value === formData.provider);
+  const providerInfo = PROVIDERS.find((p) => p.value === formData.provider);
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
-      <PageBreadcrumb items={[
-        { label: 'Configurações', href: '/settings' },
-        { label: 'WhatsApp' }
-      ]} />
+    <div className="mx-auto max-w-5xl space-y-6 p-6">
+      <PageBreadcrumb
+        items={[{ label: 'Configurações', href: '/settings' }, { label: 'WhatsApp' }]}
+      />
 
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Gateway WhatsApp</h1>
-          <p className="text-muted-foreground">Configure a integração com WAHA, Evolution API ou Z-API</p>
+          <p className="text-muted-foreground">
+            Configure a integração com WAHA, Evolution API ou Z-API
+          </p>
         </div>
-        <Button onClick={() => { resetForm(); setIsModalOpen(true); }}>
-          <Plus className="w-4 h-4 mr-2" />
+        <Button
+          onClick={() => {
+            resetForm();
+            setIsModalOpen(true);
+          }}
+        >
+          <Plus className="mr-2 h-4 w-4" />
           Novo Gateway
         </Button>
       </div>
@@ -230,22 +243,23 @@ const WhatsAppSettings = () => {
       {/* Webhook URL Info */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Zap className="w-4 h-4" />
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Zap className="h-4 w-4" />
             URL do Webhook para receber mensagens
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2">
-            <code className="flex-1 bg-muted px-3 py-2 rounded text-sm font-mono break-all">
+            <code className="flex-1 break-all rounded bg-muted px-3 py-2 font-mono text-sm">
               {webhookUrl}
             </code>
             <Button variant="outline" size="sm" onClick={() => copyToClipboard(webhookUrl)}>
-              <Copy className="w-4 h-4" />
+              <Copy className="h-4 w-4" />
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            Configure este URL no seu gateway WhatsApp para receber mensagens. Use Authorization: Bearer + sua API Key.
+          <p className="mt-2 text-xs text-muted-foreground">
+            Configure este URL no seu gateway WhatsApp para receber mensagens. Use Authorization:
+            Bearer + sua API Key.
           </p>
         </CardContent>
       </Card>
@@ -255,20 +269,25 @@ const WhatsAppSettings = () => {
         {isLoading ? (
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground">
-              <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+              <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" />
               Carregando...
             </CardContent>
           </Card>
         ) : configs?.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
-              <Smartphone className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Nenhum gateway configurado</h3>
-              <p className="text-muted-foreground mb-4">
+              <Smartphone className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+              <h3 className="mb-2 text-lg font-medium">Nenhum gateway configurado</h3>
+              <p className="mb-4 text-muted-foreground">
                 Configure um gateway WhatsApp para enviar e receber mensagens
               </p>
-              <Button onClick={() => { resetForm(); setIsModalOpen(true); }}>
-                <Plus className="w-4 h-4 mr-2" />
+              <Button
+                onClick={() => {
+                  resetForm();
+                  setIsModalOpen(true);
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
                 Configurar gateway
               </Button>
             </CardContent>
@@ -278,20 +297,21 @@ const WhatsAppSettings = () => {
             <Card key={config.id}>
               <CardContent className="py-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
-                    <Smartphone className="w-5 h-5 text-success" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10">
+                    <Smartphone className="h-5 w-5 text-success" />
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="font-medium text-foreground">{config.name}</h3>
                       <Badge variant={config.is_active ? 'default' : 'secondary'}>
                         {config.is_active ? 'Ativo' : 'Inativo'}
                       </Badge>
                       <Badge variant="outline">
-                        {PROVIDERS.find(p => p.value === config.provider)?.label || config.provider}
+                        {PROVIDERS.find((p) => p.value === config.provider)?.label ||
+                          config.provider}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground truncate">{config.base_url}</p>
+                    <p className="truncate text-sm text-muted-foreground">{config.base_url}</p>
                     {config.phone_number && (
                       <p className="text-sm text-success">📱 {config.phone_number}</p>
                     )}
@@ -301,31 +321,31 @@ const WhatsAppSettings = () => {
                       checked={config.is_active}
                       onCheckedChange={() => handleToggleActive(config)}
                     />
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleSendTestMessage(config)}
                       disabled={!config.is_active}
                     >
-                      <Play className="w-4 h-4 mr-1" />
+                      <Play className="mr-1 h-4 w-4" />
                       Testar
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm">
-                          <MoreVertical className="w-4 h-4" />
+                          <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleEdit(config)}>
-                          <Edit className="w-4 h-4 mr-2" />
+                          <Edit className="mr-2 h-4 w-4" />
                           Editar
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-red-600"
                           onClick={() => deleteMutation.mutate(config.id)}
                         >
-                          <Trash2 className="w-4 h-4 mr-2" />
+                          <Trash2 className="mr-2 h-4 w-4" />
                           Excluir
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -342,7 +362,7 @@ const WhatsAppSettings = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Info className="w-5 h-5" />
+            <Info className="h-5 w-5" />
             Guia de Configuração
           </CardTitle>
           <CardDescription>Como configurar cada provedor de WhatsApp</CardDescription>
@@ -353,16 +373,28 @@ const WhatsAppSettings = () => {
               <AccordionTrigger>WAHA (WhatsApp HTTP API)</AccordionTrigger>
               <AccordionContent className="space-y-3 text-sm">
                 <p>O WAHA é uma API HTTP open-source para WhatsApp.</p>
-                <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
-                  <li>Rode o WAHA via Docker: <code className="bg-muted px-1 rounded">docker run -it -p 3000:3000 devlikeapro/waha</code></li>
-                  <li>Acesse o painel em <code className="bg-muted px-1 rounded">http://localhost:3000</code></li>
+                <ol className="list-inside list-decimal space-y-2 text-muted-foreground">
+                  <li>
+                    Rode o WAHA via Docker:{' '}
+                    <code className="rounded bg-muted px-1">
+                      docker run -it -p 3000:3000 devlikeapro/waha
+                    </code>
+                  </li>
+                  <li>
+                    Acesse o painel em{' '}
+                    <code className="rounded bg-muted px-1">http://localhost:3000</code>
+                  </li>
                   <li>Crie uma sessão e escaneie o QR Code</li>
                   <li>Configure o webhook apontando para a URL acima</li>
                   <li>Use o token de API como API Key</li>
                 </ol>
-                <Button variant="link" className="p-0 h-auto" asChild>
-                  <a href="https://waha.devlike.pro/docs/" target="_blank" rel="noopener noreferrer">
-                    Ver documentação completa <ExternalLink className="w-3 h-3 ml-1" />
+                <Button variant="link" className="h-auto p-0" asChild>
+                  <a
+                    href="https://waha.devlike.pro/docs/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Ver documentação completa <ExternalLink className="ml-1 h-3 w-3" />
                   </a>
                 </Button>
               </AccordionContent>
@@ -371,17 +403,23 @@ const WhatsAppSettings = () => {
             <AccordionItem value="evolution">
               <AccordionTrigger>Evolution API</AccordionTrigger>
               <AccordionContent className="space-y-3 text-sm">
-                <p>Evolution API é uma solução brasileira open-source com suporte a multi-device.</p>
-                <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                <p>
+                  Evolution API é uma solução brasileira open-source com suporte a multi-device.
+                </p>
+                <ol className="list-inside list-decimal space-y-2 text-muted-foreground">
                   <li>Instale via Docker ou servidor dedicado</li>
                   <li>Crie uma instância no painel</li>
                   <li>Conecte escaneando o QR Code</li>
                   <li>Configure o webhook em Settings → Webhooks</li>
                   <li>Use a API Key global ou da instância</li>
                 </ol>
-                <Button variant="link" className="p-0 h-auto" asChild>
-                  <a href="https://doc.evolution-api.com/" target="_blank" rel="noopener noreferrer">
-                    Ver documentação completa <ExternalLink className="w-3 h-3 ml-1" />
+                <Button variant="link" className="h-auto p-0" asChild>
+                  <a
+                    href="https://doc.evolution-api.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Ver documentação completa <ExternalLink className="ml-1 h-3 w-3" />
                   </a>
                 </Button>
               </AccordionContent>
@@ -391,15 +429,15 @@ const WhatsAppSettings = () => {
               <AccordionTrigger>Z-API</AccordionTrigger>
               <AccordionContent className="space-y-3 text-sm">
                 <p>Z-API é um serviço brasileiro pago com alta disponibilidade.</p>
-                <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
+                <ol className="list-inside list-decimal space-y-2 text-muted-foreground">
                   <li>Crie uma conta em z-api.io</li>
                   <li>Crie uma instância e escaneie o QR</li>
                   <li>Copie o Client-Token da instância</li>
                   <li>Configure o webhook nas configurações da instância</li>
                 </ol>
-                <Button variant="link" className="p-0 h-auto" asChild>
+                <Button variant="link" className="h-auto p-0" asChild>
                   <a href="https://developer.z-api.io/" target="_blank" rel="noopener noreferrer">
-                    Ver documentação completa <ExternalLink className="w-3 h-3 ml-1" />
+                    Ver documentação completa <ExternalLink className="ml-1 h-3 w-3" />
                   </a>
                 </Button>
               </AccordionContent>
@@ -412,12 +450,8 @@ const WhatsAppSettings = () => {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>
-              {editingConfig ? 'Editar Gateway' : 'Novo Gateway WhatsApp'}
-            </DialogTitle>
-            <DialogDescription>
-              Configure a conexão com seu provedor de WhatsApp
-            </DialogDescription>
+            <DialogTitle>{editingConfig ? 'Editar Gateway' : 'Novo Gateway WhatsApp'}</DialogTitle>
+            <DialogDescription>Configure a conexão com seu provedor de WhatsApp</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -426,7 +460,7 @@ const WhatsAppSettings = () => {
               <Input
                 placeholder="Ex: WhatsApp Principal"
                 value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
               />
             </div>
 
@@ -434,10 +468,12 @@ const WhatsAppSettings = () => {
               <Label>Provedor *</Label>
               <Select
                 value={formData.provider}
-                onValueChange={(value) => setFormData(prev => ({ 
-                  ...prev, 
-                  provider: value as WhatsAppConfigInsert['provider'] 
-                }))}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    provider: value as WhatsAppConfigInsert['provider'],
+                  }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -454,9 +490,9 @@ const WhatsAppSettings = () => {
                 </SelectContent>
               </Select>
               {providerInfo?.docs && (
-                <Button variant="link" className="p-0 h-auto text-xs" asChild>
+                <Button variant="link" className="h-auto p-0 text-xs" asChild>
                   <a href={providerInfo.docs} target="_blank" rel="noopener noreferrer">
-                    Ver documentação <ExternalLink className="w-3 h-3 ml-1" />
+                    Ver documentação <ExternalLink className="ml-1 h-3 w-3" />
                   </a>
                 </Button>
               )}
@@ -466,13 +502,16 @@ const WhatsAppSettings = () => {
               <Label>URL Base *</Label>
               <Input
                 placeholder={
-                  formData.provider === 'waha' ? 'https://waha.seuservidor.com' :
-                  formData.provider === 'evolution' ? 'https://evolution.seuservidor.com' :
-                  formData.provider === 'z-api' ? 'https://api.z-api.io/instances/SUA_INSTANCIA/token/SEU_TOKEN' :
-                  'https://seu-gateway.com/api'
+                  formData.provider === 'waha'
+                    ? 'https://waha.seuservidor.com'
+                    : formData.provider === 'evolution'
+                      ? 'https://evolution.seuservidor.com'
+                      : formData.provider === 'z-api'
+                        ? 'https://api.z-api.io/instances/SUA_INSTANCIA/token/SEU_TOKEN'
+                        : 'https://seu-gateway.com/api'
                 }
                 value={formData.base_url}
-                onChange={(e) => setFormData(prev => ({ ...prev, base_url: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, base_url: e.target.value }))}
               />
             </div>
 
@@ -482,7 +521,7 @@ const WhatsAppSettings = () => {
                 type="password"
                 placeholder="Token de autenticação"
                 value={formData.api_key}
-                onChange={(e) => setFormData(prev => ({ ...prev, api_key: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, api_key: e.target.value }))}
               />
             </div>
 
@@ -492,7 +531,9 @@ const WhatsAppSettings = () => {
                 <Input
                   placeholder="default"
                   value={formData.instance_name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, instance_name: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, instance_name: e.target.value }))
+                  }
                 />
                 <p className="text-xs text-muted-foreground">
                   Nome da sessão/instância no gateway. Deixe vazio para usar "default".
@@ -505,14 +546,16 @@ const WhatsAppSettings = () => {
               <Input
                 placeholder="+55 11 99999-9999"
                 value={formData.phone_number}
-                onChange={(e) => setFormData(prev => ({ ...prev, phone_number: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, phone_number: e.target.value }))}
               />
             </div>
 
             <div className="flex items-center gap-2">
               <Switch
                 checked={formData.is_active}
-                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+                onCheckedChange={(checked) =>
+                  setFormData((prev) => ({ ...prev, is_active: checked }))
+                }
               />
               <Label>Gateway ativo</Label>
             </div>
@@ -521,20 +564,20 @@ const WhatsAppSettings = () => {
               <Alert>
                 <AlertDescription className="flex items-center justify-between">
                   <span className="text-sm">Teste a conexão antes de salvar</span>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={handleTestConnection}
                     disabled={testMutation.isPending}
                   >
                     {testMutation.isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : testMutation.isSuccess ? (
-                      <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
+                      <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
                     ) : testMutation.isError ? (
-                      <XCircle className="w-4 h-4 mr-2 text-red-500" />
+                      <XCircle className="mr-2 h-4 w-4 text-red-500" />
                     ) : (
-                      <Play className="w-4 h-4 mr-2" />
+                      <Play className="mr-2 h-4 w-4" />
                     )}
                     Testar Conexão
                   </Button>
@@ -544,15 +587,21 @@ const WhatsAppSettings = () => {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsModalOpen(false); resetForm(); }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsModalOpen(false);
+                resetForm();
+              }}
+            >
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={handleSubmit}
               disabled={createMutation.isPending || updateMutation.isPending}
             >
               {(createMutation.isPending || updateMutation.isPending) && (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               {editingConfig ? 'Salvar' : 'Criar Gateway'}
             </Button>
@@ -561,11 +610,14 @@ const WhatsAppSettings = () => {
       </Dialog>
 
       {/* Test Message Modal */}
-      <Dialog open={testMessageModal.open} onOpenChange={(open) => setTestMessageModal(prev => ({ ...prev, open }))}>
+      <Dialog
+        open={testMessageModal.open}
+        onOpenChange={(open) => setTestMessageModal((prev) => ({ ...prev, open }))}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <MessageCircle className="w-5 h-5" />
+              <MessageCircle className="h-5 w-5" />
               Enviar Mensagem de Teste
             </DialogTitle>
             <DialogDescription>
@@ -582,26 +634,27 @@ const WhatsAppSettings = () => {
                 onChange={(e) => setTestPhone(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Digite o número com DDD (ex: 11999999999). O código 55 será adicionado automaticamente.
+                Digite o número com DDD (ex: 11999999999). O código 55 será adicionado
+                automaticamente.
               </p>
             </div>
           </div>
 
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setTestMessageModal({ open: false, instanceId: '', instanceName: '' })}
             >
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={submitTestMessage}
               disabled={testMessageMutation.isPending || !testPhone.trim()}
             >
               {testMessageMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <Play className="w-4 h-4 mr-2" />
+                <Play className="mr-2 h-4 w-4" />
               )}
               Enviar Teste
             </Button>

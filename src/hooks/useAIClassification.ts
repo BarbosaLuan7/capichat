@@ -18,68 +18,71 @@ export function useAIClassification() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchClassification = useCallback(async (
-    messages: any[],
-    lead: {
-      name: string;
-      temperature?: string;
-      labels?: { name: string }[];
-    },
-    availableLabels: any[],
-    forceRefresh = false
-  ) => {
-    if (!messages || messages.length === 0) {
-      setClassification(null);
-      return;
-    }
-
-    // Check cache first (unless forcing refresh)
-    const cacheKey = generateMessagesKey('classification', messages);
-    
-    if (!forceRefresh) {
-      const cached = aiCache.get<AIClassification>(cacheKey);
-      if (cached) {
-        setClassification(cached);
-        return;
-      }
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const { data, error: functionError } = await supabase.functions.invoke('ai-classify-lead', {
-        body: { messages, lead, availableLabels }
-      });
-
-      if (functionError) {
-        throw functionError;
-      }
-
-      if (data?.error) {
-        if (data.error.includes('Rate limit')) {
-          toast.error('Limite de requisições atingido. Tente novamente em instantes.');
-        } else if (data.error.includes('credits')) {
-          toast.error('Créditos de IA esgotados.');
-        }
-        setError(data.error);
+  const fetchClassification = useCallback(
+    async (
+      messages: any[],
+      lead: {
+        name: string;
+        temperature?: string;
+        labels?: { name: string }[];
+      },
+      availableLabels: any[],
+      forceRefresh = false
+    ) => {
+      if (!messages || messages.length === 0) {
         setClassification(null);
         return;
       }
 
-      setClassification(data);
-      
-      // Cache the result
-      aiCache.set(cacheKey, data);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro ao classificar lead';
-      logger.error('Error fetching AI classification:', err);
-      setError(message);
-      setClassification(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      // Check cache first (unless forcing refresh)
+      const cacheKey = generateMessagesKey('classification', messages);
+
+      if (!forceRefresh) {
+        const cached = aiCache.get<AIClassification>(cacheKey);
+        if (cached) {
+          setClassification(cached);
+          return;
+        }
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const { data, error: functionError } = await supabase.functions.invoke('ai-classify-lead', {
+          body: { messages, lead, availableLabels },
+        });
+
+        if (functionError) {
+          throw functionError;
+        }
+
+        if (data?.error) {
+          if (data.error.includes('Rate limit')) {
+            toast.error('Limite de requisições atingido. Tente novamente em instantes.');
+          } else if (data.error.includes('credits')) {
+            toast.error('Créditos de IA esgotados.');
+          }
+          setError(data.error);
+          setClassification(null);
+          return;
+        }
+
+        setClassification(data);
+
+        // Cache the result
+        aiCache.set(cacheKey, data);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Erro ao classificar lead';
+        logger.error('Error fetching AI classification:', err);
+        setError(message);
+        setClassification(null);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
 
   const clearClassification = useCallback(() => {
     setClassification(null);
@@ -91,6 +94,6 @@ export function useAIClassification() {
     isLoading,
     error,
     fetchClassification,
-    clearClassification
+    clearClassification,
   };
 }

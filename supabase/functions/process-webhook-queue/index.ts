@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,27 +11,32 @@ const corsHeaders = {
 // ============================================
 
 function gerarIdLegivel(tipo: string, uuid: string): string {
-const prefixos: Record<string, string> = {
-  lead: 'lead_', mensagem: 'msg_', conversa: 'conv_', usuario: 'usr_', tarefa: 'task_', instancia: 'inst_'
-};
+  const prefixos: Record<string, string> = {
+    lead: 'lead_',
+    mensagem: 'msg_',
+    conversa: 'conv_',
+    usuario: 'usr_',
+    tarefa: 'task_',
+    instancia: 'inst_',
+  };
   return (prefixos[tipo] || '') + uuid.replace(/-/g, '').substring(0, 8);
 }
 
 function formatarTelefone(numero: string | null | undefined): string {
   if (!numero) return '';
   const digits = numero.replace(/\D/g, '');
-  
+
   if (digits.length === 13 && digits.startsWith('55')) {
-    return `+${digits.slice(0,2)} (${digits.slice(2,4)}) ${digits.slice(4,9)}-${digits.slice(9)}`;
+    return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
   }
   if (digits.length === 12 && digits.startsWith('55')) {
-    return `+${digits.slice(0,2)} (${digits.slice(2,4)}) ${digits.slice(4,8)}-${digits.slice(8)}`;
+    return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 8)}-${digits.slice(8)}`;
   }
   if (digits.length === 11) {
-    return `+55 (${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7)}`;
+    return `+55 (${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
   }
   if (digits.length === 10) {
-    return `+55 (${digits.slice(0,2)}) ${digits.slice(2,6)}-${digits.slice(6)}`;
+    return `+55 (${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
   }
   return numero;
 }
@@ -40,7 +45,7 @@ function formatarCPF(cpf: string | null | undefined): string | null {
   if (!cpf) return null;
   const digits = cpf.replace(/\D/g, '');
   if (digits.length !== 11) return cpf;
-  return `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6,9)}-${digits.slice(9)}`;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 }
 
 // Formatar timestamp em GMT-3 (São Paulo/Brasília)
@@ -48,9 +53,9 @@ function formatTimestamp(): string {
   const now = new Date();
   // Offset de -3 horas em milissegundos
   const brasiliaOffset = -3 * 60 * 60 * 1000;
-  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60 * 1000);
+  const utcTime = now.getTime() + now.getTimezoneOffset() * 60 * 1000;
   const brasiliaTime = new Date(utcTime + brasiliaOffset);
-  
+
   const year = brasiliaTime.getFullYear();
   const month = String(brasiliaTime.getMonth() + 1).padStart(2, '0');
   const day = String(brasiliaTime.getDate()).padStart(2, '0');
@@ -58,29 +63,29 @@ function formatTimestamp(): string {
   const minutes = String(brasiliaTime.getMinutes()).padStart(2, '0');
   const seconds = String(brasiliaTime.getSeconds()).padStart(2, '0');
   const ms = String(brasiliaTime.getMilliseconds()).padStart(3, '0');
-  
+
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${ms}-03:00`;
 }
 
 // Converter data do banco (UTC) para GMT-3
 function formatDateToGMT3(dateString: string | null | undefined): string | null {
   if (!dateString) return null;
-  
+
   try {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return dateString;
-    
+
     // Subtrair 3 horas para GMT-3
     const brasiliaOffset = -3 * 60 * 60 * 1000;
     const brasiliaTime = new Date(date.getTime() + brasiliaOffset);
-    
+
     const year = brasiliaTime.getUTCFullYear();
     const month = String(brasiliaTime.getUTCMonth() + 1).padStart(2, '0');
     const day = String(brasiliaTime.getUTCDate()).padStart(2, '0');
     const hours = String(brasiliaTime.getUTCHours()).padStart(2, '0');
     const minutes = String(brasiliaTime.getUTCMinutes()).padStart(2, '0');
     const seconds = String(brasiliaTime.getUTCSeconds()).padStart(2, '0');
-    
+
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}-03:00`;
   } catch {
     return dateString;
@@ -88,25 +93,34 @@ function formatDateToGMT3(dateString: string | null | undefined): string | null 
 }
 
 function traduzirTemperatura(temp: string): string {
-  const map: Record<string, string> = { 'cold': 'frio', 'warm': 'morno', 'hot': 'quente' };
+  const map: Record<string, string> = { cold: 'frio', warm: 'morno', hot: 'quente' };
   return map[temp] || temp;
 }
 
 function traduzirTipoMensagem(type: string): string {
   const map: Record<string, string> = {
-    'text': 'texto', 'image': 'imagem', 'audio': 'audio',
-    'video': 'video', 'document': 'documento', 'sticker': 'sticker', 'location': 'localizacao'
+    text: 'texto',
+    image: 'imagem',
+    audio: 'audio',
+    video: 'video',
+    document: 'documento',
+    sticker: 'sticker',
+    location: 'localizacao',
   };
   return map[type] || type;
 }
 
 function traduzirStatusConversa(status: string): string {
-  const map: Record<string, string> = { 'open': 'aberta', 'pending': 'pendente', 'resolved': 'resolvida' };
+  const map: Record<string, string> = {
+    open: 'aberta',
+    pending: 'pendente',
+    resolved: 'resolvida',
+  };
   return map[status] || status;
 }
 
 function traduzirStatusMensagem(status: string): string {
-  const map: Record<string, string> = { 'sent': 'enviada', 'delivered': 'entregue', 'read': 'lida' };
+  const map: Record<string, string> = { sent: 'enviada', delivered: 'entregue', read: 'lida' };
   return map[status] || status;
 }
 
@@ -116,22 +130,22 @@ function traduzirStatusMensagem(status: string): string {
 
 async function buscarLeadCompleto(supabase: any, leadId: string) {
   if (!leadId) return null;
-  
+
   const { data: lead } = await supabase
     .from('leads')
     .select(`*, funnel_stages (id, name)`)
     .eq('id', leadId)
     .maybeSingle();
-  
+
   if (!lead) return null;
-  
+
   const { data: leadLabels } = await supabase
     .from('lead_labels')
     .select('labels (name)')
     .eq('lead_id', leadId);
-  
+
   const etiquetas = leadLabels?.map((ll: any) => ll.labels?.name).filter(Boolean) || [];
-  
+
   let responsavel = null;
   if (lead.assigned_to) {
     const { data: profile } = await supabase
@@ -139,12 +153,12 @@ async function buscarLeadCompleto(supabase: any, leadId: string) {
       .select('id, name')
       .eq('id', lead.assigned_to)
       .maybeSingle();
-    
+
     if (profile) {
       responsavel = { id: gerarIdLegivel('usuario', profile.id), nome: profile.name };
     }
   }
-  
+
   return {
     id: gerarIdLegivel('lead', lead.id),
     id_original: lead.id,
@@ -159,26 +173,26 @@ async function buscarLeadCompleto(supabase: any, leadId: string) {
     campanha: lead.utm_medium || null,
     beneficio: lead.benefit_type || null,
     criado_em: formatDateToGMT3(lead.created_at),
-    responsavel
+    responsavel,
   };
 }
 
 async function buscarConversa(supabase: any, conversationId: string) {
   if (!conversationId) return null;
-  
+
   const { data: conv } = await supabase
     .from('conversations')
     .select('*')
     .eq('id', conversationId)
     .maybeSingle();
-  
+
   if (!conv) return null;
-  
+
   const { count } = await supabase
     .from('messages')
     .select('*', { count: 'exact', head: true })
     .eq('conversation_id', conversationId);
-  
+
   // Buscar responsável da conversa
   let responsavel = null;
   if (conv.assigned_to) {
@@ -187,11 +201,11 @@ async function buscarConversa(supabase: any, conversationId: string) {
       .select('id, name')
       .eq('id', conv.assigned_to)
       .maybeSingle();
-    
+
     if (profile) {
       responsavel = {
         id: gerarIdLegivel('usuario', profile.id),
-        nome: profile.name
+        nome: profile.name,
       };
     }
   }
@@ -205,11 +219,11 @@ async function buscarConversa(supabase: any, conversationId: string) {
       .eq('user_id', conv.assigned_to)
       .limit(1)
       .maybeSingle();
-    
+
     if (teamMember?.teams) {
       equipe = {
         id: `eqp_${teamMember.teams.id.slice(0, 8)}`,
-        nome: teamMember.teams.name
+        nome: teamMember.teams.name,
       };
     }
   }
@@ -222,15 +236,15 @@ async function buscarConversa(supabase: any, conversationId: string) {
       .select('id, name, instance_name')
       .eq('id', conv.whatsapp_instance_id)
       .maybeSingle();
-    
+
     if (instance) {
       canal = {
         tipo: 'whatsapp',
-        nome: instance.instance_name || instance.name
+        nome: instance.instance_name || instance.name,
       };
     }
   }
-  
+
   return {
     id: gerarIdLegivel('conversa', conv.id),
     id_original: conv.id,
@@ -242,45 +256,45 @@ async function buscarConversa(supabase: any, conversationId: string) {
     responsavel,
     equipe,
     canal,
-    iniciada_em: formatDateToGMT3(conv.created_at)
+    iniciada_em: formatDateToGMT3(conv.created_at),
   };
 }
 
 async function buscarInstanciaWhatsApp(supabase: any, instanceId: string) {
   if (!instanceId) return null;
-  
+
   const { data: instance } = await supabase
     .from('whatsapp_config')
     .select('id, name, instance_name, phone_number')
     .eq('id', instanceId)
     .maybeSingle();
-  
+
   if (!instance) return null;
-  
+
   return {
     id: gerarIdLegivel('instancia', instance.id),
     nome: instance.name,
     telefone: formatarTelefone(instance.phone_number),
-    identificador: instance.instance_name
+    identificador: instance.instance_name,
   };
 }
 
 async function buscarUsuario(supabase: any, userId: string) {
   if (!userId) return null;
-  
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('id, name')
     .eq('id', userId)
     .maybeSingle();
-  
+
   if (!profile) return null;
   return { id: gerarIdLegivel('usuario', profile.id), nome: profile.name };
 }
 
 async function buscarInstanciaDoLead(supabase: any, leadId: string) {
   if (!leadId) return null;
-  
+
   // Buscar a conversa mais recente do lead para obter a instância
   const { data: conv } = await supabase
     .from('conversations')
@@ -289,14 +303,14 @@ async function buscarInstanciaDoLead(supabase: any, leadId: string) {
     .order('last_message_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  
+
   if (!conv?.whatsapp_instance_id) return null;
   return await buscarInstanciaWhatsApp(supabase, conv.whatsapp_instance_id);
 }
 
 async function buscarConversaDoLead(supabase: any, leadId: string) {
   if (!leadId) return null;
-  
+
   const { data: conv } = await supabase
     .from('conversations')
     .select('id')
@@ -304,7 +318,7 @@ async function buscarConversaDoLead(supabase: any, leadId: string) {
     .order('last_message_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  
+
   if (!conv) return null;
   return await buscarConversa(supabase, conv.id);
 }
@@ -329,7 +343,7 @@ function formatarLeadPayload(lead: any) {
     campanha: lead.campanha,
     etiquetas: lead.etiquetas,
     responsavel: lead.responsavel,
-    criado_em: lead.criado_em
+    criado_em: lead.criado_em,
   };
 }
 
@@ -344,7 +358,7 @@ function formatarConversaPayload(conversa: any) {
     responsavel: conversa.responsavel,
     equipe: conversa.equipe,
     canal: conversa.canal,
-    iniciada_em: conversa.iniciada_em
+    iniciada_em: conversa.iniciada_em,
   };
 }
 
@@ -354,20 +368,26 @@ function formatarConversaPayload(conversa: any) {
 
 async function buildPayload(supabase: any, evento: string, dados: any): Promise<any> {
   const eventData = dados?.data || dados;
-  
+
   switch (evento) {
     case 'message.received': {
       const msg = eventData?.message || eventData;
       const lead = msg?.lead_id ? await buscarLeadCompleto(supabase, msg.lead_id) : null;
-      const conversa = msg?.conversation_id ? await buscarConversa(supabase, msg.conversation_id) : null;
-      const instancia = conversa?.whatsapp_instance_id ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id) : null;
-      
-      const remetente = lead ? {
-        tipo: 'contato',
-        id: lead.id,
-        nome: lead.nome
-      } : null;
-      
+      const conversa = msg?.conversation_id
+        ? await buscarConversa(supabase, msg.conversation_id)
+        : null;
+      const instancia = conversa?.whatsapp_instance_id
+        ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id)
+        : null;
+
+      const remetente = lead
+        ? {
+            tipo: 'contato',
+            id: lead.id,
+            nome: lead.nome,
+          }
+        : null;
+
       return {
         evento: 'mensagem.recebida',
         timestamp: formatTimestamp(),
@@ -380,26 +400,32 @@ async function buildPayload(supabase: any, evento: string, dados: any): Promise<
           midia_url: msg?.media_url || null,
           recebida_em: formatDateToGMT3(msg?.created_at) || formatTimestamp(),
           direcao: 'entrada',
-          remetente
+          remetente,
         },
         lead: formatarLeadPayload(lead),
-        conversa: formatarConversaPayload(conversa)
+        conversa: formatarConversaPayload(conversa),
       };
     }
-    
+
     case 'message.sent': {
       const msg = eventData?.message || eventData;
       const lead = msg?.lead_id ? await buscarLeadCompleto(supabase, msg.lead_id) : null;
-      const conversa = msg?.conversation_id ? await buscarConversa(supabase, msg.conversation_id) : null;
+      const conversa = msg?.conversation_id
+        ? await buscarConversa(supabase, msg.conversation_id)
+        : null;
       const enviadaPor = msg?.sender_id ? await buscarUsuario(supabase, msg.sender_id) : null;
-      const instancia = conversa?.whatsapp_instance_id ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id) : null;
-      
-      const remetente = enviadaPor ? {
-        tipo: 'atendente',
-        id: enviadaPor.id,
-        nome: enviadaPor.nome
-      } : null;
-      
+      const instancia = conversa?.whatsapp_instance_id
+        ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id)
+        : null;
+
+      const remetente = enviadaPor
+        ? {
+            tipo: 'atendente',
+            id: enviadaPor.id,
+            nome: enviadaPor.nome,
+          }
+        : null;
+
       return {
         evento: 'mensagem.enviada',
         timestamp: formatTimestamp(),
@@ -413,61 +439,82 @@ async function buildPayload(supabase: any, evento: string, dados: any): Promise<
           enviada_em: formatDateToGMT3(msg?.created_at) || formatTimestamp(),
           status: traduzirStatusMensagem(msg?.status || 'sent'),
           direcao: 'saida',
-          remetente
+          remetente,
         },
         lead: formatarLeadPayload(lead),
-        conversa: formatarConversaPayload(conversa)
+        conversa: formatarConversaPayload(conversa),
       };
     }
-    
+
     case 'lead.created': {
       const leadData = eventData?.lead || eventData;
       const lead = leadData?.id ? await buscarLeadCompleto(supabase, leadData.id) : null;
-      const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
-      const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
-      
+      const instancia = lead?.id_original
+        ? await buscarInstanciaDoLead(supabase, lead.id_original)
+        : null;
+      const conversa = lead?.id_original
+        ? await buscarConversaDoLead(supabase, lead.id_original)
+        : null;
+
       return {
         evento: 'lead.criado',
         timestamp: formatTimestamp(),
         request_id: gerarRequestId(),
         instancia_whatsapp: instancia,
         lead: formatarLeadPayload(lead),
-        conversa: formatarConversaPayload(conversa)
+        conversa: formatarConversaPayload(conversa),
       };
     }
-    
+
     case 'lead.updated': {
       const leadData = eventData?.lead || eventData;
       const lead = leadData?.id ? await buscarLeadCompleto(supabase, leadData.id) : null;
-      const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
-      const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
-      
+      const instancia = lead?.id_original
+        ? await buscarInstanciaDoLead(supabase, lead.id_original)
+        : null;
+      const conversa = lead?.id_original
+        ? await buscarConversaDoLead(supabase, lead.id_original)
+        : null;
+
       return {
         evento: 'lead.atualizado',
         timestamp: formatTimestamp(),
         request_id: gerarRequestId(),
         instancia_whatsapp: instancia,
         lead: formatarLeadPayload(lead),
-        conversa: formatarConversaPayload(conversa)
+        conversa: formatarConversaPayload(conversa),
       };
     }
-    
+
     case 'lead.stage_changed': {
       const leadId = eventData?.lead?.id || eventData?.lead_id;
       const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
-      const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
-      const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
-      
-      let etapaAnterior = null, etapaNova = null;
+      const instancia = lead?.id_original
+        ? await buscarInstanciaDoLead(supabase, lead.id_original)
+        : null;
+      const conversa = lead?.id_original
+        ? await buscarConversaDoLead(supabase, lead.id_original)
+        : null;
+
+      let etapaAnterior = null,
+        etapaNova = null;
       if (eventData?.previous_stage_id) {
-        const { data: stage } = await supabase.from('funnel_stages').select('name').eq('id', eventData.previous_stage_id).maybeSingle();
+        const { data: stage } = await supabase
+          .from('funnel_stages')
+          .select('name')
+          .eq('id', eventData.previous_stage_id)
+          .maybeSingle();
         etapaAnterior = stage?.name || null;
       }
       if (eventData?.new_stage_id) {
-        const { data: stage } = await supabase.from('funnel_stages').select('name').eq('id', eventData.new_stage_id).maybeSingle();
+        const { data: stage } = await supabase
+          .from('funnel_stages')
+          .select('name')
+          .eq('id', eventData.new_stage_id)
+          .maybeSingle();
         etapaNova = stage?.name || null;
       }
-      
+
       return {
         evento: 'lead.etapa_alterada',
         timestamp: formatTimestamp(),
@@ -478,17 +525,21 @@ async function buildPayload(supabase: any, evento: string, dados: any): Promise<
         mudanca: {
           etapa_anterior: etapaAnterior,
           etapa_nova: etapaNova || lead?.etapa_funil,
-          alterado_por: lead?.responsavel || null
-        }
+          alterado_por: lead?.responsavel || null,
+        },
       };
     }
-    
+
     case 'lead.temperature_changed': {
       const leadId = eventData?.lead?.id || eventData?.lead_id;
       const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
-      const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
-      const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
-      
+      const instancia = lead?.id_original
+        ? await buscarInstanciaDoLead(supabase, lead.id_original)
+        : null;
+      const conversa = lead?.id_original
+        ? await buscarConversaDoLead(supabase, lead.id_original)
+        : null;
+
       return {
         evento: 'lead.temperatura_alterada',
         timestamp: formatTimestamp(),
@@ -498,20 +549,30 @@ async function buildPayload(supabase: any, evento: string, dados: any): Promise<
         conversa: formatarConversaPayload(conversa),
         mudanca: {
           temperatura_anterior: traduzirTemperatura(eventData?.previous_temperature || ''),
-          temperatura_nova: traduzirTemperatura(eventData?.new_temperature || lead?.temperatura || ''),
-          alterado_por: lead?.responsavel || null
-        }
+          temperatura_nova: traduzirTemperatura(
+            eventData?.new_temperature || lead?.temperatura || ''
+          ),
+          alterado_por: lead?.responsavel || null,
+        },
       };
     }
-    
+
     case 'lead.assigned': {
       const leadId = eventData?.lead?.id || eventData?.lead_id;
       const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
-      const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
-      const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
-      const de = eventData?.previous_assigned_to ? await buscarUsuario(supabase, eventData.previous_assigned_to) : null;
-      const para = eventData?.new_assigned_to ? await buscarUsuario(supabase, eventData.new_assigned_to) : null;
-      
+      const instancia = lead?.id_original
+        ? await buscarInstanciaDoLead(supabase, lead.id_original)
+        : null;
+      const conversa = lead?.id_original
+        ? await buscarConversaDoLead(supabase, lead.id_original)
+        : null;
+      const de = eventData?.previous_assigned_to
+        ? await buscarUsuario(supabase, eventData.previous_assigned_to)
+        : null;
+      const para = eventData?.new_assigned_to
+        ? await buscarUsuario(supabase, eventData.new_assigned_to)
+        : null;
+
       return {
         evento: 'lead.transferido',
         timestamp: formatTimestamp(),
@@ -519,19 +580,24 @@ async function buildPayload(supabase: any, evento: string, dados: any): Promise<
         instancia_whatsapp: instancia,
         lead: formatarLeadPayload(lead),
         conversa: formatarConversaPayload(conversa),
-        transferencia: { de, para }
+        transferencia: { de, para },
       };
     }
-    
+
     case 'lead.label_added':
     case 'lead.label_removed': {
       const leadId = eventData?.lead_id;
       const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
-      const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
-      const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
-      
+      const instancia = lead?.id_original
+        ? await buscarInstanciaDoLead(supabase, lead.id_original)
+        : null;
+      const conversa = lead?.id_original
+        ? await buscarConversaDoLead(supabase, lead.id_original)
+        : null;
+
       return {
-        evento: evento === 'lead.label_added' ? 'lead.etiqueta_adicionada' : 'lead.etiqueta_removida',
+        evento:
+          evento === 'lead.label_added' ? 'lead.etiqueta_adicionada' : 'lead.etiqueta_removida',
         timestamp: formatTimestamp(),
         request_id: gerarRequestId(),
         instancia_whatsapp: instancia,
@@ -540,36 +606,50 @@ async function buildPayload(supabase: any, evento: string, dados: any): Promise<
         etiqueta: {
           nome: eventData?.label_name || null,
           cor: eventData?.label_color || null,
-          categoria: eventData?.label_category || null
+          categoria: eventData?.label_category || null,
         },
-        alterado_por: lead?.responsavel || null
+        alterado_por: lead?.responsavel || null,
       };
     }
-    
+
     case 'conversation.created': {
       const convData = eventData?.conversation || eventData;
       const conversa = convData?.id ? await buscarConversa(supabase, convData.id) : null;
-      const lead = (convData?.lead_id || conversa?.lead_id) ? await buscarLeadCompleto(supabase, convData?.lead_id || conversa?.lead_id) : null;
-      const instancia = conversa?.whatsapp_instance_id ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id) : null;
-      
+      const lead =
+        convData?.lead_id || conversa?.lead_id
+          ? await buscarLeadCompleto(supabase, convData?.lead_id || conversa?.lead_id)
+          : null;
+      const instancia = conversa?.whatsapp_instance_id
+        ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id)
+        : null;
+
       return {
         evento: 'conversa.criada',
         timestamp: formatTimestamp(),
         request_id: gerarRequestId(),
         instancia_whatsapp: instancia,
         lead: formatarLeadPayload(lead),
-        conversa: formatarConversaPayload(conversa)
+        conversa: formatarConversaPayload(conversa),
       };
     }
-    
+
     case 'conversation.assigned': {
       const convData = eventData?.conversation || eventData;
       const conversa = convData?.id ? await buscarConversa(supabase, convData.id) : null;
-      const lead = (convData?.lead_id || conversa?.lead_id) ? await buscarLeadCompleto(supabase, convData?.lead_id || conversa?.lead_id) : null;
-      const instancia = conversa?.whatsapp_instance_id ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id) : null;
-      const de = eventData?.previous_assigned_to ? await buscarUsuario(supabase, eventData.previous_assigned_to) : null;
-      const para = eventData?.new_assigned_to ? await buscarUsuario(supabase, eventData.new_assigned_to) : null;
-      
+      const lead =
+        convData?.lead_id || conversa?.lead_id
+          ? await buscarLeadCompleto(supabase, convData?.lead_id || conversa?.lead_id)
+          : null;
+      const instancia = conversa?.whatsapp_instance_id
+        ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id)
+        : null;
+      const de = eventData?.previous_assigned_to
+        ? await buscarUsuario(supabase, eventData.previous_assigned_to)
+        : null;
+      const para = eventData?.new_assigned_to
+        ? await buscarUsuario(supabase, eventData.new_assigned_to)
+        : null;
+
       return {
         evento: 'conversa.atribuida',
         timestamp: formatTimestamp(),
@@ -577,22 +657,36 @@ async function buildPayload(supabase: any, evento: string, dados: any): Promise<
         instancia_whatsapp: instancia,
         lead: formatarLeadPayload(lead),
         conversa: formatarConversaPayload(conversa),
-        atribuicao: { de, para }
+        atribuicao: { de, para },
       };
     }
-    
+
     case 'conversation.resolved': {
       const convData = eventData?.conversation || eventData;
       const conversa = convData?.id ? await buscarConversa(supabase, convData.id) : null;
-      const lead = (convData?.lead_id || conversa?.lead_id) ? await buscarLeadCompleto(supabase, convData?.lead_id || conversa?.lead_id) : null;
-      const instancia = conversa?.whatsapp_instance_id ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id) : null;
-      
+      const lead =
+        convData?.lead_id || conversa?.lead_id
+          ? await buscarLeadCompleto(supabase, convData?.lead_id || conversa?.lead_id)
+          : null;
+      const instancia = conversa?.whatsapp_instance_id
+        ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id)
+        : null;
+
       let duracaoMinutos = 0;
       if (conversa?.id_original) {
-        const { data: firstMsg } = await supabase.from('messages').select('created_at').eq('conversation_id', conversa.id_original).order('created_at', { ascending: true }).limit(1).maybeSingle();
-        if (firstMsg) duracaoMinutos = Math.round((Date.now() - new Date(firstMsg.created_at).getTime()) / 60000);
+        const { data: firstMsg } = await supabase
+          .from('messages')
+          .select('created_at')
+          .eq('conversation_id', conversa.id_original)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (firstMsg)
+          duracaoMinutos = Math.round(
+            (Date.now() - new Date(firstMsg.created_at).getTime()) / 60000
+          );
       }
-      
+
       return {
         evento: 'conversa.resolvida',
         timestamp: formatTimestamp(),
@@ -602,19 +696,25 @@ async function buildPayload(supabase: any, evento: string, dados: any): Promise<
         conversa: formatarConversaPayload(conversa),
         metricas: {
           duracao_minutos: duracaoMinutos,
-          total_mensagens: conversa?.total_mensagens || 0
+          total_mensagens: conversa?.total_mensagens || 0,
         },
-        resolvida_por: conversa?.responsavel || null
+        resolvida_por: conversa?.responsavel || null,
       };
     }
-    
+
     case 'task.created': {
       const task = eventData?.task || eventData;
       const lead = task?.lead_id ? await buscarLeadCompleto(supabase, task.lead_id) : null;
-      const responsavel = task?.assigned_to ? await buscarUsuario(supabase, task.assigned_to) : null;
-      const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
-      const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
-      
+      const responsavel = task?.assigned_to
+        ? await buscarUsuario(supabase, task.assigned_to)
+        : null;
+      const instancia = lead?.id_original
+        ? await buscarInstanciaDoLead(supabase, lead.id_original)
+        : null;
+      const conversa = lead?.id_original
+        ? await buscarConversaDoLead(supabase, lead.id_original)
+        : null;
+
       return {
         evento: 'tarefa.criada',
         timestamp: formatTimestamp(),
@@ -626,21 +726,27 @@ async function buildPayload(supabase: any, evento: string, dados: any): Promise<
           descricao: task?.description,
           prioridade: task?.priority || 'medium',
           vencimento: task?.due_date,
-          status: 'pendente'
+          status: 'pendente',
         },
         lead: formatarLeadPayload(lead),
         conversa: formatarConversaPayload(conversa),
-        responsavel
+        responsavel,
       };
     }
-    
+
     case 'task.completed': {
       const task = eventData?.task || eventData;
       const lead = task?.lead_id ? await buscarLeadCompleto(supabase, task.lead_id) : null;
-      const responsavel = task?.assigned_to ? await buscarUsuario(supabase, task.assigned_to) : null;
-      const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
-      const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
-      
+      const responsavel = task?.assigned_to
+        ? await buscarUsuario(supabase, task.assigned_to)
+        : null;
+      const instancia = lead?.id_original
+        ? await buscarInstanciaDoLead(supabase, lead.id_original)
+        : null;
+      const conversa = lead?.id_original
+        ? await buscarConversaDoLead(supabase, lead.id_original)
+        : null;
+
       return {
         evento: 'tarefa.concluida',
         timestamp: formatTimestamp(),
@@ -649,20 +755,24 @@ async function buildPayload(supabase: any, evento: string, dados: any): Promise<
         tarefa: {
           id: task?.id ? gerarIdLegivel('tarefa', task.id) : null,
           titulo: task?.title,
-          concluida_em: formatTimestamp()
+          concluida_em: formatTimestamp(),
         },
         lead: formatarLeadPayload(lead),
         conversa: formatarConversaPayload(conversa),
-        concluida_por: responsavel
+        concluida_por: responsavel,
       };
     }
-    
+
     case 'lead.summary_updated': {
       const leadId = eventData?.lead_id;
       const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
-      const instancia = lead?.id_original ? await buscarInstanciaDoLead(supabase, lead.id_original) : null;
-      const conversa = lead?.id_original ? await buscarConversaDoLead(supabase, lead.id_original) : null;
-      
+      const instancia = lead?.id_original
+        ? await buscarInstanciaDoLead(supabase, lead.id_original)
+        : null;
+      const conversa = lead?.id_original
+        ? await buscarConversaDoLead(supabase, lead.id_original)
+        : null;
+
       return {
         evento: 'lead.resumo_atualizado',
         timestamp: formatTimestamp(),
@@ -672,17 +782,17 @@ async function buildPayload(supabase: any, evento: string, dados: any): Promise<
         conversa: formatarConversaPayload(conversa),
         resumo: {
           conteudo: eventData?.case_summary || null,
-          acao: eventData?.action === 'removed' ? 'removido' : 'atualizado'
-        }
+          acao: eventData?.action === 'removed' ? 'removido' : 'atualizado',
+        },
       };
     }
-    
+
     default:
       return {
         evento: evento.replace('.', '_'),
         timestamp: formatTimestamp(),
         request_id: gerarRequestId(),
-        dados: eventData
+        dados: eventData,
       };
   }
 }
@@ -693,68 +803,84 @@ async function buildPayload(supabase: any, evento: string, dados: any): Promise<
 
 async function generateSignature(payload: any, secret: string): Promise<string> {
   const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
   const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(JSON.stringify(payload)));
-  return `sha256=${Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('')}`;
+  return `sha256=${Array.from(new Uint8Array(signature))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')}`;
 }
 
-async function sendWebhook(supabase: any, webhook: any, payload: any, queueId: string): Promise<boolean> {
+async function sendWebhook(
+  supabase: any,
+  webhook: any,
+  payload: any,
+  queueId: string
+): Promise<boolean> {
   const maxRetries = 3;
-  
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const signature = await generateSignature(payload, webhook.secret);
       const timestamp = Math.floor(Date.now() / 1000);
-      
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'X-Webhook-Evento': payload.evento,
         'X-Webhook-Timestamp': timestamp.toString(),
         'X-Webhook-Assinatura': signature,
-        ...(webhook.headers || {})
+        ...(webhook.headers || {}),
       };
-      
+
       console.log(`[WebhookQueue] ${webhook.name} tentativa ${attempt}/${maxRetries}`);
-      
-      const response = await fetch(webhook.url, { method: 'POST', headers, body: JSON.stringify(payload) });
+
+      const response = await fetch(webhook.url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
       const responseText = await response.text();
-      
+
       await supabase.from('webhook_logs').insert({
         webhook_id: webhook.id,
         event: payload.evento,
         payload,
-        status: response.ok ? 'success' : (attempt < maxRetries ? 'retrying' : 'failed'),
+        status: response.ok ? 'success' : attempt < maxRetries ? 'retrying' : 'failed',
         response_status: response.status,
         response_body: responseText.substring(0, 1000),
         attempts: attempt,
-        completed_at: response.ok ? new Date().toISOString() : null
+        completed_at: response.ok ? new Date().toISOString() : null,
       });
-      
+
       if (response.ok) {
         console.log(`[WebhookQueue] ${webhook.name}: OK`);
         return true;
       }
-      
+
       console.log(`[WebhookQueue] ${webhook.name}: ${response.status}`);
-      
     } catch (error: any) {
       console.error(`[WebhookQueue] Erro:`, error);
-      
+
       await supabase.from('webhook_logs').insert({
         webhook_id: webhook.id,
         event: payload.evento,
         payload,
         status: attempt < maxRetries ? 'retrying' : 'failed',
         error_message: error?.message || 'Erro desconhecido',
-        attempts: attempt
+        attempts: attempt,
       });
     }
-    
+
     if (attempt < maxRetries) {
-      await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
+      await new Promise((resolve) => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
     }
   }
-  
+
   return false;
 }
 
@@ -782,7 +908,7 @@ serve(async (req) => {
 
     if (!queueItems || queueItems.length === 0) {
       return new Response(JSON.stringify({ success: true, processed: 0 }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -793,46 +919,54 @@ serve(async (req) => {
 
     if (!webhooks || webhooks.length === 0) {
       for (const item of queueItems) {
-        await supabase.from('webhook_queue').update({ processed: true, processed_at: new Date().toISOString() }).eq('id', item.id);
+        await supabase
+          .from('webhook_queue')
+          .update({ processed: true, processed_at: new Date().toISOString() })
+          .eq('id', item.id);
       }
       return new Response(JSON.stringify({ success: true, processed: queueItems.length }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     let processedCount = 0;
 
     for (const item of queueItems) {
-      const webhooksForEvent = webhooks.filter(w => w.events?.includes(item.event));
-      
+      const webhooksForEvent = webhooks.filter((w) => w.events?.includes(item.event));
+
       if (webhooksForEvent.length === 0) {
-        await supabase.from('webhook_queue').update({ processed: true, processed_at: new Date().toISOString() }).eq('id', item.id);
+        await supabase
+          .from('webhook_queue')
+          .update({ processed: true, processed_at: new Date().toISOString() })
+          .eq('id', item.id);
         processedCount++;
         continue;
       }
 
       // Construir payload limpo
       const payload = await buildPayload(supabase, item.event, item.payload);
-      
+
       console.log(`[WebhookQueue] ${item.event} ->`, JSON.stringify(payload, null, 2));
 
       for (const webhook of webhooksForEvent) {
         await sendWebhook(supabase, webhook, payload, item.id);
       }
 
-      await supabase.from('webhook_queue').update({ processed: true, processed_at: new Date().toISOString() }).eq('id', item.id);
+      await supabase
+        .from('webhook_queue')
+        .update({ processed: true, processed_at: new Date().toISOString() })
+        .eq('id', item.id);
       processedCount++;
     }
 
     return new Response(JSON.stringify({ success: true, processed: processedCount }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-
   } catch (error: any) {
     console.error('[WebhookQueue] Erro:', error);
     return new Response(JSON.stringify({ error: error?.message || 'Erro' }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });

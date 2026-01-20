@@ -1,22 +1,10 @@
 import { useState, memo } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import {
-  Filter,
-  Tag,
-  Thermometer,
-  User,
-  CalendarDays,
-  X,
-  ChevronDown,
-} from 'lucide-react';
+import { Filter, Tag, Thermometer, User, CalendarDays, X, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -98,11 +86,14 @@ function LeadFiltersComponent({
     onFiltersChange({ ...filters, labelIds: newLabelIds });
   };
 
-  const labelsByCategory = labels.reduce((acc, label) => {
-    if (!acc[label.category]) acc[label.category] = [];
-    acc[label.category].push(label);
-    return acc;
-  }, {} as Record<string, Label[]>);
+  const labelsByCategory = labels.reduce(
+    (acc, label) => {
+      if (!acc[label.category]) acc[label.category] = [];
+      acc[label.category].push(label);
+      return acc;
+    },
+    {} as Record<string, Label[]>
+  );
 
   const categoryLabels: Record<string, string> = {
     origem: 'Origem',
@@ -117,7 +108,7 @@ function LeadFiltersComponent({
   };
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="flex flex-wrap items-center gap-2">
       {/* Etapa do Funil */}
       <Select
         value={filters.stageId || 'all'}
@@ -125,8 +116,8 @@ function LeadFiltersComponent({
           onFiltersChange({ ...filters, stageId: value === 'all' ? null : value })
         }
       >
-        <SelectTrigger className="w-[180px] h-9">
-          <Filter className="w-4 h-4 mr-2 text-muted-foreground" />
+        <SelectTrigger className="h-9 w-[180px]">
+          <Filter className="mr-2 h-4 w-4 text-muted-foreground" />
           <SelectValue placeholder="Etapa" />
         </SelectTrigger>
         <SelectContent>
@@ -134,10 +125,7 @@ function LeadFiltersComponent({
           {funnelStages.map((stage) => (
             <SelectItem key={stage.id} value={stage.id}>
               <div className="flex items-center gap-2">
-                <div
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: stage.color }}
-                />
+                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: stage.color }} />
                 {stage.name}
               </div>
             </SelectItem>
@@ -149,38 +137,36 @@ function LeadFiltersComponent({
       <Popover open={labelsOpen} onOpenChange={setLabelsOpen}>
         <PopoverTrigger asChild>
           <Button variant="outline" className="h-9 gap-2">
-            <Tag className="w-4 h-4" />
+            <Tag className="h-4 w-4" />
             Etiquetas
             {filters.labelIds.length > 0 && (
               <Badge variant="secondary" className="ml-1 h-5 px-1.5">
                 {filters.labelIds.length}
               </Badge>
             )}
-            <ChevronDown className="w-4 h-4" />
+            <ChevronDown className="h-4 w-4" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80 p-0" align="start">
-          <div className="p-3 border-b">
-            <p className="font-medium text-sm">Filtrar por etiquetas</p>
-            <p className="text-xs text-muted-foreground">
-              Selecione uma ou mais etiquetas
-            </p>
+          <div className="border-b p-3">
+            <p className="text-sm font-medium">Filtrar por etiquetas</p>
+            <p className="text-xs text-muted-foreground">Selecione uma ou mais etiquetas</p>
           </div>
           <div className="max-h-64 overflow-y-auto p-2">
             {Object.entries(labelsByCategory).map(([category, categoryLabelsItems]) => (
               <div key={category} className="mb-3">
-                <p className="text-xs font-medium text-muted-foreground px-2 mb-1">
+                <p className="mb-1 px-2 text-xs font-medium text-muted-foreground">
                   {categoryLabels[category] || category}
                 </p>
                 {categoryLabelsItems.map((label) => (
                   <div
                     key={label.id}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent cursor-pointer"
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent"
                     onClick={() => toggleLabel(label.id)}
                   >
                     <Checkbox checked={filters.labelIds.includes(label.id)} />
                     <div
-                      className="w-3 h-3 rounded-full"
+                      className="h-3 w-3 rounded-full"
                       style={{ backgroundColor: label.color }}
                     />
                     <span className="text-sm">{label.name}</span>
@@ -190,7 +176,7 @@ function LeadFiltersComponent({
             ))}
           </div>
           {filters.labelIds.length > 0 && (
-            <div className="p-2 border-t">
+            <div className="border-t p-2">
               <Button
                 variant="ghost"
                 size="sm"
@@ -211,8 +197,8 @@ function LeadFiltersComponent({
           onFiltersChange({ ...filters, temperature: value === 'all' ? null : value })
         }
       >
-        <SelectTrigger className="w-[140px] h-9">
-          <Thermometer className="w-4 h-4 mr-2 text-muted-foreground" />
+        <SelectTrigger className="h-9 w-[140px]">
+          <Thermometer className="mr-2 h-4 w-4 text-muted-foreground" />
           <SelectValue placeholder="Temperatura" />
         </SelectTrigger>
         <SelectContent>
@@ -230,8 +216,8 @@ function LeadFiltersComponent({
           onFiltersChange({ ...filters, assignedTo: value === 'all' ? null : value })
         }
       >
-        <SelectTrigger className="w-[180px] h-9">
-          <User className="w-4 h-4 mr-2 text-muted-foreground" />
+        <SelectTrigger className="h-9 w-[180px]">
+          <User className="mr-2 h-4 w-4 text-muted-foreground" />
           <SelectValue placeholder="Responsável" />
         </SelectTrigger>
         <SelectContent>
@@ -248,7 +234,7 @@ function LeadFiltersComponent({
       <Popover open={dateOpen} onOpenChange={setDateOpen}>
         <PopoverTrigger asChild>
           <Button variant="outline" className="h-9 gap-2">
-            <CalendarDays className="w-4 h-4" />
+            <CalendarDays className="h-4 w-4" />
             {filters.dateRange?.from ? (
               filters.dateRange.to ? (
                 <>
@@ -261,7 +247,7 @@ function LeadFiltersComponent({
             ) : (
               'Data'
             )}
-            <ChevronDown className="w-4 h-4" />
+            <ChevronDown className="h-4 w-4" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
@@ -273,10 +259,10 @@ function LeadFiltersComponent({
             }}
             numberOfMonths={2}
             locale={ptBR}
-            className={cn('p-3 pointer-events-auto')}
+            className={cn('pointer-events-auto p-3')}
           />
           {filters.dateRange?.from && (
-            <div className="p-2 border-t">
+            <div className="border-t p-2">
               <Button
                 variant="ghost"
                 size="sm"
@@ -298,7 +284,7 @@ function LeadFiltersComponent({
           className="h-9 gap-2 text-muted-foreground hover:text-foreground"
           onClick={clearAllFilters}
         >
-          <X className="w-4 h-4" />
+          <X className="h-4 w-4" />
           Limpar ({activeFiltersCount})
         </Button>
       )}

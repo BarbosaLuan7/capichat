@@ -1,15 +1,6 @@
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import {
-  User,
-  GitBranch,
-  Thermometer,
-  UserPlus,
-  Tag,
-  StickyNote,
-  Edit,
-  Plus,
-} from 'lucide-react';
+import { User, GitBranch, Thermometer, UserPlus, Tag, StickyNote, Edit, Plus } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useLeadActivities, formatActivityMessage } from '@/hooks/useLeadActivities';
@@ -67,7 +58,7 @@ export function LeadActivityTimeline({ leadId }: LeadActivityTimelineProps) {
       <div className="space-y-4">
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="flex gap-3">
-            <Skeleton className="w-8 h-8 rounded-full" />
+            <Skeleton className="h-8 w-8 rounded-full" />
             <div className="flex-1 space-y-2">
               <Skeleton className="h-4 w-48" />
               <Skeleton className="h-3 w-24" />
@@ -80,16 +71,14 @@ export function LeadActivityTimeline({ leadId }: LeadActivityTimelineProps) {
 
   if (!activities || activities.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        Nenhuma atividade registrada
-      </div>
+      <div className="py-8 text-center text-muted-foreground">Nenhuma atividade registrada</div>
     );
   }
 
   return (
     <div className="relative">
       {/* Timeline line */}
-      <div className="absolute left-4 top-0 bottom-0 w-px bg-border" />
+      <div className="absolute bottom-0 left-4 top-0 w-px bg-border" />
 
       <div className="space-y-6">
         {activities.map((activity, index) => {
@@ -102,23 +91,21 @@ export function LeadActivityTimeline({ leadId }: LeadActivityTimelineProps) {
               {/* Icon */}
               <div
                 className={cn(
-                  'relative z-10 flex items-center justify-center w-8 h-8 rounded-full text-white',
+                  'relative z-10 flex h-8 w-8 items-center justify-center rounded-full text-white',
                   colorClass
                 )}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="h-4 w-4" />
               </div>
 
               {/* Content */}
-              <div className="flex-1 min-w-0 pb-4">
+              <div className="min-w-0 flex-1 pb-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {message}
-                    </p>
+                    <p className="text-sm font-medium text-foreground">{message}</p>
                     {activity.profiles && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <Avatar className="w-5 h-5">
+                      <div className="mt-1 flex items-center gap-2">
+                        <Avatar className="h-5 w-5">
                           <AvatarImage src={activity.profiles.avatar || undefined} />
                           <AvatarFallback className="text-2xs">
                             {activity.profiles.name?.charAt(0)}
@@ -130,7 +117,7 @@ export function LeadActivityTimeline({ leadId }: LeadActivityTimelineProps) {
                       </div>
                     )}
                   </div>
-                  <time className="text-xs text-muted-foreground whitespace-nowrap">
+                  <time className="whitespace-nowrap text-xs text-muted-foreground">
                     {format(new Date(activity.created_at), "dd/MM 'às' HH:mm", {
                       locale: ptBR,
                     })}
@@ -139,7 +126,7 @@ export function LeadActivityTimeline({ leadId }: LeadActivityTimelineProps) {
 
                 {/* Additional details */}
                 {activity.details && Object.keys(activity.details).length > 0 && (
-                  <div className="mt-2 text-xs text-muted-foreground bg-muted/50 rounded p-2">
+                  <div className="mt-2 rounded bg-muted/50 p-2 text-xs text-muted-foreground">
                     {activity.action === 'stage_changed' && activity.details.from_stage && (
                       <span>De "{activity.details.from_stage}"</span>
                     )}

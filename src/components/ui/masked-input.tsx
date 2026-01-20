@@ -1,10 +1,10 @@
-import * as React from "react";
-import { Input } from "@/components/ui/input";
-import { formatPhone, formatCPF } from "@/lib/masks";
+import * as React from 'react';
+import { Input } from '@/components/ui/input';
+import { formatPhone, formatCPF } from '@/lib/masks';
 
-type MaskType = "phone" | "cpf";
+type MaskType = 'phone' | 'cpf';
 
-interface MaskedInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange"> {
+interface MaskedInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
   mask: MaskType;
   value: string;
   onChange: (value: string) => void;
@@ -32,15 +32,9 @@ export const MaskedInput = React.forwardRef<HTMLInputElement, MaskedInputProps>(
     };
 
     return (
-      <Input
-        ref={ref}
-        value={value}
-        onChange={handleChange}
-        maxLength={maxLength}
-        {...props}
-      />
+      <Input ref={ref} value={value} onChange={handleChange} maxLength={maxLength} {...props} />
     );
   }
 );
 
-MaskedInput.displayName = "MaskedInput";
+MaskedInput.displayName = 'MaskedInput';

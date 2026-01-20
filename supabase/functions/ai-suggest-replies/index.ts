@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,15 +23,17 @@ serve(async (req) => {
     console.log('Messages count:', messages?.length);
 
     // Build conversation context
-    const conversationContext = messages
-      ?.slice(-10)
-      .map((m: any) => `${m.sender_type === 'lead' ? 'Cliente' : 'Atendente'}: ${m.content}`)
-      .join('\n') || 'Nenhuma mensagem ainda';
+    const conversationContext =
+      messages
+        ?.slice(-10)
+        .map((m: any) => `${m.sender_type === 'lead' ? 'Cliente' : 'Atendente'}: ${m.content}`)
+        .join('\n') || 'Nenhuma mensagem ainda';
 
     // Build templates context
-    const templatesContext = templates?.length > 0
-      ? `\nTemplates disponíveis que podem ser adaptados:\n${templates.map((t: any) => `- ${t.name}: ${t.content}`).join('\n')}`
-      : '';
+    const templatesContext =
+      templates?.length > 0
+        ? `\nTemplates disponíveis que podem ser adaptados:\n${templates.map((t: any) => `- ${t.name}: ${t.content}`).join('\n')}`
+        : '';
 
     const systemPrompt = `Você é um assistente do escritório GaranteDireito, especializado em Direito Previdenciário (BPC/LOAS, Aposentadorias, Auxílios).
 
@@ -61,14 +63,14 @@ Sugira 3 respostas curtas e úteis que o atendente pode enviar agora.`;
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
+          { role: 'user', content: userPrompt },
         ],
         tools: [
           {
@@ -85,37 +87,46 @@ Sugira 3 respostas curtas e úteis que o atendente pode enviar agora.`;
                       type: 'object',
                       properties: {
                         text: { type: 'string', description: 'Texto da resposta sugerida' },
-                        intent: { type: 'string', description: 'Intenção da resposta (greeting, info, action, closing)' }
+                        intent: {
+                          type: 'string',
+                          description: 'Intenção da resposta (greeting, info, action, closing)',
+                        },
                       },
-                      required: ['text', 'intent']
+                      required: ['text', 'intent'],
                     },
                     minItems: 3,
-                    maxItems: 3
-                  }
+                    maxItems: 3,
+                  },
                 },
-                required: ['suggestions']
-              }
-            }
-          }
+                required: ['suggestions'],
+              },
+            },
+          },
         ],
-        tool_choice: { type: 'function', function: { name: 'suggest_replies' } }
+        tool_choice: { type: 'function', function: { name: 'suggest_replies' } },
       }),
     });
 
     if (!response.ok) {
       if (response.status === 429) {
         console.error('Rate limit exceeded');
-        return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+          {
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
       }
       if (response.status === 402) {
         console.error('Payment required');
-        return new Response(JSON.stringify({ error: 'AI credits exhausted. Please add more credits.' }), {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return new Response(
+          JSON.stringify({ error: 'AI credits exhausted. Please add more credits.' }),
+          {
+            status: 402,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
       }
       const errorText = await response.text();
       console.error('AI gateway error:', response.status, errorText);
@@ -138,17 +149,19 @@ Sugira 3 respostas curtas e úteis que o atendente pode enviar agora.`;
     // Fallback: parse from content if tool call not present
     const content = data.choices?.[0]?.message?.content || '';
     console.log('Fallback: parsing from content');
-    
-    return new Response(JSON.stringify({ 
-      suggestions: [
-        { text: 'Olá! Como posso ajudar você hoje?', intent: 'greeting' },
-        { text: 'Vou verificar essas informações e já te retorno.', intent: 'info' },
-        { text: 'Pode me enviar os documentos necessários?', intent: 'action' }
-      ]
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
 
+    return new Response(
+      JSON.stringify({
+        suggestions: [
+          { text: 'Olá! Como posso ajudar você hoje?', intent: 'greeting' },
+          { text: 'Vou verificar essas informações e já te retorno.', intent: 'info' },
+          { text: 'Pode me enviar os documentos necessários?', intent: 'action' },
+        ],
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
   } catch (error: unknown) {
     console.error('Error in ai-suggest-replies:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

@@ -3,12 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Trash2, Loader2 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Form,
   FormControl,
@@ -60,7 +55,14 @@ interface UserModalProps {
   isLoading?: boolean;
 }
 
-export const UserModal = ({ open, onOpenChange, user, onSave, onDelete, isLoading = false }: UserModalProps) => {
+export const UserModal = ({
+  open,
+  onOpenChange,
+  user,
+  onSave,
+  onDelete,
+  isLoading = false,
+}: UserModalProps) => {
   const { data: teamsData } = useTeams();
   const teams = teamsData || [];
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -170,7 +172,7 @@ export const UserModal = ({ open, onOpenChange, user, onSave, onDelete, isLoadin
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {roles.map(role => (
+                        {roles.map((role) => (
                           <SelectItem key={role} value={role}>
                             {getRoleLabel(role)}
                           </SelectItem>
@@ -196,7 +198,7 @@ export const UserModal = ({ open, onOpenChange, user, onSave, onDelete, isLoadin
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="">Nenhuma</SelectItem>
-                        {teams.map(team => (
+                        {teams.map((team) => (
                           <SelectItem key={team.id} value={team.id}>
                             {team.name}
                           </SelectItem>
@@ -221,10 +223,7 @@ export const UserModal = ({ open, onOpenChange, user, onSave, onDelete, isLoadin
                     </p>
                   </div>
                   <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
                   </FormControl>
                 </FormItem>
               )}
@@ -237,16 +236,20 @@ export const UserModal = ({ open, onOpenChange, user, onSave, onDelete, isLoadin
                   variant="destructive"
                   onClick={() => setDeleteDialogOpen(true)}
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
+                  <Trash2 className="mr-2 h-4 w-4" />
                   Excluir
                 </Button>
               )}
-              <div className="flex gap-2 ml-auto">
+              <div className="ml-auto flex gap-2">
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit" className="gradient-primary text-primary-foreground" disabled={isLoading}>
-                  {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                <Button
+                  type="submit"
+                  className="gradient-primary text-primary-foreground"
+                  disabled={isLoading}
+                >
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {user ? 'Salvar' : 'Criar Usuário'}
                 </Button>
               </div>
@@ -260,8 +263,8 @@ export const UserModal = ({ open, onOpenChange, user, onSave, onDelete, isLoadin
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir usuário?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir <span className="font-medium">{user?.name}</span>? 
-              Esta ação não pode ser desfeita.
+              Tem certeza que deseja excluir <span className="font-medium">{user?.name}</span>? Esta
+              ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

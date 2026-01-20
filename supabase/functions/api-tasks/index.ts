@@ -18,12 +18,16 @@ function formatTelefone(phone: string | null): string | null {
   return phone;
 }
 
-function safeErrorResponse(internalError: unknown, publicMessage: string, status: number = 500): Response {
+function safeErrorResponse(
+  internalError: unknown,
+  publicMessage: string,
+  status: number = 500
+): Response {
   console.error('Internal error:', internalError);
-  return new Response(
-    JSON.stringify({ success: false, error: publicMessage }),
-    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return new Response(JSON.stringify({ success: false, error: publicMessage }), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }
 
 Deno.serve(async (req) => {
@@ -46,13 +50,15 @@ Deno.serve(async (req) => {
     }
 
     const apiKey = authHeader.replace('Bearer ', '');
-    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', { key_value: apiKey });
+    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', {
+      key_value: apiKey,
+    });
 
     if (apiKeyError || !apiKeyId) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Invalid API key' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ success: false, error: 'Invalid API key' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log('[api-tasks] API key validated');
@@ -72,12 +78,13 @@ Deno.serve(async (req) => {
       const priority = url.searchParams.get('priority');
 
       // Use simple join without FK hint - assigned_to references auth.users, not profiles directly
-      let query = supabase
-        .from('tasks')
-        .select(`
+      let query = supabase.from('tasks').select(
+        `
           *,
           lead:leads(id, name, phone)
-        `, { count: 'exact' });
+        `,
+        { count: 'exact' }
+      );
 
       if (status) query = query.eq('status', status);
       if (assignedTo) query = query.eq('assigned_to', assignedTo);
@@ -98,10 +105,11 @@ Deno.serve(async (req) => {
 
       // Fetch assignee names separately
       const assigneeIds = [...new Set((data || []).map((t: any) => t.assigned_to).filter(Boolean))];
-      const { data: assigneesData } = assigneeIds.length > 0
-        ? await supabase.from('profiles').select('id, name').in('id', assigneeIds)
-        : { data: [] };
-      
+      const { data: assigneesData } =
+        assigneeIds.length > 0
+          ? await supabase.from('profiles').select('id, name').in('id', assigneeIds)
+          : { data: [] };
+
       const assigneesMap = new Map<string, string>();
       (assigneesData || []).forEach((p: any) => assigneesMap.set(p.id, p.name));
 
@@ -112,17 +120,21 @@ Deno.serve(async (req) => {
         status: task.status,
         prioridade: task.priority,
         prazo: task.due_date,
-        responsavel: task.assigned_to ? {
-          id: `usr_${task.assigned_to.slice(0, 8)}`,
-          nome: assigneesMap.get(task.assigned_to) || 'Unknown'
-        } : null,
-        contato: task.lead ? {
-          id: `cnt_${task.lead.id.slice(0, 8)}`,
-          nome: task.lead.name,
-          telefone: formatTelefone(task.lead.phone)
-        } : null,
+        responsavel: task.assigned_to
+          ? {
+              id: `usr_${task.assigned_to.slice(0, 8)}`,
+              nome: assigneesMap.get(task.assigned_to) || 'Unknown',
+            }
+          : null,
+        contato: task.lead
+          ? {
+              id: `cnt_${task.lead.id.slice(0, 8)}`,
+              nome: task.lead.name,
+              telefone: formatTelefone(task.lead.phone),
+            }
+          : null,
         criado_em: task.created_at,
-        atualizado_em: task.updated_at
+        atualizado_em: task.updated_at,
       }));
 
       console.log('[api-tasks] Listed', transformed.length, 'tasks');
@@ -134,8 +146,8 @@ Deno.serve(async (req) => {
             pagina: page,
             por_pagina: pageSize,
             total: count || 0,
-            total_paginas: Math.ceil((count || 0) / pageSize)
-          }
+            total_paginas: Math.ceil((count || 0) / pageSize),
+          },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -145,10 +157,12 @@ Deno.serve(async (req) => {
     if (method === 'GET' && id && !action) {
       const { data: task, error } = await supabase
         .from('tasks')
-        .select(`
+        .select(
+          `
           *,
           lead:leads(id, name, phone)
-        `)
+        `
+        )
         .eq('id', id)
         .maybeSingle();
 
@@ -157,10 +171,10 @@ Deno.serve(async (req) => {
       }
 
       if (!task) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'Task not found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ success: false, error: 'Task not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // Fetch assignee name separately
@@ -183,17 +197,21 @@ Deno.serve(async (req) => {
           prioridade: task.priority,
           prazo: task.due_date,
           subtarefas: task.subtasks,
-          responsavel: task.assigned_to ? {
-            id: `usr_${task.assigned_to.slice(0, 8)}`,
-            nome: assigneeName || 'Unknown'
-          } : null,
-          contato: task.lead ? {
-            id: `cnt_${task.lead.id.slice(0, 8)}`,
-            nome: task.lead.name,
-            telefone: formatTelefone(task.lead.phone)
-          } : null,
+          responsavel: task.assigned_to
+            ? {
+                id: `usr_${task.assigned_to.slice(0, 8)}`,
+                nome: assigneeName || 'Unknown',
+              }
+            : null,
+          contato: task.lead
+            ? {
+                id: `cnt_${task.lead.id.slice(0, 8)}`,
+                nome: task.lead.name,
+                telefone: formatTelefone(task.lead.phone),
+              }
+            : null,
           criado_em: task.created_at,
-          atualizado_em: task.updated_at
+          atualizado_em: task.updated_at,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -229,12 +247,14 @@ Deno.serve(async (req) => {
           due_date: prazo || null,
           priority: prioridade,
           status: 'todo',
-          tenant_id: tenantId || null
+          tenant_id: tenantId || null,
         })
-        .select(`
+        .select(
+          `
           *,
           lead:leads(id, name, phone)
-        `)
+        `
+        )
         .single();
 
       if (error) {
@@ -264,16 +284,20 @@ Deno.serve(async (req) => {
             status: newTask.status,
             prioridade: newTask.priority,
             prazo: newTask.due_date,
-            responsavel: newTask.assigned_to ? {
-              id: `usr_${newTask.assigned_to.slice(0, 8)}`,
-              nome: assigneeName || 'Unknown'
-            } : null,
-            contato: newTask.lead ? {
-              id: `cnt_${newTask.lead.id.slice(0, 8)}`,
-              nome: newTask.lead.name
-            } : null,
-            criado_em: newTask.created_at
-          }
+            responsavel: newTask.assigned_to
+              ? {
+                  id: `usr_${newTask.assigned_to.slice(0, 8)}`,
+                  nome: assigneeName || 'Unknown',
+                }
+              : null,
+            contato: newTask.lead
+              ? {
+                  id: `cnt_${newTask.lead.id.slice(0, 8)}`,
+                  nome: newTask.lead.name,
+                }
+              : null,
+            criado_em: newTask.created_at,
+          },
         }),
         { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -284,7 +308,7 @@ Deno.serve(async (req) => {
       const body = await req.json();
 
       const updateData: Record<string, unknown> = {
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
       // Accept both PT and EN parameter names
       if (body.titulo !== undefined || body.title !== undefined) {
@@ -293,7 +317,11 @@ Deno.serve(async (req) => {
       if (body.descricao !== undefined || body.description !== undefined) {
         updateData.description = body.descricao || body.description;
       }
-      if (body.prazo !== undefined || body.data_vencimento !== undefined || body.due_date !== undefined) {
+      if (
+        body.prazo !== undefined ||
+        body.data_vencimento !== undefined ||
+        body.due_date !== undefined
+      ) {
         updateData.due_date = body.prazo || body.data_vencimento || body.due_date;
       }
       if (body.prioridade !== undefined || body.priority !== undefined) {
@@ -327,8 +355,8 @@ Deno.serve(async (req) => {
             id: `task_${updatedTask.id.slice(0, 8)}`,
             titulo: updatedTask.title,
             status: updatedTask.status,
-            atualizado_em: updatedTask.updated_at
-          }
+            atualizado_em: updatedTask.updated_at,
+          },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -340,7 +368,7 @@ Deno.serve(async (req) => {
         .from('tasks')
         .update({
           status: 'done',
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', id)
         .select()
@@ -359,8 +387,8 @@ Deno.serve(async (req) => {
           tarefa: {
             id: `task_${completedTask.id.slice(0, 8)}`,
             titulo: completedTask.title,
-            status: completedTask.status
-          }
+            status: completedTask.status,
+          },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -368,10 +396,7 @@ Deno.serve(async (req) => {
 
     // DELETE /api-tasks?id=xxx - Delete task
     if (method === 'DELETE' && id) {
-      const { error } = await supabase
-        .from('tasks')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('tasks').delete().eq('id', id);
 
       if (error) {
         return safeErrorResponse(error, 'Error deleting task');
@@ -385,11 +410,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed or invalid action' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
+    return new Response(JSON.stringify({ error: 'Method not allowed or invalid action' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('[api-tasks] Error:', error);
     return safeErrorResponse(error, 'Internal server error');

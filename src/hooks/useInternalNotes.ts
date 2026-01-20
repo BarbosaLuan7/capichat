@@ -9,29 +9,29 @@ export function useInternalNotes(conversationId: string | undefined) {
     queryKey: ['internal-notes', conversationId],
     queryFn: async () => {
       if (!conversationId) return [];
-      
+
       // Fetch notes
       const { data: notes, error } = await supabase
         .from('internal_notes')
         .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       if (!notes || notes.length === 0) return [];
-      
+
       // Fetch profiles for authors
-      const authorIds = [...new Set(notes.map(n => n.author_id))];
+      const authorIds = [...new Set(notes.map((n) => n.author_id))];
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, name, email, avatar')
         .in('id', authorIds);
-      
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
-      
-      return notes.map(note => ({
+
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
+
+      return notes.map((note) => ({
         ...note,
-        profiles: profileMap.get(note.author_id) || null
+        profiles: profileMap.get(note.author_id) || null,
       }));
     },
     enabled: !!conversationId,
@@ -71,8 +71,16 @@ export function useCreateInternalNote() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ conversationId, content }: { conversationId: string; content: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+    mutationFn: async ({
+      conversationId,
+      content,
+    }: {
+      conversationId: string;
+      content: string;
+    }) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
       const { data, error } = await supabase
@@ -84,7 +92,7 @@ export function useCreateInternalNote() {
         })
         .select()
         .single();
-      
+
       if (error) throw error;
 
       // Register activity in lead_activities for history tab
@@ -99,7 +107,7 @@ export function useCreateInternalNote() {
           lead_id: conversation.lead_id,
           user_id: user.id,
           action: 'note_added',
-          details: { content: content.substring(0, 100) }
+          details: { content: content.substring(0, 100) },
         });
       }
 
@@ -123,7 +131,7 @@ export function useUpdateInternalNote() {
         .eq('id', noteId)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -138,11 +146,8 @@ export function useDeleteInternalNote() {
 
   return useMutation({
     mutationFn: async (noteId: string) => {
-      const { error } = await supabase
-        .from('internal_notes')
-        .delete()
-        .eq('id', noteId);
-      
+      const { error } = await supabase.from('internal_notes').delete().eq('id', noteId);
+
       if (error) throw error;
     },
     onSuccess: () => {

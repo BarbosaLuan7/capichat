@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  Plus, 
-  Webhook, 
-  MoreVertical, 
-  Trash2, 
-  Edit, 
+import {
+  Plus,
+  Webhook,
+  MoreVertical,
+  Trash2,
+  Edit,
   Send,
   CheckCircle2,
   XCircle,
@@ -16,29 +16,29 @@ import {
   Copy,
   Book,
   Code,
-  FileJson
+  FileJson,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -51,28 +51,83 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion";
+} from '@/components/ui/accordion';
 
 const WEBHOOK_EVENTS = [
   { value: 'lead.created', label: 'Lead criado', labelPt: 'lead.criado', category: 'Lead' },
   { value: 'lead.updated', label: 'Lead atualizado', labelPt: 'lead.atualizado', category: 'Lead' },
   { value: 'lead.deleted', label: 'Lead excluído', labelPt: 'lead.excluido', category: 'Lead' },
-  { value: 'lead.stage_changed', label: 'Lead mudou de etapa', labelPt: 'lead.etapa_alterada', category: 'Lead' },
+  {
+    value: 'lead.stage_changed',
+    label: 'Lead mudou de etapa',
+    labelPt: 'lead.etapa_alterada',
+    category: 'Lead',
+  },
   { value: 'lead.assigned', label: 'Lead atribuído', labelPt: 'lead.atribuido', category: 'Lead' },
-  { value: 'lead.temperature_changed', label: 'Temperatura alterada', labelPt: 'lead.temperatura_alterada', category: 'Lead' },
-  { value: 'lead.label_added', label: 'Etiqueta adicionada', labelPt: 'lead.etiqueta_adicionada', category: 'Lead' },
-  { value: 'lead.label_removed', label: 'Etiqueta removida', labelPt: 'lead.etiqueta_removida', category: 'Lead' },
-  { value: 'lead.summary_updated', label: 'Resumo do caso atualizado', labelPt: 'lead.resumo_atualizado', category: 'Lead' },
-  { value: 'message.received', label: 'Mensagem recebida', labelPt: 'mensagem.recebida', category: 'Mensagem' },
-  { value: 'message.sent', label: 'Mensagem enviada', labelPt: 'mensagem.enviada', category: 'Mensagem' },
-  { value: 'conversation.created', label: 'Conversa criada', labelPt: 'conversa.criada', category: 'Conversa' },
-  { value: 'conversation.assigned', label: 'Conversa atribuída', labelPt: 'conversa.atribuida', category: 'Conversa' },
-  { value: 'conversation.resolved', label: 'Conversa resolvida', labelPt: 'conversa.resolvida', category: 'Conversa' },
+  {
+    value: 'lead.temperature_changed',
+    label: 'Temperatura alterada',
+    labelPt: 'lead.temperatura_alterada',
+    category: 'Lead',
+  },
+  {
+    value: 'lead.label_added',
+    label: 'Etiqueta adicionada',
+    labelPt: 'lead.etiqueta_adicionada',
+    category: 'Lead',
+  },
+  {
+    value: 'lead.label_removed',
+    label: 'Etiqueta removida',
+    labelPt: 'lead.etiqueta_removida',
+    category: 'Lead',
+  },
+  {
+    value: 'lead.summary_updated',
+    label: 'Resumo do caso atualizado',
+    labelPt: 'lead.resumo_atualizado',
+    category: 'Lead',
+  },
+  {
+    value: 'message.received',
+    label: 'Mensagem recebida',
+    labelPt: 'mensagem.recebida',
+    category: 'Mensagem',
+  },
+  {
+    value: 'message.sent',
+    label: 'Mensagem enviada',
+    labelPt: 'mensagem.enviada',
+    category: 'Mensagem',
+  },
+  {
+    value: 'conversation.created',
+    label: 'Conversa criada',
+    labelPt: 'conversa.criada',
+    category: 'Conversa',
+  },
+  {
+    value: 'conversation.assigned',
+    label: 'Conversa atribuída',
+    labelPt: 'conversa.atribuida',
+    category: 'Conversa',
+  },
+  {
+    value: 'conversation.resolved',
+    label: 'Conversa resolvida',
+    labelPt: 'conversa.resolvida',
+    category: 'Conversa',
+  },
   { value: 'task.created', label: 'Tarefa criada', labelPt: 'tarefa.criada', category: 'Tarefa' },
-  { value: 'task.completed', label: 'Tarefa concluída', labelPt: 'tarefa.concluida', category: 'Tarefa' },
+  {
+    value: 'task.completed',
+    label: 'Tarefa concluída',
+    labelPt: 'tarefa.concluida',
+    category: 'Tarefa',
+  },
 ] as const;
 
-type WebhookEvent = typeof WEBHOOK_EVENTS[number]['value'];
+type WebhookEvent = (typeof WEBHOOK_EVENTS)[number]['value'];
 
 interface WebhookFormData {
   name: string;
@@ -252,7 +307,7 @@ const WebhooksSettings = () => {
         .from('webhooks')
         .select('*')
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       return data;
     },
@@ -269,7 +324,7 @@ const WebhooksSettings = () => {
         .eq('webhook_id', selectedWebhook)
         .order('created_at', { ascending: false })
         .limit(50);
-      
+
       if (error) throw error;
       return data;
     },
@@ -344,10 +399,7 @@ const WebhooksSettings = () => {
   // Toggle active mutation
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { error } = await supabase
-        .from('webhooks')
-        .update({ is_active })
-        .eq('id', id);
+      const { error } = await supabase.from('webhooks').update({ is_active }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -358,7 +410,7 @@ const WebhooksSettings = () => {
   // Test webhook mutation
   const testMutation = useMutation({
     mutationFn: async (webhookId: string) => {
-      const webhook = webhooks?.find(w => w.id === webhookId);
+      const webhook = webhooks?.find((w) => w.id === webhookId);
       if (!webhook) throw new Error('Webhook não encontrado');
 
       const response = await supabase.functions.invoke('dispatch-webhook', {
@@ -389,7 +441,9 @@ const WebhooksSettings = () => {
       return response.data;
     },
     onSuccess: () => {
-      toast.success('Webhook de teste enviado - Payload em PT-BR com fuso GMT-3 enviado. Verifique os logs.');
+      toast.success(
+        'Webhook de teste enviado - Payload em PT-BR com fuso GMT-3 enviado. Verifique os logs.'
+      );
       queryClient.invalidateQueries({ queryKey: ['webhook-logs'] });
     },
     onError: (error: Error) => {
@@ -403,7 +457,7 @@ const WebhooksSettings = () => {
     setEditingWebhook(null);
   };
 
-  const handleEdit = (webhook: typeof webhooks[0]) => {
+  const handleEdit = (webhook: (typeof webhooks)[0]) => {
     setEditingWebhook(webhook.id);
     setFormData({
       name: webhook.name,
@@ -422,7 +476,7 @@ const WebhooksSettings = () => {
 
   const handleSubmit = () => {
     const headers: Record<string, string> = {};
-    headersText.split('\n').forEach(line => {
+    headersText.split('\n').forEach((line) => {
       const [key, ...valueParts] = line.split(':');
       if (key && valueParts.length > 0) {
         headers[key.trim()] = valueParts.join(':').trim();
@@ -439,10 +493,10 @@ const WebhooksSettings = () => {
   };
 
   const handleEventToggle = (event: WebhookEvent) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       events: prev.events.includes(event)
-        ? prev.events.filter(e => e !== event)
+        ? prev.events.filter((e) => e !== event)
         : [...prev.events, event],
     }));
   };
@@ -455,58 +509,68 @@ const WebhooksSettings = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'success':
-        return <CheckCircle2 className="w-4 h-4 text-success" />;
+        return <CheckCircle2 className="h-4 w-4 text-success" />;
       case 'failed':
-        return <XCircle className="w-4 h-4 text-destructive" />;
+        return <XCircle className="h-4 w-4 text-destructive" />;
       case 'retrying':
-        return <RefreshCw className="w-4 h-4 text-warning" />;
+        return <RefreshCw className="h-4 w-4 text-warning" />;
       default:
-        return <Clock className="w-4 h-4 text-muted-foreground" />;
+        return <Clock className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
-  const groupedEvents = WEBHOOK_EVENTS.reduce((acc, event) => {
-    if (!acc[event.category]) acc[event.category] = [];
-    acc[event.category].push(event);
-    return acc;
-  }, {} as Record<string, typeof WEBHOOK_EVENTS[number][]>);
+  const groupedEvents = WEBHOOK_EVENTS.reduce(
+    (acc, event) => {
+      if (!acc[event.category]) acc[event.category] = [];
+      acc[event.category].push(event);
+      return acc;
+    },
+    {} as Record<string, (typeof WEBHOOK_EVENTS)[number][]>
+  );
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
-      <PageBreadcrumb items={[
-        { label: 'Configurações', href: '/settings' },
-        { label: 'Webhooks' }
-      ]} />
+    <div className="mx-auto max-w-5xl space-y-6 p-6">
+      <PageBreadcrumb
+        items={[{ label: 'Configurações', href: '/settings' }, { label: 'Webhooks' }]}
+      />
 
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Webhooks</h1>
-          <p className="text-muted-foreground">Configure webhooks para integrar com sistemas externos</p>
+          <p className="text-muted-foreground">
+            Configure webhooks para integrar com sistemas externos
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setIsDocsModalOpen(true)}>
-            <Book className="w-4 h-4 mr-2" />
+            <Book className="mr-2 h-4 w-4" />
             Documentação
           </Button>
-          <Button onClick={() => { resetForm(); setIsModalOpen(true); }}>
-            <Plus className="w-4 h-4 mr-2" />
+          <Button
+            onClick={() => {
+              resetForm();
+              setIsModalOpen(true);
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" />
             Novo Webhook
           </Button>
         </div>
       </div>
 
       {/* Info Card */}
-      <Card className="bg-primary/5 border-primary/20">
+      <Card className="border-primary/20 bg-primary/5">
         <CardContent className="py-4">
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <FileJson className="w-4 h-4 text-primary" />
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <FileJson className="h-4 w-4 text-primary" />
             </div>
             <div className="text-sm">
-              <p className="font-medium text-foreground mb-1">Payloads em PT-BR com fuso GMT-3</p>
+              <p className="mb-1 font-medium text-foreground">Payloads em PT-BR com fuso GMT-3</p>
               <p className="text-muted-foreground">
-                Os webhooks são enviados com campos em português e datas no fuso horário de São Paulo (GMT-3).
-                Clique em "Documentação" para ver exemplos de payload e código de validação HMAC.
+                Os webhooks são enviados com campos em português e datas no fuso horário de São
+                Paulo (GMT-3). Clique em "Documentação" para ver exemplos de payload e código de
+                validação HMAC.
               </p>
             </div>
           </div>
@@ -524,13 +588,18 @@ const WebhooksSettings = () => {
         ) : webhooks?.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
-              <Webhook className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Nenhum webhook configurado</h3>
-              <p className="text-muted-foreground mb-4">
+              <Webhook className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+              <h3 className="mb-2 text-lg font-medium">Nenhum webhook configurado</h3>
+              <p className="mb-4 text-muted-foreground">
                 Webhooks permitem enviar dados para sistemas externos quando eventos ocorrem
               </p>
-              <Button onClick={() => { resetForm(); setIsModalOpen(true); }}>
-                <Plus className="w-4 h-4 mr-2" />
+              <Button
+                onClick={() => {
+                  resetForm();
+                  setIsModalOpen(true);
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
                 Criar primeiro webhook
               </Button>
             </CardContent>
@@ -540,21 +609,21 @@ const WebhooksSettings = () => {
             <Card key={webhook.id}>
               <CardContent className="py-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Webhook className="w-5 h-5 text-primary" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <Webhook className="h-5 w-5 text-primary" />
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="font-medium text-foreground">{webhook.name}</h3>
                       <Badge variant={webhook.is_active ? 'default' : 'secondary'}>
                         {webhook.is_active ? 'Ativo' : 'Inativo'}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground truncate">{webhook.url}</p>
-                    <div className="flex flex-wrap gap-1 mt-1">
+                    <p className="truncate text-sm text-muted-foreground">{webhook.url}</p>
+                    <div className="mt-1 flex flex-wrap gap-1">
                       {webhook.events.slice(0, 3).map((event: string) => (
                         <Badge key={event} variant="outline" className="text-xs">
-                          {WEBHOOK_EVENTS.find(e => e.value === event)?.label || event}
+                          {WEBHOOK_EVENTS.find((e) => e.value === event)?.label || event}
                         </Badge>
                       ))}
                       {webhook.events.length > 3 && (
@@ -567,7 +636,7 @@ const WebhooksSettings = () => {
                   <div className="flex items-center gap-2">
                     <Switch
                       checked={webhook.is_active}
-                      onCheckedChange={(checked) => 
+                      onCheckedChange={(checked) =>
                         toggleActiveMutation.mutate({ id: webhook.id, is_active: checked })
                       }
                     />
@@ -579,7 +648,7 @@ const WebhooksSettings = () => {
                         setIsLogsModalOpen(true);
                       }}
                     >
-                      <Eye className="w-4 h-4" />
+                      <Eye className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="outline"
@@ -587,24 +656,24 @@ const WebhooksSettings = () => {
                       onClick={() => testMutation.mutate(webhook.id)}
                       disabled={testMutation.isPending}
                     >
-                      <Send className="w-4 h-4" />
+                      <Send className="h-4 w-4" />
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm">
-                          <MoreVertical className="w-4 h-4" />
+                          <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => handleEdit(webhook)}>
-                          <Edit className="w-4 h-4 mr-2" />
+                          <Edit className="mr-2 h-4 w-4" />
                           Editar
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-red-600"
                           onClick={() => deleteMutation.mutate(webhook.id)}
                         >
-                          <Trash2 className="w-4 h-4 mr-2" />
+                          <Trash2 className="mr-2 h-4 w-4" />
                           Excluir
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -619,11 +688,9 @@ const WebhooksSettings = () => {
 
       {/* Webhook Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingWebhook ? 'Editar Webhook' : 'Novo Webhook'}
-            </DialogTitle>
+            <DialogTitle>{editingWebhook ? 'Editar Webhook' : 'Novo Webhook'}</DialogTitle>
             <DialogDescription>
               Configure o webhook para receber notificações de eventos
             </DialogDescription>
@@ -642,7 +709,7 @@ const WebhooksSettings = () => {
                 <Input
                   placeholder="Ex: Integração n8n"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                 />
               </div>
               <div className="space-y-2">
@@ -650,13 +717,15 @@ const WebhooksSettings = () => {
                 <Input
                   placeholder="https://seu-servidor.com/webhook"
                   value={formData.url}
-                  onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, url: e.target.value }))}
                 />
               </div>
               <div className="flex items-center gap-2">
                 <Switch
                   checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({ ...prev, is_active: checked }))
+                  }
                 />
                 <Label>Webhook ativo</Label>
               </div>
@@ -664,11 +733,12 @@ const WebhooksSettings = () => {
 
             <TabsContent value="events" className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Selecione os eventos que dispararão este webhook. Os eventos serão enviados com nomes em PT-BR.
+                Selecione os eventos que dispararão este webhook. Os eventos serão enviados com
+                nomes em PT-BR.
               </p>
               {Object.entries(groupedEvents).map(([category, events]) => (
                 <div key={category} className="space-y-2">
-                  <h4 className="font-medium text-sm">{category}</h4>
+                  <h4 className="text-sm font-medium">{category}</h4>
                   <div className="grid grid-cols-1 gap-2">
                     {events.map((event) => (
                       <div key={event.value} className="flex items-center gap-2">
@@ -677,9 +747,9 @@ const WebhooksSettings = () => {
                           checked={formData.events.includes(event.value)}
                           onCheckedChange={() => handleEventToggle(event.value)}
                         />
-                        <Label htmlFor={event.value} className="text-sm cursor-pointer flex-1">
+                        <Label htmlFor={event.value} className="flex-1 cursor-pointer text-sm">
                           <span>{event.label}</span>
-                          <span className="text-xs text-muted-foreground ml-2">
+                          <span className="ml-2 text-xs text-muted-foreground">
                             → {event.labelPt}
                           </span>
                         </Label>
@@ -703,15 +773,27 @@ const WebhooksSettings = () => {
                   Um header por linha no formato: Nome: Valor
                 </p>
               </div>
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-xs font-medium mb-2">Headers padrão enviados automaticamente:</p>
-                <ul className="text-xs text-muted-foreground space-y-1">
-                  <li>• <code>X-Webhook-Evento</code> - Nome do evento em PT-BR</li>
-                  <li>• <code>X-Webhook-Versao</code> - Versão da API (1.0)</li>
-                  <li>• <code>X-Webhook-Ambiente</code> - producao ou teste</li>
-                  <li>• <code>X-Webhook-Timestamp</code> - Unix timestamp</li>
-                  <li>• <code>X-Webhook-Assinatura</code> - HMAC-SHA256</li>
-                  <li>• <code>X-Webhook-ID-Entrega</code> - ID único da entrega</li>
+              <div className="rounded-lg bg-muted p-3">
+                <p className="mb-2 text-xs font-medium">Headers padrão enviados automaticamente:</p>
+                <ul className="space-y-1 text-xs text-muted-foreground">
+                  <li>
+                    • <code>X-Webhook-Evento</code> - Nome do evento em PT-BR
+                  </li>
+                  <li>
+                    • <code>X-Webhook-Versao</code> - Versão da API (1.0)
+                  </li>
+                  <li>
+                    • <code>X-Webhook-Ambiente</code> - producao ou teste
+                  </li>
+                  <li>
+                    • <code>X-Webhook-Timestamp</code> - Unix timestamp
+                  </li>
+                  <li>
+                    • <code>X-Webhook-Assinatura</code> - HMAC-SHA256
+                  </li>
+                  <li>
+                    • <code>X-Webhook-ID-Entrega</code> - ID único da entrega
+                  </li>
                 </ul>
               </div>
             </TabsContent>
@@ -721,7 +803,7 @@ const WebhooksSettings = () => {
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={handleSubmit}
               disabled={!formData.name || !formData.url || formData.events.length === 0}
             >
@@ -733,31 +815,33 @@ const WebhooksSettings = () => {
 
       {/* Logs Modal */}
       <Dialog open={isLogsModalOpen} onOpenChange={setIsLogsModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh]">
+        <DialogContent className="max-h-[80vh] max-w-3xl">
           <DialogHeader>
             <DialogTitle>Logs do Webhook</DialogTitle>
-            <DialogDescription>
-              Histórico de disparos e respostas
-            </DialogDescription>
+            <DialogDescription>Histórico de disparos e respostas</DialogDescription>
           </DialogHeader>
 
           <ScrollArea className="h-[500px]">
             <div className="space-y-3">
               {webhookLogs?.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  Nenhum log encontrado
-                </p>
+                <p className="py-8 text-center text-muted-foreground">Nenhum log encontrado</p>
               ) : (
                 webhookLogs?.map((log) => (
                   <Card key={log.id}>
                     <CardContent className="py-3">
                       <div className="flex items-start gap-3">
                         {getStatusIcon(log.status)}
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <Badge variant="outline">{log.event}</Badge>
                             {log.response_status && (
-                              <Badge variant={log.response_status >= 200 && log.response_status < 300 ? 'default' : 'destructive'}>
+                              <Badge
+                                variant={
+                                  log.response_status >= 200 && log.response_status < 300
+                                    ? 'default'
+                                    : 'destructive'
+                                }
+                              >
                                 {log.response_status}
                               </Badge>
                             )}
@@ -765,14 +849,16 @@ const WebhooksSettings = () => {
                               Tentativa {log.attempts}
                             </span>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {format(new Date(log.created_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {format(new Date(log.created_at), "dd/MM/yyyy 'às' HH:mm:ss", {
+                              locale: ptBR,
+                            })}
                           </p>
                           {log.error_message && (
-                            <p className="text-xs text-red-500 mt-1">{log.error_message}</p>
+                            <p className="mt-1 text-xs text-red-500">{log.error_message}</p>
                           )}
                           {log.response_body && (
-                            <pre className="text-xs bg-muted p-2 rounded mt-2 overflow-x-auto">
+                            <pre className="mt-2 overflow-x-auto rounded bg-muted p-2 text-xs">
                               {log.response_body.substring(0, 200)}
                               {log.response_body.length > 200 && '...'}
                             </pre>
@@ -790,7 +876,7 @@ const WebhooksSettings = () => {
 
       {/* Documentation Modal */}
       <Dialog open={isDocsModalOpen} onOpenChange={setIsDocsModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Documentação de Webhooks</DialogTitle>
             <DialogDescription>
@@ -807,43 +893,72 @@ const WebhooksSettings = () => {
             </TabsList>
 
             <TabsContent value="payload" className="space-y-4">
-              <div className="p-4 bg-muted rounded-lg">
-                <div className="flex items-center justify-between mb-2">
+              <div className="rounded-lg bg-muted p-4">
+                <div className="mb-2 flex items-center justify-between">
                   <h3 className="font-medium">Estrutura do Payload</h3>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => copyToClipboard(JSON.stringify(TEST_PAYLOAD, null, 2), 'Payload')}
+                    onClick={() =>
+                      copyToClipboard(JSON.stringify(TEST_PAYLOAD, null, 2), 'Payload')
+                    }
                   >
-                    <Copy className="w-4 h-4 mr-2" />
+                    <Copy className="mr-2 h-4 w-4" />
                     Copiar
                   </Button>
                 </div>
-                <pre className="text-xs bg-background p-4 rounded overflow-x-auto">
+                <pre className="overflow-x-auto rounded bg-background p-4 text-xs">
                   {JSON.stringify(TEST_PAYLOAD, null, 2)}
                 </pre>
               </div>
 
               <div className="grid gap-2">
                 <h4 className="font-medium">Campos principais:</h4>
-                <ul className="text-sm text-muted-foreground space-y-2">
-                  <li><code className="bg-muted px-1 py-0.5 rounded">evento</code> - Nome do evento em PT-BR (ex: lead.criado)</li>
-                  <li><code className="bg-muted px-1 py-0.5 rounded">evento_original</code> - Nome técnico do evento (ex: lead.created)</li>
-                  <li><code className="bg-muted px-1 py-0.5 rounded">versao_api</code> - Versão da API do webhook</li>
-                  <li><code className="bg-muted px-1 py-0.5 rounded">ambiente</code> - "producao" ou "teste"</li>
-                  <li><code className="bg-muted px-1 py-0.5 rounded">data_hora</code> - Data/hora em GMT-3 (São Paulo)</li>
-                  <li><code className="bg-muted px-1 py-0.5 rounded">id_entrega</code> - ID único desta entrega</li>
-                  <li><code className="bg-muted px-1 py-0.5 rounded">dados</code> - Dados do evento (lead, mensagem, etc)</li>
-                  <li><code className="bg-muted px-1 py-0.5 rounded">metadados</code> - Informações sobre tentativas e webhook</li>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li>
+                    <code className="rounded bg-muted px-1 py-0.5">evento</code> - Nome do evento em
+                    PT-BR (ex: lead.criado)
+                  </li>
+                  <li>
+                    <code className="rounded bg-muted px-1 py-0.5">evento_original</code> - Nome
+                    técnico do evento (ex: lead.created)
+                  </li>
+                  <li>
+                    <code className="rounded bg-muted px-1 py-0.5">versao_api</code> - Versão da API
+                    do webhook
+                  </li>
+                  <li>
+                    <code className="rounded bg-muted px-1 py-0.5">ambiente</code> - "producao" ou
+                    "teste"
+                  </li>
+                  <li>
+                    <code className="rounded bg-muted px-1 py-0.5">data_hora</code> - Data/hora em
+                    GMT-3 (São Paulo)
+                  </li>
+                  <li>
+                    <code className="rounded bg-muted px-1 py-0.5">id_entrega</code> - ID único
+                    desta entrega
+                  </li>
+                  <li>
+                    <code className="rounded bg-muted px-1 py-0.5">dados</code> - Dados do evento
+                    (lead, mensagem, etc)
+                  </li>
+                  <li>
+                    <code className="rounded bg-muted px-1 py-0.5">metadados</code> - Informações
+                    sobre tentativas e webhook
+                  </li>
                 </ul>
               </div>
 
-              <div className="p-4 border rounded-lg">
-                <h4 className="font-medium mb-2">Formato de Data/Hora</h4>
-                <p className="text-sm text-muted-foreground mb-2">
-                  Todas as datas são enviadas no formato ISO 8601 com offset GMT-3 (horário de Brasília):
+              <div className="rounded-lg border p-4">
+                <h4 className="mb-2 font-medium">Formato de Data/Hora</h4>
+                <p className="mb-2 text-sm text-muted-foreground">
+                  Todas as datas são enviadas no formato ISO 8601 com offset GMT-3 (horário de
+                  Brasília):
                 </p>
-                <code className="bg-muted px-2 py-1 rounded text-sm">2024-12-22T18:30:00-03:00</code>
+                <code className="rounded bg-muted px-2 py-1 text-sm">
+                  2024-12-22T18:30:00-03:00
+                </code>
               </div>
             </TabsContent>
 
@@ -852,17 +967,21 @@ const WebhooksSettings = () => {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left py-2 px-4">Evento Técnico</th>
-                      <th className="text-left py-2 px-4">Evento PT-BR</th>
-                      <th className="text-left py-2 px-4">Descrição</th>
+                      <th className="px-4 py-2 text-left">Evento Técnico</th>
+                      <th className="px-4 py-2 text-left">Evento PT-BR</th>
+                      <th className="px-4 py-2 text-left">Descrição</th>
                     </tr>
                   </thead>
                   <tbody>
                     {WEBHOOK_EVENTS.map((event) => (
                       <tr key={event.value} className="border-b">
-                        <td className="py-2 px-4"><code className="text-xs">{event.value}</code></td>
-                        <td className="py-2 px-4"><code className="text-xs">{event.labelPt}</code></td>
-                        <td className="py-2 px-4 text-muted-foreground">{event.label}</td>
+                        <td className="px-4 py-2">
+                          <code className="text-xs">{event.value}</code>
+                        </td>
+                        <td className="px-4 py-2">
+                          <code className="text-xs">{event.labelPt}</code>
+                        </td>
+                        <td className="px-4 py-2 text-muted-foreground">{event.label}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -873,7 +992,7 @@ const WebhooksSettings = () => {
                 <AccordionItem value="lead-created">
                   <AccordionTrigger>Exemplo: lead.criado</AccordionTrigger>
                   <AccordionContent>
-                    <pre className="text-xs bg-muted p-4 rounded overflow-x-auto">
+                    <pre className="overflow-x-auto rounded bg-muted p-4 text-xs">
                       {JSON.stringify(PAYLOAD_EXAMPLES['lead.created'], null, 2)}
                     </pre>
                   </AccordionContent>
@@ -881,7 +1000,7 @@ const WebhooksSettings = () => {
                 <AccordionItem value="lead-stage">
                   <AccordionTrigger>Exemplo: lead.etapa_alterada</AccordionTrigger>
                   <AccordionContent>
-                    <pre className="text-xs bg-muted p-4 rounded overflow-x-auto">
+                    <pre className="overflow-x-auto rounded bg-muted p-4 text-xs">
                       {JSON.stringify(PAYLOAD_EXAMPLES['lead.stage_changed'], null, 2)}
                     </pre>
                   </AccordionContent>
@@ -889,7 +1008,7 @@ const WebhooksSettings = () => {
                 <AccordionItem value="message-received">
                   <AccordionTrigger>Exemplo: mensagem.recebida</AccordionTrigger>
                   <AccordionContent>
-                    <pre className="text-xs bg-muted p-4 rounded overflow-x-auto">
+                    <pre className="overflow-x-auto rounded bg-muted p-4 text-xs">
                       {JSON.stringify(PAYLOAD_EXAMPLES['message.received'], null, 2)}
                     </pre>
                   </AccordionContent>
@@ -902,51 +1021,83 @@ const WebhooksSettings = () => {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left py-2 px-4">Header</th>
-                      <th className="text-left py-2 px-4">Exemplo</th>
-                      <th className="text-left py-2 px-4">Descrição</th>
+                      <th className="px-4 py-2 text-left">Header</th>
+                      <th className="px-4 py-2 text-left">Exemplo</th>
+                      <th className="px-4 py-2 text-left">Descrição</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr className="border-b">
-                      <td className="py-2 px-4"><code className="text-xs">Content-Type</code></td>
-                      <td className="py-2 px-4"><code className="text-xs">application/json; charset=utf-8</code></td>
-                      <td className="py-2 px-4 text-muted-foreground">Tipo de conteúdo</td>
+                      <td className="px-4 py-2">
+                        <code className="text-xs">Content-Type</code>
+                      </td>
+                      <td className="px-4 py-2">
+                        <code className="text-xs">application/json; charset=utf-8</code>
+                      </td>
+                      <td className="px-4 py-2 text-muted-foreground">Tipo de conteúdo</td>
                     </tr>
                     <tr className="border-b">
-                      <td className="py-2 px-4"><code className="text-xs">X-Webhook-Evento</code></td>
-                      <td className="py-2 px-4"><code className="text-xs">lead.criado</code></td>
-                      <td className="py-2 px-4 text-muted-foreground">Nome do evento em PT-BR</td>
+                      <td className="px-4 py-2">
+                        <code className="text-xs">X-Webhook-Evento</code>
+                      </td>
+                      <td className="px-4 py-2">
+                        <code className="text-xs">lead.criado</code>
+                      </td>
+                      <td className="px-4 py-2 text-muted-foreground">Nome do evento em PT-BR</td>
                     </tr>
                     <tr className="border-b">
-                      <td className="py-2 px-4"><code className="text-xs">X-Webhook-Evento-Original</code></td>
-                      <td className="py-2 px-4"><code className="text-xs">lead.created</code></td>
-                      <td className="py-2 px-4 text-muted-foreground">Nome técnico do evento</td>
+                      <td className="px-4 py-2">
+                        <code className="text-xs">X-Webhook-Evento-Original</code>
+                      </td>
+                      <td className="px-4 py-2">
+                        <code className="text-xs">lead.created</code>
+                      </td>
+                      <td className="px-4 py-2 text-muted-foreground">Nome técnico do evento</td>
                     </tr>
                     <tr className="border-b">
-                      <td className="py-2 px-4"><code className="text-xs">X-Webhook-Versao</code></td>
-                      <td className="py-2 px-4"><code className="text-xs">1.0</code></td>
-                      <td className="py-2 px-4 text-muted-foreground">Versão da API</td>
+                      <td className="px-4 py-2">
+                        <code className="text-xs">X-Webhook-Versao</code>
+                      </td>
+                      <td className="px-4 py-2">
+                        <code className="text-xs">1.0</code>
+                      </td>
+                      <td className="px-4 py-2 text-muted-foreground">Versão da API</td>
                     </tr>
                     <tr className="border-b">
-                      <td className="py-2 px-4"><code className="text-xs">X-Webhook-Ambiente</code></td>
-                      <td className="py-2 px-4"><code className="text-xs">producao</code></td>
-                      <td className="py-2 px-4 text-muted-foreground">Ambiente (producao/teste)</td>
+                      <td className="px-4 py-2">
+                        <code className="text-xs">X-Webhook-Ambiente</code>
+                      </td>
+                      <td className="px-4 py-2">
+                        <code className="text-xs">producao</code>
+                      </td>
+                      <td className="px-4 py-2 text-muted-foreground">Ambiente (producao/teste)</td>
                     </tr>
                     <tr className="border-b">
-                      <td className="py-2 px-4"><code className="text-xs">X-Webhook-Timestamp</code></td>
-                      <td className="py-2 px-4"><code className="text-xs">1734901800</code></td>
-                      <td className="py-2 px-4 text-muted-foreground">Unix timestamp</td>
+                      <td className="px-4 py-2">
+                        <code className="text-xs">X-Webhook-Timestamp</code>
+                      </td>
+                      <td className="px-4 py-2">
+                        <code className="text-xs">1734901800</code>
+                      </td>
+                      <td className="px-4 py-2 text-muted-foreground">Unix timestamp</td>
                     </tr>
                     <tr className="border-b">
-                      <td className="py-2 px-4"><code className="text-xs">X-Webhook-Assinatura</code></td>
-                      <td className="py-2 px-4"><code className="text-xs">sha256=abc123...</code></td>
-                      <td className="py-2 px-4 text-muted-foreground">Assinatura HMAC-SHA256</td>
+                      <td className="px-4 py-2">
+                        <code className="text-xs">X-Webhook-Assinatura</code>
+                      </td>
+                      <td className="px-4 py-2">
+                        <code className="text-xs">sha256=abc123...</code>
+                      </td>
+                      <td className="px-4 py-2 text-muted-foreground">Assinatura HMAC-SHA256</td>
                     </tr>
                     <tr className="border-b">
-                      <td className="py-2 px-4"><code className="text-xs">X-Webhook-ID-Entrega</code></td>
-                      <td className="py-2 px-4"><code className="text-xs">uuid-unico</code></td>
-                      <td className="py-2 px-4 text-muted-foreground">ID único desta entrega</td>
+                      <td className="px-4 py-2">
+                        <code className="text-xs">X-Webhook-ID-Entrega</code>
+                      </td>
+                      <td className="px-4 py-2">
+                        <code className="text-xs">uuid-unico</code>
+                      </td>
+                      <td className="px-4 py-2 text-muted-foreground">ID único desta entrega</td>
                     </tr>
                   </tbody>
                 </table>
@@ -954,38 +1105,43 @@ const WebhooksSettings = () => {
             </TabsContent>
 
             <TabsContent value="hmac" className="space-y-4">
-              <div className="p-4 bg-muted rounded-lg">
-                <div className="flex items-center justify-between mb-2">
+              <div className="rounded-lg bg-muted p-4">
+                <div className="mb-2 flex items-center justify-between">
                   <h3 className="font-medium">Código de Validação (Node.js)</h3>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => copyToClipboard(HMAC_VALIDATION_CODE, 'Código')}
                   >
-                    <Copy className="w-4 h-4 mr-2" />
+                    <Copy className="mr-2 h-4 w-4" />
                     Copiar
                   </Button>
                 </div>
-                <pre className="text-xs bg-background p-4 rounded overflow-x-auto whitespace-pre-wrap">
+                <pre className="overflow-x-auto whitespace-pre-wrap rounded bg-background p-4 text-xs">
                   {HMAC_VALIDATION_CODE}
                 </pre>
               </div>
 
-              <div className="p-4 border rounded-lg space-y-3">
+              <div className="space-y-3 rounded-lg border p-4">
                 <h4 className="font-medium">Como funciona a validação:</h4>
-                <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
+                <ol className="list-inside list-decimal space-y-2 text-sm text-muted-foreground">
                   <li>Pegue o corpo da requisição (JSON stringificado)</li>
                   <li>Gere um HMAC-SHA256 usando o secret do webhook</li>
-                  <li>Compare com o header <code className="bg-muted px-1 py-0.5 rounded">X-Webhook-Assinatura</code></li>
+                  <li>
+                    Compare com o header{' '}
+                    <code className="rounded bg-muted px-1 py-0.5">X-Webhook-Assinatura</code>
+                  </li>
                   <li>Se forem iguais, o webhook é autêntico</li>
                 </ol>
               </div>
 
-              <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                <h4 className="font-medium text-yellow-700 dark:text-yellow-400 mb-2">⚠️ Importante</h4>
+              <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4">
+                <h4 className="mb-2 font-medium text-yellow-700 dark:text-yellow-400">
+                  ⚠️ Importante
+                </h4>
                 <p className="text-sm text-muted-foreground">
-                  Sempre valide a assinatura HMAC antes de processar o webhook. 
-                  Isso garante que a requisição veio do sistema GaranteDireito e não foi adulterada.
+                  Sempre valide a assinatura HMAC antes de processar o webhook. Isso garante que a
+                  requisição veio do sistema GaranteDireito e não foi adulterada.
                 </p>
               </div>
             </TabsContent>

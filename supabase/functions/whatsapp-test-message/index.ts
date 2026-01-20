@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,14 +18,14 @@ function normalizeUrl(url: string): string {
 
 // Tenta fazer request com múltiplos formatos de auth para WAHA
 async function wahaFetch(
-  url: string, 
-  apiKey: string, 
+  url: string,
+  apiKey: string,
   options: RequestInit = {}
 ): Promise<Response> {
   const authFormats: Array<{ name: string; headers: Record<string, string> }> = [
     { name: 'X-Api-Key', headers: { 'X-Api-Key': apiKey } },
-    { name: 'Bearer', headers: { 'Authorization': `Bearer ${apiKey}` } },
-    { name: 'ApiKey (sem Bearer)', headers: { 'Authorization': apiKey } },
+    { name: 'Bearer', headers: { Authorization: `Bearer ${apiKey}` } },
+    { name: 'ApiKey (sem Bearer)', headers: { Authorization: apiKey } },
   ];
 
   let lastResponse: Response | null = null;
@@ -34,12 +34,12 @@ async function wahaFetch(
   for (const authFormat of authFormats) {
     try {
       console.log(`[WAHA] Tentando ${options.method || 'GET'} ${url} com ${authFormat.name}`);
-      
+
       const mergedHeaders: Record<string, string> = {
-        ...(options.headers as Record<string, string> || {}),
+        ...((options.headers as Record<string, string>) || {}),
         ...authFormat.headers,
       };
-      
+
       const response = await fetch(url, {
         ...options,
         headers: mergedHeaders,
@@ -50,10 +50,9 @@ async function wahaFetch(
       if (response.ok || response.status !== 401) {
         return response;
       }
-      
+
       lastResponse = response;
       console.log(`[WAHA] ${authFormat.name} - Unauthorized, tentando próximo...`);
-      
     } catch (error: unknown) {
       console.error(`[WAHA] ${authFormat.name} - Erro:`, error);
       lastError = error instanceof Error ? error : new Error(String(error));
@@ -63,7 +62,7 @@ async function wahaFetch(
   if (lastResponse) {
     return lastResponse;
   }
-  
+
   throw lastError || new Error('Todos os formatos de autenticação falharam');
 }
 
@@ -79,14 +78,14 @@ interface WhatsAppConfig {
 
 // Envia mensagem via WAHA
 async function sendWAHA(
-  config: WhatsAppConfig, 
-  phone: string, 
+  config: WhatsAppConfig,
+  phone: string,
   message: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const baseUrl = normalizeUrl(config.base_url);
   const session = config.instance_name || 'default';
   const chatId = `${phone}@c.us`;
-  
+
   const url = `${baseUrl}/api/sendText`;
   const body = {
     chatId,
@@ -109,7 +108,10 @@ async function sendWAHA(
     if (!response.ok) {
       try {
         const errorData = JSON.parse(responseText);
-        return { success: false, error: errorData.message || errorData.error || `Erro ${response.status}` };
+        return {
+          success: false,
+          error: errorData.message || errorData.error || `Erro ${response.status}`,
+        };
       } catch {
         return { success: false, error: `Erro ${response.status}: ${responseText}` };
       }
@@ -125,13 +127,13 @@ async function sendWAHA(
 
 // Envia mensagem via Evolution API
 async function sendEvolution(
-  config: WhatsAppConfig, 
-  phone: string, 
+  config: WhatsAppConfig,
+  phone: string,
   message: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const baseUrl = normalizeUrl(config.base_url);
   const instanceName = config.instance_name || 'default';
-  
+
   const url = `${baseUrl}/message/sendText/${instanceName}`;
   const body = {
     number: phone,
@@ -144,7 +146,7 @@ async function sendEvolution(
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'apikey': config.api_key,
+        apikey: config.api_key,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
@@ -172,12 +174,12 @@ async function sendEvolution(
 
 // Envia mensagem via Z-API
 async function sendZAPI(
-  config: WhatsAppConfig, 
-  phone: string, 
+  config: WhatsAppConfig,
+  phone: string,
   message: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const baseUrl = normalizeUrl(config.base_url);
-  
+
   const url = `${baseUrl}/send-text`;
   const body = {
     phone,
@@ -223,17 +225,17 @@ serve(async (req) => {
   }
 
   if (req.method !== 'POST') {
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    
+
     // Get user auth from request
     const authHeader = req.headers.get('Authorization');
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
@@ -241,12 +243,15 @@ serve(async (req) => {
     });
 
     // Verify user is authenticated
-    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseAuth.auth.getUser();
     if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const payload: TestMessagePayload = await req.json();
@@ -267,7 +272,7 @@ serve(async (req) => {
 
     // Buscar configuração completa (com api_key) usando service role
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-    
+
     const { data: config, error: configError } = await supabaseAdmin
       .from('whatsapp_config')
       .select('id, provider, base_url, api_key, instance_name, name')
@@ -276,10 +281,10 @@ serve(async (req) => {
 
     if (configError || !config) {
       console.error('[whatsapp-test-message] Config não encontrada:', configError);
-      return new Response(
-        JSON.stringify({ error: 'Configuração WhatsApp não encontrada' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Configuração WhatsApp não encontrada' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log('[whatsapp-test-message] Config encontrada:', config.name, config.provider);
@@ -300,7 +305,10 @@ serve(async (req) => {
         result = await sendZAPI(config as WhatsAppConfig, phone, testMessage);
         break;
       default:
-        result = { success: false, error: `Provider '${config.provider}' não suportado para teste` };
+        result = {
+          success: false,
+          error: `Provider '${config.provider}' não suportado para teste`,
+        };
     }
 
     console.log('[whatsapp-test-message] Resultado:', result);
@@ -313,16 +321,17 @@ serve(async (req) => {
         instance: config.name,
         phone,
       }),
-      { 
-        status: result.success ? 200 : 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: result.success ? 200 : 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
-
   } catch (error: unknown) {
     console.error('[whatsapp-test-message] Erro:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno do servidor' }),
+      JSON.stringify({
+        error: error instanceof Error ? error.message : 'Erro interno do servidor',
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

@@ -128,7 +128,7 @@ export interface InternalNote {
 }
 
 // Automation Types
-export type AutomationTrigger = 
+export type AutomationTrigger =
   | 'lead_created'
   | 'lead_stage_changed'
   | 'lead_temperature_changed'
@@ -137,7 +137,7 @@ export type AutomationTrigger =
   | 'task_overdue'
   | 'conversation_no_response';
 
-export type AutomationAction = 
+export type AutomationAction =
   | 'move_lead_to_stage'
   | 'change_lead_temperature'
   | 'add_label'

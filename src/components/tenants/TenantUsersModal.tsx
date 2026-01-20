@@ -36,7 +36,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useTenantUsers, useAddUserToTenant, useUpdateUserTenant, useRemoveUserFromTenant } from '@/hooks/useTenants';
+import {
+  useTenantUsers,
+  useAddUserToTenant,
+  useUpdateUserTenant,
+  useRemoveUserFromTenant,
+} from '@/hooks/useTenants';
 import { useProfiles } from '@/hooks/useProfiles';
 import type { Tenant } from '@/contexts/TenantContext';
 
@@ -80,13 +85,13 @@ export function TenantUsersModal({ open, onOpenChange, tenant }: TenantUsersModa
 
   const handleAddUser = async () => {
     if (!tenant || !selectedUserId) return;
-    
+
     await addUserToTenant.mutateAsync({
       userId: selectedUserId,
       tenantId: tenant.id,
       role: selectedRole as 'admin' | 'manager' | 'agent' | 'viewer',
     });
-    
+
     setAddingUser(false);
     setSelectedUserId('');
     setSelectedRole('agent');
@@ -101,12 +106,12 @@ export function TenantUsersModal({ open, onOpenChange, tenant }: TenantUsersModa
 
   const handleRemoveUser = async () => {
     if (!tenant || !userToRemove) return;
-    
+
     await removeUserFromTenant.mutateAsync({
       userId: userToRemove.userId,
       tenantId: tenant.id,
     });
-    
+
     setDeleteConfirmOpen(false);
     setUserToRemove(null);
   };
@@ -121,7 +126,7 @@ export function TenantUsersModal({ open, onOpenChange, tenant }: TenantUsersModa
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="flex max-h-[80vh] flex-col overflow-hidden sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
@@ -132,10 +137,10 @@ export function TenantUsersModal({ open, onOpenChange, tenant }: TenantUsersModa
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-auto space-y-4">
+          <div className="flex-1 space-y-4 overflow-auto">
             {/* Add User Section */}
             {addingUser ? (
-              <div className="flex flex-col sm:flex-row gap-2 p-3 rounded-lg border bg-muted/50">
+              <div className="flex flex-col gap-2 rounded-lg border bg-muted/50 p-3 sm:flex-row">
                 <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                   <SelectTrigger className="flex-1">
                     <SelectValue placeholder="Selecione um usuário" />
@@ -180,27 +185,23 @@ export function TenantUsersModal({ open, onOpenChange, tenant }: TenantUsersModa
                 </Select>
 
                 <div className="flex gap-2">
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     onClick={handleAddUser}
                     disabled={!selectedUserId || addUserToTenant.isPending}
                   >
-                    {addUserToTenant.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    {addUserToTenant.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Adicionar
                   </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={() => setAddingUser(false)}
-                  >
+                  <Button size="sm" variant="outline" onClick={() => setAddingUser(false)}>
                     Cancelar
                   </Button>
                 </div>
               </div>
             ) : (
-              <Button 
-                variant="outline" 
-                className="w-full gap-2" 
+              <Button
+                variant="outline"
+                className="w-full gap-2"
                 onClick={() => setAddingUser(true)}
               >
                 <Plus className="h-4 w-4" />
@@ -216,7 +217,7 @@ export function TenantUsersModal({ open, onOpenChange, tenant }: TenantUsersModa
                 <Skeleton className="h-12 w-full" />
               </div>
             ) : tenantUsers?.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="py-8 text-center text-muted-foreground">
                 Nenhum usuário associado a esta empresa
               </div>
             ) : (
@@ -235,21 +236,17 @@ export function TenantUsersModal({ open, onOpenChange, tenant }: TenantUsersModa
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">
                             <AvatarImage src={ut.profile?.avatar || undefined} />
-                            <AvatarFallback>
-                              {ut.profile?.name?.charAt(0) || '?'}
-                            </AvatarFallback>
+                            <AvatarFallback>{ut.profile?.name?.charAt(0) || '?'}</AvatarFallback>
                           </Avatar>
                           <div>
                             <p className="font-medium">{ut.profile?.name || 'Usuário'}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {ut.profile?.email}
-                            </p>
+                            <p className="text-xs text-muted-foreground">{ut.profile?.email}</p>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Select 
-                          value={ut.role} 
+                        <Select
+                          value={ut.role}
                           onValueChange={(value) => handleRoleChange(ut.id, value)}
                         >
                           <SelectTrigger className="w-32">
@@ -269,7 +266,9 @@ export function TenantUsersModal({ open, onOpenChange, tenant }: TenantUsersModa
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => confirmRemoveUser(ut.user_id, ut.profile?.name || 'Usuário')}
+                          onClick={() =>
+                            confirmRemoveUser(ut.user_id, ut.profile?.name || 'Usuário')
+                          }
                           className="text-destructive hover:text-destructive"
                           aria-label={`Remover ${ut.profile?.name || 'usuário'} do escritório`}
                         >
@@ -291,8 +290,8 @@ export function TenantUsersModal({ open, onOpenChange, tenant }: TenantUsersModa
           <AlertDialogHeader>
             <AlertDialogTitle>Remover usuário?</AlertDialogTitle>
             <AlertDialogDescription>
-              Deseja remover <strong>{userToRemove?.name}</strong> desta empresa?
-              O usuário perderá acesso a todos os dados associados.
+              Deseja remover <strong>{userToRemove?.name}</strong> desta empresa? O usuário perderá
+              acesso a todos os dados associados.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -24,10 +24,10 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('[admin-create-user] No authorization header');
-      return new Response(
-        JSON.stringify({ error: 'Não autorizado' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Create Supabase client with service role for admin operations
@@ -37,16 +37,19 @@ Deno.serve(async (req) => {
 
     // First, verify the caller is an admin using the anon client
     const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
+      global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: { user: caller }, error: authError } = await supabaseAuth.auth.getUser();
+    const {
+      data: { user: caller },
+      error: authError,
+    } = await supabaseAuth.auth.getUser();
     if (authError || !caller) {
       console.error('[admin-create-user] Auth error:', authError);
-      return new Response(
-        JSON.stringify({ error: 'Não autorizado' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Check if caller is admin
@@ -58,10 +61,10 @@ Deno.serve(async (req) => {
 
     if (roleError) {
       console.error('[admin-create-user] Role fetch error:', roleError);
-      return new Response(
-        JSON.stringify({ error: 'Erro ao verificar permissões' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Erro ao verificar permissões' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     if (callerRole?.role !== 'admin') {
@@ -78,22 +81,22 @@ Deno.serve(async (req) => {
 
     // Validate required fields
     if (!email || !password || !name) {
-      return new Response(
-        JSON.stringify({ error: 'Email, senha e nome são obrigatórios' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Email, senha e nome são obrigatórios' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     if (password.length < 6) {
-      return new Response(
-        JSON.stringify({ error: 'Senha deve ter pelo menos 6 caracteres' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ error: 'Senha deve ter pelo menos 6 caracteres' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Create admin client with service role
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
+      auth: { autoRefreshToken: false, persistSession: false },
     });
 
     console.log('[admin-create-user] Creating user:', email);
@@ -108,18 +111,18 @@ Deno.serve(async (req) => {
 
     if (createError) {
       console.error('[admin-create-user] Create user error:', createError);
-      
+
       if (createError.message.includes('already been registered')) {
-        return new Response(
-          JSON.stringify({ error: 'Este email já está cadastrado' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ error: 'Este email já está cadastrado' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
-      
-      return new Response(
-        JSON.stringify({ error: createError.message }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+
+      return new Response(JSON.stringify({ error: createError.message }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const newUser = authData.user;
@@ -127,7 +130,7 @@ Deno.serve(async (req) => {
 
     // The profile and role should be created by the trigger, but let's ensure they exist
     // Wait a bit for the trigger to execute
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Update the profile with the correct name (trigger might have used email)
     const { error: profileUpdateError } = await supabaseAdmin
@@ -153,14 +156,12 @@ Deno.serve(async (req) => {
 
     // Add user to tenant if provided
     if (tenantId) {
-      const { error: tenantError } = await supabaseAdmin
-        .from('user_tenants')
-        .insert({
-          user_id: newUser.id,
-          tenant_id: tenantId,
-          role: role,
-          is_active: true,
-        });
+      const { error: tenantError } = await supabaseAdmin.from('user_tenants').insert({
+        user_id: newUser.id,
+        tenant_id: tenantId,
+        role: role,
+        is_active: true,
+      });
 
       if (tenantError) {
         console.error('[admin-create-user] Tenant assignment error:', tenantError);
@@ -181,12 +182,11 @@ Deno.serve(async (req) => {
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error) {
     console.error('[admin-create-user] Unexpected error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Erro interno do servidor' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: 'Erro interno do servidor' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

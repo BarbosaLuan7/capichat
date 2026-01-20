@@ -1,32 +1,32 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  Plus, 
-  Key, 
-  MoreVertical, 
-  Trash2, 
+import {
+  Plus,
+  Key,
+  MoreVertical,
+  Trash2,
   Copy,
   Eye,
   EyeOff,
   CheckCircle2,
   AlertCircle,
   Clock,
-  ExternalLink
+  ExternalLink,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -38,11 +38,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -68,7 +68,7 @@ async function hashKey(key: string): Promise<string> {
   const data = encoder.encode(key);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 const ApiSettings = () => {
@@ -90,7 +90,7 @@ const ApiSettings = () => {
         .from('api_keys')
         .select('*')
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       return data;
     },
@@ -128,10 +128,7 @@ const ApiSettings = () => {
   // Toggle active mutation
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { error } = await supabase
-        .from('api_keys')
-        .update({ is_active })
-        .eq('id', id);
+      const { error } = await supabase.from('api_keys').update({ is_active }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -169,19 +166,18 @@ const ApiSettings = () => {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
-      <PageBreadcrumb items={[
-        { label: 'Configurações', href: '/settings' },
-        { label: 'API' }
-      ]} />
+    <div className="mx-auto max-w-5xl space-y-6 p-6">
+      <PageBreadcrumb items={[{ label: 'Configurações', href: '/settings' }, { label: 'API' }]} />
 
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">API & Integrações</h1>
-          <p className="text-muted-foreground">Gerencie API Keys para integrar com sistemas externos</p>
+          <p className="text-muted-foreground">
+            Gerencie API Keys para integrar com sistemas externos
+          </p>
         </div>
         <Button onClick={() => setIsCreateModalOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="mr-2 h-4 w-4" />
           Nova API Key
         </Button>
       </div>
@@ -190,27 +186,39 @@ const ApiSettings = () => {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Documentação da API</CardTitle>
-          <CardDescription>
-            Use a API REST para integrar o CRM com seus sistemas
-          </CardDescription>
+          <CardDescription>Use a API REST para integrar o CRM com seus sistemas</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <h4 className="font-medium text-sm">Endpoints disponíveis:</h4>
-              <div className="text-sm text-muted-foreground space-y-1">
-                <p><code className="bg-muted px-1 rounded">POST /api-leads</code> - Criar lead</p>
-                <p><code className="bg-muted px-1 rounded">GET /api-leads?phone=xxx</code> - Buscar por telefone</p>
-                <p><code className="bg-muted px-1 rounded">PUT /api-leads?id=xxx</code> - Atualizar lead</p>
-                <p><code className="bg-muted px-1 rounded">DELETE /api-leads?id=xxx</code> - Excluir lead</p>
-                <p><code className="bg-muted px-1 rounded">POST /api-messages-receive</code> - Receber mensagem</p>
+              <h4 className="text-sm font-medium">Endpoints disponíveis:</h4>
+              <div className="space-y-1 text-sm text-muted-foreground">
+                <p>
+                  <code className="rounded bg-muted px-1">POST /api-leads</code> - Criar lead
+                </p>
+                <p>
+                  <code className="rounded bg-muted px-1">GET /api-leads?phone=xxx</code> - Buscar
+                  por telefone
+                </p>
+                <p>
+                  <code className="rounded bg-muted px-1">PUT /api-leads?id=xxx</code> - Atualizar
+                  lead
+                </p>
+                <p>
+                  <code className="rounded bg-muted px-1">DELETE /api-leads?id=xxx</code> - Excluir
+                  lead
+                </p>
+                <p>
+                  <code className="rounded bg-muted px-1">POST /api-messages-receive</code> -
+                  Receber mensagem
+                </p>
               </div>
             </div>
             <div className="space-y-2">
-              <h4 className="font-medium text-sm">Autenticação:</h4>
+              <h4 className="text-sm font-medium">Autenticação:</h4>
               <div className="text-sm text-muted-foreground">
                 <p>Inclua o header em todas as requisições:</p>
-                <pre className="bg-muted p-2 rounded mt-2 text-xs overflow-x-auto">
+                <pre className="mt-2 overflow-x-auto rounded bg-muted p-2 text-xs">
                   Authorization: Bearer sua_api_key
                 </pre>
               </div>
@@ -218,9 +226,9 @@ const ApiSettings = () => {
           </div>
           <Separator />
           <div className="space-y-2">
-            <h4 className="font-medium text-sm">Exemplo de criação de lead:</h4>
-            <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
-{`curl -X POST \\
+            <h4 className="text-sm font-medium">Exemplo de criação de lead:</h4>
+            <pre className="overflow-x-auto rounded bg-muted p-3 text-xs">
+              {`curl -X POST \\
   https://vnsypopnzwtkmyvxvqpu.supabase.co/functions/v1/api-leads \\
   -H "Authorization: Bearer sua_api_key" \\
   -H "Content-Type: application/json" \\
@@ -240,71 +248,66 @@ const ApiSettings = () => {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">API Keys</CardTitle>
-          <CardDescription>
-            Chaves de acesso para autenticação na API
-          </CardDescription>
+          <CardDescription>Chaves de acesso para autenticação na API</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <p className="text-center text-muted-foreground py-8">Carregando...</p>
+            <p className="py-8 text-center text-muted-foreground">Carregando...</p>
           ) : apiKeys?.length === 0 ? (
-            <div className="text-center py-12">
-              <Key className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">Nenhuma API Key criada</h3>
-              <p className="text-muted-foreground mb-4">
+            <div className="py-12 text-center">
+              <Key className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+              <h3 className="mb-2 text-lg font-medium">Nenhuma API Key criada</h3>
+              <p className="mb-4 text-muted-foreground">
                 Crie uma API Key para começar a usar a API
               </p>
               <Button onClick={() => setIsCreateModalOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="mr-2 h-4 w-4" />
                 Criar API Key
               </Button>
             </div>
           ) : (
             <div className="space-y-3">
               {apiKeys?.map((apiKey) => (
-                <div
-                  key={apiKey.id}
-                  className="flex items-center gap-4 p-4 border rounded-lg"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Key className="w-5 h-5 text-primary" />
+                <div key={apiKey.id} className="flex items-center gap-4 rounded-lg border p-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <Key className="h-5 w-5 text-primary" />
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="font-medium text-foreground">{apiKey.name}</h3>
                       <Badge variant={apiKey.is_active ? 'default' : 'secondary'}>
                         {apiKey.is_active ? 'Ativa' : 'Inativa'}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground font-mono">
-                      {apiKey.key_prefix}
-                    </p>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
+                    <p className="font-mono text-sm text-muted-foreground">{apiKey.key_prefix}</p>
+                    <div className="mt-1 flex items-center gap-4 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        Criada em {format(new Date(apiKey.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                        <Clock className="h-3 w-3" />
+                        Criada em{' '}
+                        {format(new Date(apiKey.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                       </span>
                       {apiKey.last_used_at && (
                         <span>
-                          Último uso: {format(new Date(apiKey.last_used_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          Último uso:{' '}
+                          {format(new Date(apiKey.last_used_at), "dd/MM/yyyy 'às' HH:mm", {
+                            locale: ptBR,
+                          })}
                         </span>
                       )}
-                      <span>
-                        {apiKey.usage_count} requisições
-                      </span>
+                      <span>{apiKey.usage_count} requisições</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch
                       checked={apiKey.is_active}
-                      onCheckedChange={(checked) => 
+                      onCheckedChange={(checked) =>
                         toggleActiveMutation.mutate({ id: apiKey.id, is_active: checked })
                       }
                     />
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm">
-                          <MoreVertical className="w-4 h-4" />
+                          <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -312,7 +315,7 @@ const ApiSettings = () => {
                           className="text-destructive"
                           onClick={() => handleDelete(apiKey.id)}
                         >
-                          <Trash2 className="w-4 h-4 mr-2" />
+                          <Trash2 className="mr-2 h-4 w-4" />
                           Revogar
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -330,9 +333,7 @@ const ApiSettings = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Nova API Key</DialogTitle>
-            <DialogDescription>
-              Crie uma nova chave de acesso para a API
-            </DialogDescription>
+            <DialogDescription>Crie uma nova chave de acesso para a API</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -353,7 +354,7 @@ const ApiSettings = () => {
             <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={() => createMutation.mutate(newKeyName)}
               disabled={!newKeyName || createMutation.isPending}
             >
@@ -364,17 +365,20 @@ const ApiSettings = () => {
       </Dialog>
 
       {/* Show New Key Modal */}
-      <Dialog open={isKeyModalOpen} onOpenChange={(open) => {
-        if (!open) {
-          setNewKeyValue('');
-          setShowKey(false);
-        }
-        setIsKeyModalOpen(open);
-      }}>
+      <Dialog
+        open={isKeyModalOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setNewKeyValue('');
+            setShowKey(false);
+          }
+          setIsKeyModalOpen(open);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-success" />
+              <CheckCircle2 className="h-5 w-5 text-success" />
               API Key Criada
             </DialogTitle>
             <DialogDescription>
@@ -383,40 +387,38 @@ const ApiSettings = () => {
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="flex items-center gap-2 p-3 bg-warning/10 border border-warning/20 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-warning flex-shrink-0" />
+            <div className="flex items-center gap-2 rounded-lg border border-warning/20 bg-warning/10 p-3">
+              <AlertCircle className="h-5 w-5 flex-shrink-0 text-warning" />
               <p className="text-sm text-warning">
-                Guarde esta chave em um local seguro. Por segurança, ela não pode ser visualizada novamente.
+                Guarde esta chave em um local seguro. Por segurança, ela não pode ser visualizada
+                novamente.
               </p>
             </div>
 
             <div className="space-y-2">
               <Label>Sua API Key</Label>
               <div className="flex items-center gap-2">
-                <div className="flex-1 relative">
+                <div className="relative flex-1">
                   <Input
                     readOnly
                     type={showKey ? 'text' : 'password'}
                     value={newKeyValue}
-                    className="font-mono pr-10"
+                    className="pr-10 font-mono"
                   />
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                    className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 p-0"
                     onClick={() => setShowKey(!showKey)}
                   >
-                    {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={() => copyToClipboard(newKeyValue)}
-                >
+                <Button variant="outline" onClick={() => copyToClipboard(newKeyValue)}>
                   {keyCopied ? (
-                    <CheckCircle2 className="w-4 h-4 text-success" />
+                    <CheckCircle2 className="h-4 w-4 text-success" />
                   ) : (
-                    <Copy className="w-4 h-4" />
+                    <Copy className="h-4 w-4" />
                   )}
                 </Button>
               </div>
@@ -424,11 +426,13 @@ const ApiSettings = () => {
           </div>
 
           <DialogFooter>
-            <Button onClick={() => {
-              setIsKeyModalOpen(false);
-              setNewKeyValue('');
-              setShowKey(false);
-            }}>
+            <Button
+              onClick={() => {
+                setIsKeyModalOpen(false);
+                setNewKeyValue('');
+                setShowKey(false);
+              }}
+            >
               Entendi, já copiei
             </Button>
           </DialogFooter>
@@ -441,7 +445,8 @@ const ApiSettings = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Revogar API Key?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. Todas as integrações que usam esta chave deixarão de funcionar imediatamente.
+              Esta ação não pode ser desfeita. Todas as integrações que usam esta chave deixarão de
+              funcionar imediatamente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

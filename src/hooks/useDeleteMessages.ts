@@ -49,13 +49,17 @@ export function useDeleteMessages() {
     },
     onSuccess: ({ conversationId, results }) => {
       queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
-      
+
       // Verificar se todas foram deletadas com sucesso
-      interface DeleteResult { success: boolean; messageId?: string; error?: string }
+      interface DeleteResult {
+        success: boolean;
+        messageId?: string;
+        error?: string;
+      }
       const typedResults = results as DeleteResult[] | undefined;
       const successCount = typedResults?.filter((r) => r.success).length || 0;
       const failCount = typedResults?.filter((r) => !r.success).length || 0;
-      
+
       if (failCount === 0) {
         toast.success('Mensagens apagadas para todos');
       } else if (successCount > 0) {

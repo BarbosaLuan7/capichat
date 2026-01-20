@@ -24,9 +24,12 @@ export function useAIReminders() {
     setIsLoading(true);
 
     try {
-      const { data, error: functionError } = await supabase.functions.invoke('ai-detect-reminders', {
-        body: { message, leadName }
-      });
+      const { data, error: functionError } = await supabase.functions.invoke(
+        'ai-detect-reminders',
+        {
+          body: { message, leadName },
+        }
+      );
 
       if (functionError) {
         logger.error('Error detecting reminder:', functionError);
@@ -35,7 +38,7 @@ export function useAIReminders() {
       }
 
       const result = data as AIReminder;
-      
+
       if (result?.hasReminder) {
         setReminder(result);
         return result;
@@ -60,6 +63,6 @@ export function useAIReminders() {
     reminder,
     isLoading,
     detectReminder,
-    clearReminder
+    clearReminder,
   };
 }

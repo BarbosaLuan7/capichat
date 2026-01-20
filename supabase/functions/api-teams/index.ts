@@ -18,12 +18,16 @@ function formatTelefone(phone: string | null): string | null {
   return phone;
 }
 
-function safeErrorResponse(internalError: unknown, publicMessage: string, status: number = 500): Response {
+function safeErrorResponse(
+  internalError: unknown,
+  publicMessage: string,
+  status: number = 500
+): Response {
   console.error('Internal error:', internalError);
-  return new Response(
-    JSON.stringify({ success: false, error: publicMessage }),
-    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-  );
+  return new Response(JSON.stringify({ success: false, error: publicMessage }), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }
 
 Deno.serve(async (req) => {
@@ -46,13 +50,15 @@ Deno.serve(async (req) => {
     }
 
     const apiKey = authHeader.replace('Bearer ', '');
-    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', { key_value: apiKey });
+    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', {
+      key_value: apiKey,
+    });
 
     if (apiKeyError || !apiKeyId) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Invalid API key' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ success: false, error: 'Invalid API key' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     console.log('[api-teams] API key validated');
@@ -66,10 +72,12 @@ Deno.serve(async (req) => {
     if (method === 'GET' && !id) {
       const { data: teams, error } = await supabase
         .from('teams')
-        .select(`
+        .select(
+          `
           *,
           team_members(user_id, is_supervisor, profiles(id, name, is_available))
-        `)
+        `
+        )
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -79,7 +87,7 @@ Deno.serve(async (req) => {
       const transformed = (teams || []).map((team: any) => {
         const members = team.team_members || [];
         const availableMembers = members.filter((m: any) => m.profiles?.is_available);
-        
+
         return {
           id: `eqp_${team.id.slice(0, 8)}`,
           nome: team.name,
@@ -88,27 +96,28 @@ Deno.serve(async (req) => {
           equipe_padrao: team.is_default || false,
           total_membros: members.length,
           membros_disponiveis: availableMembers.length,
-          criado_em: team.created_at
+          criado_em: team.created_at,
         };
       });
 
       console.log('[api-teams] Listed', transformed.length, 'teams');
 
-      return new Response(
-        JSON.stringify({ dados: transformed }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ dados: transformed }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // GET /api-teams?id=xxx - Get single team with members
     if (method === 'GET' && id && !action) {
       const { data: team, error } = await supabase
         .from('teams')
-        .select(`
+        .select(
+          `
           *,
           team_members(user_id, is_supervisor, profiles(id, name, email, is_available)),
           team_whatsapp_configs(whatsapp_config_id, whatsapp_config:whatsapp_config_safe(id, name, provider, phone_number))
-        `)
+        `
+        )
         .eq('id', id)
         .maybeSingle();
 
@@ -117,10 +126,10 @@ Deno.serve(async (req) => {
       }
 
       if (!team) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'Team not found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ success: false, error: 'Team not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       const members = team.team_members || [];
@@ -140,47 +149,51 @@ Deno.serve(async (req) => {
           nome: m.profiles?.name,
           email: m.profiles?.email,
           supervisor: m.is_supervisor,
-          disponivel: m.profiles?.is_available
+          disponivel: m.profiles?.is_available,
         })),
-        canais: (team.team_whatsapp_configs || []).map((twc: any) => ({
-          id: twc.whatsapp_config?.id ? `inst_${twc.whatsapp_config.id.slice(0, 8)}` : null,
-          tipo: 'whatsapp',
-          nome: twc.whatsapp_config?.name,
-          telefone: formatTelefone(twc.whatsapp_config?.phone_number)
-        })).filter((c: any) => c.id)
+        canais: (team.team_whatsapp_configs || [])
+          .map((twc: any) => ({
+            id: twc.whatsapp_config?.id ? `inst_${twc.whatsapp_config.id.slice(0, 8)}` : null,
+            tipo: 'whatsapp',
+            nome: twc.whatsapp_config?.name,
+            telefone: formatTelefone(twc.whatsapp_config?.phone_number),
+          }))
+          .filter((c: any) => c.id),
       };
 
-      return new Response(
-        JSON.stringify(transformed),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify(transformed), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // GET /api-teams?id=xxx&action=canais - List team channels
     if (method === 'GET' && id && action === 'canais') {
       const { data, error } = await supabase
         .from('team_whatsapp_configs')
-        .select(`
+        .select(
+          `
           whatsapp_config:whatsapp_config_safe(id, name, provider, phone_number, is_active)
-        `)
+        `
+        )
         .eq('team_id', id);
 
       if (error) {
         return safeErrorResponse(error, 'Error fetching team channels');
       }
 
-      const channels = (data || []).map((twc: any) => ({
-        id: twc.whatsapp_config?.id ? `inst_${twc.whatsapp_config.id.slice(0, 8)}` : null,
-        tipo: 'whatsapp',
-        nome: twc.whatsapp_config?.name,
-        telefone: formatTelefone(twc.whatsapp_config?.phone_number),
-        ativo: twc.whatsapp_config?.is_active
-      })).filter((c: any) => c.id);
+      const channels = (data || [])
+        .map((twc: any) => ({
+          id: twc.whatsapp_config?.id ? `inst_${twc.whatsapp_config.id.slice(0, 8)}` : null,
+          tipo: 'whatsapp',
+          nome: twc.whatsapp_config?.name,
+          telefone: formatTelefone(twc.whatsapp_config?.phone_number),
+          ativo: twc.whatsapp_config?.is_active,
+        }))
+        .filter((c: any) => c.id);
 
-      return new Response(
-        JSON.stringify(channels),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify(channels), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // POST /api-teams - Create team
@@ -188,10 +201,10 @@ Deno.serve(async (req) => {
       const body = await req.json();
 
       if (!body.nome) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'nome is required' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ success: false, error: 'nome is required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       const { data: newTeam, error } = await supabase
@@ -200,7 +213,7 @@ Deno.serve(async (req) => {
           name: body.nome,
           access_level: body.nivel_acesso || 'team',
           auto_distribution: body.distribuicao_automatica || false,
-          is_default: false
+          is_default: false,
         })
         .select()
         .single();
@@ -218,7 +231,7 @@ Deno.serve(async (req) => {
           nivel_acesso: newTeam.access_level,
           distribuicao_automatica: newTeam.auto_distribution,
           equipe_padrao: newTeam.is_default,
-          criado_em: newTeam.created_at
+          criado_em: newTeam.created_at,
         }),
         { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -231,7 +244,8 @@ Deno.serve(async (req) => {
       const updateData: Record<string, unknown> = {};
       if (body.nome !== undefined) updateData.name = body.nome;
       if (body.nivel_acesso !== undefined) updateData.access_level = body.nivel_acesso;
-      if (body.distribuicao_automatica !== undefined) updateData.auto_distribution = body.distribuicao_automatica;
+      if (body.distribuicao_automatica !== undefined)
+        updateData.auto_distribution = body.distribuicao_automatica;
       if (body.equipe_padrao !== undefined) updateData.is_default = body.equipe_padrao;
 
       const { data: updatedTeam, error } = await supabase
@@ -255,8 +269,8 @@ Deno.serve(async (req) => {
             nome: updatedTeam.name,
             nivel_acesso: updatedTeam.access_level,
             distribuicao_automatica: updatedTeam.auto_distribution,
-            equipe_padrao: updatedTeam.is_default
-          }
+            equipe_padrao: updatedTeam.is_default,
+          },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -268,22 +282,17 @@ Deno.serve(async (req) => {
       const usuarios = body.usuarios || [];
 
       // Delete existing memberships for this team
-      await supabase
-        .from('team_members')
-        .delete()
-        .eq('team_id', id);
+      await supabase.from('team_members').delete().eq('team_id', id);
 
       // Insert new memberships
       if (usuarios.length > 0) {
         const memberships = usuarios.map((u: any) => ({
           team_id: id,
           user_id: u.usuario_id,
-          is_supervisor: u.supervisor || false
+          is_supervisor: u.supervisor || false,
         }));
 
-        const { error: insertError } = await supabase
-          .from('team_members')
-          .insert(memberships);
+        const { error: insertError } = await supabase.from('team_members').insert(memberships);
 
         if (insertError) {
           return safeErrorResponse(insertError, 'Error updating team members');
@@ -301,10 +310,7 @@ Deno.serve(async (req) => {
     // DELETE /api-teams?id=xxx - Delete team
     if (method === 'DELETE' && id) {
       // Check if team has members
-      const { data: members } = await supabase
-        .from('team_members')
-        .select('id')
-        .eq('team_id', id);
+      const { data: members } = await supabase.from('team_members').select('id').eq('team_id', id);
 
       if (members && members.length > 0) {
         return new Response(
@@ -313,10 +319,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      const { error } = await supabase
-        .from('teams')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('teams').delete().eq('id', id);
 
       if (error) {
         return safeErrorResponse(error, 'Error deleting team');
@@ -330,11 +333,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed or invalid action' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
+    return new Response(JSON.stringify({ error: 'Method not allowed or invalid action' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('[api-teams] Error:', error);
     return safeErrorResponse(error, 'Internal server error');

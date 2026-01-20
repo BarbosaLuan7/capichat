@@ -25,13 +25,15 @@ Deno.serve(async (req) => {
     }
 
     const apiKey = authHeader.replace('Bearer ', '');
-    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', { key_value: apiKey });
+    const { data: apiKeyId, error: apiKeyError } = await supabase.rpc('validate_api_key', {
+      key_value: apiKey,
+    });
 
     if (apiKeyError || !apiKeyId) {
-      return new Response(
-        JSON.stringify({ sucesso: false, erro: 'API key inválida' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: false, erro: 'API key inválida' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const url = new URL(req.url);
@@ -74,8 +76,8 @@ Deno.serve(async (req) => {
             url: data.signedUrl,
             token: data.token,
             path: storagePath,
-            expira_em: new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1 hour
-          }
+            expira_em: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour
+          },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -84,26 +86,26 @@ Deno.serve(async (req) => {
     // POST - Confirm upload and get permanent URL
     if (req.method === 'POST') {
       const body = await req.json();
-      
+
       if (!body.path) {
-        return new Response(
-          JSON.stringify({ sucesso: false, erro: 'path é obrigatório' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ sucesso: false, erro: 'path é obrigatório' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // Check if file exists
       const { data: fileData, error: fileError } = await supabase.storage
         .from('message-attachments')
         .list('api-uploads', {
-          search: body.path.replace('api-uploads/', '')
+          search: body.path.replace('api-uploads/', ''),
         });
 
       if (fileError || !fileData?.length) {
-        return new Response(
-          JSON.stringify({ sucesso: false, erro: 'Arquivo não encontrado' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ sucesso: false, erro: 'Arquivo não encontrado' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       // Generate public URL
@@ -117,8 +119,8 @@ Deno.serve(async (req) => {
           arquivo: {
             path: body.path,
             url: urlData.publicUrl,
-            nome: body.nome_original || body.path.split('/').pop()
-          }
+            nome: body.nome_original || body.path.split('/').pop(),
+          },
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -127,40 +129,36 @@ Deno.serve(async (req) => {
     // DELETE - Remove file
     if (req.method === 'DELETE') {
       if (!filePath) {
-        return new Response(
-          JSON.stringify({ sucesso: false, erro: 'path é obrigatório' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ sucesso: false, erro: 'path é obrigatório' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
-      const { error } = await supabase.storage
-        .from('message-attachments')
-        .remove([filePath]);
+      const { error } = await supabase.storage.from('message-attachments').remove([filePath]);
 
       if (error) {
         console.error('[api-arquivos] Error deleting file:', error);
-        return new Response(
-          JSON.stringify({ sucesso: false, erro: 'Erro ao remover arquivo' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return new Response(JSON.stringify({ sucesso: false, erro: 'Erro ao remover arquivo' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
-      return new Response(
-        JSON.stringify({ sucesso: true }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return new Response(JSON.stringify({ sucesso: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    return new Response(
-      JSON.stringify({ sucesso: false, erro: 'Método não permitido' }),
-      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
+    return new Response(JSON.stringify({ sucesso: false, erro: 'Método não permitido' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('[api-arquivos] Error:', error);
-    return new Response(
-      JSON.stringify({ sucesso: false, erro: 'Erro interno do servidor' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ sucesso: false, erro: 'Erro interno do servidor' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });

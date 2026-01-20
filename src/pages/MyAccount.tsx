@@ -124,7 +124,7 @@ const MyAccountPage = () => {
   };
 
   const handleNotificationToggle = (key: keyof NotificationPreferences) => {
-    setNotificationPrefs(prev => ({
+    setNotificationPrefs((prev) => ({
       ...prev,
       [key]: !prev[key],
     }));
@@ -135,19 +135,15 @@ const MyAccountPage = () => {
     if (!authUser?.name) return 'U';
     return authUser.name
       .split(' ')
-      .map(n => n[0])
+      .map((n) => n[0])
       .join('')
       .toUpperCase()
       .slice(0, 2);
   };
 
   return (
-    <div className="container max-w-3xl py-6 space-y-6">
-      <PageBreadcrumb
-        items={[
-          { label: 'Minha Conta' },
-        ]}
-      />
+    <div className="container max-w-3xl space-y-6 py-6">
+      <PageBreadcrumb items={[{ label: 'Minha Conta' }]} />
 
       {/* Avatar Section */}
       <Card>
@@ -156,21 +152,19 @@ const MyAccountPage = () => {
             <User className="h-5 w-5" />
             Foto de Perfil
           </CardTitle>
-          <CardDescription>
-            Sua foto será exibida nas conversas e no perfil
-          </CardDescription>
+          <CardDescription>Sua foto será exibida nas conversas e no perfil</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-6">
             <div className="relative">
-              <Avatar className="w-24 h-24 border-2 border-border">
+              <Avatar className="h-24 w-24 border-2 border-border">
                 <AvatarImage src={avatarUrl} alt={authUser?.name} />
-                <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                <AvatarFallback className="bg-primary/10 text-2xl text-primary">
                   {getInitials()}
                 </AvatarFallback>
               </Avatar>
               {uploading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
+                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-background/80">
                   <Progress value={progress} className="w-16" />
                 </div>
               )}
@@ -183,7 +177,7 @@ const MyAccountPage = () => {
                   onClick={handleAvatarClick}
                   disabled={uploading}
                 >
-                  <Camera className="h-4 w-4 mr-2" />
+                  <Camera className="mr-2 h-4 w-4" />
                   Alterar foto
                 </Button>
                 {avatarUrl && (
@@ -194,14 +188,12 @@ const MyAccountPage = () => {
                     disabled={uploading}
                     className="text-destructive hover:text-destructive"
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className="mr-2 h-4 w-4" />
                     Remover
                   </Button>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">
-                JPG, PNG, GIF ou WebP. Máximo 5MB.
-              </p>
+              <p className="text-xs text-muted-foreground">JPG, PNG, GIF ou WebP. Máximo 5MB.</p>
             </div>
             <input
               ref={fileInputRef}
@@ -218,9 +210,7 @@ const MyAccountPage = () => {
       <Card>
         <CardHeader>
           <CardTitle>Informações Pessoais</CardTitle>
-          <CardDescription>
-            Atualize suas informações de perfil
-          </CardDescription>
+          <CardDescription>Atualize suas informações de perfil</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -229,7 +219,7 @@ const MyAccountPage = () => {
               <Input
                 id="name"
                 value={name}
-                onChange={e => setName(e.target.value)}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="Seu nome completo"
               />
             </div>
@@ -238,7 +228,7 @@ const MyAccountPage = () => {
               <Input
                 id="nickname"
                 value={nickname}
-                onChange={e => setNickname(e.target.value)}
+                onChange={(e) => setNickname(e.target.value)}
                 placeholder="Como gostaria de ser chamado"
               />
             </div>
@@ -249,29 +239,21 @@ const MyAccountPage = () => {
               <Input
                 id="phone"
                 value={phone}
-                onChange={e => setPhone(e.target.value)}
+                onChange={(e) => setPhone(e.target.value)}
                 placeholder="(00) 00000-0000"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                value={authUser?.email || ''}
-                disabled
-                className="bg-muted"
-              />
+              <Input id="email" value={authUser?.email || ''} disabled className="bg-muted" />
             </div>
           </div>
           <div className="flex justify-end">
-            <Button
-              onClick={handleSaveProfile}
-              disabled={updateProfile.isPending}
-            >
+            <Button onClick={handleSaveProfile} disabled={updateProfile.isPending}>
               {updateProfile.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <Save className="h-4 w-4 mr-2" />
+                <Save className="mr-2 h-4 w-4" />
               )}
               Salvar alterações
             </Button>
@@ -286,9 +268,7 @@ const MyAccountPage = () => {
             <Lock className="h-5 w-5" />
             Alterar Senha
           </CardTitle>
-          <CardDescription>
-            Atualize sua senha de acesso
-          </CardDescription>
+          <CardDescription>Atualize sua senha de acesso</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -298,7 +278,7 @@ const MyAccountPage = () => {
                 id="newPassword"
                 type="password"
                 value={newPassword}
-                onChange={e => setNewPassword(e.target.value)}
+                onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Mínimo 8 caracteres"
               />
             </div>
@@ -308,7 +288,7 @@ const MyAccountPage = () => {
                 id="confirmPassword"
                 type="password"
                 value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Repita a nova senha"
               />
             </div>
@@ -319,9 +299,9 @@ const MyAccountPage = () => {
               disabled={isChangingPassword || !newPassword || !confirmPassword}
             >
               {isChangingPassword ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
-                <Lock className="h-4 w-4 mr-2" />
+                <Lock className="mr-2 h-4 w-4" />
               )}
               Alterar senha
             </Button>
@@ -336,9 +316,7 @@ const MyAccountPage = () => {
             <Bell className="h-5 w-5" />
             Notificações
           </CardTitle>
-          <CardDescription>
-            Configure como você deseja receber notificações
-          </CardDescription>
+          <CardDescription>Configure como você deseja receber notificações</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
