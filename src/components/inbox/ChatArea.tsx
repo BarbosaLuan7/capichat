@@ -553,9 +553,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(function ChatA
 
   const isPhoneAsName = lead.name?.startsWith('Lead ') && /^Lead \d+$/.test(lead.name || '');
   const chatDisplayName =
-    lead.whatsapp_name ||
-    (!isPhoneAsName ? lead.name : null) ||
-    formatPhoneNumber(lead.phone);
+    lead.whatsapp_name || (!isPhoneAsName ? lead.name : null) || formatPhoneNumber(lead.phone);
 
   return (
     <div
