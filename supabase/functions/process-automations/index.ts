@@ -347,15 +347,16 @@ async function fetchProfilePicture(
       formattedContactId = `${cleanLid}@lid`;
       console.log(`[avatar-retry] 📷 Buscando foto via LID: ${formattedContactId}`);
     } else {
-      // Para números normais
-      formattedContactId = contactId
+      // Para números normais: limpar e adicionar @c.us (formato exigido pela WAHA)
+      const cleanPhone = contactId
         .replace('@c.us', '')
         .replace('@s.whatsapp.net', '')
         .replace(/\D/g, '');
 
-      if (formattedContactId.length < 10) {
+      if (cleanPhone.length < 10) {
         return { url: null, reason: 'number_too_short' };
       }
+      formattedContactId = `${cleanPhone}@c.us`;
       console.log(`[avatar-retry] 📷 Buscando foto via telefone: ${formattedContactId}`);
     }
 

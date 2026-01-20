@@ -22,11 +22,13 @@ async function getProfilePicture(
     // Formatar telefone: remover tudo que não é número, adicionar 55 se necessário
     const cleanPhone = phone.replace(/\D/g, '');
     const phoneWithCountry = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+    // WAHA exige formato com @c.us no final
+    const contactId = `${phoneWithCountry}@c.us`;
 
-    console.log(`[get-whatsapp-avatar] Buscando foto para: ${phoneWithCountry}`);
+    console.log(`[get-whatsapp-avatar] Buscando foto para: ${contactId}`);
 
     // Usar endpoint padrão do WAHA
-    const url = `${baseUrl}/api/contacts/profile-picture?contactId=${phoneWithCountry}&session=${sessionName}`;
+    const url = `${baseUrl}/api/contacts/profile-picture?contactId=${contactId}&session=${sessionName}`;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);

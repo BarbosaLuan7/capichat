@@ -262,20 +262,18 @@ async function getProfilePictureWithReason(
       formattedContactId = `${cleanLid}@lid`;
       console.log('[whatsapp-webhook] 📷 Buscando foto via LID:', formattedContactId);
     } else {
-      // Para números normais: usar apenas o número SEM @c.us
-      formattedContactId = contactId
+      // Para números normais: limpar e adicionar @c.us (formato exigido pela WAHA)
+      const cleanPhone = contactId
         .replace('@c.us', '')
         .replace('@s.whatsapp.net', '')
         .replace(/\D/g, '');
 
       // Ignorar números muito curtos ou inválidos
-      if (formattedContactId.length < 10) {
-        console.log(
-          '[whatsapp-webhook] 📷 Número muito curto para buscar foto:',
-          formattedContactId
-        );
+      if (cleanPhone.length < 10) {
+        console.log('[whatsapp-webhook] 📷 Número muito curto para buscar foto:', cleanPhone);
         return { url: null, reason: 'number_too_short' };
       }
+      formattedContactId = `${cleanPhone}@c.us`;
       console.log('[whatsapp-webhook] 📷 Buscando foto via telefone:', formattedContactId);
     }
 

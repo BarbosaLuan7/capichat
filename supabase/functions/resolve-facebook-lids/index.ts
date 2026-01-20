@@ -78,9 +78,11 @@ async function getProfilePicture(
 ): Promise<string | null> {
   try {
     const phoneWithCountry = phone.startsWith('55') ? phone : `55${phone}`;
-    const url = `${wahaBaseUrl}/api/contacts/profile-picture?contactId=${phoneWithCountry}&session=${sessionName}&refresh=true`;
+    // WAHA exige formato com @c.us no final
+    const contactId = `${phoneWithCountry}@c.us`;
+    const url = `${wahaBaseUrl}/api/contacts/profile-picture?contactId=${contactId}&session=${sessionName}&refresh=true`;
 
-    console.log('[resolve-lids] Buscando avatar para:', phoneWithCountry);
+    console.log('[resolve-lids] Buscando avatar para:', contactId);
 
     const response = await fetch(url, {
       method: 'GET',

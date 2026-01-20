@@ -30,11 +30,12 @@ async function getProfilePicture(
       formattedContactId = `${cleanLid}@lid`;
       console.log(`[refresh-avatars] 📷 Buscando foto via LID: ${formattedContactId}`);
     } else {
-      // Para números normais: usar apenas o número limpo
-      formattedContactId = contactId
+      // Para números normais: limpar e adicionar @c.us (formato exigido pela WAHA)
+      const cleanPhone = contactId
         .replace('@c.us', '')
         .replace('@s.whatsapp.net', '')
         .replace(/\D/g, '');
+      formattedContactId = `${cleanPhone}@c.us`;
       console.log(`[refresh-avatars] 📷 Buscando foto via telefone: ${formattedContactId}`);
     }
 
