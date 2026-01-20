@@ -42,6 +42,18 @@ function getCleanCaption(message: string | undefined | null): string | undefined
   return message || undefined;
 }
 
+// Gera preview do conteúdo da mensagem para exibição na lista
+function getMessagePreview(content: string, type: string): string {
+  switch (type) {
+    case 'image': return '📷 Imagem';
+    case 'audio': return '🎵 Áudio';
+    case 'video': return '🎬 Vídeo';
+    case 'document': return '📄 Documento';
+    case 'sticker': return '🏷️ Figurinha';
+    default: return content?.substring(0, 100) || '';
+  }
+}
+
 // Converte storage:// URLs para signed URLs públicas
 // deno-lint-ignore no-explicit-any
 async function resolveStorageUrl(
@@ -1195,10 +1207,12 @@ serve(async (req) => {
       // Mensagem foi enviada, mas não salva - ainda retorna sucesso
     }
 
-    // Update conversation last_message_at
+    // Update conversation last_message_at and last_message_content
     // AUTO-ATRIBUIÇÃO: Se a conversa não tem atendente, atribuir ao usuário que está respondendo
-    const updateData: { last_message_at: string; assigned_to?: string } = {
+    // Nota: messageType já definido na linha ~1051
+    const updateData: { last_message_at: string; last_message_content: string; assigned_to?: string } = {
       last_message_at: new Date().toISOString(),
+      last_message_content: getMessagePreview(payload.content, messageType),
     };
 
     if (!conversation.assigned_to) {
