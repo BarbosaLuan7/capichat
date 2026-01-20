@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { StickyNote, Send, Loader2, Check, Pencil, Trash2, X, MoreVertical } from 'lucide-react';
+import { Send, Loader2, Check, Pencil, Trash2, X, MoreVertical } from 'lucide-react';
 import {
   useInternalNotes,
   useCreateInternalNote,
@@ -110,11 +110,6 @@ function InternalNotesComponent({ conversationId }: InternalNotesProps) {
 
   return (
     <div className="space-y-3">
-      <h4 className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-        <StickyNote className="h-4 w-4" />
-        NOTAS INTERNAS
-      </h4>
-
       <div className="space-y-2">
         <Textarea
           value={note}
