@@ -783,7 +783,7 @@ function MessageBubbleComponent({
                     </div>
                     <button
                       onClick={() => setIsExpanded(true)}
-                      aria-expanded="false"
+                      aria-expanded={isExpanded}
                       className="mt-1 flex items-center gap-0.5 text-xs text-primary underline hover:text-primary/80"
                     >
                       <ChevronDown className="h-3 w-3" aria-hidden="true" />
@@ -798,7 +798,7 @@ function MessageBubbleComponent({
                     {message.content.length > MAX_MESSAGE_LENGTH && isExpanded && (
                       <button
                         onClick={() => setIsExpanded(false)}
-                        aria-expanded="true"
+                        aria-expanded={isExpanded}
                         className="mt-1 flex items-center gap-0.5 text-xs text-primary underline hover:text-primary/80"
                       >
                         <ChevronUp className="h-3 w-3" aria-hidden="true" />

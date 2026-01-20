@@ -11,6 +11,41 @@ type ConversationInsert = Database['public']['Tables']['conversations']['Insert'
 type Message = Database['public']['Tables']['messages']['Row'];
 type MessageInsert = Database['public']['Tables']['messages']['Insert'];
 
+// Types for TanStack Query cache data
+interface ConversationCacheData extends Conversation {
+  unread_count: number;
+  is_favorite: boolean;
+  leads?: {
+    id: string;
+    name: string;
+    phone: string;
+    email?: string | null;
+    temperature?: string | null;
+    avatar_url?: string | null;
+    whatsapp_name?: string | null;
+    benefit_type?: string | null;
+    tenant_id?: string | null;
+    lead_labels?: Array<{
+      labels: { id: string; name: string; color: string; category?: string | null } | null;
+    }>;
+  } | null;
+  whatsapp_config?: {
+    id: string;
+    name: string;
+    phone_number?: string | null;
+  } | null;
+}
+
+interface InfiniteConversationsPage {
+  conversations: ConversationCacheData[];
+  nextCursor?: string;
+}
+
+interface InfiniteConversationsData {
+  pages: InfiniteConversationsPage[];
+  pageParams: unknown[];
+}
+
 export function useConversations() {
   return useQuery({
     queryKey: ['conversations'],
@@ -190,7 +225,7 @@ export function useMarkConversationAsRead() {
       const previousConversation = queryClient.getQueryData(['conversations', conversationId]);
 
       // Optimistically update conversation list
-      queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
+      queryClient.setQueryData(['conversations'], (old: ConversationCacheData[] | undefined) => {
         if (!old) return old;
         return old.map((conv) =>
           conv.id === conversationId ? { ...conv, unread_count: 0 } : conv
@@ -198,21 +233,24 @@ export function useMarkConversationAsRead() {
       });
 
       // Optimistically update single conversation cache
-      queryClient.setQueryData(['conversations', conversationId], (old: any) => {
-        if (!old) return old;
-        return { ...old, unread_count: 0 };
-      });
+      queryClient.setQueryData(
+        ['conversations', conversationId],
+        (old: ConversationCacheData | undefined) => {
+          if (!old) return old;
+          return { ...old, unread_count: 0 };
+        }
+      );
 
       // Also update infinite queries (used by Inbox)
       queryClient.setQueriesData(
         { queryKey: ['conversations-infinite'], exact: false },
-        (oldData: any) => {
+        (oldData: InfiniteConversationsData | undefined) => {
           if (!oldData?.pages) return oldData;
           return {
             ...oldData,
-            pages: oldData.pages.map((page: any) => ({
+            pages: oldData.pages.map((page) => ({
               ...page,
-              conversations: page.conversations.map((conv: any) =>
+              conversations: page.conversations.map((conv) =>
                 conv.id === conversationId ? { ...conv, unread_count: 0 } : conv
               ),
             })),
@@ -259,7 +297,7 @@ export function useToggleConversationFavorite() {
       await queryClient.cancelQueries({ queryKey: ['conversations'] });
       const previousConversations = queryClient.getQueryData(['conversations']);
 
-      queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
+      queryClient.setQueryData(['conversations'], (old: ConversationCacheData[] | undefined) => {
         if (!old) return old;
         return old.map((conv) =>
           conv.id === conversationId ? { ...conv, is_favorite: isFavorite } : conv
@@ -267,10 +305,13 @@ export function useToggleConversationFavorite() {
       });
 
       // Also update the single conversation cache
-      queryClient.setQueryData(['conversations', conversationId], (old: any) => {
-        if (!old) return old;
-        return { ...old, is_favorite: isFavorite };
-      });
+      queryClient.setQueryData(
+        ['conversations', conversationId],
+        (old: ConversationCacheData | undefined) => {
+          if (!old) return old;
+          return { ...old, is_favorite: isFavorite };
+        }
+      );
 
       return { previousConversations };
     },
@@ -356,15 +397,18 @@ export function useUpdateConversationStatus() {
       await queryClient.cancelQueries({ queryKey: ['conversations'] });
       const previousConversations = queryClient.getQueryData(['conversations']);
 
-      queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
+      queryClient.setQueryData(['conversations'], (old: ConversationCacheData[] | undefined) => {
         if (!old) return old;
         return old.map((conv) => (conv.id === conversationId ? { ...conv, status } : conv));
       });
 
-      queryClient.setQueryData(['conversations', conversationId], (old: any) => {
-        if (!old) return old;
-        return { ...old, status };
-      });
+      queryClient.setQueryData(
+        ['conversations', conversationId],
+        (old: ConversationCacheData | undefined) => {
+          if (!old) return old;
+          return { ...old, status };
+        }
+      );
 
       return { previousConversations };
     },

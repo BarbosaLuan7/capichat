@@ -190,63 +190,65 @@ export function ConversationList({
       .sort((a, b) => (a.phone_number || a.name).localeCompare(b.phone_number || b.name));
   }, [whatsAppConfigs, inboxIdCounts]);
 
-  // Filter conversations by inbox (WhatsApp number) first
-  // Now using EXCLUSION logic: empty excludedInboxIds = show all
-  const inboxFilteredConversations = useMemo(() => {
-    // If no exclusions, show all conversations
-    if (filters.excludedInboxIds.length === 0) {
-      return conversations || [];
-    }
-    // Filter OUT the excluded inboxes
-    return (conversations || []).filter(
-      (conv) =>
-        !conv.whatsapp_config?.id || !filters.excludedInboxIds.includes(conv.whatsapp_config.id)
-    );
-  }, [conversations, filters.excludedInboxIds]);
+  // Consolidate all filters in a single useMemo for better performance
+  // Instead of chaining multiple useMemo calls (O(n) x 4), we do a single pass
+  const baseFilteredConversations = useMemo(() => {
+    if (!conversations) return [];
 
-  // Filter by labels from global store
-  const labelFilteredConversations = useMemo(() => {
-    if (filters.labelIds.length === 0) {
-      return inboxFilteredConversations;
-    }
-    return inboxFilteredConversations.filter((conv) =>
-      filters.labelIds.some((labelId) =>
-        (conv.leads?.lead_labels || []).some((ll) => ll.labels?.id === labelId)
-      )
-    );
-  }, [inboxFilteredConversations, filters.labelIds]);
+    const hasInboxFilter = filters.excludedInboxIds.length > 0;
+    const hasLabelFilter = filters.labelIds.length > 0;
+    const hasUserFilter = filters.userIds.length > 0;
+    const hasTenantFilter = filters.tenantIds.length > 0;
 
-  // Filter by user assignment from global store
-  const userFilteredConversations = useMemo(() => {
-    if (filters.userIds.length === 0) {
-      return labelFilteredConversations;
-    }
+    // Pre-compute user filter values
+    const includeUnassigned = hasUserFilter && filters.userIds.includes('unassigned');
+    const specificUserIds = hasUserFilter
+      ? filters.userIds.filter((id) => id !== 'unassigned')
+      : [];
 
-    const includeUnassigned = filters.userIds.includes('unassigned');
-    const specificUserIds = filters.userIds.filter((id) => id !== 'unassigned');
-
-    return labelFilteredConversations.filter((conv) => {
-      if (!conv.assigned_to) {
-        return includeUnassigned;
+    return conversations.filter((conv) => {
+      // Inbox filter (exclusion logic)
+      if (hasInboxFilter) {
+        if (
+          conv.whatsapp_config?.id &&
+          filters.excludedInboxIds.includes(conv.whatsapp_config.id)
+        ) {
+          return false;
+        }
       }
-      return specificUserIds.includes(conv.assigned_to);
+
+      // Label filter
+      if (hasLabelFilter) {
+        const hasMatchingLabel = filters.labelIds.some((labelId) =>
+          (conv.leads?.lead_labels || []).some((ll) => ll.labels?.id === labelId)
+        );
+        if (!hasMatchingLabel) return false;
+      }
+
+      // User assignment filter
+      if (hasUserFilter) {
+        if (!conv.assigned_to) {
+          if (!includeUnassigned) return false;
+        } else {
+          if (!specificUserIds.includes(conv.assigned_to)) return false;
+        }
+      }
+
+      // Tenant filter
+      if (hasTenantFilter) {
+        if (!conv.whatsapp_config?.tenant_id) return false;
+        if (!filters.tenantIds.includes(conv.whatsapp_config.tenant_id)) return false;
+      }
+
+      return true;
     });
-  }, [labelFilteredConversations, filters.userIds]);
-
-  // Filter by tenant from global store
-  const tenantFilteredConversations = useMemo(() => {
-    if (filters.tenantIds.length === 0) {
-      return userFilteredConversations;
-    }
-    return userFilteredConversations.filter(
-      (conv) =>
-        conv.whatsapp_config?.tenant_id &&
-        filters.tenantIds.includes(conv.whatsapp_config.tenant_id)
-    );
-  }, [userFilteredConversations, filters.tenantIds]);
-
-  // Base filtered conversations (after all filters except main tab)
-  const baseFilteredConversations = tenantFilteredConversations;
+  }, [
+    conversations,
+    filters.excludedInboxIds,
+    filters.labelIds,
+    filters.userIds,
+    filters.tenantIds,
+  ]);
 
   // Clear search handler
   const handleClearSearch = useCallback(() => {
@@ -610,6 +612,8 @@ function VirtualizedConversationList({
       style={{ willChange: 'scroll-position' }}
       role="listbox"
       aria-label="Lista de conversas"
+      aria-live="polite"
+      aria-busy={isLoadingMore}
       aria-activedescendant={
         selectedConversationId ? `conversation-${selectedConversationId}` : undefined
       }

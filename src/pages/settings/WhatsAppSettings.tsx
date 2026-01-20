@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { z } from 'zod';
 import {
   Plus,
   Smartphone,
@@ -89,6 +90,22 @@ const PROVIDERS = [
   },
 ] as const;
 
+// Zod schema para validação do formulário
+const whatsAppConfigSchema = z.object({
+  name: z.string().min(1, 'Nome é obrigatório').max(100, 'Nome muito longo'),
+  provider: z.enum(['waha', 'evolution', 'z-api', 'custom']),
+  base_url: z.string().url('URL inválida').min(1, 'URL é obrigatória'),
+  api_key: z.string().min(1, 'API Key é obrigatória'),
+  instance_name: z.string().optional(),
+  phone_number: z.string().optional(),
+  is_active: z.boolean(),
+});
+
+// Schema para edição (api_key opcional)
+const whatsAppConfigEditSchema = whatsAppConfigSchema.extend({
+  api_key: z.string().optional(),
+});
+
 const WhatsAppSettings = () => {
   const { data: configs, isLoading } = useWhatsAppConfigs();
   const createMutation = useCreateWhatsAppConfig();
@@ -152,10 +169,13 @@ const WhatsAppSettings = () => {
   };
 
   const handleSubmit = async () => {
-    // For new configs, api_key is required. For edits, it's optional (only update if provided)
-    const isNewConfig = !editingConfig;
-    if (!formData.name || !formData.base_url || (isNewConfig && !formData.api_key)) {
-      toast.error('Preencha todos os campos obrigatórios');
+    // Usar schema apropriado baseado se é edição ou criação
+    const schema = editingConfig ? whatsAppConfigEditSchema : whatsAppConfigSchema;
+    const result = schema.safeParse(formData);
+
+    if (!result.success) {
+      const firstError = result.error.errors[0];
+      toast.error(firstError.message);
       return;
     }
 

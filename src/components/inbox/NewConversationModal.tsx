@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, forwardRef } from 'react';
+import { z } from 'zod';
 import { Loader2, CheckCircle, AlertCircle, ExternalLink, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -63,6 +64,18 @@ const COUNTRY_CODES = [
   { code: '44', country: 'Reino Unido', flag: '🇬🇧' },
 ];
 
+// Zod schema para validação de telefone brasileiro
+const brazilPhoneSchema = z
+  .string()
+  .min(10, 'Número deve ter pelo menos 10 dígitos')
+  .max(11, 'Número deve ter no máximo 11 dígitos')
+  .refine((val) => val.length !== 11 || val[2] === '9', {
+    message: 'Celular deve ter 9 no terceiro dígito',
+  });
+
+// Schema genérico para outros países
+const internationalPhoneSchema = z.string().min(8, 'Número deve ter pelo menos 8 dígitos');
+
 export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationModalProps>(
   function NewConversationModal({ open, onOpenChange, onConversationCreated }, ref) {
     const { user } = useAuth();
@@ -113,19 +126,10 @@ export const NewConversationModal = forwardRef<HTMLDivElement, NewConversationMo
       return `${countryCode}${normalizedPhone}`;
     }, [countryCode, normalizedPhone]);
 
-    // Phone validation - basic length check
+    // Phone validation using Zod schemas
     const isPhoneValid = useMemo(() => {
-      // Mínimo de 8 dígitos para números internacionais
-      if (normalizedPhone.length < 8) return false;
-
-      // Para Brasil, validar DDD e 9º dígito para celular
-      if (countryCode === '55') {
-        if (normalizedPhone.length < 10 || normalizedPhone.length > 11) return false;
-        // Se tem 11 dígitos, deve começar com 9 (celular)
-        if (normalizedPhone.length === 11 && normalizedPhone[2] !== '9') return false;
-      }
-
-      return true;
+      const schema = countryCode === '55' ? brazilPhoneSchema : internationalPhoneSchema;
+      return schema.safeParse(normalizedPhone).success;
     }, [normalizedPhone, countryCode]);
 
     // Check for duplicate phone with debounce - busca flexível por múltiplos formatos

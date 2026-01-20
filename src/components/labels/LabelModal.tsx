@@ -1,5 +1,7 @@
 import { useState, useEffect, forwardRef } from 'react';
+import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -54,6 +56,25 @@ const CATEGORIES: { value: LabelCategory; label: string }[] = [
   { value: 'desqualificacao', label: 'Desqualificação' },
 ];
 
+// Zod schema para validação
+const labelSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'Nome é obrigatório')
+    .max(50, 'Nome muito longo (máx. 50 caracteres)')
+    .regex(/^[a-zA-Z0-9À-ÿ\s\-_/]+$/, 'Nome contém caracteres inválidos'),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Cor inválida'),
+  category: z.enum([
+    'origem',
+    'beneficio',
+    'condicao_saude',
+    'prioridade',
+    'status',
+    'interesse',
+    'desqualificacao',
+  ]),
+});
+
 export const LabelModal = forwardRef<HTMLDivElement, LabelModalProps>(function LabelModal(
   { open, onOpenChange, label, onSave, isLoading = false },
   _ref
@@ -76,7 +97,11 @@ export const LabelModal = forwardRef<HTMLDivElement, LabelModalProps>(function L
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    const result = labelSchema.safeParse({ name: name.trim(), color, category });
+    if (!result.success) {
+      toast.error(result.error.errors[0].message);
+      return;
+    }
     onSave({ name: name.trim(), color, category });
     onOpenChange(false);
   };

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -70,6 +71,15 @@ async function hashKey(key: string): Promise<string> {
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
+
+// Zod schema para validação
+const apiKeySchema = z.object({
+  name: z
+    .string()
+    .min(1, 'Nome é obrigatório')
+    .max(100, 'Nome muito longo')
+    .regex(/^[a-zA-Z0-9\s\-_]+$/, 'Nome contém caracteres inválidos'),
+});
 
 const ApiSettings = () => {
   const queryClient = useQueryClient();
@@ -355,7 +365,14 @@ const ApiSettings = () => {
               Cancelar
             </Button>
             <Button
-              onClick={() => createMutation.mutate(newKeyName)}
+              onClick={() => {
+                const result = apiKeySchema.safeParse({ name: newKeyName });
+                if (!result.success) {
+                  toast.error(result.error.errors[0].message);
+                  return;
+                }
+                createMutation.mutate(newKeyName);
+              }}
               disabled={!newKeyName || createMutation.isPending}
             >
               {createMutation.isPending ? 'Criando...' : 'Criar API Key'}
