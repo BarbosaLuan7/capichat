@@ -281,7 +281,7 @@ const Inbox = () => {
     if (!selectedConversationId || !selectedConversation) return;
     toggleFavorite.mutate({
       conversationId: selectedConversationId,
-      isFavorite: !(selectedConversation as any).is_favorite,
+      isFavorite: !selectedConversation.is_favorite,
     });
   }, [selectedConversationId, selectedConversation, toggleFavorite]);
 

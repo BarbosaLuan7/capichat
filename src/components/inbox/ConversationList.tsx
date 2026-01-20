@@ -67,6 +67,28 @@ interface WhatsAppConfigData {
   tenant_id: string | null;
 }
 
+interface ConversationLeadLabel {
+  label_id?: string;
+  labels?: {
+    id: string;
+    name: string;
+    color: string;
+    category?: string | null;
+  } | null;
+}
+
+interface ConversationLeadData {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string | null;
+  temperature?: string | null;
+  avatar_url?: string | null;
+  whatsapp_name?: string | null;
+  benefit_type?: string | null;
+  lead_labels?: ConversationLeadLabel[];
+}
+
 interface ConversationData {
   id: string;
   status: ConversationStatus;
@@ -76,7 +98,7 @@ interface ConversationData {
   is_favorite?: boolean | null;
   assigned_to?: string | null;
   created_at: string;
-  leads?: any;
+  leads?: ConversationLeadData | null;
   whatsapp_config?: WhatsAppConfigData | null;
 }
 
@@ -189,7 +211,7 @@ export function ConversationList({
     }
     return inboxFilteredConversations.filter((conv) =>
       filters.labelIds.some((labelId) =>
-        (conv.leads?.lead_labels || []).some((ll: any) => ll.labels?.id === labelId)
+        (conv.leads?.lead_labels || []).some((ll) => ll.labels?.id === labelId)
       )
     );
   }, [inboxFilteredConversations, filters.labelIds]);

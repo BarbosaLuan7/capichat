@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 
@@ -13,6 +13,17 @@ interface AIReminder {
 export function useAIReminders() {
   const [reminder, setReminder] = useState<AIReminder | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Ref para controlar cancelamento de requisições em unmount
+  const isMountedRef = useRef(true);
+
+  // Cleanup em unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const detectReminder = useCallback(async (message: string, leadName?: string) => {
     // Only check messages longer than 10 chars
@@ -31,6 +42,9 @@ export function useAIReminders() {
         }
       );
 
+      // Verificar se componente ainda está montado
+      if (!isMountedRef.current) return null;
+
       if (functionError) {
         logger.error('Error detecting reminder:', functionError);
         setReminder(null);
@@ -47,11 +61,16 @@ export function useAIReminders() {
       setReminder(null);
       return null;
     } catch (err) {
+      // Ignorar erros se componente desmontou
+      if (!isMountedRef.current) return null;
+
       logger.error('Error detecting reminder:', err);
       setReminder(null);
       return null;
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 

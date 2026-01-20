@@ -156,7 +156,9 @@ export function LeadImportModal({ open, onOpenChange }: LeadImportModalProps) {
         const normalizedPhone = normalizePhoneNumber(phone);
         const mappedStageId = getStageIdByName(stageName);
 
-        const isValid = !!name && normalizedPhone.length >= 10 && normalizedPhone.length <= 11;
+        // Validação melhorada: apenas dígitos e comprimento correto (DDD + número)
+        const isValidPhone = /^\d{10,11}$/.test(normalizedPhone);
+        const isValid = !!name && isValidPhone;
 
         leads.push({
           name,
@@ -168,8 +170,8 @@ export function LeadImportModal({ open, onOpenChange }: LeadImportModalProps) {
           isValid,
           error: !name
             ? 'Nome obrigatório'
-            : normalizedPhone.length < 10
-              ? 'Telefone inválido'
+            : !isValidPhone
+              ? 'Telefone inválido (deve ter 10 ou 11 dígitos)'
               : undefined,
         });
       }

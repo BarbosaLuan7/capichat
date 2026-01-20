@@ -106,42 +106,50 @@ export function useFileUpload() {
       const fileName = `${user.id}/${folder}/${Date.now()}.${fileExt}`;
 
       // Simulate progress for better UX
-      const progressInterval = setInterval(() => {
-        setUploadProgress((prev) => ({
-          ...prev,
-          progress: Math.min(prev.progress + 10, 90),
-        }));
-      }, 100);
+      // Declarado fora do try interno para garantir cleanup
+      let progressInterval: ReturnType<typeof setInterval> | null = null;
 
-      // Create promise with timeout
-      const uploadPromise = supabase.storage.from('message-attachments').upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
+      try {
+        progressInterval = setInterval(() => {
+          setUploadProgress((prev) => ({
+            ...prev,
+            progress: Math.min(prev.progress + 10, 90),
+          }));
+        }, 100);
 
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('UPLOAD_TIMEOUT'));
-        }, UPLOAD_TIMEOUT_MS);
-      });
+        // Create promise with timeout
+        const uploadPromise = supabase.storage.from('message-attachments').upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
 
-      const { data, error } = await Promise.race([uploadPromise, timeoutPromise]);
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error('UPLOAD_TIMEOUT'));
+          }, UPLOAD_TIMEOUT_MS);
+        });
 
-      clearInterval(progressInterval);
+        const { data, error } = await Promise.race([uploadPromise, timeoutPromise]);
 
-      if (error) {
-        logger.error('Upload error:', error);
-        toast.error('Erro ao enviar arquivo');
-        setUploadProgress({ progress: 0, uploading: false });
-        return null;
+        if (error) {
+          logger.error('Upload error:', error);
+          toast.error('Erro ao enviar arquivo');
+          setUploadProgress({ progress: 0, uploading: false });
+          return null;
+        }
+
+        setUploadProgress({ progress: 100, uploading: false });
+
+        // Retornar storage ref em vez de publicUrl (bucket é privado)
+        // Frontend vai gerar signed URL quando precisar exibir
+        const storageRef = `storage://message-attachments/${data.path}`;
+        return storageRef;
+      } finally {
+        // Garantir limpeza do interval mesmo em caso de erro
+        if (progressInterval) {
+          clearInterval(progressInterval);
+        }
       }
-
-      setUploadProgress({ progress: 100, uploading: false });
-
-      // Retornar storage ref em vez de publicUrl (bucket é privado)
-      // Frontend vai gerar signed URL quando precisar exibir
-      const storageRef = `storage://message-attachments/${data.path}`;
-      return storageRef;
     } catch (error) {
       logger.error('Upload error:', error);
 

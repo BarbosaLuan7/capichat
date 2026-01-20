@@ -62,17 +62,18 @@ const MAX_REPAIR_ENTRIES = 500; // Limite para evitar crescimento ilimitado
 /**
  * Limpa entradas antigas dos Sets de controle de auto-repair.
  *
- * Executada periodicamente (5 min) para evitar memory leaks em sessões longas.
- * Remove entries mais antigas que 10 minutos e, se ainda houver muitas,
+ * Executada periodicamente (1 min) para evitar memory leaks em sessões longas.
+ * Remove entries mais antigas que 5 minutos e, se ainda houver muitas,
  * remove as 100 mais antigas como fallback.
  */
 function cleanupAutoRepairEntries() {
   const now = Date.now();
-  const threshold = now - 10 * 60 * 1000; // 10 minutos
+  const threshold = now - 5 * 60 * 1000; // 5 minutos (mais agressivo)
 
   for (const [id, time] of lastAttemptTime.entries()) {
     if (time < threshold) {
       autoRepairAttempted.delete(id);
+      autoRepairInFlight.delete(id); // Limpar também os in-flight expirados
       lastAttemptTime.delete(id);
     }
   }
@@ -85,14 +86,23 @@ function cleanupAutoRepairEntries() {
 
     for (const [id] of entriesToRemove) {
       autoRepairAttempted.delete(id);
+      autoRepairInFlight.delete(id);
       lastAttemptTime.delete(id);
     }
   }
 }
 
-// Executar limpeza periodicamente (a cada 5 minutos)
+// Executar limpeza periodicamente (a cada 1 minuto - mais frequente para evitar acúmulo)
+// Usar variável global para evitar múltiplos intervals em hot reload
 if (typeof window !== 'undefined') {
-  setInterval(cleanupAutoRepairEntries, 5 * 60 * 1000);
+  const CLEANUP_INTERVAL_KEY = '__messageBubbleCleanupInterval__';
+  if ((window as unknown as Record<string, number>)[CLEANUP_INTERVAL_KEY]) {
+    clearInterval((window as unknown as Record<string, number>)[CLEANUP_INTERVAL_KEY]);
+  }
+  (window as unknown as Record<string, number>)[CLEANUP_INTERVAL_KEY] = setInterval(
+    cleanupAutoRepairEntries,
+    60 * 1000 // 1 minuto
+  ) as unknown as number;
 }
 
 // Constantes estáticas para tipos de mídia (evitar recriação)

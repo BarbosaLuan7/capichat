@@ -428,6 +428,21 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(function ChatA
     [setMessageInput, showSlashCommand, onStartTyping]
   );
 
+  // Handle keyboard - extraído para evitar recriação a cada render
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (showSlashCommand) return;
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        // Prevent double-send during upload
+        if (!uploadProgress.uploading) {
+          handleSendMessage();
+        }
+      }
+    },
+    [showSlashCommand, uploadProgress.uploading, handleSendMessage]
+  );
+
   // Handle paste - suporte a colar imagens da área de transferência
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const items = e.clipboardData?.items;
@@ -538,7 +553,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(function ChatA
 
   const isPhoneAsName = lead.name?.startsWith('Lead ') && /^Lead \d+$/.test(lead.name || '');
   const chatDisplayName =
-    (lead as any).whatsapp_name ||
+    lead.whatsapp_name ||
     (!isPhoneAsName ? lead.name : null) ||
     formatPhoneNumber(lead.phone);
 
@@ -634,12 +649,15 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(function ChatA
                   size="icon"
                   onClick={() => syncHistory(conversation.id)}
                   disabled={isSyncing}
-                  aria-label="Sincronizar histórico do WhatsApp"
+                  aria-label={isSyncing ? 'Sincronizando...' : 'Sincronizar histórico do WhatsApp'}
+                  aria-busy={isSyncing}
                 >
                   <RefreshCw className={cn('h-4 w-4', isSyncing && 'animate-spin')} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Sincronizar histórico do WhatsApp</TooltipContent>
+              <TooltipContent>
+                {isSyncing ? 'Sincronizando...' : 'Sincronizar histórico do WhatsApp'}
+              </TooltipContent>
             </Tooltip>
           </TooltipProvider>
           <Button
@@ -869,16 +887,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(function ChatA
               value={messageInput}
               onChange={handleInputChange}
               onPaste={handlePaste}
-              onKeyDown={(e) => {
-                if (showSlashCommand) return;
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  // Prevent double-send during upload
-                  if (!uploadProgress.uploading) {
-                    handleSendMessage();
-                  }
-                }
-              }}
+              onKeyDown={handleKeyDown}
               aria-label="Escrever mensagem"
               placeholder="Digite / para atalhos... (Shift+Enter para nova linha)"
               className="max-h-[120px] min-h-[40px] resize-none overflow-y-auto py-2 pr-12"

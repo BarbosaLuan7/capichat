@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { aiCache, generateMessagesKey } from '@/lib/aiCache';
@@ -17,6 +17,17 @@ export function useAIClassification() {
   const [classification, setClassification] = useState<AIClassification | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Ref para controlar cancelamento de requisições em unmount
+  const isMountedRef = useRef(true);
+
+  // Cleanup em unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const fetchClassification = useCallback(
     async (
@@ -53,6 +64,9 @@ export function useAIClassification() {
           body: { messages, lead, availableLabels },
         });
 
+        // Verificar se componente ainda está montado antes de atualizar estado
+        if (!isMountedRef.current) return;
+
         if (functionError) {
           throw functionError;
         }
@@ -73,12 +87,17 @@ export function useAIClassification() {
         // Cache the result
         aiCache.set(cacheKey, data);
       } catch (err) {
+        // Ignorar erros se componente desmontou
+        if (!isMountedRef.current) return;
+
         const message = err instanceof Error ? err.message : 'Erro ao classificar lead';
         logger.error('Error fetching AI classification:', err);
         setError(message);
         setClassification(null);
       } finally {
-        setIsLoading(false);
+        if (isMountedRef.current) {
+          setIsLoading(false);
+        }
       }
     },
     []
