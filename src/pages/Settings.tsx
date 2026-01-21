@@ -52,7 +52,7 @@ const settingsMenu = [
   {
     icon: Smartphone,
     label: 'WhatsApp',
-    description: 'Gateway WAHA/Evolution/Z-API',
+    description: 'Gateway WAHA ou Meta Cloud API',
     href: '/settings/whatsapp',
   },
   {

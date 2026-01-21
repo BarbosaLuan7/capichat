@@ -69,11 +69,12 @@ async function wahaFetch(
 // Interface para config do WhatsApp
 interface WhatsAppConfig {
   id: string;
-  provider: 'waha' | 'evolution' | 'z-api' | 'custom';
+  provider: 'waha' | 'meta';
   base_url: string;
   api_key: string;
   instance_name: string | null;
   name: string;
+  phone_number_id?: string;
 }
 
 // Envia mensagem via WAHA
@@ -125,95 +126,55 @@ async function sendWAHA(
   }
 }
 
-// Envia mensagem via Evolution API
-async function sendEvolution(
+// Envia mensagem via Meta Cloud API
+async function sendMeta(
   config: WhatsAppConfig,
   phone: string,
   message: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const baseUrl = normalizeUrl(config.base_url);
-  const instanceName = config.instance_name || 'default';
+  const phoneNumberId = config.phone_number_id;
+  const accessToken = config.api_key;
 
-  const url = `${baseUrl}/message/sendText/${instanceName}`;
-  const body = {
-    number: phone,
-    text: message,
-  };
-
-  console.log('[Evolution] Enviando mensagem de teste:', { url, phone });
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        apikey: config.api_key,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-
-    const responseText = await response.text();
-    console.log('[Evolution] Resposta:', response.status, responseText);
-
-    if (!response.ok) {
-      try {
-        const errorData = JSON.parse(responseText);
-        return { success: false, error: errorData.message || `Erro ${response.status}` };
-      } catch {
-        return { success: false, error: `Erro ${response.status}: ${responseText}` };
-      }
-    }
-
-    const data = JSON.parse(responseText);
-    return { success: true, messageId: data.key?.id };
-  } catch (error: unknown) {
-    console.error('[Evolution] Erro ao enviar:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Erro de conexão' };
+  if (!phoneNumberId) {
+    return { success: false, error: 'Meta Cloud API: phone_number_id não configurado' };
   }
-}
 
-// Envia mensagem via Z-API
-async function sendZAPI(
-  config: WhatsAppConfig,
-  phone: string,
-  message: string
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const baseUrl = normalizeUrl(config.base_url);
-
-  const url = `${baseUrl}/send-text`;
+  const url = `https://graph.facebook.com/v18.0/${phoneNumberId}/messages`;
   const body = {
-    phone,
-    message,
+    messaging_product: 'whatsapp',
+    to: phone,
+    type: 'text',
+    text: { body: message },
   };
 
-  console.log('[Z-API] Enviando mensagem de teste:', { url, phone });
+  console.log('[Meta] Enviando mensagem de teste:', { phoneNumberId, phone });
 
   try {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Client-Token': config.api_key,
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(body),
     });
 
     const responseText = await response.text();
-    console.log('[Z-API] Resposta:', response.status, responseText);
+    console.log('[Meta] Resposta:', response.status, responseText);
 
     if (!response.ok) {
       try {
         const errorData = JSON.parse(responseText);
-        return { success: false, error: errorData.message || `Erro ${response.status}` };
+        return { success: false, error: errorData.error?.message || `Erro ${response.status}` };
       } catch {
         return { success: false, error: `Erro ${response.status}: ${responseText}` };
       }
     }
 
     const data = JSON.parse(responseText);
-    return { success: true, messageId: data.messageId };
+    return { success: true, messageId: data.messages?.[0]?.id };
   } catch (error: unknown) {
-    console.error('[Z-API] Erro ao enviar:', error);
+    console.error('[Meta] Erro ao enviar:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Erro de conexão' };
   }
 }
@@ -298,16 +259,13 @@ serve(async (req) => {
       case 'waha':
         result = await sendWAHA(config as WhatsAppConfig, phone, testMessage);
         break;
-      case 'evolution':
-        result = await sendEvolution(config as WhatsAppConfig, phone, testMessage);
-        break;
-      case 'z-api':
-        result = await sendZAPI(config as WhatsAppConfig, phone, testMessage);
+      case 'meta':
+        result = await sendMeta(config as WhatsAppConfig, phone, testMessage);
         break;
       default:
         result = {
           success: false,
-          error: `Provider '${config.provider}' não suportado para teste`,
+          error: `Provider '${config.provider}' não suportado. Use 'waha' ou 'meta'.`,
         };
     }
 

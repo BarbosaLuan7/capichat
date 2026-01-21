@@ -1,5 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { debug, debugError } from '../_shared/debug.ts';
+
+const PREFIX = 'dispatch-webhook';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -383,11 +386,15 @@ function formatarConversaPayload(conversa: any) {
 
 async function buildMensagemRecebida(supabase: any, eventData: any) {
   const msg = eventData?.message || eventData;
-  const leadId = msg?.lead_id || eventData?.lead_id;
-  const convId = msg?.conversation_id || eventData?.conversation_id;
 
+  // Extrair IDs - podem vir como objetos ou diretamente
+  const leadId = msg?.lead_id || eventData?.lead?.id || eventData?.lead_id;
+  const convId = msg?.conversation_id || eventData?.conversation?.id || eventData?.conversation_id;
+
+  // SEMPRE buscar dados completos pelo ID para ter todas as informações (etapa, responsavel, etc)
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
   const conversa = convId ? await buscarConversa(supabase, convId) : null;
+
   const instancia = conversa?.whatsapp_instance_id
     ? await buscarInstanciaWhatsApp(supabase, conversa.whatsapp_instance_id)
     : null;
@@ -441,8 +448,9 @@ async function buildMensagemRecebida(supabase: any, eventData: any) {
 
 async function buildMensagemEnviada(supabase: any, eventData: any) {
   const msg = eventData?.message || eventData;
-  const leadId = msg?.lead_id || eventData?.lead_id;
-  const convId = msg?.conversation_id || eventData?.conversation_id;
+  // Extrair IDs - podem vir como objetos ou diretamente
+  const leadId = msg?.lead_id || eventData?.lead?.id || eventData?.lead_id;
+  const convId = msg?.conversation_id || eventData?.conversation?.id || eventData?.conversation_id;
 
   const lead = leadId ? await buscarLeadCompleto(supabase, leadId) : null;
   const conversa = convId ? await buscarConversa(supabase, convId) : null;
@@ -811,7 +819,7 @@ async function buildTarefaConcluida(supabase: any, eventData: any) {
 async function buildPayload(supabase: any, evento: string, dados: any): Promise<any> {
   const eventData = dados?.data || dados;
 
-  console.log(`[Webhook] Construindo payload limpo para: ${evento}`);
+  debug(PREFIX, `Construindo payload limpo para: ${evento}`);
 
   switch (evento) {
     case 'message.received':
@@ -881,13 +889,25 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { event, payload: rawPayload, webhook_id } = await req.json();
+    const { event, payload: rawPayload, webhook_id, data } = await req.json();
 
-    console.log(`[Webhook] Evento recebido: ${event}`);
+    debug(PREFIX, `Evento recebido: ${event}`);
 
-    // Buscar webhooks
+    // Extrair tenant_id do payload (lead, conversation, ou diretamente)
+    const eventData = data || rawPayload?.data || rawPayload;
+    const tenantId =
+      eventData?.lead?.tenant_id ||
+      eventData?.conversation?.tenant_id ||
+      eventData?.message?.tenant_id ||
+      eventData?.tenant_id ||
+      null;
+
+    debug(PREFIX, `Tenant ID: ${tenantId || 'não identificado'}`);
+
+    // Buscar webhooks - filtrar por tenant se disponível
     let webhooksQuery = supabase.from('webhooks').select('*').eq('is_active', true);
     if (webhook_id) webhooksQuery = webhooksQuery.eq('id', webhook_id);
+    if (tenantId) webhooksQuery = webhooksQuery.or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
 
     const { data: webhooks, error: webhooksError } = await webhooksQuery;
 
@@ -911,10 +931,10 @@ serve(async (req) => {
       );
     }
 
-    // Construir payload LIMPO
-    const payload = await buildPayload(supabase, event, rawPayload);
+    // Construir payload LIMPO - usar eventData que já foi extraído corretamente
+    const payload = await buildPayload(supabase, event, eventData);
 
-    console.log(`[Webhook] Payload:`, JSON.stringify(payload, null, 2));
+    debug(PREFIX, 'Payload:', JSON.stringify(payload, null, 2));
 
     // Enviar para cada webhook
     const results = [];
@@ -950,9 +970,9 @@ serve(async (req) => {
         });
 
         results.push({ webhook_id: webhook.id, success: response.ok, status: response.status });
-        console.log(`[Webhook] ${webhook.name}: ${response.status}`);
+        debug(PREFIX, `${webhook.name}: ${response.status}`);
       } catch (error: any) {
-        console.error(`[Webhook] Erro ${webhook.name}:`, error);
+        debugError(PREFIX, `Erro ${webhook.name}:`, error);
 
         await supabase.from('webhook_logs').insert({
           webhook_id: webhook.id,
@@ -970,7 +990,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
-    console.error('[Webhook] Erro:', error);
+    debugError(PREFIX, 'Erro:', error);
     return new Response(JSON.stringify({ error: error?.message || 'Erro' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

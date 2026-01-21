@@ -71,33 +71,23 @@ const PROVIDERS = [
     docs: 'https://waha.devlike.pro/docs/',
   },
   {
-    value: 'evolution',
-    label: 'Evolution API',
-    description: 'Open source, multi-device',
-    docs: 'https://doc.evolution-api.com/',
-  },
-  {
-    value: 'z-api',
-    label: 'Z-API',
-    description: 'Serviço brasileiro pago',
-    docs: 'https://developer.z-api.io/',
-  },
-  {
-    value: 'custom',
-    label: 'Gateway Customizado',
-    description: 'Endpoint HTTP personalizado',
-    docs: null,
+    value: 'meta',
+    label: 'Meta Cloud API (Oficial)',
+    description: 'API oficial do WhatsApp Business',
+    docs: 'https://developers.facebook.com/docs/whatsapp/cloud-api',
   },
 ] as const;
 
 // Zod schema para validação do formulário
 const whatsAppConfigSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório').max(100, 'Nome muito longo'),
-  provider: z.enum(['waha', 'evolution', 'z-api', 'custom']),
+  provider: z.enum(['waha', 'meta']),
   base_url: z.string().url('URL inválida').min(1, 'URL é obrigatória'),
   api_key: z.string().min(1, 'API Key é obrigatória'),
   instance_name: z.string().optional(),
   phone_number: z.string().optional(),
+  phone_number_id: z.string().optional(), // Meta Cloud API
+  business_account_id: z.string().optional(), // Meta Cloud API
   is_active: z.boolean(),
 });
 
@@ -246,7 +236,7 @@ const WhatsAppSettings = () => {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Gateway WhatsApp</h1>
           <p className="text-muted-foreground">
-            Configure a integração com WAHA, Evolution API ou Z-API
+            Configure a integração com WAHA ou Meta Cloud API (oficial)
           </p>
         </div>
         <Button
@@ -420,43 +410,26 @@ const WhatsAppSettings = () => {
               </AccordionContent>
             </AccordionItem>
 
-            <AccordionItem value="evolution">
-              <AccordionTrigger>Evolution API</AccordionTrigger>
+            <AccordionItem value="meta">
+              <AccordionTrigger>Meta Cloud API (Oficial)</AccordionTrigger>
               <AccordionContent className="space-y-3 text-sm">
                 <p>
-                  Evolution API é uma solução brasileira open-source com suporte a multi-device.
+                  API oficial do WhatsApp Business, gerenciada pela Meta. Ideal para uso em produção
+                  com alta confiabilidade.
                 </p>
                 <ol className="list-inside list-decimal space-y-2 text-muted-foreground">
-                  <li>Instale via Docker ou servidor dedicado</li>
-                  <li>Crie uma instância no painel</li>
-                  <li>Conecte escaneando o QR Code</li>
-                  <li>Configure o webhook em Settings → Webhooks</li>
-                  <li>Use a API Key global ou da instância</li>
+                  <li>Crie uma conta de desenvolvedor em developers.facebook.com</li>
+                  <li>Crie um app do tipo Business e adicione o produto WhatsApp</li>
+                  <li>Configure o número de telefone comercial</li>
+                  <li>Obtenha o Phone Number ID e o Access Token permanente</li>
+                  <li>Configure o webhook URL nas configurações do app</li>
                 </ol>
                 <Button variant="link" className="h-auto p-0" asChild>
                   <a
-                    href="https://doc.evolution-api.com/"
+                    href="https://developers.facebook.com/docs/whatsapp/cloud-api"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Ver documentação completa <ExternalLink className="ml-1 h-3 w-3" />
-                  </a>
-                </Button>
-              </AccordionContent>
-            </AccordionItem>
-
-            <AccordionItem value="z-api">
-              <AccordionTrigger>Z-API</AccordionTrigger>
-              <AccordionContent className="space-y-3 text-sm">
-                <p>Z-API é um serviço brasileiro pago com alta disponibilidade.</p>
-                <ol className="list-inside list-decimal space-y-2 text-muted-foreground">
-                  <li>Crie uma conta em z-api.io</li>
-                  <li>Crie uma instância e escaneie o QR</li>
-                  <li>Copie o Client-Token da instância</li>
-                  <li>Configure o webhook nas configurações da instância</li>
-                </ol>
-                <Button variant="link" className="h-auto p-0" asChild>
-                  <a href="https://developer.z-api.io/" target="_blank" rel="noopener noreferrer">
                     Ver documentação completa <ExternalLink className="ml-1 h-3 w-3" />
                   </a>
                 </Button>
@@ -524,11 +497,7 @@ const WhatsAppSettings = () => {
                 placeholder={
                   formData.provider === 'waha'
                     ? 'https://waha.seuservidor.com'
-                    : formData.provider === 'evolution'
-                      ? 'https://evolution.seuservidor.com'
-                      : formData.provider === 'z-api'
-                        ? 'https://api.z-api.io/instances/SUA_INSTANCIA/token/SEU_TOKEN'
-                        : 'https://seu-gateway.com/api'
+                    : 'https://graph.facebook.com'
                 }
                 value={formData.base_url}
                 onChange={(e) => setFormData((prev) => ({ ...prev, base_url: e.target.value }))}
@@ -545,7 +514,7 @@ const WhatsAppSettings = () => {
               />
             </div>
 
-            {(formData.provider === 'waha' || formData.provider === 'evolution') && (
+            {formData.provider === 'waha' && (
               <div className="space-y-2">
                 <Label>Nome da Instância</Label>
                 <Input
@@ -556,7 +525,23 @@ const WhatsAppSettings = () => {
                   }
                 />
                 <p className="text-xs text-muted-foreground">
-                  Nome da sessão/instância no gateway. Deixe vazio para usar "default".
+                  Nome da sessão/instância no WAHA. Deixe vazio para usar "default".
+                </p>
+              </div>
+            )}
+
+            {formData.provider === 'meta' && (
+              <div className="space-y-2">
+                <Label>Phone Number ID *</Label>
+                <Input
+                  placeholder="123456789012345"
+                  value={formData.phone_number_id || ''}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, phone_number_id: e.target.value }))
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  ID do número de telefone do WhatsApp Business. Encontrado no painel da Meta.
                 </p>
               </div>
             )}

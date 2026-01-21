@@ -75,7 +75,8 @@ export function useConversations() {
           )
         `
         )
-        .order('last_message_at', { ascending: false });
+        .order('last_message_at', { ascending: false })
+        .limit(100); // Limitar para evitar carregar todas as conversas
 
       if (error) throw error;
       return data;
@@ -126,10 +127,12 @@ export function useMessages(conversationId: string | undefined) {
         .from('messages')
         .select('*')
         .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: false })
+        .limit(100); // Limitar para evitar carregar todas as mensagens
 
       if (error) throw error;
-      return data as Message[];
+      // Reverter para ordem cronológica (mais antigas primeiro)
+      return (data as Message[]).reverse();
     },
     enabled: !!conversationId,
     gcTime: 5 * 60 * 1000, // 5 minutes cache

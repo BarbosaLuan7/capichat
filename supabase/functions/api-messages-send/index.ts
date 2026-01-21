@@ -109,11 +109,12 @@ interface SendMessagePayload {
 interface WhatsAppConfig {
   id: string;
   name: string;
-  provider: 'waha' | 'evolution' | 'z-api' | 'custom';
+  provider: 'waha' | 'meta';
   base_url: string;
   api_key: string;
   instance_name: string | null;
   phone_number: string | null;
+  phone_number_id?: string;
 }
 
 interface LeadData {
@@ -361,163 +362,88 @@ async function sendWAHA(
   }
 }
 
-async function sendEvolution(
+// ========== ENVIO VIA META CLOUD API ==========
+async function sendMeta(
   config: WhatsAppConfig,
   payload: SendMessagePayload
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const baseUrl = normalizeUrl(config.base_url);
-  const number = payload.phone.replace(/\D/g, '');
-  const instance = config.instance_name || 'default';
-
-  let endpoint = `/message/sendText/${instance}`;
-  let body: Record<string, unknown> = {
-    number,
-    text: payload.message,
-  };
-
-  if (payload.type === 'image' && payload.media_url) {
-    endpoint = `/message/sendMedia/${instance}`;
-    body = {
-      number,
-      mediatype: 'image',
-      media: payload.media_url,
-      caption: payload.message,
-    };
-  } else if (payload.type === 'audio' && payload.media_url) {
-    endpoint = `/message/sendWhatsAppAudio/${instance}`;
-    body = {
-      number,
-      audio: payload.media_url,
-    };
-  } else if (payload.type === 'document' && payload.media_url) {
-    endpoint = `/message/sendMedia/${instance}`;
-    body = {
-      number,
-      mediatype: 'document',
-      media: payload.media_url,
-      caption: payload.message,
-    };
-  }
-
-  try {
-    console.log('[Evolution] Enviando mensagem:', { baseUrl, endpoint, number });
-
-    const response = await fetch(`${baseUrl}${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: config.api_key,
-      },
-      body: JSON.stringify(body),
-    });
-
-    const data = await response.json();
-    console.log('[Evolution] Resposta:', response.status, JSON.stringify(data));
-
-    if (!response.ok) {
-      return { success: false, error: data.message || `Erro ${response.status}` };
-    }
-
-    return { success: true, messageId: data.key?.id };
-  } catch (error: unknown) {
-    console.error('[Evolution] Erro de request:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Erro desconhecido' };
-  }
-}
-
-async function sendZAPI(
-  config: WhatsAppConfig,
-  payload: SendMessagePayload
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const baseUrl = normalizeUrl(config.base_url);
+  const phoneNumberId = config.phone_number_id;
+  const accessToken = config.api_key;
   const phone = payload.phone.replace(/\D/g, '');
 
-  let endpoint = '/send-text';
-  let body: Record<string, unknown> = {
-    phone,
-    message: payload.message,
-  };
+  if (!phoneNumberId) {
+    return { success: false, error: 'Meta Cloud API: phone_number_id não configurado' };
+  }
 
-  if (payload.type === 'image' && payload.media_url) {
-    endpoint = '/send-image';
+  const endpoint = `https://graph.facebook.com/v18.0/${phoneNumberId}/messages`;
+  let body: Record<string, unknown>;
+
+  if (payload.type === 'text' || !payload.media_url) {
     body = {
-      phone,
-      image: payload.media_url,
-      caption: payload.message,
+      messaging_product: 'whatsapp',
+      to: phone,
+      type: 'text',
+      text: { body: payload.message },
     };
-  } else if (payload.type === 'audio' && payload.media_url) {
-    endpoint = '/send-audio';
+  } else if (payload.type === 'image') {
     body = {
-      phone,
-      audio: payload.media_url,
+      messaging_product: 'whatsapp',
+      to: phone,
+      type: 'image',
+      image: { link: payload.media_url, caption: payload.message },
     };
-  } else if (payload.type === 'document' && payload.media_url) {
-    endpoint = '/send-document';
+  } else if (payload.type === 'audio') {
     body = {
-      phone,
-      document: payload.media_url,
+      messaging_product: 'whatsapp',
+      to: phone,
+      type: 'audio',
+      audio: { link: payload.media_url },
+    };
+  } else if (payload.type === 'video') {
+    body = {
+      messaging_product: 'whatsapp',
+      to: phone,
+      type: 'video',
+      video: { link: payload.media_url, caption: payload.message },
+    };
+  } else if (payload.type === 'document') {
+    body = {
+      messaging_product: 'whatsapp',
+      to: phone,
+      type: 'document',
+      document: { link: payload.media_url, caption: payload.message },
+    };
+  } else {
+    body = {
+      messaging_product: 'whatsapp',
+      to: phone,
+      type: 'text',
+      text: { body: payload.message },
     };
   }
 
   try {
-    console.log('[Z-API] Enviando mensagem:', { baseUrl, endpoint, phone });
+    console.log('[Meta] Enviando mensagem:', { phoneNumberId, phone, type: payload.type });
 
-    const response = await fetch(`${baseUrl}${endpoint}`, {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Client-Token': config.api_key,
+        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(body),
     });
 
     const data = await response.json();
-    console.log('[Z-API] Resposta:', response.status, JSON.stringify(data));
+    console.log('[Meta] Resposta:', response.status, JSON.stringify(data));
 
     if (!response.ok) {
-      return { success: false, error: data.message || `Erro ${response.status}` };
+      return { success: false, error: data.error?.message || `Erro ${response.status}` };
     }
 
-    return { success: true, messageId: data.messageId };
+    return { success: true, messageId: data.messages?.[0]?.id };
   } catch (error: unknown) {
-    console.error('[Z-API] Erro de request:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Erro desconhecido' };
-  }
-}
-
-async function sendCustom(
-  config: WhatsAppConfig,
-  payload: SendMessagePayload
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const baseUrl = normalizeUrl(config.base_url);
-
-  try {
-    console.log('[Custom] Enviando mensagem:', { baseUrl });
-
-    const response = await fetch(baseUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.api_key}`,
-      },
-      body: JSON.stringify({
-        phone: payload.phone,
-        message: payload.message,
-        type: payload.type || 'text',
-        media_url: payload.media_url,
-      }),
-    });
-
-    const data = await response.json();
-    console.log('[Custom] Resposta:', response.status, JSON.stringify(data));
-
-    if (!response.ok) {
-      return { success: false, error: data.message || `Erro ${response.status}` };
-    }
-
-    return { success: true, messageId: data.messageId || data.id };
-  } catch (error: unknown) {
-    console.error('[Custom] Erro de request:', error);
+    console.error('[Meta] Erro de request:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Erro desconhecido' };
   }
 }
@@ -822,17 +748,14 @@ serve(async (req) => {
       case 'waha':
         result = await sendWAHA(config, processedPayload);
         break;
-      case 'evolution':
-        result = await sendEvolution(config, processedPayload);
-        break;
-      case 'z-api':
-        result = await sendZAPI(config, processedPayload);
-        break;
-      case 'custom':
-        result = await sendCustom(config, processedPayload);
+      case 'meta':
+        result = await sendMeta(config, processedPayload);
         break;
       default:
-        result = { success: false, error: 'Unknown provider' };
+        result = {
+          success: false,
+          error: `Provider não suportado: ${config.provider}. Use 'waha' ou 'meta'.`,
+        };
     }
 
     if (!result.success) {

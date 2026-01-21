@@ -38,30 +38,45 @@ interface WAHAWebhookPayload {
   };
 }
 
-// Tipos Evolution API
-interface EvolutionMessage {
-  key: {
-    remoteJid: string;
-    fromMe: boolean;
-    id: string;
-  };
-  pushName?: string;
-  message?: {
-    conversation?: string;
-    extendedTextMessage?: { text: string };
-    imageMessage?: { url?: string; caption?: string };
-    audioMessage?: { url?: string };
-    videoMessage?: { url?: string; caption?: string };
-    documentMessage?: { url?: string; fileName?: string };
-  };
-  messageType: string;
-  messageTimestamp: number;
+// Meta Cloud API types (para suporte futuro)
+interface MetaWebhookEntry {
+  id: string;
+  changes: Array<{
+    value: {
+      messaging_product: string;
+      metadata: {
+        display_phone_number: string;
+        phone_number_id: string;
+      };
+      contacts?: Array<{
+        profile: { name: string };
+        wa_id: string;
+      }>;
+      messages?: Array<{
+        from: string;
+        id: string;
+        timestamp: string;
+        type: string;
+        text?: { body: string };
+        image?: { id: string; mime_type: string; sha256: string; caption?: string };
+        audio?: { id: string; mime_type: string };
+        video?: { id: string; mime_type: string; caption?: string };
+        document?: { id: string; mime_type: string; filename?: string; caption?: string };
+      }>;
+      statuses?: Array<{
+        id: string;
+        status: 'sent' | 'delivered' | 'read' | 'failed';
+        timestamp: string;
+        recipient_id: string;
+      }>;
+    };
+    field: string;
+  }>;
 }
 
-interface EvolutionWebhookPayload {
-  event: string;
-  instance: string;
-  data: EvolutionMessage;
+interface MetaWebhookPayload {
+  object: string;
+  entry: MetaWebhookEntry[];
 }
 
 // Detecta se é um chat de grupo (IDs terminam com @g.us ou começam com 120363)
@@ -973,11 +988,9 @@ interface MessageContentResult {
   quotedMessage?: QuotedMessageData;
 }
 
-function getMessageContent(
-  payload: WAHAMessage | EvolutionMessage,
-  provider: 'waha' | 'evolution'
-): MessageContentResult {
-  if (provider === 'waha') {
+function getMessageContent(payload: WAHAMessage, provider: 'waha' | 'meta'): MessageContentResult {
+  // Para Meta, o payload já vem convertido para WAHAMessage no handler principal
+  if (provider === 'waha' || provider === 'meta') {
     const msg = payload as WAHAMessage & { _data?: any };
 
     // Verificar se é notificação do sistema
@@ -1190,79 +1203,6 @@ function getMessageContent(
       mediaUrl: extractedMediaUrl,
       quotedMessage,
     };
-  } else {
-    const msg = payload as EvolutionMessage;
-    const message = msg.message;
-
-    if (!message) {
-      return { content: '[Mensagem vazia]', type: 'text' };
-    }
-
-    // Para Evolution, extrair quoted do contextInfo (usando any para flexibilidade de tipos)
-    let quotedMessage: QuotedMessageData | undefined;
-    const msgAny = message as any;
-    const contextInfo =
-      msgAny.extendedTextMessage?.contextInfo ||
-      msgAny.imageMessage?.contextInfo ||
-      msgAny.audioMessage?.contextInfo ||
-      msgAny.videoMessage?.contextInfo ||
-      msgAny.documentMessage?.contextInfo;
-
-    if (contextInfo?.quotedMessage) {
-      const quoted = contextInfo.quotedMessage;
-      quotedMessage = {
-        id: contextInfo.stanzaId || '',
-        body: quoted.conversation || quoted.extendedTextMessage?.text || '[Mídia]',
-        from: contextInfo.participant || '',
-        type: 'text',
-      };
-    }
-
-    if (message.conversation) {
-      return { content: message.conversation, type: 'text', quotedMessage };
-    }
-
-    if (message.extendedTextMessage?.text) {
-      return { content: message.extendedTextMessage.text, type: 'text', quotedMessage };
-    }
-
-    if (message.imageMessage) {
-      return {
-        content: message.imageMessage.caption || '[Imagem]',
-        type: 'image',
-        mediaUrl: message.imageMessage.url,
-        quotedMessage,
-      };
-    }
-
-    if (message.audioMessage) {
-      return {
-        content: '[Áudio]',
-        type: 'audio',
-        mediaUrl: message.audioMessage.url,
-        quotedMessage,
-      };
-    }
-
-    if (message.videoMessage) {
-      return {
-        content: message.videoMessage.caption || '[Vídeo]',
-        type: 'video',
-        mediaUrl: message.videoMessage.url,
-        quotedMessage,
-      };
-    }
-
-    if (message.documentMessage) {
-      return {
-        content: message.documentMessage.fileName || '[Documento]',
-        type: 'document',
-        mediaUrl: message.documentMessage.url,
-        quotedMessage,
-      };
-    }
-
-    return { content: '[Mensagem não suportada]', type: 'text' };
   }
 }
 
@@ -1391,9 +1331,9 @@ serve(async (req) => {
     console.log('[whatsapp-webhook] Recebido:', JSON.stringify(body).substring(0, 1000));
 
     // Detectar provider pelo formato do payload
-    let provider: 'waha' | 'evolution' = 'waha';
+    let provider: 'waha' | 'meta' = 'waha';
     let event = '';
-    let messageData: WAHAMessage | EvolutionMessage | null = null;
+    let messageData: WAHAMessage | null = null;
     let senderPhone = '';
     let senderName = '';
     let isFromMe = false;
@@ -2074,78 +2014,115 @@ serve(async (req) => {
         );
       }
     }
-    // Evolution API format
-    else if (body.event && body.instance !== undefined) {
-      provider = 'evolution';
-      event = body.event;
+    // Meta Cloud API format (webhook verification e messages)
+    else if (body.object === 'whatsapp_business_account' && body.entry) {
+      provider = 'meta';
 
-      // ========== Evolution: Evento de status update ==========
-      if (event === 'messages.update') {
-        const payload = body.data || {};
-        const messageId = payload.key?.id || payload.id;
-        const status = payload.update?.status || payload.status;
+      // Processar cada entry do webhook Meta
+      for (const entry of body.entry as MetaWebhookEntry[]) {
+        for (const change of entry.changes) {
+          if (change.field !== 'messages') continue;
 
-        console.log('[whatsapp-webhook] Evolution status update:', { messageId, status });
+          const value = change.value;
 
-        let newStatus: 'delivered' | 'read' | null = null;
+          // ========== Meta: Status updates ==========
+          if (value.statuses && value.statuses.length > 0) {
+            for (const statusUpdate of value.statuses) {
+              const messageId = statusUpdate.id;
+              const status = statusUpdate.status;
 
-        // Evolution usa: 2 = delivered, 3 = read (ou strings equivalentes)
-        if (status === 2 || status === 'DELIVERY_ACK' || status === 'delivered') {
-          newStatus = 'delivered';
-        } else if (status === 3 || status === 'READ' || status === 'read') {
-          newStatus = 'read';
-        }
+              console.log('[whatsapp-webhook] Meta status update:', { messageId, status });
 
-        if (newStatus && messageId) {
-          const { error: updateError } = await supabase
-            .from('messages')
-            .update({ status: newStatus })
-            .eq('external_id', messageId);
+              let newStatus: 'delivered' | 'read' | null = null;
+              if (status === 'delivered') {
+                newStatus = 'delivered';
+              } else if (status === 'read') {
+                newStatus = 'read';
+              }
 
-          if (updateError) {
-            console.error('[whatsapp-webhook] Erro ao atualizar status Evolution:', updateError);
-          } else {
-            console.log(
-              '[whatsapp-webhook] Status Evolution atualizado para:',
-              newStatus,
-              'messageId:',
-              messageId
+              if (newStatus && messageId) {
+                const { error: updateError } = await supabase
+                  .from('messages')
+                  .update({ status: newStatus })
+                  .eq('external_id', messageId);
+
+                if (updateError) {
+                  console.error('[whatsapp-webhook] Erro ao atualizar status Meta:', updateError);
+                } else {
+                  console.log(
+                    '[whatsapp-webhook] Status Meta atualizado para:',
+                    newStatus,
+                    'messageId:',
+                    messageId
+                  );
+                }
+              }
+            }
+
+            return new Response(
+              JSON.stringify({ success: true, event: 'status_update', provider: 'meta' }),
+              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           }
-        }
 
-        return new Response(
-          JSON.stringify({ success: true, event: 'status_update', status: newStatus, messageId }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+          // ========== Meta: Mensagens recebidas ==========
+          if (value.messages && value.messages.length > 0) {
+            const metaMsg = value.messages[0];
+            const contact = value.contacts?.[0];
+
+            event = 'message';
+            externalMessageId = metaMsg.id;
+            senderPhone = normalizePhone(metaMsg.from);
+            senderName = contact?.profile?.name || '';
+            isFromMe = false; // Meta webhook só recebe mensagens inbound
+
+            // Converter para formato WAHAMessage para compatibilidade
+            let msgBody = '';
+            let msgType: 'chat' | 'image' | 'audio' | 'video' | 'document' | 'ptt' = 'chat';
+            let mediaUrl: string | undefined;
+
+            if (metaMsg.type === 'text' && metaMsg.text) {
+              msgBody = metaMsg.text.body;
+              msgType = 'chat';
+            } else if (metaMsg.type === 'image' && metaMsg.image) {
+              msgBody = metaMsg.image.caption || '';
+              msgType = 'image';
+              // Media URL precisa ser baixada via API Meta (media_id)
+            } else if (metaMsg.type === 'audio' && metaMsg.audio) {
+              msgType = 'audio';
+            } else if (metaMsg.type === 'video' && metaMsg.video) {
+              msgBody = metaMsg.video.caption || '';
+              msgType = 'video';
+            } else if (metaMsg.type === 'document' && metaMsg.document) {
+              msgBody = metaMsg.document.caption || '';
+              msgType = 'document';
+            }
+
+            messageData = {
+              id: metaMsg.id,
+              timestamp: parseInt(metaMsg.timestamp),
+              from: metaMsg.from,
+              to: value.metadata.phone_number_id,
+              body: msgBody,
+              hasMedia: ['image', 'audio', 'video', 'document'].includes(metaMsg.type),
+              mediaUrl,
+              type: msgType,
+              fromMe: false,
+              pushName: senderName,
+            };
+
+            console.log('[whatsapp-webhook] Meta mensagem recebida:', {
+              from: senderPhone,
+              name: senderName,
+              type: msgType,
+            });
+          }
+        }
       }
 
-      if (event === 'messages.upsert') {
-        const payload = body.data as EvolutionMessage;
-        const remoteJid = payload.key?.remoteJid || '';
-
-        // ========== FILTRO DE GRUPOS - Ignorar mensagens de grupos ==========
-        if (isGroupChat(remoteJid)) {
-          console.log('[whatsapp-webhook] Ignorando mensagem de grupo Evolution:', remoteJid);
-          return new Response(
-            JSON.stringify({ success: true, ignored: true, reason: 'group_message' }),
-            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        // Processar TODAS as mensagens - tanto inbound quanto outbound (Evolution)
-        isFromMe = payload.key?.fromMe || false;
-        console.log('[whatsapp-webhook] Evolution Mensagem fromMe:', isFromMe);
-
-        messageData = payload;
-        externalMessageId = payload.key?.id || '';
-        senderPhone = normalizePhone(remoteJid);
-        senderName = payload.pushName || '';
-        isFromMe = payload.key?.fromMe || false;
-      } else {
-        console.log('[whatsapp-webhook] Evento Evolution não processado:', event);
+      if (!messageData) {
         return new Response(
-          JSON.stringify({ success: true, ignored: true, reason: 'event not handled', event }),
+          JSON.stringify({ success: true, ignored: true, reason: 'no_messages_in_payload' }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -3109,24 +3086,15 @@ serve(async (req) => {
       console.log('[whatsapp-webhook] ⚠️ Upsert retornou null, buscando mensagem existente...');
       const { data: existingMsg } = await supabase
         .from('messages')
-        .select('id')
+        .select('*')
         .eq('waha_message_id', wahaMessageId)
         .maybeSingle();
 
       if (existingMsg) {
         console.log('[whatsapp-webhook] ✅ Mensagem existente encontrada:', existingMsg.id);
-        return new Response(
-          JSON.stringify({
-            success: true,
-            duplicate: true,
-            data: {
-              message_id: existingMsg.id,
-              conversation_id: conversation.id,
-              lead_id: lead.id,
-            },
-          }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        // Usar a mensagem existente para o dispatch
+        message = existingMsg;
+        // Não retornar aqui - continuar para disparar webhook
       }
     }
 
@@ -3136,6 +3104,49 @@ serve(async (req) => {
       'waha_message_id:',
       wahaMessageId
     );
+
+    // Disparar webhook para sistemas externos (N8N, Make, etc.) via dispatch-webhook
+    console.log(
+      '[whatsapp-webhook] 📋 message existe?',
+      !!message,
+      'ID:',
+      message?.id,
+      'direction:',
+      message?.direction
+    );
+    if (message) {
+      try {
+        // Determinar evento baseado na direção
+        const webhookEvent = message.direction === 'inbound' ? 'message.received' : 'message.sent';
+        console.log('[whatsapp-webhook] 🔔 Disparando webhook:', webhookEvent);
+
+        // Chamar dispatch-webhook via fetch (tem payload completo com todas as infos)
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const dispatchResponse = await fetch(`${supabaseUrl}/functions/v1/dispatch-webhook`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event: webhookEvent,
+            data: {
+              message: message,
+              lead: lead,
+              conversation: conversation,
+            },
+          }),
+        });
+
+        const dispatchResult = await dispatchResponse.text();
+        console.log(
+          '[whatsapp-webhook] ✅ dispatch-webhook respondeu:',
+          dispatchResponse.status,
+          dispatchResult.substring(0, 150)
+        );
+      } catch (webhookError) {
+        console.error('[whatsapp-webhook] ⚠️ Erro ao disparar webhook:', webhookError);
+      }
+    } else {
+      console.log('[whatsapp-webhook] ⏭️ message é null, pulando dispatch');
+    }
 
     // Notificações de mensagens removidas - o sino é reservado para eventos importantes
     // Alertas de novas mensagens são tratados via toast/som no frontend (useInboxRealtime)

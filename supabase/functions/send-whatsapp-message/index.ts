@@ -1,5 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { debug, debugError, debugInfo } from '../_shared/debug.ts';
+
+const PREFIX = 'send-whatsapp-message';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,10 +19,13 @@ interface SendMessagePayload {
 
 interface WhatsAppConfig {
   id: string;
-  provider: 'waha' | 'evolution' | 'z-api' | 'custom';
+  provider: 'waha' | 'meta';
   base_url: string;
   api_key: string;
   instance_name: string | null;
+  // Meta Cloud API specific
+  phone_number_id?: string;
+  business_account_id?: string;
 }
 
 // Normaliza URL removendo barras finais
@@ -45,12 +51,18 @@ function getCleanCaption(message: string | undefined | null): string | undefined
 // Gera preview do conteúdo da mensagem para exibição na lista
 function getMessagePreview(content: string, type: string): string {
   switch (type) {
-    case 'image': return '📷 Imagem';
-    case 'audio': return '🎵 Áudio';
-    case 'video': return '🎬 Vídeo';
-    case 'document': return '📄 Documento';
-    case 'sticker': return '🏷️ Figurinha';
-    default: return content?.substring(0, 100) || '';
+    case 'image':
+      return '📷 Imagem';
+    case 'audio':
+      return '🎵 Áudio';
+    case 'video':
+      return '🎬 Vídeo';
+    case 'document':
+      return '📄 Documento';
+    case 'sticker':
+      return '🏷️ Figurinha';
+    default:
+      return content?.substring(0, 100) || '';
   }
 }
 
@@ -69,7 +81,7 @@ async function resolveStorageUrl(
     return storageUrl;
   }
 
-  console.log('[send-whatsapp-message] Convertendo storage URL:', storageUrl);
+  debug(PREFIX, 'Convertendo storage URL:', storageUrl);
 
   // storage://bucket-name/path/to/file.ext
   const withoutProtocol = storageUrl.replace('storage://', '');
@@ -77,7 +89,7 @@ async function resolveStorageUrl(
   const path = pathParts.join('/');
 
   if (!bucket || !path) {
-    console.error('[send-whatsapp-message] URL storage:// malformada:', storageUrl);
+    debugError(PREFIX, 'URL storage:// malformada:', storageUrl);
     throw new Error(`URL de mídia inválida: ${storageUrl}`);
   }
 
@@ -85,16 +97,13 @@ async function resolveStorageUrl(
   const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, 3600); // 1 hora
 
   if (error || !data?.signedUrl) {
-    console.error('[send-whatsapp-message] Erro ao gerar signed URL:', error);
+    debugError(PREFIX, 'Erro ao gerar signed URL:', error);
     throw new Error(
       `Falha ao gerar URL pública para mídia: ${error?.message || 'erro desconhecido'}`
     );
   }
 
-  console.log(
-    '[send-whatsapp-message] Signed URL gerada:',
-    data.signedUrl.substring(0, 80) + '...'
-  );
+  debug(PREFIX, 'Signed URL gerada:', data.signedUrl.substring(0, 80) + '...');
   return data.signedUrl;
 }
 
@@ -364,7 +373,7 @@ async function wahaFetch(
 
   for (const authFormat of authFormats) {
     try {
-      console.log(`[WAHA] Tentando ${options.method || 'GET'} ${url} com ${authFormat.name}`);
+      debug('WAHA', `Tentando ${options.method || 'GET'} ${url} com ${authFormat.name}`);
 
       const mergedHeaders: Record<string, string> = {
         ...((options.headers as Record<string, string>) || {}),
@@ -376,16 +385,16 @@ async function wahaFetch(
         headers: mergedHeaders,
       });
 
-      console.log(`[WAHA] ${authFormat.name} - Status: ${response.status}`);
+      debug('WAHA', `${authFormat.name} - Status: ${response.status}`);
 
       if (response.ok || response.status !== 401) {
         return response;
       }
 
       lastResponse = response;
-      console.log(`[WAHA] ${authFormat.name} - Unauthorized, tentando próximo...`);
+      debug('WAHA', `${authFormat.name} - Unauthorized, tentando próximo...`);
     } catch (error: unknown) {
-      console.error(`[WAHA] ${authFormat.name} - Erro:`, error);
+      debugError('WAHA', `${authFormat.name} - Erro:`, error);
       lastError = error instanceof Error ? error : new Error(String(error));
     }
   }
@@ -410,16 +419,16 @@ async function getWahaContactChatId(
     const cleanPhone = phone.replace(/^\+/, '');
 
     const url = `${baseUrl}/api/contacts/check-exists?phone=${cleanPhone}&session=${session}`;
-    console.log('[WAHA] Verificando existência do número:', url);
+    debug('WAHA', 'Verificando existência do número:', url);
 
     const response = await wahaFetch(url, apiKey, { method: 'GET' });
     const responseText = await response.text();
-    console.log('[WAHA] check-exists resposta:', response.status, responseText);
+    debug('WAHA', 'check-exists resposta:', response.status, responseText);
 
     if (!response.ok) {
       // Se endpoint não existe (versão antiga WAHA), usar formato padrão @c.us
       if (response.status === 404) {
-        console.log('[WAHA] Endpoint check-exists não encontrado, usando formato @c.us padrão');
+        debug('WAHA', 'Endpoint check-exists não encontrado, usando formato @c.us padrão');
         return { exists: true, chatId: `${cleanPhone}@c.us` };
       }
       return { exists: false, error: `Erro ao verificar número: ${response.status}` };
@@ -429,7 +438,7 @@ async function getWahaContactChatId(
     // Resposta esperada: { "numberExists": true, "chatId": "5545988428644@c.us" }
     // ou para LID: { "numberExists": true, "chatId": "5545988428644@lid" }
 
-    console.log('[WAHA] Resultado check-exists:', data);
+    debug('WAHA', 'Resultado check-exists:', data);
 
     if (!data.numberExists) {
       return {
@@ -440,11 +449,11 @@ async function getWahaContactChatId(
 
     // Usar o chatId retornado pela API (pode ser @c.us ou @lid)
     const chatId = data.chatId || `${cleanPhone}@c.us`;
-    console.log('[WAHA] ChatId obtido:', chatId);
+    debug('WAHA', 'ChatId obtido:', chatId);
 
     return { exists: true, chatId };
   } catch (error) {
-    console.error('[WAHA] Erro ao verificar existência:', error);
+    debugError('WAHA', 'Erro ao verificar existência:', error);
     // Em caso de erro, tenta com formato padrão @c.us
     return { exists: true, chatId: `${phone}@c.us` };
   }
@@ -470,14 +479,14 @@ async function sendWAHA(
   // Se temos chatId cacheado, usar direto (evita chamada à API)
   if (cachedChatId) {
     chatId = cachedChatId;
-    console.log('[WAHA] Usando chatId cacheado:', chatId);
+    debug('WAHA', 'Usando chatId cacheado:', chatId);
   } else {
     // Verificar número e obter chatId correto ANTES de enviar
     // Isso resolve o problema "No LID for user" para números novos
     const checkResult = await getWahaContactChatId(baseUrl, config.api_key, session, phone);
 
     if (!checkResult.exists || !checkResult.chatId) {
-      console.log('[WAHA] Número não existe no WhatsApp:', checkResult.error);
+      debug('WAHA', 'Número não existe no WhatsApp:', checkResult.error);
       return {
         success: false,
         error: checkResult.error || 'Número não existe no WhatsApp',
@@ -485,7 +494,7 @@ async function sendWAHA(
     }
 
     chatId = checkResult.chatId;
-    console.log('[WAHA] ChatId obtido da API:', chatId);
+    debug('WAHA', 'ChatId obtido da API:', chatId);
   }
 
   let endpoint = '/api/sendText';
@@ -498,7 +507,7 @@ async function sendWAHA(
   // Adicionar reply_to se estiver respondendo uma mensagem
   if (replyToExternalId) {
     body.reply_to = replyToExternalId;
-    console.log('[WAHA] Enviando como reply para:', replyToExternalId);
+    debug('WAHA', 'Enviando como reply para:', replyToExternalId);
   }
 
   if (type === 'image' && mediaUrl) {
@@ -548,7 +557,7 @@ async function sendWAHA(
   }
 
   const url = `${baseUrl}${endpoint}`;
-  console.log('[WAHA] Enviando mensagem:', { url, chatId, session, type });
+  debug('WAHA', 'Enviando mensagem:', { url, chatId, session, type });
 
   try {
     const response = await wahaFetch(url, config.api_key, {
@@ -558,7 +567,7 @@ async function sendWAHA(
     });
 
     const responseText = await response.text();
-    console.log('[WAHA] Resposta:', response.status, responseText);
+    debug('WAHA', 'Resposta:', response.status, responseText);
 
     if (!response.ok) {
       try {
@@ -634,8 +643,9 @@ async function sendWAHA(
         messageId = data._data.id._serialized || data._data.id.id;
       }
 
-      console.log(
-        '[WAHA] MessageId extraído:',
+      debug(
+        'WAHA',
+        'MessageId extraído:',
         messageId,
         'raw:',
         JSON.stringify({ id: data.id?.id, serialized: data.id?._serialized })
@@ -646,177 +656,100 @@ async function sendWAHA(
       return { success: true, messageId: undefined, chatId };
     }
   } catch (error: unknown) {
-    console.error('[WAHA] Erro de request:', error);
+    debugError('WAHA', 'Erro de request:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Erro desconhecido' };
   }
 }
 
-async function sendEvolution(
+// ========== ENVIO VIA META CLOUD API ==========
+async function sendMeta(
   config: WhatsAppConfig,
   phone: string,
   message: string,
   type: string,
   mediaUrl?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const baseUrl = normalizeUrl(config.base_url);
-  const number = phone; // phone já está validado e normalizado
-  const instance = config.instance_name || 'default';
+  const phoneNumberId = config.phone_number_id;
+  const accessToken = config.api_key;
 
-  let endpoint = `/message/sendText/${instance}`;
-  let body: Record<string, unknown> = {
-    number,
-    text: message,
-  };
-
-  if (type === 'image' && mediaUrl) {
-    endpoint = `/message/sendMedia/${instance}`;
-    body = {
-      number,
-      mediatype: 'image',
-      media: mediaUrl,
-      caption: message,
-    };
-  } else if (type === 'audio' && mediaUrl) {
-    endpoint = `/message/sendWhatsAppAudio/${instance}`;
-    body = {
-      number,
-      audio: mediaUrl,
-    };
-  } else if (type === 'document' && mediaUrl) {
-    endpoint = `/message/sendMedia/${instance}`;
-    body = {
-      number,
-      mediatype: 'document',
-      media: mediaUrl,
-      caption: message,
-    };
+  if (!phoneNumberId) {
+    return { success: false, error: 'Meta Cloud API: phone_number_id não configurado' };
   }
 
   try {
-    console.log('[Evolution] Enviando mensagem:', { baseUrl, endpoint, number });
+    const endpoint = `https://graph.facebook.com/v18.0/${phoneNumberId}/messages`;
+    let body: Record<string, unknown>;
 
-    const response = await fetch(`${baseUrl}${endpoint}`, {
+    const cleanCaption = getCleanCaption(message);
+
+    if (type === 'text' || !mediaUrl) {
+      body = {
+        messaging_product: 'whatsapp',
+        to: phone,
+        type: 'text',
+        text: { body: message },
+      };
+    } else if (type === 'image') {
+      body = {
+        messaging_product: 'whatsapp',
+        to: phone,
+        type: 'image',
+        image: { link: mediaUrl, ...(cleanCaption && { caption: cleanCaption }) },
+      };
+    } else if (type === 'audio') {
+      body = {
+        messaging_product: 'whatsapp',
+        to: phone,
+        type: 'audio',
+        audio: { link: mediaUrl },
+      };
+    } else if (type === 'video') {
+      body = {
+        messaging_product: 'whatsapp',
+        to: phone,
+        type: 'video',
+        video: { link: mediaUrl, ...(cleanCaption && { caption: cleanCaption }) },
+      };
+    } else if (type === 'document') {
+      body = {
+        messaging_product: 'whatsapp',
+        to: phone,
+        type: 'document',
+        document: { link: mediaUrl, ...(cleanCaption && { caption: cleanCaption }) },
+      };
+    } else {
+      body = {
+        messaging_product: 'whatsapp',
+        to: phone,
+        type: 'text',
+        text: { body: message },
+      };
+    }
+
+    debug('Meta', `Enviando ${type} para ${phone}`);
+
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        apikey: config.api_key,
+        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(body),
     });
 
-    const data = await response.json();
-    console.log('[Evolution] Resposta:', response.status, JSON.stringify(data));
-
     if (!response.ok) {
-      return { success: false, error: data.message || `Erro ${response.status}` };
+      const errorText = await response.text();
+      debugError('Meta', 'Erro:', response.status, errorText);
+      return { success: false, error: `Meta Cloud API error: ${response.status}` };
     }
 
-    return { success: true, messageId: data.key?.id };
-  } catch (error: unknown) {
-    console.error('[Evolution] Erro de request:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Erro desconhecido' };
-  }
-}
+    const result = await response.json();
+    const messageId = result?.messages?.[0]?.id;
 
-async function sendZAPI(
-  config: WhatsAppConfig,
-  phone: string,
-  message: string,
-  type: string,
-  mediaUrl?: string
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const baseUrl = normalizeUrl(config.base_url);
-  const phoneNumber = phone; // phone já está validado e normalizado
-
-  let endpoint = '/send-text';
-  let body: Record<string, unknown> = {
-    phone: phoneNumber,
-    message: message,
-  };
-
-  if (type === 'image' && mediaUrl) {
-    endpoint = '/send-image';
-    body = {
-      phone: phoneNumber,
-      image: mediaUrl,
-      caption: message,
-    };
-  } else if (type === 'audio' && mediaUrl) {
-    endpoint = '/send-audio';
-    body = {
-      phone: phoneNumber,
-      audio: mediaUrl,
-    };
-  } else if (type === 'document' && mediaUrl) {
-    endpoint = '/send-document';
-    body = {
-      phone: phoneNumber,
-      document: mediaUrl,
-    };
-  }
-
-  try {
-    console.log('[Z-API] Enviando mensagem:', { baseUrl, endpoint, phone: phoneNumber });
-
-    const response = await fetch(`${baseUrl}${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Client-Token': config.api_key,
-      },
-      body: JSON.stringify(body),
-    });
-
-    const data = await response.json();
-    console.log('[Z-API] Resposta:', response.status, JSON.stringify(data));
-
-    if (!response.ok) {
-      return { success: false, error: data.message || `Erro ${response.status}` };
-    }
-
-    return { success: true, messageId: data.messageId };
-  } catch (error: unknown) {
-    console.error('[Z-API] Erro de request:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Erro desconhecido' };
-  }
-}
-
-async function sendCustom(
-  config: WhatsAppConfig,
-  phone: string,
-  message: string,
-  type: string,
-  mediaUrl?: string
-): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const baseUrl = normalizeUrl(config.base_url);
-
-  try {
-    console.log('[Custom] Enviando mensagem:', { baseUrl });
-
-    const response = await fetch(baseUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.api_key}`,
-      },
-      body: JSON.stringify({
-        phone,
-        message,
-        type: type || 'text',
-        media_url: mediaUrl,
-      }),
-    });
-
-    const data = await response.json();
-    console.log('[Custom] Resposta:', response.status, JSON.stringify(data));
-
-    if (!response.ok) {
-      return { success: false, error: data.message || `Erro ${response.status}` };
-    }
-
-    return { success: true, messageId: data.messageId || data.id };
-  } catch (error: unknown) {
-    console.error('[Custom] Erro de request:', error);
+    debug('Meta', 'Mensagem enviada:', messageId);
+    return { success: true, messageId };
+  } catch (error) {
+    debugError('Meta', 'Exception:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Erro desconhecido' };
   }
 }
@@ -858,21 +791,21 @@ serve(async (req) => {
       error: userError,
     } = await supabaseUser.auth.getUser();
     if (userError || !user) {
-      console.error('[send-whatsapp-message] User auth error:', userError);
+      debugError(PREFIX, 'User auth error:', userError);
       return new Response(JSON.stringify({ error: 'Usuário não autenticado' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('[send-whatsapp-message] User:', user.id);
+    debug(PREFIX, 'User:', user.id);
 
     // Use service role client for database operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse payload
     const payload: SendMessagePayload = await req.json();
-    console.log('[send-whatsapp-message] Payload:', {
+    debug(PREFIX, 'Payload:', {
       conversation_id: payload.conversation_id,
       content: payload.content?.substring(0, 50) + '...',
       type: payload.type,
@@ -929,7 +862,7 @@ serve(async (req) => {
       .single();
 
     if (convError || !conversation) {
-      console.error('[send-whatsapp-message] Conversation not found:', convError);
+      debugError(PREFIX, 'Conversation not found:', convError);
       return new Response(JSON.stringify({ error: 'Conversa não encontrada' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -948,8 +881,9 @@ serve(async (req) => {
     // Montar número completo com código do país
     const countryCode = (lead as LeadForTemplate).country_code || '55';
     const fullPhoneNumber = `${countryCode}${lead.phone.replace(/\D/g, '')}`;
-    console.log(
-      '[send-whatsapp-message] Lead:',
+    debug(
+      PREFIX,
+      'Lead:',
       lead.name,
       'Phone local:',
       lead.phone,
@@ -963,12 +897,7 @@ serve(async (req) => {
     if (countryCode === '55') {
       const phoneValidation = validateBrazilianPhone(lead.phone);
       if (!phoneValidation.valid) {
-        console.error(
-          '[send-whatsapp-message] Número brasileiro inválido:',
-          lead.phone,
-          '-',
-          phoneValidation.error
-        );
+        debugError(PREFIX, 'Número brasileiro inválido:', lead.phone, '-', phoneValidation.error);
         return new Response(
           JSON.stringify({
             error: `Número de telefone inválido: ${phoneValidation.error}`,
@@ -982,7 +911,7 @@ serve(async (req) => {
       // Para números internacionais, apenas verificar tamanho mínimo
       const digits = lead.phone.replace(/\D/g, '');
       if (digits.length < 8) {
-        console.error('[send-whatsapp-message] Número internacional muito curto:', lead.phone);
+        debugError(PREFIX, 'Número internacional muito curto:', lead.phone);
         return new Response(
           JSON.stringify({
             error: `Número de telefone muito curto (${digits.length} dígitos). Mínimo: 8 dígitos.`,
@@ -995,32 +924,24 @@ serve(async (req) => {
       }
     }
 
-    console.log(
-      '[send-whatsapp-message] Conversa whatsapp_instance_id:',
-      conversation.whatsapp_instance_id
-    );
+    debug(PREFIX, 'Conversa whatsapp_instance_id:', conversation.whatsapp_instance_id);
 
     // Get WhatsApp config - PRIORIZAR a instância específica da conversa
     let configQuery = supabase.from('whatsapp_config').select('*').eq('is_active', true);
 
     // Se a conversa tem uma instância específica, usar ela
     if (conversation.whatsapp_instance_id) {
-      console.log(
-        '[send-whatsapp-message] Usando instância específica da conversa:',
-        conversation.whatsapp_instance_id
-      );
+      debug(PREFIX, 'Usando instância específica da conversa:', conversation.whatsapp_instance_id);
       configQuery = configQuery.eq('id', conversation.whatsapp_instance_id);
     } else {
-      console.log(
-        '[send-whatsapp-message] Conversa sem instância específica, usando qualquer ativa'
-      );
+      debug(PREFIX, 'Conversa sem instância específica, usando qualquer ativa');
       configQuery = configQuery.limit(1);
     }
 
     const { data: configs, error: configError } = await configQuery;
 
     if (configError) {
-      console.error('[send-whatsapp-message] Config error:', configError);
+      debugError(PREFIX, 'Config error:', configError);
       return new Response(JSON.stringify({ error: 'Erro ao buscar configuração do WhatsApp' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1035,17 +956,12 @@ serve(async (req) => {
     }
 
     const config = configs[0] as WhatsAppConfig;
-    console.log(
-      '[send-whatsapp-message] Provider:',
-      config.provider,
-      'Instance:',
-      config.instance_name
-    );
+    debug(PREFIX, 'Provider:', config.provider, 'Instance:', config.instance_name);
 
     // Substitui variáveis de template no conteúdo da mensagem
     const messageContent = replaceTemplateVariables(payload.content, lead);
-    console.log('[send-whatsapp-message] Conteúdo original:', payload.content?.substring(0, 50));
-    console.log('[send-whatsapp-message] Conteúdo processado:', messageContent?.substring(0, 50));
+    debug(PREFIX, 'Conteúdo original:', payload.content?.substring(0, 50));
+    debug(PREFIX, 'Conteúdo processado:', messageContent?.substring(0, 50));
 
     // Send message based on provider (usando número já validado)
     const messageType = payload.type || 'text';
@@ -1056,7 +972,7 @@ serve(async (req) => {
     try {
       resolvedMediaUrl = await resolveStorageUrl(supabase, payload.media_url);
     } catch (urlError) {
-      console.error('[send-whatsapp-message] Erro ao resolver URL de mídia:', urlError);
+      debugError(PREFIX, 'Erro ao resolver URL de mídia:', urlError);
       return new Response(
         JSON.stringify({
           success: false,
@@ -1079,26 +995,8 @@ serve(async (req) => {
           payload.reply_to_external_id
         );
         break;
-      case 'evolution':
-        result = await sendEvolution(
-          config,
-          fullPhoneNumber,
-          messageContent,
-          messageType,
-          resolvedMediaUrl
-        );
-        break;
-      case 'z-api':
-        result = await sendZAPI(
-          config,
-          fullPhoneNumber,
-          messageContent,
-          messageType,
-          resolvedMediaUrl
-        );
-        break;
-      case 'custom':
-        result = await sendCustom(
+      case 'meta':
+        result = await sendMeta(
           config,
           fullPhoneNumber,
           messageContent,
@@ -1107,11 +1005,14 @@ serve(async (req) => {
         );
         break;
       default:
-        result = { success: false, error: 'Provider desconhecido' };
+        result = {
+          success: false,
+          error: `Provider não suportado: ${config.provider}. Use 'waha' ou 'meta'.`,
+        };
     }
 
     if (!result.success) {
-      console.error('[send-whatsapp-message] Falha ao enviar:', result.error);
+      debugError(PREFIX, 'Falha ao enviar:', result.error);
       // Importante: retornar 200 para evitar que o client trate como "erro de edge function" (422)
       // e possa exibir uma mensagem amigável via `data.success === false`.
       return new Response(
@@ -1122,7 +1023,7 @@ serve(async (req) => {
 
     // CACHE: Se obtivemos um chatId novo (não estava cacheado), salvar no banco
     if (config.provider === 'waha' && result.chatId && result.chatId !== lead.whatsapp_chat_id) {
-      console.log('[send-whatsapp-message] Atualizando cache de whatsapp_chat_id:', result.chatId);
+      debug(PREFIX, 'Atualizando cache de whatsapp_chat_id:', result.chatId);
       await supabase.from('leads').update({ whatsapp_chat_id: result.chatId }).eq('id', lead.id);
     }
 
@@ -1147,10 +1048,7 @@ serve(async (req) => {
     // Adicionar reply_to_external_id e buscar mensagem original para quoted_message
     if (payload.reply_to_external_id) {
       messageInsertData.reply_to_external_id = payload.reply_to_external_id;
-      console.log(
-        '[send-whatsapp-message] Salvando mensagem como reply para:',
-        payload.reply_to_external_id
-      );
+      debug(PREFIX, 'Salvando mensagem como reply para:', payload.reply_to_external_id);
 
       // Buscar mensagem original pelo external_id para popular quoted_message
       const { data: originalMessage, error: originalError } = await supabase
@@ -1186,10 +1084,11 @@ serve(async (req) => {
           type: originalMessage.type || 'text',
         };
 
-        console.log('[send-whatsapp-message] Quote populado:', messageInsertData.quoted_message);
+        debug(PREFIX, 'Quote populado:', messageInsertData.quoted_message);
       } else {
-        console.warn(
-          '[send-whatsapp-message] Mensagem original não encontrada para quote:',
+        debugError(
+          PREFIX,
+          'Mensagem original não encontrada para quote:',
           payload.reply_to_external_id,
           originalError
         );
@@ -1203,20 +1102,24 @@ serve(async (req) => {
       .single();
 
     if (messageError) {
-      console.error('[send-whatsapp-message] Erro ao salvar mensagem:', messageError);
+      debugError(PREFIX, 'Erro ao salvar mensagem:', messageError);
       // Mensagem foi enviada, mas não salva - ainda retorna sucesso
     }
 
     // Update conversation last_message_at and last_message_content
     // AUTO-ATRIBUIÇÃO: Se a conversa não tem atendente, atribuir ao usuário que está respondendo
     // Nota: messageType já definido na linha ~1051
-    const updateData: { last_message_at: string; last_message_content: string; assigned_to?: string } = {
+    const updateData: {
+      last_message_at: string;
+      last_message_content: string;
+      assigned_to?: string;
+    } = {
       last_message_at: new Date().toISOString(),
       last_message_content: getMessagePreview(payload.content, messageType),
     };
 
     if (!conversation.assigned_to) {
-      console.log('[send-whatsapp-message] Auto-atribuindo conversa ao usuário:', user.id);
+      debug(PREFIX, 'Auto-atribuindo conversa ao usuário:', user.id);
       updateData.assigned_to = user.id;
 
       // Atribuir lead também para manter sincronizado
@@ -1225,7 +1128,7 @@ serve(async (req) => {
 
     await supabase.from('conversations').update(updateData).eq('id', payload.conversation_id);
 
-    console.log('[send-whatsapp-message] Mensagem enviada com sucesso:', result.messageId);
+    debug(PREFIX, 'Mensagem enviada com sucesso:', result.messageId);
 
     return new Response(
       JSON.stringify({
@@ -1237,7 +1140,7 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: unknown) {
-    console.error('[send-whatsapp-message] Erro não tratado:', error);
+    debugError(PREFIX, 'Erro não tratado:', error);
     return new Response(
       JSON.stringify({ error: 'Ocorreu um erro ao processar sua solicitação.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

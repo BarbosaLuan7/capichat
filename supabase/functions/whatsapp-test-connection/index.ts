@@ -7,10 +7,11 @@ const corsHeaders = {
 };
 
 interface TestConnectionPayload {
-  provider: 'waha' | 'evolution' | 'z-api' | 'custom';
+  provider: 'waha' | 'meta';
   base_url: string;
   api_key: string;
   instance_name?: string;
+  phone_number_id?: string;
 }
 
 // Normaliza URL removendo barras finais
@@ -128,139 +129,48 @@ async function testWAHA(config: TestConnectionPayload): Promise<{
   };
 }
 
-async function testEvolution(
+// ========== TESTE VIA META CLOUD API ==========
+async function testMeta(
   config: TestConnectionPayload
 ): Promise<{ success: boolean; status?: string; phone?: string; error?: string }> {
-  const baseUrl = normalizeUrl(config.base_url);
-  const instanceName = config.instance_name || 'default';
+  const phoneNumberId = config.phone_number_id;
+  const accessToken = config.api_key;
 
-  try {
-    console.log('[Evolution] Testando conexão:', { baseUrl, instanceName });
-
-    const endpoint = `/instance/connectionState/${instanceName}`;
-    const response = await fetch(`${baseUrl}${endpoint}`, {
-      method: 'GET',
-      headers: {
-        apikey: config.api_key,
-      },
-    });
-
-    console.log('[Evolution] Status:', response.status);
-    const data = await response.json();
-    console.log('[Evolution] Resposta:', JSON.stringify(data));
-
-    if (!response.ok) {
-      return { success: false, error: data.message || `Erro ${response.status}` };
-    }
-
-    // Tenta obter info da instância
-    let phone = '';
-    try {
-      const infoResponse = await fetch(`${baseUrl}/instance/fetchInstances`, {
-        method: 'GET',
-        headers: { apikey: config.api_key },
-      });
-
-      if (infoResponse.ok) {
-        const instances = await infoResponse.json();
-        const instance = instances.find((i: { name: string }) => i.name === instanceName);
-        phone = instance?.ownerJid?.replace('@s.whatsapp.net', '') || '';
-      }
-    } catch (e) {
-      console.log('[Evolution] Erro ao buscar instâncias:', e);
-    }
-
-    return {
-      success: data.state === 'open',
-      status: data.state,
-      phone,
-      error: data.state !== 'open' ? 'Instância não está conectada' : undefined,
-    };
-  } catch (error: unknown) {
-    console.error('[Evolution] Erro de conexão:', error);
-    return {
-      success: false,
-      error: `Erro de conexão: ${error instanceof Error ? error.message : 'Unknown'}`,
-    };
+  if (!phoneNumberId) {
+    return { success: false, error: 'Meta Cloud API: phone_number_id não configurado' };
   }
-}
-
-async function testZAPI(
-  config: TestConnectionPayload
-): Promise<{ success: boolean; status?: string; phone?: string; error?: string }> {
-  const baseUrl = normalizeUrl(config.base_url);
 
   try {
-    console.log('[Z-API] Testando conexão:', { baseUrl });
+    console.log('[Meta] Testando conexão para phone_number_id:', phoneNumberId);
 
-    const response = await fetch(`${baseUrl}/status`, {
-      method: 'GET',
-      headers: {
-        'Client-Token': config.api_key,
-      },
-    });
-
-    console.log('[Z-API] Status:', response.status);
-    const data = await response.json();
-    console.log('[Z-API] Resposta:', JSON.stringify(data));
-
-    if (!response.ok) {
-      return { success: false, error: data.message || `Erro ${response.status}` };
-    }
-
-    return {
-      success: data.connected === true,
-      status: data.connected ? 'connected' : 'disconnected',
-      phone: data.phone,
-      error: !data.connected ? 'Instância não está conectada' : undefined,
-    };
-  } catch (error: unknown) {
-    console.error('[Z-API] Erro de conexão:', error);
-    return {
-      success: false,
-      error: `Erro de conexão: ${error instanceof Error ? error.message : 'Unknown'}`,
-    };
-  }
-}
-
-async function testCustom(
-  config: TestConnectionPayload
-): Promise<{ success: boolean; status?: string; phone?: string; error?: string }> {
-  const baseUrl = normalizeUrl(config.base_url);
-
-  try {
-    console.log('[Custom] Testando conexão:', { baseUrl });
-
-    // Tenta /health primeiro
-    let response = await fetch(`${baseUrl}/health`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${config.api_key}`,
-      },
-    });
-
-    console.log('[Custom] /health Status:', response.status);
-
-    if (!response.ok) {
-      // Tenta URL base
-      console.log('[Custom] Tentando URL base...');
-      response = await fetch(baseUrl, {
+    const response = await fetch(
+      `https://graph.facebook.com/v18.0/${phoneNumberId}?fields=verified_name,display_phone_number`,
+      {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${config.api_key}`,
+          Authorization: `Bearer ${accessToken}`,
         },
-      });
-
-      console.log('[Custom] Base URL Status:', response.status);
-
-      if (!response.ok) {
-        return { success: false, error: `Servidor respondeu com status ${response.status}` };
       }
+    );
+
+    console.log('[Meta] Status:', response.status);
+    const data = await response.json();
+    console.log('[Meta] Resposta:', JSON.stringify(data));
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.error?.message || `Erro ${response.status}`,
+      };
     }
 
-    return { success: true, status: 'connected' };
+    return {
+      success: true,
+      status: 'connected',
+      phone: data.display_phone_number || data.verified_name,
+    };
   } catch (error: unknown) {
-    console.error('[Custom] Erro de conexão:', error);
+    console.error('[Meta] Erro de conexão:', error);
     return {
       success: false,
       error: `Erro de conexão: ${error instanceof Error ? error.message : 'Unknown'}`,
@@ -327,17 +237,14 @@ serve(async (req) => {
       case 'waha':
         result = await testWAHA(payload);
         break;
-      case 'evolution':
-        result = await testEvolution(payload);
-        break;
-      case 'z-api':
-        result = await testZAPI(payload);
-        break;
-      case 'custom':
-        result = await testCustom(payload);
+      case 'meta':
+        result = await testMeta(payload);
         break;
       default:
-        result = { success: false, error: 'Provider desconhecido' };
+        result = {
+          success: false,
+          error: `Provider não suportado: ${payload.provider}. Use 'waha' ou 'meta'.`,
+        };
     }
 
     console.log('[whatsapp-test-connection] Resultado:', JSON.stringify(result));

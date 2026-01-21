@@ -6,11 +6,13 @@ import { toast } from 'sonner';
 export interface WhatsAppConfig {
   id: string;
   name: string;
-  provider: 'waha' | 'evolution' | 'z-api' | 'custom';
+  provider: 'waha' | 'meta';
   base_url: string;
   api_key_masked: string | null; // Shows only last 4 chars
   instance_name: string | null;
   phone_number: string | null;
+  phone_number_id?: string | null; // Meta Cloud API
+  business_account_id?: string | null; // Meta Cloud API
   is_active: boolean;
   has_webhook_secret: boolean;
   created_by: string | null;
@@ -21,11 +23,13 @@ export interface WhatsAppConfig {
 
 export interface WhatsAppConfigInsert {
   name: string;
-  provider: 'waha' | 'evolution' | 'z-api' | 'custom';
+  provider: 'waha' | 'meta';
   base_url: string;
   api_key: string;
   instance_name?: string;
   phone_number?: string;
+  phone_number_id?: string; // Meta Cloud API
+  business_account_id?: string; // Meta Cloud API
   is_active?: boolean;
 }
 
