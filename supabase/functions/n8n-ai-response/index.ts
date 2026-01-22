@@ -1,13 +1,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { debug, debugError } from '../_shared/debug.ts';
+import { corsHeaders } from '../_shared/types.ts';
+import { normalizeUrl } from '../_shared/url.ts';
 
 const PREFIX = 'n8n-ai-response';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-api-key',
-};
 
 // ========== TIPOS ==========
 interface N8NPayload {
@@ -46,10 +43,6 @@ interface WhatsAppConfig {
 // ========== HELPERS ==========
 function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, '');
-}
-
-function normalizeUrl(url: string): string {
-  return url.endsWith('/') ? url.slice(0, -1) : url;
 }
 
 function safeErrorResponse(

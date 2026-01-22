@@ -1,69 +1,12 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from '../_shared/types.ts';
+import { normalizeUrl } from '../_shared/url.ts';
+import { wahaFetch } from '../_shared/waha-client.ts';
 
 interface TestMessagePayload {
   whatsapp_instance_id: string;
   phone: string;
-}
-
-// Normaliza URL removendo barras finais
-function normalizeUrl(url: string): string {
-  return url.replace(/\/+$/, '');
-}
-
-// Tenta fazer request com múltiplos formatos de auth para WAHA
-async function wahaFetch(
-  url: string,
-  apiKey: string,
-  options: RequestInit = {}
-): Promise<Response> {
-  const authFormats: Array<{ name: string; headers: Record<string, string> }> = [
-    { name: 'X-Api-Key', headers: { 'X-Api-Key': apiKey } },
-    { name: 'Bearer', headers: { Authorization: `Bearer ${apiKey}` } },
-    { name: 'ApiKey (sem Bearer)', headers: { Authorization: apiKey } },
-  ];
-
-  let lastResponse: Response | null = null;
-  let lastError: Error | null = null;
-
-  for (const authFormat of authFormats) {
-    try {
-      console.log(`[WAHA] Tentando ${options.method || 'GET'} ${url} com ${authFormat.name}`);
-
-      const mergedHeaders: Record<string, string> = {
-        ...((options.headers as Record<string, string>) || {}),
-        ...authFormat.headers,
-      };
-
-      const response = await fetch(url, {
-        ...options,
-        headers: mergedHeaders,
-      });
-
-      console.log(`[WAHA] ${authFormat.name} - Status: ${response.status}`);
-
-      if (response.ok || response.status !== 401) {
-        return response;
-      }
-
-      lastResponse = response;
-      console.log(`[WAHA] ${authFormat.name} - Unauthorized, tentando próximo...`);
-    } catch (error: unknown) {
-      console.error(`[WAHA] ${authFormat.name} - Erro:`, error);
-      lastError = error instanceof Error ? error : new Error(String(error));
-    }
-  }
-
-  if (lastResponse) {
-    return lastResponse;
-  }
-
-  throw lastError || new Error('Todos os formatos de autenticação falharam');
 }
 
 // Interface para config do WhatsApp

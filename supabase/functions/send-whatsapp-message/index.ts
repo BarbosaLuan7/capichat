@@ -1,13 +1,12 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { debug, debugError, debugInfo } from '../_shared/debug.ts';
+import { debug, debugError } from '../_shared/debug.ts';
+import { corsHeaders } from '../_shared/types.ts';
+import { normalizeUrl } from '../_shared/url.ts';
+import { validateBrazilianPhone } from '../_shared/phone.ts';
+import { wahaFetch, getWahaContactChatId } from '../_shared/waha-client.ts';
 
 const PREFIX = 'send-whatsapp-message';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
 
 interface SendMessagePayload {
   conversation_id: string;
@@ -26,11 +25,6 @@ interface WhatsAppConfig {
   // Meta Cloud API specific
   phone_number_id?: string;
   business_account_id?: string;
-}
-
-// Normaliza URL removendo barras finais
-function normalizeUrl(url: string): string {
-  return url.replace(/\/+$/, '');
 }
 
 // Helper para verificar se o texto é um placeholder de mídia
@@ -107,177 +101,6 @@ async function resolveStorageUrl(
   return data.signedUrl;
 }
 
-// DDDs válidos do Brasil (11-99, excluindo alguns inexistentes)
-const VALID_DDDS = new Set([
-  // Região Sudeste
-  11,
-  12,
-  13,
-  14,
-  15,
-  16,
-  17,
-  18,
-  19, // São Paulo
-  21,
-  22,
-  24, // Rio de Janeiro
-  27,
-  28, // Espírito Santo
-  31,
-  32,
-  33,
-  34,
-  35,
-  37,
-  38, // Minas Gerais
-  // Região Sul
-  41,
-  42,
-  43,
-  44,
-  45,
-  46, // Paraná
-  47,
-  48,
-  49, // Santa Catarina
-  51,
-  53,
-  54,
-  55, // Rio Grande do Sul
-  // Região Centro-Oeste
-  61, // Distrito Federal
-  62,
-  64, // Goiás
-  63, // Tocantins
-  65,
-  66, // Mato Grosso
-  67, // Mato Grosso do Sul
-  // Região Nordeste
-  71,
-  73,
-  74,
-  75,
-  77, // Bahia
-  79, // Sergipe
-  81,
-  87, // Pernambuco
-  82, // Alagoas
-  83, // Paraíba
-  84, // Rio Grande do Norte
-  85,
-  88, // Ceará
-  86,
-  89, // Piauí
-  // Região Norte
-  91,
-  93,
-  94, // Pará
-  92,
-  97, // Amazonas
-  95, // Roraima
-  96, // Amapá
-  98,
-  99, // Maranhão
-  69, // Rondônia
-  68, // Acre
-]);
-
-// Valida telefone brasileiro e retorna objeto com resultado
-interface PhoneValidation {
-  valid: boolean;
-  normalized?: string;
-  error?: string;
-}
-
-function validateBrazilianPhone(phone: string): PhoneValidation {
-  if (!phone || phone.trim() === '') {
-    return { valid: false, error: 'Número de telefone não informado' };
-  }
-
-  // Remove tudo que não é número
-  const numbers = phone.replace(/\D/g, '');
-
-  // Verifica tamanho mínimo (10 dígitos sem código país: DDD + 8 dígitos)
-  if (numbers.length < 10) {
-    return {
-      valid: false,
-      error: `Número de telefone muito curto (${numbers.length} dígitos). Formato esperado: (DDD) 9XXXX-XXXX`,
-    };
-  }
-
-  // Verifica tamanho máximo (13 dígitos com código país: 55 + DDD + 9 dígitos)
-  if (numbers.length > 13) {
-    return {
-      valid: false,
-      error: `Número de telefone muito longo (${numbers.length} dígitos). Verifique se há dígitos extras.`,
-    };
-  }
-
-  let ddd: number;
-  let phoneNumber: string;
-  let normalized: string;
-
-  // Determina formato baseado no tamanho
-  if (numbers.startsWith('55')) {
-    // Com código do país
-    if (numbers.length < 12 || numbers.length > 13) {
-      return {
-        valid: false,
-        error: 'Número com código 55 deve ter 12-13 dígitos (55 + DDD + número)',
-      };
-    }
-    ddd = parseInt(numbers.substring(2, 4));
-    phoneNumber = numbers.substring(4);
-    normalized = numbers;
-  } else {
-    // Sem código do país
-    if (numbers.length < 10 || numbers.length > 11) {
-      return {
-        valid: false,
-        error: 'Número sem código do país deve ter 10-11 dígitos (DDD + número)',
-      };
-    }
-    ddd = parseInt(numbers.substring(0, 2));
-    phoneNumber = numbers.substring(2);
-    normalized = '55' + numbers;
-  }
-
-  // Valida DDD
-  if (!VALID_DDDS.has(ddd)) {
-    return {
-      valid: false,
-      error: `DDD ${ddd} não é válido no Brasil. Verifique o código de área.`,
-    };
-  }
-
-  // Valida número (8 ou 9 dígitos)
-  if (phoneNumber.length < 8 || phoneNumber.length > 9) {
-    return {
-      valid: false,
-      error: `Número após DDD deve ter 8-9 dígitos, mas tem ${phoneNumber.length}`,
-    };
-  }
-
-  // Celulares brasileiros começam com 9
-  if (phoneNumber.length === 9 && !phoneNumber.startsWith('9')) {
-    return {
-      valid: false,
-      error: 'Celulares brasileiros com 9 dígitos devem começar com 9',
-    };
-  }
-
-  // Verifica se não são todos dígitos iguais (número inválido)
-  if (/^(\d)\1+$/.test(phoneNumber)) {
-    return {
-      valid: false,
-      error: 'Número de telefone inválido (todos os dígitos são iguais)',
-    };
-  }
-
-  return { valid: true, normalized };
-}
-
 // Interface para lead com campos de substituição
 interface LeadForTemplate {
   id: string;
@@ -347,116 +170,6 @@ function replaceTemplateVariables(content: string, lead: LeadForTemplate): strin
   result = result.replace(/\{data_nascimento\}/gi, formatDate(lead.birth_date));
 
   return result;
-}
-
-// Normaliza telefone para envio (adiciona código do país 55 se necessário)
-// DEPRECATED: Use validateBrazilianPhone instead
-function normalizePhoneForSending(phone: string): string {
-  const validation = validateBrazilianPhone(phone);
-  return validation.normalized || phone.replace(/\D/g, '');
-}
-
-// Tenta fazer request com múltiplos formatos de auth para WAHA
-async function wahaFetch(
-  url: string,
-  apiKey: string,
-  options: RequestInit = {}
-): Promise<Response> {
-  const authFormats: Array<{ name: string; headers: Record<string, string> }> = [
-    { name: 'X-Api-Key', headers: { 'X-Api-Key': apiKey } },
-    { name: 'Bearer', headers: { Authorization: `Bearer ${apiKey}` } },
-    { name: 'ApiKey (sem Bearer)', headers: { Authorization: apiKey } },
-  ];
-
-  let lastResponse: Response | null = null;
-  let lastError: Error | null = null;
-
-  for (const authFormat of authFormats) {
-    try {
-      debug('WAHA', `Tentando ${options.method || 'GET'} ${url} com ${authFormat.name}`);
-
-      const mergedHeaders: Record<string, string> = {
-        ...((options.headers as Record<string, string>) || {}),
-        ...authFormat.headers,
-      };
-
-      const response = await fetch(url, {
-        ...options,
-        headers: mergedHeaders,
-      });
-
-      debug('WAHA', `${authFormat.name} - Status: ${response.status}`);
-
-      if (response.ok || response.status !== 401) {
-        return response;
-      }
-
-      lastResponse = response;
-      debug('WAHA', `${authFormat.name} - Unauthorized, tentando próximo...`);
-    } catch (error: unknown) {
-      debugError('WAHA', `${authFormat.name} - Erro:`, error);
-      lastError = error instanceof Error ? error : new Error(String(error));
-    }
-  }
-
-  if (lastResponse) {
-    return lastResponse;
-  }
-
-  throw lastError || new Error('Todos os formatos de autenticação falharam');
-}
-
-// Verifica se um número existe no WhatsApp e obtém o chatId correto
-// Isso resolve o problema "No LID for user" para números novos
-async function getWahaContactChatId(
-  baseUrl: string,
-  apiKey: string,
-  session: string,
-  phone: string
-): Promise<{ exists: boolean; chatId?: string; error?: string }> {
-  try {
-    // Remove o + se existir e garante formato limpo
-    const cleanPhone = phone.replace(/^\+/, '');
-
-    const url = `${baseUrl}/api/contacts/check-exists?phone=${cleanPhone}&session=${session}`;
-    debug('WAHA', 'Verificando existência do número:', url);
-
-    const response = await wahaFetch(url, apiKey, { method: 'GET' });
-    const responseText = await response.text();
-    debug('WAHA', 'check-exists resposta:', response.status, responseText);
-
-    if (!response.ok) {
-      // Se endpoint não existe (versão antiga WAHA), usar formato padrão @c.us
-      if (response.status === 404) {
-        debug('WAHA', 'Endpoint check-exists não encontrado, usando formato @c.us padrão');
-        return { exists: true, chatId: `${cleanPhone}@c.us` };
-      }
-      return { exists: false, error: `Erro ao verificar número: ${response.status}` };
-    }
-
-    const data = JSON.parse(responseText);
-    // Resposta esperada: { "numberExists": true, "chatId": "5545988428644@c.us" }
-    // ou para LID: { "numberExists": true, "chatId": "5545988428644@lid" }
-
-    debug('WAHA', 'Resultado check-exists:', data);
-
-    if (!data.numberExists) {
-      return {
-        exists: false,
-        error: 'Este número não está registrado no WhatsApp. Verifique se o número está correto.',
-      };
-    }
-
-    // Usar o chatId retornado pela API (pode ser @c.us ou @lid)
-    const chatId = data.chatId || `${cleanPhone}@c.us`;
-    debug('WAHA', 'ChatId obtido:', chatId);
-
-    return { exists: true, chatId };
-  } catch (error) {
-    debugError('WAHA', 'Erro ao verificar existência:', error);
-    // Em caso de erro, tenta com formato padrão @c.us
-    return { exists: true, chatId: `${phone}@c.us` };
-  }
 }
 
 // Provider-specific message sending functions
