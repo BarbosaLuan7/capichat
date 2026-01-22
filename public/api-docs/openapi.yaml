@@ -96,6 +96,8 @@ tags:
     description: Agrupamento de contatos
   - name: Webhooks
     description: Configuração de webhooks
+  - name: Automação
+    description: Integração com N8N, Make, Zapier e sistemas de IA
   - name: Arquivos
     description: Upload de arquivos
   - name: Conversas
@@ -1483,6 +1485,149 @@ paths:
                   unread_count: 1
                   is_new: true
                   nova: true
+
+  # ============================================================================
+  # N8N / AUTOMAÇÃO - RESPOSTA DA IA
+  # ============================================================================
+  /n8n-ai-response:
+    post:
+      tags: [Automação]
+      summary: Enviar resposta da IA (N8N)
+      operationId: enviarRespostaIA
+      description: |
+        Endpoint para sistemas de automação (N8N, Make, Zapier) enviarem respostas
+        processadas por IA de volta ao WhatsApp.
+
+        **Fluxo típico:**
+        1. Capichat recebe mensagem do cliente
+        2. Dispara webhook `message.received` para N8N
+        3. N8N processa com IA (GPT, Claude, etc.)
+        4. N8N chama este endpoint para enviar resposta
+        5. Capichat envia via WhatsApp
+
+        **Recursos:**
+        - Envia mensagem via WhatsApp (Evolution API, WAHA, Z-API)
+        - Atualiza dados do lead automaticamente (nome, temperatura, CPF, etc.)
+        - Salva mensagem no histórico da conversa
+        - Suporta texto, imagem, áudio, documento
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+                - message
+              properties:
+                phone:
+                  type: string
+                  description: Número do destinatário (com ou sem código do país)
+                  example: "5511999990001"
+                message:
+                  type: string
+                  description: Conteúdo da mensagem a enviar
+                  example: "*Marina - GaranteDireito*\n\nOlá! Como posso ajudar você hoje?"
+                type:
+                  type: string
+                  enum: [text, image, audio, video, document]
+                  default: text
+                  description: Tipo de mensagem
+                media_url:
+                  type: string
+                  format: uri
+                  description: URL da mídia (obrigatório para tipos não-texto)
+                lead_id:
+                  type: string
+                  format: uuid
+                  description: ID do lead (opcional, detectado automaticamente pelo telefone)
+                conversation_id:
+                  type: string
+                  format: uuid
+                  description: ID da conversa (opcional, detectado automaticamente)
+                lead_data:
+                  type: object
+                  description: Dados para atualizar no lead
+                  properties:
+                    name:
+                      type: string
+                      description: Nome do lead
+                    temperature:
+                      type: string
+                      enum: [cold, warm, hot]
+                      description: Temperatura/qualificação
+                    benefit_type:
+                      type: string
+                      description: Tipo de benefício (BPC-LOAS, Aposentadoria, etc.)
+                    estimated_value:
+                      type: number
+                      description: Valor estimado do caso
+                    cpf:
+                      type: string
+                      description: CPF do lead
+                    notes:
+                      type: string
+                      description: Observações internas
+                    stage_id:
+                      type: string
+                      format: uuid
+                      description: ID da etapa do funil
+                    custom_fields:
+                      type: object
+                      description: Campos personalizados
+            example:
+              phone: "5511999990001"
+              message: "*Marina - GaranteDireito*\n\nEntendi! Você está buscando o BPC-LOAS. Vou precisar de algumas informações para analisar seu caso."
+              type: "text"
+              lead_data:
+                name: "Maria Silva"
+                temperature: "warm"
+                benefit_type: "BPC-LOAS"
+                cpf: "12345678900"
+      responses:
+        "200":
+          description: Mensagem enviada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message_id:
+                    type: string
+                    format: uuid
+                    description: ID da mensagem salva no banco
+                  whatsapp_message_id:
+                    type: string
+                    description: ID da mensagem no WhatsApp
+                  lead_id:
+                    type: string
+                    format: uuid
+                  conversation_id:
+                    type: string
+                    format: uuid
+              example:
+                success: true
+                message_id: "uuid-da-mensagem"
+                whatsapp_message_id: "3EB0ABC123456789"
+                lead_id: "uuid-do-lead"
+                conversation_id: "uuid-da-conversa"
+        "400":
+          description: Requisição inválida
+          content:
+            application/json:
+              example:
+                success: false
+                error: "phone is required"
+        "401":
+          description: API key inválida ou ausente
+          content:
+            application/json:
+              example:
+                success: false
+                error: "Invalid API key"
 
   # ============================================================================
   # MENSAGENS - BUSCA
