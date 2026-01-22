@@ -1,11 +1,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { callGemini } from '../_shared/gemini.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -14,10 +13,6 @@ serve(async (req) => {
 
   try {
     const { messages, lead, templates } = await req.json();
-
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
-    }
 
     console.log('Generating AI reply suggestions for lead:', lead?.name);
     console.log('Messages count:', messages?.length);
@@ -60,96 +55,68 @@ ${conversationContext}
 
 Sugira 3 respostas curtas e úteis que o atendente pode enviar agora.`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        tools: [
-          {
-            type: 'function',
-            function: {
-              name: 'suggest_replies',
-              description: 'Retorna 3 sugestões de resposta para o atendente',
-              parameters: {
-                type: 'object',
-                properties: {
-                  suggestions: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        text: { type: 'string', description: 'Texto da resposta sugerida' },
-                        intent: {
-                          type: 'string',
-                          description: 'Intenção da resposta (greeting, info, action, closing)',
-                        },
+    const result = await callGemini({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      tools: [
+        {
+          type: 'function',
+          function: {
+            name: 'suggest_replies',
+            description: 'Retorna 3 sugestões de resposta para o atendente',
+            parameters: {
+              type: 'object',
+              properties: {
+                suggestions: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      text: { type: 'string', description: 'Texto da resposta sugerida' },
+                      intent: {
+                        type: 'string',
+                        description: 'Intenção da resposta (greeting, info, action, closing)',
                       },
-                      required: ['text', 'intent'],
                     },
-                    minItems: 3,
-                    maxItems: 3,
+                    required: ['text', 'intent'],
                   },
+                  minItems: 3,
+                  maxItems: 3,
                 },
-                required: ['suggestions'],
               },
+              required: ['suggestions'],
             },
           },
-        ],
-        tool_choice: { type: 'function', function: { name: 'suggest_replies' } },
-      }),
+        },
+      ],
+      toolChoice: { type: 'function', function: { name: 'suggest_replies' } },
     });
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        console.error('Rate limit exceeded');
+    if (!result.success) {
+      console.error('Gemini error:', result.error);
+
+      if (result.error?.includes('Rate limit')) {
         return new Response(
           JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
-          {
-            status: 429,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          }
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      if (response.status === 402) {
-        console.error('Payment required');
-        return new Response(
-          JSON.stringify({ error: 'AI credits exhausted. Please add more credits.' }),
-          {
-            status: 402,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          }
-        );
-      }
-      const errorText = await response.text();
-      console.error('AI gateway error:', response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+
+      throw new Error(result.error || 'AI error');
     }
 
-    const data = await response.json();
-    console.log('AI response received');
-
-    // Extract the tool call result
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (toolCall?.function?.arguments) {
-      const suggestions = JSON.parse(toolCall.function.arguments);
-      console.log('Suggestions generated:', suggestions.suggestions?.length);
-      return new Response(JSON.stringify(suggestions), {
+    // Extract function call result
+    if (result.functionCall?.arguments) {
+      console.log('Suggestions generated:', result.functionCall.arguments);
+      return new Response(JSON.stringify(result.functionCall.arguments), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Fallback: parse from content if tool call not present
-    const content = data.choices?.[0]?.message?.content || '';
-    console.log('Fallback: parsing from content');
-
+    // Fallback
+    console.log('Fallback: using default suggestions');
     return new Response(
       JSON.stringify({
         suggestions: [
@@ -158,9 +125,7 @@ Sugira 3 respostas curtas e úteis que o atendente pode enviar agora.`;
           { text: 'Pode me enviar os documentos necessários?', intent: 'action' },
         ],
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: unknown) {
     console.error('Error in ai-suggest-replies:', error);

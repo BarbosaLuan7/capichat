@@ -1,11 +1,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { callGemini } from '../_shared/gemini.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -14,10 +13,6 @@ serve(async (req) => {
 
   try {
     const { messages, lead, availableLabels } = await req.json();
-
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
-    }
 
     console.log('Classifying lead:', lead?.name);
     console.log('Messages count:', messages?.length);
@@ -76,100 +71,74 @@ Dados atuais do lead:
 
 Analise e sugira classificações.`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        tools: [
-          {
-            type: 'function',
-            function: {
-              name: 'classify_lead',
-              description: 'Classifica o lead baseado na conversa',
-              parameters: {
-                type: 'object',
-                properties: {
-                  suggestedBenefit: {
-                    type: 'string',
-                    description: 'Tipo de benefício provável (ex: BPC Idoso, Aposentadoria, etc)',
-                  },
-                  suggestedTemperature: {
-                    type: 'string',
-                    enum: ['cold', 'warm', 'hot'],
-                    description: 'Temperatura sugerida baseada no interesse demonstrado',
-                  },
-                  suggestedLabels: {
-                    type: 'array',
-                    items: { type: 'string' },
-                    description: 'Nomes das etiquetas sugeridas (das disponíveis)',
-                  },
-                  healthConditions: {
-                    type: 'array',
-                    items: { type: 'string' },
-                    description: 'Condições de saúde mencionadas',
-                  },
-                  reasoning: {
-                    type: 'string',
-                    description: 'Breve justificativa das sugestões (1-2 frases)',
-                  },
-                  confidence: {
-                    type: 'string',
-                    enum: ['low', 'medium', 'high'],
-                    description: 'Nível de confiança nas sugestões',
-                  },
+    const result = await callGemini({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      tools: [
+        {
+          type: 'function',
+          function: {
+            name: 'classify_lead',
+            description: 'Classifica o lead baseado na conversa',
+            parameters: {
+              type: 'object',
+              properties: {
+                suggestedBenefit: {
+                  type: 'string',
+                  description: 'Tipo de benefício provável (ex: BPC Idoso, Aposentadoria, etc)',
                 },
-                required: ['suggestedTemperature', 'suggestedLabels', 'reasoning', 'confidence'],
+                suggestedTemperature: {
+                  type: 'string',
+                  enum: ['cold', 'warm', 'hot'],
+                  description: 'Temperatura sugerida baseada no interesse demonstrado',
+                },
+                suggestedLabels: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Nomes das etiquetas sugeridas (das disponíveis)',
+                },
+                healthConditions: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Condições de saúde mencionadas',
+                },
+                reasoning: {
+                  type: 'string',
+                  description: 'Breve justificativa das sugestões (1-2 frases)',
+                },
+                confidence: {
+                  type: 'string',
+                  enum: ['low', 'medium', 'high'],
+                  description: 'Nível de confiança nas sugestões',
+                },
               },
+              required: ['suggestedTemperature', 'suggestedLabels', 'reasoning', 'confidence'],
             },
           },
-        ],
-        tool_choice: { type: 'function', function: { name: 'classify_lead' } },
-      }),
+        },
+      ],
+      toolChoice: { type: 'function', function: { name: 'classify_lead' } },
     });
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        console.error('Rate limit exceeded');
+    if (!result.success) {
+      console.error('Gemini error:', result.error);
+
+      if (result.error?.includes('Rate limit')) {
         return new Response(
           JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
-          {
-            status: 429,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          }
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      if (response.status === 402) {
-        console.error('Payment required');
-        return new Response(
-          JSON.stringify({ error: 'AI credits exhausted. Please add more credits.' }),
-          {
-            status: 402,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          }
-        );
-      }
-      const errorText = await response.text();
-      console.error('AI gateway error:', response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+
+      throw new Error(result.error || 'AI error');
     }
 
-    const data = await response.json();
-    console.log('AI classification received');
-
-    // Extract the tool call result
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (toolCall?.function?.arguments) {
-      const classification = JSON.parse(toolCall.function.arguments);
-      console.log('Classification:', classification);
-      return new Response(JSON.stringify(classification), {
+    // Extract function call result
+    if (result.functionCall?.arguments) {
+      console.log('Classification:', result.functionCall.arguments);
+      return new Response(JSON.stringify(result.functionCall.arguments), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -182,9 +151,7 @@ Analise e sugira classificações.`;
         reasoning: 'Não foi possível determinar classificação específica.',
         confidence: 'low',
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: unknown) {
     console.error('Error in ai-classify-lead:', error);

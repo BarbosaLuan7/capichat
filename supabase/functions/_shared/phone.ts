@@ -298,6 +298,59 @@ export function getPhoneWithCountryCode(
  * Valida telefone brasileiro e retorna objeto com resultado
  * Verifica: tamanho, DDD válido, formato correto
  */
+/**
+ * Gera variantes do número brasileiro para tentar envio no WhatsApp
+ * O WhatsApp pode ter o contato salvo com ou sem o nono dígito
+ *
+ * @param phone - Número normalizado (ex: 5545999957851)
+ * @returns Array com variantes para tentar [comNonoDigito, semNonoDigito]
+ */
+export function getBrazilianPhoneVariants(phone: string): string[] {
+  const digits = phone.replace(/\D/g, '');
+
+  // Se não é brasileiro, retorna só o original
+  if (!digits.startsWith('55')) {
+    return [digits];
+  }
+
+  const withoutCountry = digits.substring(2); // Remove 55
+  const ddd = withoutCountry.substring(0, 2);
+  const localNumber = withoutCountry.substring(2);
+
+  const variants: string[] = [];
+
+  // Caso 1: Número tem 9 dígitos (com nono dígito) - 55 + DDD + 9XXXXXXXX
+  if (localNumber.length === 9 && localNumber.startsWith('9')) {
+    // Variante COM nono dígito (original)
+    variants.push(`55${ddd}${localNumber}`);
+    // Variante SEM nono dígito (remove o primeiro 9)
+    variants.push(`55${ddd}${localNumber.substring(1)}`);
+  }
+  // Caso 2: Número tem 8 dígitos (sem nono dígito) - 55 + DDD + XXXXXXXX
+  else if (localNumber.length === 8) {
+    // Variante SEM nono dígito (original)
+    variants.push(`55${ddd}${localNumber}`);
+    // Variante COM nono dígito (adiciona 9 na frente)
+    variants.push(`55${ddd}9${localNumber}`);
+  }
+  // Outros casos: retorna original
+  else {
+    variants.push(digits);
+  }
+
+  return variants;
+}
+
+/**
+ * Formata número para chatId do WhatsApp
+ * @param phone - Número normalizado
+ * @returns chatId no formato XXXXXXXX@c.us
+ */
+export function formatWhatsAppChatId(phone: string): string {
+  const digits = phone.replace(/\D/g, '').replace('@c.us', '').replace('@lid', '');
+  return `${digits}@c.us`;
+}
+
 export function validateBrazilianPhone(phone: string): PhoneValidation {
   if (!phone || phone.trim() === '') {
     return { valid: false, normalized: '', error: 'Número de telefone não informado' };

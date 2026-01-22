@@ -1,77 +1,69 @@
-# Welcome to your Lovable project
+# CapiChat
 
-## Project info
+Sistema de atendimento via WhatsApp para a GaranteDireito - escritório especializado em Direito Previdenciário.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Stack
 
-## How can I edit this code?
+- **Frontend**: React 18 + Vite + TypeScript
+- **Backend**: Supabase (Auth, PostgreSQL, Realtime, Edge Functions)
+- **UI**: shadcn-ui + Tailwind CSS + Radix UI
+- **State**: TanStack React Query + Zustand
+- **IA**: Google Gemini (transcrição, sugestões, classificação)
 
-There are several ways of editing your application.
+## Desenvolvimento
 
-**Use Lovable**
+```bash
+# Instalar dependências
+npm install
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Rodar em desenvolvimento
 npm run dev
+
+# Build de produção
+npm run build
+
+# Lint
+npm run lint
+
+# Formatar código
+npm run format
+
+# Rodar testes
+npm test
 ```
 
-**Edit a file directly in GitHub**
+## Estrutura do Projeto
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```
+src/
+├── components/     # Componentes React
+│   ├── ui/         # Primitivos shadcn-ui
+│   ├── inbox/      # Tela de conversas
+│   ├── leads/      # Gestão de leads
+│   └── dashboard/  # Métricas
+├── contexts/       # AuthContext, TenantContext
+├── hooks/          # Custom hooks
+├── pages/          # Páginas lazy-loaded
+└── lib/            # Utilities
 
-**Use GitHub Codespaces**
+supabase/
+├── functions/      # Edge Functions
+│   ├── _shared/    # Módulos compartilhados (gemini, waha, etc)
+│   └── */          # Funções individuais
+└── migrations/     # Migrações SQL
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Funcionalidades
 
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- **Inbox**: Conversa em tempo real via WhatsApp (WAHA + Meta)
+- **Leads**: CRM com funil, etiquetas e temperatura
+- **IA**: Sugestões de resposta, transcrição de áudio, classificação automática
+- **Multi-tenancy**: Suporte a múltiplos escritórios
+- **RBAC**: Roles (admin, manager, agent, viewer)
 
 ## Acessibilidade
 
-O sistema segue as diretrizes WCAG 2.1 nível AA:
-
-### Recursos Implementados
-
-- **Navegação por teclado**: Todas as ações principais acessíveis via Tab/Enter/Espaço
-- **Leitores de tela**: Elementos com aria-labels apropriados
-- **Live regions**: Anúncio automático de novas mensagens
-- **Semântica correta**: `role="log"`, `role="listbox"`, `role="option"` aplicados
-
-### Atalhos de Teclado
+O sistema segue WCAG 2.1 nível AA:
 
 | Atalho        | Ação                       |
 | ------------- | -------------------------- |
@@ -82,21 +74,12 @@ O sistema segue as diretrizes WCAG 2.1 nível AA:
 | `Tab`         | Navegar entre elementos    |
 | `/`           | Abrir seletor de templates |
 
-### Testando Acessibilidade
+## Deploy
 
-1. Navegar usando apenas teclado
-2. Testar com VoiceOver (macOS/iOS) ou NVDA/JAWS (Windows)
-3. Verificar que anúncios de novas mensagens funcionam
-4. Validar contraste de cores (mínimo 4.5:1)
+```bash
+# Deploy das Edge Functions
+supabase functions deploy
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+# Push das migrações
+supabase db push
+```

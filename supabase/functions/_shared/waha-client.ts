@@ -8,6 +8,7 @@
 
 import { debug, debugError } from './debug.ts';
 import { normalizeUrl } from './url.ts';
+import { getBrazilianPhoneVariants } from './phone.ts';
 
 const PREFIX = 'waha-client';
 
@@ -112,30 +113,50 @@ export async function getWahaContactChatId(
     const cleanPhone = phone.replace(/^\+/, '').replace(/\D/g, '');
     const normalizedBaseUrl = normalizeUrl(baseUrl);
 
-    const url = `${normalizedBaseUrl}/api/contacts/check-exists?phone=${cleanPhone}&session=${session}`;
-    debug(PREFIX, 'Verificando existência do número:', url);
+    // Gera variantes do número brasileiro (com/sem nono dígito)
+    const phoneVariants = getBrazilianPhoneVariants(cleanPhone);
+    debug(PREFIX, `Variantes do número ${cleanPhone}:`, phoneVariants);
 
-    const response = await wahaFetch(url, apiKey, { method: 'GET' });
-    const responseText = await response.text();
-    debug(PREFIX, 'check-exists resposta:', response.status, responseText);
+    // Tenta cada variante até encontrar uma que existe no WhatsApp
+    for (const variant of phoneVariants) {
+      const url = `${normalizedBaseUrl}/api/contacts/check-exists?phone=${variant}&session=${session}`;
+      debug(PREFIX, `Verificando variante ${variant}:`, url);
 
-    if (!response.ok) {
-      return {
-        exists: false,
-        error: `API retornou ${response.status}: ${responseText}`,
-      };
+      const response = await wahaFetch(url, apiKey, { method: 'GET' });
+      const responseText = await response.text();
+      debug(PREFIX, `check-exists ${variant} resposta:`, response.status, responseText);
+
+      if (!response.ok) {
+        debug(
+          PREFIX,
+          `Variante ${variant} falhou com status ${response.status}, tentando próxima...`
+        );
+        continue;
+      }
+
+      const data = JSON.parse(responseText);
+
+      // Resposta pode ter diferentes formatos dependendo da versão do WAHA
+      const exists = data.numberExists || data.exists || data.isRegistered || false;
+
+      if (exists) {
+        const chatId = data.chatId || data.jid || data.id || `${variant}@c.us`;
+        debug(PREFIX, `Encontrado! Variante ${variant} existe no WhatsApp, chatId: ${chatId}`);
+        return {
+          exists: true,
+          chatId,
+        };
+      }
+
+      debug(PREFIX, `Variante ${variant} não existe no WhatsApp, tentando próxima...`);
     }
 
-    const data = JSON.parse(responseText);
-
-    // Resposta pode ter diferentes formatos dependendo da versão do WAHA
-    const exists = data.numberExists || data.exists || data.isRegistered || false;
-    const chatId =
-      data.chatId || data.jid || data.id || (exists ? `${cleanPhone}@c.us` : undefined);
-
+    // Nenhuma variante encontrada - retorna o número original como fallback
+    debug(PREFIX, `Nenhuma variante encontrada para ${cleanPhone}, usando original`);
     return {
-      exists,
-      chatId,
+      exists: false,
+      chatId: `${cleanPhone}@c.us`,
+      error: 'Número não encontrado no WhatsApp (tentadas todas as variantes brasileiras)',
     };
   } catch (error) {
     debugError(PREFIX, 'Erro ao verificar existência do número:', error);
