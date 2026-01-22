@@ -138,6 +138,29 @@ export function normalizePhone(phone: string): string {
 }
 
 /**
+ * Verifica se um número parece ser brasileiro local (sem código 55)
+ * Critérios: DDD válido + número local com formato correto
+ */
+function looksLikeBrazilianLocal(digits: string): boolean {
+  if (digits.length < 10 || digits.length > 11) return false;
+
+  const possibleDDD = parseInt(digits.substring(0, 2));
+  if (!VALID_DDDS.has(possibleDDD)) return false;
+
+  const localPart = digits.substring(2);
+  // Celular brasileiro: 9 dígitos começando com 9
+  // Fixo brasileiro: 8 dígitos começando com 2-5
+  if (localPart.length === 9) {
+    return localPart.startsWith('9'); // Celular deve começar com 9
+  }
+  if (localPart.length === 8) {
+    const firstDigit = parseInt(localPart[0]);
+    return firstDigit >= 2 && firstDigit <= 5; // Fixo começa com 2-5
+  }
+  return false;
+}
+
+/**
  * Detecta o código do país a partir de um número completo
  * @param phone - Número completo com código do país
  * @returns Objeto com countryCode, localNumber, fullNumber e country (se detectado)
@@ -145,12 +168,34 @@ export function normalizePhone(phone: string): string {
 export function parseInternationalPhone(phone: string): ParsedPhone {
   const digits = phone.replace(/\D/g, '');
 
+  // CASO ESPECIAL: Números brasileiros sem código 55
+  // Ex: 11987654321 (SP), 45988428644 (PR)
+  if (looksLikeBrazilianLocal(digits)) {
+    return {
+      countryCode: '55',
+      localNumber: digits,
+      fullNumber: `55${digits}`,
+      isValid: true,
+    };
+  }
+
   // Tentar detectar código do país conhecido
-  for (const { code, name } of COUNTRY_CODES) {
+  for (const { code } of COUNTRY_CODES) {
     if (digits.startsWith(code)) {
       const localNumber = digits.substring(code.length);
       // Verificar se o número local tem tamanho razoável (mínimo 8 dígitos)
       if (localNumber.length >= 8) {
+        // VALIDAÇÃO EXTRA: Se detectou EUA (1) mas parece número brasileiro, corrigir
+        // Ex: 11987654321 começa com 1, mas é brasileiro (DDD 11)
+        if (code === '1' && looksLikeBrazilianLocal(digits)) {
+          return {
+            countryCode: '55',
+            localNumber: digits,
+            fullNumber: `55${digits}`,
+            isValid: true,
+          };
+        }
+
         return {
           countryCode: code,
           localNumber,

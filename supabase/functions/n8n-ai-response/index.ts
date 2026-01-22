@@ -3,6 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { debug, debugError } from '../_shared/debug.ts';
 import { corsHeaders } from '../_shared/types.ts';
 import { normalizeUrl } from '../_shared/url.ts';
+import { normalizePhone } from '../_shared/phone.ts';
+import { wahaFetch } from '../_shared/waha-client.ts';
 
 const PREFIX = 'n8n-ai-response';
 
@@ -41,10 +43,6 @@ interface WhatsAppConfig {
 }
 
 // ========== HELPERS ==========
-function normalizePhone(phone: string): string {
-  return phone.replace(/\D/g, '');
-}
-
 function safeErrorResponse(
   internalError: unknown,
   publicMessage: string,
@@ -68,7 +66,8 @@ async function sendWaha(
   const baseUrl = normalizeUrl(config.base_url);
   const number = normalizePhone(phone);
   const session = config.instance_name || 'default';
-  const chatId = `${number}@s.whatsapp.net`;
+  // Padronizado: usar @c.us (formato padrão do WhatsApp)
+  const chatId = `${number}@c.us`;
 
   try {
     let endpoint: string;
@@ -84,12 +83,10 @@ async function sendWaha(
 
     debug('WAHA', `Sending ${type} to ${number}`);
 
-    const response = await fetch(endpoint, {
+    // Usar wahaFetch com retry multi-auth
+    const response = await wahaFetch(endpoint, config.api_key, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Api-Key': config.api_key,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
 

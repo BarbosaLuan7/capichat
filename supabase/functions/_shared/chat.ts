@@ -39,7 +39,10 @@ export function isLID(phone: string): boolean {
   return (
     phone.includes('@lid') ||
     phone.endsWith('@lid') ||
-    (cleanPhone.length >= 15 && !phone.includes('@c.us') && !phone.includes('@s.whatsapp.net'))
+    (cleanPhone.length >= 15 &&
+      !phone.includes('@c.us') &&
+      !phone.includes('@s.whatsapp.net') &&
+      !phone.includes('@g.us'))
   );
 }
 
