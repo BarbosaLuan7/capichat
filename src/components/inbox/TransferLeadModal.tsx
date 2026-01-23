@@ -73,8 +73,7 @@ export function TransferLeadModal({
 
   // Filtered teams by search
   const filteredTeams = useMemo(
-    () =>
-      teams?.filter((t) => t.name.toLowerCase().includes(debouncedSearch.toLowerCase())) || [],
+    () => teams?.filter((t) => t.name.toLowerCase().includes(debouncedSearch.toLowerCase())) || [],
     [teams, debouncedSearch]
   );
 
@@ -247,9 +246,7 @@ export function TransferLeadModal({
               ) : filteredProfiles.length === 0 ? (
                 <div className="space-y-2 p-4 text-center">
                   <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground" />
-                  <p className="text-muted-foreground">
-                    Nenhum usuário encontrado para "{search}"
-                  </p>
+                  <p className="text-muted-foreground">Nenhum usuário encontrado para "{search}"</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -277,64 +274,60 @@ export function TransferLeadModal({
                   ))}
                 </div>
               )
-            ) : (
-              // Teams tab content
-              !teams || teams.length === 0 ? (
-                <div className="space-y-3 p-6 text-center">
-                  <Building2 className="mx-auto h-10 w-10 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium text-foreground">Nenhuma equipe cadastrada</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Crie equipes para organizar seus atendentes.
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      handleOpenChange(false);
-                      navigate('/settings/teams');
-                    }}
-                    className="gap-2"
-                  >
-                    <Users className="h-4 w-4" />
-                    Criar equipe
-                  </Button>
-                </div>
-              ) : filteredTeams.length === 0 ? (
-                <div className="space-y-2 p-4 text-center">
-                  <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground" />
-                  <p className="text-muted-foreground">
-                    Nenhuma equipe encontrada para "{search}"
+            ) : // Teams tab content
+            !teams || teams.length === 0 ? (
+              <div className="space-y-3 p-6 text-center">
+                <Building2 className="mx-auto h-10 w-10 text-muted-foreground" />
+                <div>
+                  <p className="font-medium text-foreground">Nenhuma equipe cadastrada</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Crie equipes para organizar seus atendentes.
                   </p>
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  {filteredTeams.map((team) => (
-                    <Button
-                      key={team.id}
-                      variant="ghost"
-                      className="h-auto w-full justify-start gap-3 py-3"
-                      onClick={() => setSelectedTeam(team)}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    handleOpenChange(false);
+                    navigate('/settings/teams');
+                  }}
+                  className="gap-2"
+                >
+                  <Users className="h-4 w-4" />
+                  Criar equipe
+                </Button>
+              </div>
+            ) : filteredTeams.length === 0 ? (
+              <div className="space-y-2 p-4 text-center">
+                <AlertCircle className="mx-auto h-8 w-8 text-muted-foreground" />
+                <p className="text-muted-foreground">Nenhuma equipe encontrada para "{search}"</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredTeams.map((team) => (
+                  <Button
+                    key={team.id}
+                    variant="ghost"
+                    className="h-auto w-full justify-start gap-3 py-3"
+                    onClick={() => setSelectedTeam(team)}
+                  >
+                    <div
+                      className={cn(
+                        'flex h-10 w-10 items-center justify-center rounded-full',
+                        'bg-primary/10 text-primary'
+                      )}
                     >
-                      <div
-                        className={cn(
-                          'flex h-10 w-10 items-center justify-center rounded-full',
-                          'bg-primary/10 text-primary'
-                        )}
-                      >
-                        <Building2 className="h-5 w-5" />
-                      </div>
-                      <div className="text-left">
-                        <p className="font-medium text-foreground">{team.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {team.team_members?.length || 0} membro(s)
-                        </p>
-                      </div>
-                    </Button>
-                  ))}
-                </div>
-              )
+                      <Building2 className="h-5 w-5" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-foreground">{team.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {team.team_members?.length || 0} membro(s)
+                      </p>
+                    </div>
+                  </Button>
+                ))}
+              </div>
             )}
           </ScrollArea>
         </div>

@@ -148,12 +148,18 @@ function mapTypeToTipo(type: string): string {
 // Gera preview do conteúdo da mensagem para exibição na lista
 function getMessagePreview(content: string, type: string): string {
   switch (type) {
-    case 'image': return '📷 Imagem';
-    case 'audio': return '🎵 Áudio';
-    case 'video': return '🎬 Vídeo';
-    case 'document': return '📄 Documento';
-    case 'sticker': return '🏷️ Figurinha';
-    default: return content?.substring(0, 100) || '';
+    case 'image':
+      return '📷 Imagem';
+    case 'audio':
+      return '🎵 Áudio';
+    case 'video':
+      return '🎬 Vídeo';
+    case 'document':
+      return '📄 Documento';
+    case 'sticker':
+      return '🏷️ Figurinha';
+    default:
+      return content?.substring(0, 100) || '';
   }
 }
 

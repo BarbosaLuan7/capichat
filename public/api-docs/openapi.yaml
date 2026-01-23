@@ -1523,7 +1523,7 @@ paths:
                 phone:
                   type: string
                   description: Número do destinatário (com ou sem código do país)
-                  example: "5511999990001"
+                  example: '5511999990001'
                 message:
                   type: string
                   description: Conteúdo da mensagem a enviar
@@ -1576,16 +1576,16 @@ paths:
                       type: object
                       description: Campos personalizados
             example:
-              phone: "5511999990001"
+              phone: '5511999990001'
               message: "*Marina - GaranteDireito*\n\nEntendi! Você está buscando o BPC-LOAS. Vou precisar de algumas informações para analisar seu caso."
-              type: "text"
+              type: 'text'
               lead_data:
-                name: "Maria Silva"
-                temperature: "warm"
-                benefit_type: "BPC-LOAS"
-                cpf: "12345678900"
+                name: 'Maria Silva'
+                temperature: 'warm'
+                benefit_type: 'BPC-LOAS'
+                cpf: '12345678900'
       responses:
-        "200":
+        '200':
           description: Mensagem enviada com sucesso
           content:
             application/json:
@@ -1610,24 +1610,24 @@ paths:
                     format: uuid
               example:
                 success: true
-                message_id: "uuid-da-mensagem"
-                whatsapp_message_id: "3EB0ABC123456789"
-                lead_id: "uuid-do-lead"
-                conversation_id: "uuid-da-conversa"
-        "400":
+                message_id: 'uuid-da-mensagem'
+                whatsapp_message_id: '3EB0ABC123456789'
+                lead_id: 'uuid-do-lead'
+                conversation_id: 'uuid-da-conversa'
+        '400':
           description: Requisição inválida
           content:
             application/json:
               example:
                 success: false
-                error: "phone is required"
-        "401":
+                error: 'phone is required'
+        '401':
           description: API key inválida ou ausente
           content:
             application/json:
               example:
                 success: false
-                error: "Invalid API key"
+                error: 'Invalid API key'
 
   # ============================================================================
   # MENSAGENS - BUSCA
