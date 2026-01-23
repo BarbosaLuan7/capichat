@@ -102,29 +102,46 @@ export interface VirtualizedMessageListRef {
 }
 
 // Estimate item heights for virtualization
+// IMPORTANT: These estimates should be slightly LARGER than actual to prevent overlap
+// The virtualizer will measure and adjust, but initial estimates affect layout
 function getEstimatedSize(item: VirtualItem): number {
   switch (item.type) {
     case 'date-separator':
-      return 48;
+      return 56; // Increased padding
     case 'unread-separator':
-      return 56;
+      return 64; // Increased padding
     case 'note':
-      return 72;
+      return 80;
     case 'message': {
       const msg = item.message;
-      if (msg.type === 'image') return 300;
-      if (msg.type === 'video') return 300;
-      if (msg.type === 'audio') return 120;
-      if (msg.type === 'document') return 100;
-      // Text - estimate based on length
+      const hasQuote = !!msg.quoted_message;
+      const quoteHeight = hasQuote ? 80 : 0; // Increased quote height
+
+      if (msg.type === 'image') return 320 + quoteHeight;
+      if (msg.type === 'video') return 350 + quoteHeight;
+      if (msg.type === 'audio') {
+        // Audio player base + potential transcription
+        const transcription = (msg as any).transcription as string | null;
+        if (transcription) {
+          // Estimate based on transcription length
+          const lines = Math.ceil(transcription.length / 60); // ~60 chars per line
+          const transcriptionHeight = Math.min(40 + lines * 24, 300); // Cap at 300px
+          return 120 + quoteHeight + transcriptionHeight;
+        }
+        return 120 + quoteHeight; // Audio without transcription
+      }
+      if (msg.type === 'document') return 120 + quoteHeight;
+
+      // Text - estimate based on content length with padding
       const textLength = msg.content?.length || 0;
-      if (textLength < 50) return 72;
-      if (textLength < 150) return 96;
-      if (textLength < 300) return 130;
-      return 170;
+      if (textLength < 50) return 80;
+      if (textLength < 150) return 110;
+      if (textLength < 300) return 150;
+      if (textLength < 500) return 200;
+      return 250; // Very long messages
     }
     default:
-      return 80;
+      return 100;
   }
 }
 
@@ -239,6 +256,7 @@ const VirtualizedMessageListComponent = forwardRef<
   const initialScrollDoneRef = useRef(false);
   const prevItemCountRef = useRef(0);
   const isLoadingMoreRef = useRef(false);
+  const prevConversationFingerprintRef = useRef<string | null>(null);
 
   // Flatten items for virtualization
   const flatItems = useMemo(
@@ -259,6 +277,8 @@ const VirtualizedMessageListComponent = forwardRef<
     overscan: 8,
     // Measure elements after render for accurate heights
     measureElement: (el) => el.getBoundingClientRect().height,
+    // CRITICAL: Use item ID as key to prevent cache confusion between conversations
+    getItemKey: (index) => flatItems[index]?.id ?? `item-${index}`,
   });
 
   const virtualItems = virtualizer.getVirtualItems();
@@ -275,6 +295,29 @@ const VirtualizedMessageListComponent = forwardRef<
     }),
     [flatItems.length, virtualizer]
   );
+
+  // Reset scroll ref and force re-measure when conversation changes
+  useEffect(() => {
+    // Create fingerprint based on first and last message IDs
+    const messageItems = flatItems.filter((item) => item.type === 'message');
+    const fingerprint =
+      messageItems.length > 0
+        ? `${messageItems[0]?.id}-${messageItems[messageItems.length - 1]?.id}`
+        : null;
+
+    if (fingerprint !== prevConversationFingerprintRef.current) {
+      initialScrollDoneRef.current = false;
+      prevConversationFingerprintRef.current = fingerprint;
+
+      // CRITICAL: Force virtualizer to clear cached measurements and re-measure all items
+      // Use double rAF to ensure DOM is fully rendered before measuring
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          virtualizer.measure();
+        });
+      });
+    }
+  }, [flatItems, virtualizer]);
 
   // Handle initial scroll positioning
   useEffect(() => {
@@ -365,9 +408,11 @@ const VirtualizedMessageListComponent = forwardRef<
 
         case 'unread-separator':
           return (
-            <div className="flex items-center gap-3 py-3">
+            <div className="relative z-10 flex items-center gap-3 bg-background py-3">
               <div className="h-px flex-1 bg-primary/40" />
-              <span className="px-2 text-xs font-medium text-primary">Mensagens não lidas</span>
+              <span className="whitespace-nowrap px-2 text-xs font-medium text-primary">
+                Mensagens não lidas
+              </span>
               <div className="h-px flex-1 bg-primary/40" />
             </div>
           );
@@ -505,12 +550,12 @@ const VirtualizedMessageListComponent = forwardRef<
               key={item.id}
               data-index={virtualRow.index}
               ref={virtualizer.measureElement}
-              className="absolute left-0 right-0 overflow-visible"
+              className="absolute left-0 right-0"
               style={{
                 transform: `translateY(${virtualRow.start}px)`,
               }}
             >
-              <div className="overflow-visible py-1">{renderItem(item)}</div>
+              <div className="py-1">{renderItem(item)}</div>
             </div>
           );
         })}

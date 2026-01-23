@@ -445,6 +445,17 @@ function MessageBubbleComponent({
     });
   }, [message.id, message.type, message.media_url, message.isOptimistic]);
 
+  // Early return for empty text messages (after all hooks)
+  const isEmptyTextMessage =
+    message.type === 'text' &&
+    (!message.content ||
+      message.content.trim() === '' ||
+      MEDIA_PLACEHOLDERS.includes(message.content));
+
+  if (isEmptyTextMessage) {
+    return null;
+  }
+
   const renderMedia = () => {
     // Se é mensagem de mídia mas NÃO tem media_url, mostrar placeholder com botão de recuperar
     if (message.type !== 'text' && !message.media_url) {
@@ -709,8 +720,9 @@ function MessageBubbleComponent({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.1 }}
       className={cn('group flex gap-2', isAgent && 'flex-row-reverse')}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
@@ -851,9 +863,7 @@ function MessageBubbleComponent({
           {(message.status as string) === 'failed' && isAgent && (
             <div className="mt-2 border-t border-destructive/30 pt-2">
               {message.errorMessage && (
-                <p className="mb-1 text-xs text-primary-foreground/80">
-                  {message.errorMessage}
-                </p>
+                <p className="mb-1 text-xs text-primary-foreground/80">{message.errorMessage}</p>
               )}
               {onRetry && (
                 <Button
@@ -874,19 +884,19 @@ function MessageBubbleComponent({
   );
 }
 
-MessageBubbleComponent.displayName = 'MessageBubble';
-
-// Memoize to prevent unnecessary re-renders
+// Memoize to prevent unnecessary re-renders in long conversations (50-100+ messages)
 export const MessageBubble = memo(MessageBubbleComponent, (prevProps, nextProps) => {
+  // Retorna true se props são iguais (não precisa re-render)
   return (
+    // Props principais da mensagem que afetam o render
     prevProps.message.id === nextProps.message.id &&
-    prevProps.message.status === nextProps.message.status &&
     prevProps.message.content === nextProps.message.content &&
+    prevProps.message.status === nextProps.message.status &&
+    prevProps.message.type === nextProps.message.type &&
     prevProps.message.media_url === nextProps.message.media_url &&
-    prevProps.message.is_starred === nextProps.message.is_starred &&
-    (prevProps.message as any).transcription === (nextProps.message as any).transcription &&
-    (prevProps.message as any).isOptimistic === (nextProps.message as any).isOptimistic &&
-    (prevProps.message as any).errorMessage === (nextProps.message as any).errorMessage &&
+    prevProps.message.is_deleted_locally === nextProps.message.is_deleted_locally &&
+    prevProps.message.quoted_message === nextProps.message.quoted_message &&
+    // Props do componente
     prevProps.isAgent === nextProps.isAgent &&
     prevProps.showAvatar === nextProps.showAvatar &&
     prevProps.selectionMode === nextProps.selectionMode &&
@@ -894,3 +904,5 @@ export const MessageBubble = memo(MessageBubbleComponent, (prevProps, nextProps)
     prevProps.resolvedMediaUrl === nextProps.resolvedMediaUrl
   );
 });
+
+MessageBubble.displayName = 'MessageBubble';

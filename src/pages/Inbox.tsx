@@ -1,26 +1,15 @@
-import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useRef, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { WifiOff, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
-import { getErrorWithFallback } from '@/lib/errorMessages';
+
+// Context
+import { InboxProvider, useInbox } from '@/contexts/InboxContext';
 
 // Hooks
-import {
-  useConversation,
-  useSendMessage,
-  useMarkConversationAsRead,
-  useToggleConversationFavorite,
-  useUpdateConversationAssignee,
-  useUpdateConversationStatus,
-} from '@/hooks/useConversations';
 import { useConversationsInfinite } from '@/hooks/useConversationsInfinite';
-import { useMessagesInfinite } from '@/hooks/useMessagesInfinite';
-import { useLead, useUpdateLead } from '@/hooks/useLeads';
-import { useLeadLabels } from '@/hooks/useLabels';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useInboxRealtime } from '@/hooks/useInboxRealtime';
@@ -43,27 +32,33 @@ const NewConversationModal = lazy(() =>
   }))
 );
 
-import type { Database } from '@/integrations/supabase/types';
-
-type ConversationStatus = Database['public']['Enums']['conversation_status'];
-
-const LEAD_PANEL_STORAGE_KEY = 'inbox-show-lead-panel-v2';
-
-const Inbox = () => {
-  const { user, authUser } = useAuth();
+// Inner component that uses the context
+const InboxContent = () => {
+  const { user } = useAuth();
   const isMobile = useIsMobile();
-  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Orchestration state
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
-  const [showLeadPanel, setShowLeadPanel] = useState(() => {
-    const saved = localStorage.getItem(LEAD_PANEL_STORAGE_KEY);
-    return saved === 'true';
-  });
+  // Get state from context
+  const {
+    selectedConversationId,
+    setSelectedConversationId,
+    selectedConversation,
+    messages,
+    lead,
+    isLoadingLead,
+    showLeadPanel,
+    setShowLeadPanel,
+    onToggleFavorite,
+    onTransfer,
+    onMarkAsRead,
+    addMessageOptimistically,
+    updateMessageOptimistically,
+    userClickedConversationRef,
+  } = useInbox();
+
+  // Local state only for this component
   const [showNewConversationModal, setShowNewConversationModal] = useState(false);
-  const userClickedConversationRef = useRef(false);
 
-  // Data hooks - usando paginação infinita
+  // Conversation list data (stays here because ConversationList is not using context yet)
   const {
     conversations,
     isLoading: loadingConversations,
@@ -71,39 +66,9 @@ const Inbox = () => {
     hasNextPage: hasMoreConversations,
     fetchNextPage: fetchMoreConversations,
     isFetchingNextPage: loadingMoreConversations,
-    addConversationOptimistically,
-    updateConversationOptimistically,
+    addConversationOptimistically: addConvOptimistic,
+    updateConversationOptimistically: updateConvOptimistic,
   } = useConversationsInfinite();
-
-  const { data: selectedConversation } = useConversation(selectedConversationId || undefined);
-
-  const {
-    messages,
-    isLoading: loadingMessages,
-    hasNextPage: hasMoreMessages,
-    fetchNextPage: fetchMoreMessages,
-    isFetchingNextPage: loadingMoreMessages,
-    addMessageOptimistically,
-    updateMessageOptimistically,
-    replaceOptimisticMessage,
-    markMessageFailed,
-    removeMessage,
-  } = useMessagesInfinite(selectedConversationId || undefined);
-
-  const {
-    data: leadData,
-    refetch: refetchLead,
-    isLoading: loadingLead,
-  } = useLead(selectedConversation?.lead_id || undefined);
-  const { data: leadLabels } = useLeadLabels(selectedConversation?.lead_id || undefined);
-
-  // Mutations
-  const sendMessage = useSendMessage();
-  const markAsRead = useMarkConversationAsRead();
-  const toggleFavorite = useToggleConversationFavorite();
-  const updateAssignee = useUpdateConversationAssignee();
-  const updateLead = useUpdateLead();
-  const updateConversationStatus = useUpdateConversationStatus();
 
   // Notification sound hook
   const { notify } = useNotificationSound();
@@ -112,201 +77,22 @@ const Inbox = () => {
   const { connectionStatus, showDisconnectedBanner, forceReconnect } = useInboxRealtime({
     selectedConversationId,
     onNewIncomingMessage: (message, leadName) => {
-      // Play sound and show toast for messages from non-selected conversations
       notify(message.content, leadName);
       logger.log('[Inbox] New incoming message:', message.id);
     },
-    // REMOVIDO: onMarkSelectedConversationAsRead - badge só some ao digitar
     addMessageOptimistically,
     updateMessageOptimistically,
-    addConversationOptimistically,
-    updateConversationOptimistically,
+    addConversationOptimistically: addConvOptimistic,
+    updateConversationOptimistically: updateConvOptimistic,
   });
 
-  // Persist lead panel toggle
-  useEffect(() => {
-    localStorage.setItem(LEAD_PANEL_STORAGE_KEY, String(showLeadPanel));
-  }, [showLeadPanel]);
-
-  // Handle conversation from URL query param
-  useEffect(() => {
-    const conversationFromUrl = searchParams.get('conversation');
-    if (conversationFromUrl && !selectedConversationId) {
-      setSelectedConversationId(conversationFromUrl);
+  // Callbacks
+  const handleSelectConversation = useCallback(
+    (id: string) => {
       userClickedConversationRef.current = true;
-      // Clear query param - create new URLSearchParams to avoid mutation
-      const newParams = new URLSearchParams(searchParams.toString());
-      newParams.delete('conversation');
-      setSearchParams(newParams, { replace: true });
-    }
-  }, [searchParams, selectedConversationId, setSearchParams]);
-
-  // REMOVIDO: Mark as read ao clicar - agora badge só some quando agente começa a digitar
-  useEffect(() => {
-    // Apenas resetar a flag de clique, sem marcar como lido
-    userClickedConversationRef.current = false;
-  }, [selectedConversationId]);
-
-  // Prepare lead with labels - memoized to prevent re-renders
-  const leadWithLabels = useMemo(() => {
-    if (!leadData) return null;
-    return {
-      ...leadData,
-      labels: leadLabels?.map((ll: any) => ll.labels) || [],
-    };
-  }, [leadData, leadLabels]);
-
-  // Callbacks for child components
-  const handleSelectConversation = useCallback((id: string) => {
-    userClickedConversationRef.current = true;
-    setSelectedConversationId(id);
-  }, []);
-
-  const handleSendMessage = useCallback(
-    async (
-      content: string,
-      type: string,
-      mediaUrl?: string | null,
-      replyToExternalId?: string | null
-    ) => {
-      if (!selectedConversationId || !user) return;
-
-      // AUTO-ATRIBUIÇÃO: Se a conversa não está atribuída, atribuir ao usuário atual
-      const isUnassigned = !selectedConversation?.assigned_to;
-
-      if (isUnassigned && leadData) {
-        // Atribuir conversa e lead ao usuário atual (em paralelo, não bloqueia o envio)
-        Promise.all([
-          updateAssignee.mutateAsync({
-            conversationId: selectedConversationId,
-            assignedTo: user.id,
-          }),
-          updateLead.mutateAsync({
-            id: leadData.id,
-            assigned_to: user.id,
-          }),
-        ])
-          .then(() => {
-            toast.info('Lead atribuído a você automaticamente');
-          })
-          .catch((error) => {
-            logger.error('Erro na auto-atribuição:', error);
-          });
-      }
-
-      const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-
-      // 1. IMEDIATAMENTE adicionar mensagem otimista
-      addMessageOptimistically({
-        id: tempId,
-        conversation_id: selectedConversationId,
-        content,
-        type: type as any,
-        sender_type: 'agent',
-        sender_id: user.id,
-        status: 'sending', // ⏳ Enviando
-        created_at: new Date().toISOString(),
-        source: 'crm',
-        media_url: mediaUrl || null,
-        is_starred: false,
-        direction: 'outbound',
-        is_internal_note: false,
-        lead_id: null,
-        external_id: null,
-        reply_to_external_id: replyToExternalId || null,
-        quoted_message: null,
-        isOptimistic: true,
-      });
-
-      // 2. API em background (não bloqueia)
-      sendMessage
-        .mutateAsync({
-          conversation_id: selectedConversationId,
-          sender_id: user.id,
-          sender_type: 'agent',
-          content,
-          type: type as any,
-          media_url: mediaUrl,
-          reply_to_external_id: replyToExternalId || undefined,
-        })
-        .then((realMessage) => {
-          // Sucesso: substituir temp pela mensagem real
-          if (realMessage) {
-            replaceOptimisticMessage(tempId, realMessage);
-          } else {
-            // Se não retornou mensagem, apenas atualizar status
-            updateMessageOptimistically(tempId, { status: 'sent' });
-          }
-        })
-        .catch((error) => {
-          // Erro: marcar em vermelho
-          const errorMsg = error instanceof Error ? error.message : 'Erro ao enviar';
-          markMessageFailed(tempId, errorMsg);
-        });
+      setSelectedConversationId(id);
     },
-    [
-      selectedConversationId,
-      selectedConversation?.assigned_to,
-      user,
-      leadData,
-      sendMessage,
-      updateAssignee,
-      updateLead,
-      addMessageOptimistically,
-      replaceOptimisticMessage,
-      updateMessageOptimistically,
-      markMessageFailed,
-    ]
-  );
-
-  const handleStatusChange = useCallback(
-    (status: ConversationStatus) => {
-      if (!selectedConversationId) return;
-      updateConversationStatus.mutate(
-        { conversationId: selectedConversationId, status },
-        {
-          onSuccess: () => {
-            const statusLabels = { open: 'Aberta', pending: 'Pendente', resolved: 'Resolvida' };
-            toast.success(`Conversa marcada como ${statusLabels[status]}`);
-          },
-          onError: (error) => {
-            const message = getErrorWithFallback(error, 'Erro ao atualizar status');
-            toast.error(message);
-          },
-        }
-      );
-    },
-    [selectedConversationId, updateConversationStatus]
-  );
-
-  const handleToggleFavorite = useCallback(() => {
-    if (!selectedConversationId || !selectedConversation) return;
-    toggleFavorite.mutate({
-      conversationId: selectedConversationId,
-      isFavorite: !selectedConversation.is_favorite,
-    });
-  }, [selectedConversationId, selectedConversation, toggleFavorite]);
-
-  const handleTransfer = useCallback(
-    async (userId: string) => {
-      if (!selectedConversationId || !leadData) return;
-
-      try {
-        await updateAssignee.mutateAsync({
-          conversationId: selectedConversationId,
-          assignedTo: userId,
-        });
-        await updateLead.mutateAsync({
-          id: leadData.id,
-          assigned_to: userId,
-        });
-        toast.success('Lead transferido com sucesso');
-      } catch (error) {
-        const message = getErrorWithFallback(error, 'Erro ao transferir lead');
-        toast.error(message);
-      }
-    },
-    [selectedConversationId, leadData, updateAssignee, updateLead]
+    [setSelectedConversationId, userClickedConversationRef]
   );
 
   // Mobile visibility logic
@@ -325,7 +111,7 @@ const Inbox = () => {
         <div className="flex shrink-0 items-center justify-between border-b border-destructive/20 bg-destructive/10 px-4 py-2 text-sm text-destructive">
           <div className="flex items-center gap-2">
             <WifiOff className="h-4 w-4" />
-            <span>Conexão perdida. Tentando reconectar...</span>
+            <span>Conexao perdida. Tentando reconectar...</span>
           </div>
           <Button
             size="sm"
@@ -364,55 +150,32 @@ const Inbox = () => {
           </div>
         )}
 
-        {/* Chat Area - Lazy loaded */}
+        {/* Chat Area - Lazy loaded, now uses context internally */}
         {showChatArea && (
           <Suspense fallback={<ChatAreaSkeleton />}>
             <ChatArea
-              conversation={
-                selectedConversation
-                  ? {
-                      id: selectedConversation.id,
-                      status: selectedConversation.status,
-                      is_favorite: (selectedConversation as any).is_favorite,
-                      lead_id: selectedConversation.lead_id,
-                      unread_count: selectedConversation.unread_count,
-                    }
-                  : null
-              }
-              lead={leadWithLabels}
-              messages={messages}
-              isLoadingMessages={loadingMessages}
-              onSendMessage={handleSendMessage}
-              onStatusChange={handleStatusChange}
-              onToggleFavorite={handleToggleFavorite}
-              isUpdatingStatus={updateConversationStatus.isPending}
-              showLeadPanel={showLeadPanel}
-              onToggleLeadPanel={() => setShowLeadPanel(!showLeadPanel)}
-              agentName={authUser?.name}
+              key={selectedConversation?.id}
               onBack={() => setSelectedConversationId(null)}
-              hasMoreMessages={hasMoreMessages}
-              onLoadMoreMessages={fetchMoreMessages}
-              isLoadingMoreMessages={loadingMoreMessages}
               onStartTyping={() => {
-                // Badge some ao digitar APENAS se já está atribuída
+                // Badge some ao digitar APENAS se ja esta atribuida
                 if (
                   selectedConversationId &&
                   selectedConversation?.assigned_to &&
                   selectedConversation?.unread_count &&
                   selectedConversation.unread_count > 0
                 ) {
-                  markAsRead.mutate(selectedConversationId);
+                  onMarkAsRead();
                 }
               }}
               onMessageSent={() => {
-                // Badge some ao enviar APENAS se NÃO estava atribuída
+                // Badge some ao enviar APENAS se NAO estava atribuida
                 if (
                   selectedConversationId &&
                   !selectedConversation?.assigned_to &&
                   selectedConversation?.unread_count &&
                   selectedConversation.unread_count > 0
                 ) {
-                  markAsRead.mutate(selectedConversationId);
+                  onMarkAsRead();
                 }
               }}
             />
@@ -442,18 +205,18 @@ const Inbox = () => {
                   className="absolute right-0 top-0 h-full w-[360px] max-w-[92vw] overflow-hidden border-l border-border bg-card shadow-lg"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {loadingLead ? (
+                  {isLoadingLead ? (
                     <LeadDetailsPanelSkeleton />
-                  ) : leadWithLabels ? (
+                  ) : lead ? (
                     <Suspense fallback={<LeadDetailsPanelSkeleton />}>
                       <LeadDetailsPanel
-                        lead={leadWithLabels}
+                        lead={lead}
                         conversationId={selectedConversation.id}
                         messages={messages}
-                        isFavorite={(selectedConversation as any).is_favorite}
-                        onToggleFavorite={handleToggleFavorite}
-                        onTransfer={handleTransfer}
-                        onLabelsUpdate={() => refetchLead()}
+                        isFavorite={selectedConversation.is_favorite ?? false}
+                        onToggleFavorite={onToggleFavorite}
+                        onTransfer={onTransfer}
+                        onLabelsUpdate={() => {}}
                       />
                     </Suspense>
                   ) : (
@@ -469,18 +232,18 @@ const Inbox = () => {
                 transition={{ duration: 0.2 }}
                 className="w-[300px] max-w-[340px] shrink-0 overflow-hidden border-l border-border bg-card xl:w-[340px]"
               >
-                {loadingLead ? (
+                {isLoadingLead ? (
                   <LeadDetailsPanelSkeleton />
-                ) : leadWithLabels ? (
+                ) : lead ? (
                   <Suspense fallback={<LeadDetailsPanelSkeleton />}>
                     <LeadDetailsPanel
-                      lead={leadWithLabels}
+                      lead={lead}
                       conversationId={selectedConversation.id}
                       messages={messages}
-                      isFavorite={(selectedConversation as any).is_favorite}
-                      onToggleFavorite={handleToggleFavorite}
-                      onTransfer={handleTransfer}
-                      onLabelsUpdate={() => refetchLead()}
+                      isFavorite={selectedConversation.is_favorite ?? false}
+                      onToggleFavorite={onToggleFavorite}
+                      onTransfer={onTransfer}
+                      onLabelsUpdate={() => {}}
                     />
                   </Suspense>
                 ) : (
@@ -502,6 +265,15 @@ const Inbox = () => {
         </Suspense>
       </div>
     </div>
+  );
+};
+
+// Main component wrapped with Provider
+const Inbox = () => {
+  return (
+    <InboxProvider>
+      <InboxContent />
+    </InboxProvider>
   );
 };
 

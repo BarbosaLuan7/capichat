@@ -10,6 +10,9 @@ import React, {
 import { AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
+// Context
+import { useInbox } from '@/contexts/InboxContext';
+
 // Components
 import { ReplyPreview } from '@/components/inbox/ReplyPreview';
 import { ScrollToBottomButton } from '@/components/inbox/ScrollToBottomButton';
@@ -46,75 +49,35 @@ import { useMessageSelection } from '@/hooks/useMessageSelection';
 
 import type { Database } from '@/integrations/supabase/types';
 
-type ConversationStatus = Database['public']['Enums']['conversation_status'];
 type Message = Database['public']['Tables']['messages']['Row'];
 
-interface LeadWithLabels {
-  id: string;
-  name: string;
-  phone: string;
-  email?: string | null;
-  temperature?: string;
-  avatar_url?: string | null;
-  whatsapp_name?: string | null;
-  benefit_type?: string | null;
-  funnel_stages?: { name: string } | null;
-  labels?: Array<{ id: string; name: string; color: string }>;
-}
-
-interface ConversationData {
-  id: string;
-  status: ConversationStatus;
-  is_favorite?: boolean | null;
-  lead_id: string;
-  unread_count?: number;
-}
-
 interface ChatAreaProps {
-  conversation: ConversationData | null;
-  lead: LeadWithLabels | null;
-  messages: Message[] | undefined;
-  isLoadingMessages: boolean;
-  onSendMessage: (
-    content: string,
-    type: string,
-    mediaUrl?: string | null,
-    replyToExternalId?: string | null
-  ) => Promise<void>;
-  onStatusChange: (status: ConversationStatus) => void;
-  onToggleFavorite: () => void;
-  isUpdatingStatus: boolean;
-  showLeadPanel: boolean;
-  onToggleLeadPanel: () => void;
-  agentName?: string;
+  className?: string;
   onBack?: () => void;
-  hasMoreMessages?: boolean;
-  onLoadMoreMessages?: () => void;
-  isLoadingMoreMessages?: boolean;
   onStartTyping?: () => void;
   onMessageSent?: () => void;
 }
 
 export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(function ChatArea(props, ref) {
+  const { className, onBack, onStartTyping, onMessageSent } = props;
+
+  // Get data from context
   const {
-    conversation,
+    selectedConversation: conversation,
     lead,
     messages,
     isLoadingMessages,
+    isLoadingMoreMessages,
+    isUpdatingStatus,
+    hasMoreMessages,
+    fetchMoreMessages,
     onSendMessage,
     onStatusChange,
     onToggleFavorite,
-    isUpdatingStatus,
     showLeadPanel,
-    onToggleLeadPanel,
+    setShowLeadPanel,
     agentName,
-    onBack,
-    hasMoreMessages,
-    onLoadMoreMessages,
-    isLoadingMoreMessages,
-    onStartTyping,
-    onMessageSent,
-  } = props;
+  } = useInbox();
 
   const isMobile = useIsMobile();
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
@@ -224,6 +187,21 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(function ChatA
     }
   }, [conversation?.id, isMobile, inputRef]);
 
+  // ESC to cancel selection mode
+  useEffect(() => {
+    if (!selectionMode) return;
+
+    const handleEscKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelSelection();
+      }
+    };
+
+    window.addEventListener('keydown', handleEscKey);
+    return () => window.removeEventListener('keydown', handleEscKey);
+  }, [selectionMode, cancelSelection]);
+
   const scrollToBottom = useCallback(() => {
     virtualizerRef.current?.scrollToBottom();
     setShowScrollButton(false);
@@ -259,13 +237,17 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(function ChatA
     }
   }, [audioRecorder, conversation, onSendMessage, uploadFile]);
 
+  const handleToggleLeadPanel = useCallback(() => {
+    setShowLeadPanel(!showLeadPanel);
+  }, [showLeadPanel, setShowLeadPanel]);
+
   // Empty state
   if (!conversation || !lead) return <EmptyConversationState />;
 
   return (
     <div
       ref={ref}
-      className="relative flex min-w-0 flex-1 flex-col overflow-hidden"
+      className={`relative flex min-w-0 flex-1 flex-col overflow-hidden ${className || ''}`}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -285,11 +267,12 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(function ChatA
         onStatusChange={onStatusChange}
         onToggleFavorite={onToggleFavorite}
         onSyncHistory={() => syncHistory(conversation.id)}
-        onToggleLeadPanel={onToggleLeadPanel}
+        onToggleLeadPanel={handleToggleLeadPanel}
       />
 
       <div className="relative flex-1 overflow-hidden">
         <VirtualizedMessageList
+          key={conversation?.id}
           ref={virtualizerRef}
           messages={messages || []}
           internalNotes={internalNotes}
@@ -310,7 +293,7 @@ export const ChatArea = forwardRef<HTMLDivElement, ChatAreaProps>(function ChatA
           isLoadingMessages={isLoadingMessages}
           isLoadingMoreMessages={isLoadingMoreMessages}
           hasMoreMessages={hasMoreMessages}
-          onLoadMoreMessages={onLoadMoreMessages}
+          onLoadMoreMessages={fetchMoreMessages}
           getSignedUrl={getSignedUrl}
           onTemplateSelect={handleTemplateSelect}
           onInitialScrollDone={() => {}}
