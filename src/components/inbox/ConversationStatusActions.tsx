@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MessageCircle, Clock, CheckCircle2, ChevronDown, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
 type ConversationStatus = Database['public']['Enums']['conversation_status'];
@@ -48,6 +49,15 @@ function ConversationStatusActionsComponent({
   const current = statusConfig[currentStatus];
   const StatusIcon = current.icon;
 
+  const handleStatusChange = useCallback(
+    (status: ConversationStatus) => {
+      if (status === currentStatus) return;
+      onStatusChange(status);
+      toast.success(`Status alterado para ${statusConfig[status].label}`);
+    },
+    [currentStatus, onStatusChange]
+  );
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -68,7 +78,8 @@ function ConversationStatusActionsComponent({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuItem
-          onClick={() => onStatusChange('open')}
+          onClick={() => handleStatusChange('open')}
+          disabled={isLoading}
           className={cn(currentStatus === 'open' && 'bg-muted')}
         >
           <MessageCircle className="mr-2 h-4 w-4 text-success" />
@@ -76,7 +87,8 @@ function ConversationStatusActionsComponent({
           {currentStatus === 'open' && <CheckCircle2 className="ml-auto h-4 w-4 text-success" />}
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => onStatusChange('pending')}
+          onClick={() => handleStatusChange('pending')}
+          disabled={isLoading}
           className={cn(currentStatus === 'pending' && 'bg-muted')}
         >
           <Clock className="mr-2 h-4 w-4 text-warning" />
@@ -85,7 +97,8 @@ function ConversationStatusActionsComponent({
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => onStatusChange('resolved')}
+          onClick={() => handleStatusChange('resolved')}
+          disabled={isLoading}
           className={cn(currentStatus === 'resolved' && 'bg-muted')}
         >
           <CheckCircle2 className="mr-2 h-4 w-4 text-muted-foreground" />
