@@ -60,6 +60,16 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
   const disconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   // Ref for channel to allow force reconnect
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  // Ref for health check interval
+  const healthCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Ref for last event timestamp (polling fallback)
+  const lastEventTimestampRef = useRef<number>(Date.now());
+  // Ref for BroadcastChannel (cross-tab sync)
+  const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
+  // Ref for connection status (to avoid stale closure in interval)
+  const connectionStatusRef = useRef<'connecting' | 'connected' | 'disconnected'>('connecting');
+  // Ref for forceReconnect function
+  const forceReconnectRef = useRef<() => void>(() => {});
 
   // Keep refs in sync
   useEffect(() => {
@@ -90,6 +100,80 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
     updateConversationOptimisticallyRef.current = updateConversationOptimistically;
   }, [updateConversationOptimistically]);
 
+  // Keep connectionStatusRef in sync
+  useEffect(() => {
+    connectionStatusRef.current = connectionStatus;
+  }, [connectionStatus]);
+
+  // Setup BroadcastChannel for cross-tab synchronization
+  useEffect(() => {
+    // BroadcastChannel is supported in all modern browsers
+    if (typeof BroadcastChannel === 'undefined') {
+      logger.log('[InboxRealtime] BroadcastChannel not supported');
+      return;
+    }
+
+    const bc = new BroadcastChannel('capichat-inbox-realtime');
+    broadcastChannelRef.current = bc;
+
+    bc.onmessage = (event) => {
+      const { type, data } = event.data;
+      logger.log('[InboxRealtime] Received from other tab:', type);
+
+      switch (type) {
+        case 'NEW_MESSAGE':
+          // Apply optimistic update from other tab
+          if (addMessageOptimisticallyRef.current) {
+            addMessageOptimisticallyRef.current(data);
+          }
+          // Also update conversations cache
+          queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
+            if (!old) return old;
+            const existingConv = old.find((conv) => conv.id === data.conversation_id);
+            if (!existingConv) return old;
+            return old.map((conv) =>
+              conv.id === data.conversation_id
+                ? {
+                    ...conv,
+                    last_message_at: data.created_at,
+                    last_message_content: data.content,
+                  }
+                : conv
+            );
+          });
+          break;
+
+        case 'MESSAGE_UPDATE':
+          if (updateMessageOptimisticallyRef.current) {
+            updateMessageOptimisticallyRef.current(data.id, data);
+          }
+          break;
+
+        case 'CONVERSATION_UPDATE':
+          if (updateConversationOptimisticallyRef.current) {
+            updateConversationOptimisticallyRef.current(data.id, data);
+          }
+          queryClient.setQueryData(['conversations'], (old: any[] | undefined) => {
+            if (!old) return old;
+            return old.map((conv) => (conv.id === data.id ? { ...conv, ...data } : conv));
+          });
+          break;
+      }
+    };
+
+    return () => {
+      bc.close();
+      broadcastChannelRef.current = null;
+    };
+  }, [queryClient]);
+
+  // Broadcast event to other tabs
+  const broadcastToOtherTabs = useCallback((type: string, data: any) => {
+    if (broadcastChannelRef.current) {
+      broadcastChannelRef.current.postMessage({ type, data });
+    }
+  }, []);
+
   // Handle new message in selected conversation - optimistic update
   const handleMessageInsert = useCallback(
     (payload: any) => {
@@ -97,11 +181,17 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
       const conversationId = newMessage.conversation_id;
       const currentSelectedId = selectedConversationIdRef.current;
 
+      // Update last event timestamp for polling fallback
+      lastEventTimestampRef.current = Date.now();
+
       logger.log('[InboxRealtime] New message:', {
         messageId: newMessage.id,
         conversationId,
         isSelectedConversation: conversationId === currentSelectedId,
       });
+
+      // Broadcast to other tabs
+      broadcastToOtherTabs('NEW_MESSAGE', newMessage);
 
       // Use infinite hook's optimistic update if available (for selected conversation)
       if (conversationId === currentSelectedId && addMessageOptimisticallyRef.current) {
@@ -191,7 +281,7 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
         });
       });
     },
-    [queryClient]
+    [queryClient, broadcastToOtherTabs]
   );
 
   // Handle message updates (status changes, starred, etc.)
@@ -202,6 +292,9 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
       const conversationId = updatedMessage.conversation_id;
       const currentSelectedId = selectedConversationIdRef.current;
 
+      // Update last event timestamp for polling fallback
+      lastEventTimestampRef.current = Date.now();
+
       if (oldMessage && oldMessage.status !== updatedMessage.status) {
         logger.log('[InboxRealtime] Message status changed:', {
           id: updatedMessage.id,
@@ -211,6 +304,9 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
       } else {
         logger.log('[InboxRealtime] Message updated:', updatedMessage.id);
       }
+
+      // Broadcast to other tabs
+      broadcastToOtherTabs('MESSAGE_UPDATE', updatedMessage);
 
       // Use infinite hook's optimistic update if available
       if (conversationId === currentSelectedId && updateMessageOptimisticallyRef.current) {
@@ -223,17 +319,23 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
         });
       }
     },
-    [queryClient]
+    [queryClient, broadcastToOtherTabs]
   );
 
   // Handle conversation updates
   const handleConversationChange = useCallback(
     (payload: any) => {
+      // Update last event timestamp for polling fallback
+      lastEventTimestampRef.current = Date.now();
+
       logger.log('[InboxRealtime] Conversation change:', payload.eventType);
       const currentSelectedId = selectedConversationIdRef.current;
 
       if (payload.eventType === 'UPDATE') {
         const updated = payload.new;
+
+        // Broadcast to other tabs
+        broadcastToOtherTabs('CONVERSATION_UPDATE', updated);
 
         // Use infinite hook's optimistic update if available
         if (updateConversationOptimisticallyRef.current) {
@@ -259,7 +361,7 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
         queryClient.invalidateQueries({ queryKey: ['conversations'] });
       }
     },
-    [queryClient]
+    [queryClient, broadcastToOtherTabs]
   );
 
   // Handle lead labels changes (for conversation list labels display)
@@ -357,6 +459,25 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
   useEffect(() => {
     const channel = setupChannel();
 
+    // Health check: auto-reconnect every 30s if disconnected
+    healthCheckIntervalRef.current = setInterval(() => {
+      const currentStatus = connectionStatusRef.current;
+
+      if (currentStatus === 'disconnected') {
+        logger.log('[InboxRealtime] Health check: attempting auto-reconnect');
+        forceReconnectRef.current();
+      }
+
+      // Polling fallback: if no events in 60s, invalidate queries to refresh data
+      const timeSinceLastEvent = Date.now() - lastEventTimestampRef.current;
+      if (timeSinceLastEvent > 60000 && currentStatus === 'connected') {
+        logger.log('[InboxRealtime] Polling fallback: no events in 60s, refreshing data');
+        lastEventTimestampRef.current = Date.now(); // Reset to avoid repeated polls
+        queryClient.invalidateQueries({ queryKey: ['messages-infinite'] });
+        queryClient.invalidateQueries({ queryKey: ['conversations-infinite'] });
+      }
+    }, 30000);
+
     return () => {
       logger.log('[InboxRealtime] Cleaning up subscription');
       setConnectionStatus('disconnected');
@@ -367,9 +488,12 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
       if (markAsReadTimeoutRef.current) {
         clearTimeout(markAsReadTimeoutRef.current);
       }
+      // Clear health check interval
+      if (healthCheckIntervalRef.current) {
+        clearInterval(healthCheckIntervalRef.current);
+      }
       supabase.removeChannel(channel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Force reconnect function
@@ -392,6 +516,11 @@ export function useInboxRealtime(options: UseInboxRealtimeOptions = {}) {
     // Setup new channel
     setupChannel();
   }, [setupChannel]);
+
+  // Keep forceReconnectRef in sync
+  useEffect(() => {
+    forceReconnectRef.current = forceReconnect;
+  }, [forceReconnect]);
 
   return { connectionStatus, showDisconnectedBanner, forceReconnect };
 }
